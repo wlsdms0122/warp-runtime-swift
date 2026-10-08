@@ -45,6 +45,11 @@ struct LinearityChecker {
             // and a body cannot give away what it never took.
             var borrowed: Set<Name> = []
 
+            // The names whose slot declares a type written `linear`: a write
+            // into one takes the obligation whatever wrote the value, since
+            // the slot naming the type carries it.
+            var linear: Set<Name> = []
+
             // Whether this way through ended the body. Only leaving the
             // procedure does: a run comes back out of a loop from a `break`
             // still holding what the way through held.
@@ -69,6 +74,7 @@ struct LinearityChecker {
                     live: live,
                     moved: moved.union(other.moved),
                     borrowed: borrowed.union(other.borrowed),
+                    linear: linear.union(other.linear),
                     endsTheBody: endsTheBody && other.endsTheBody
                 )
             }
@@ -124,15 +130,14 @@ struct LinearityChecker {
                 }
 
                 switch statement.binding {
-                // A name declaring the type takes the obligation whatever
-                // wrote the value, since the slot naming it carries it.
                 case let .constant(name, declared)?, let .variable(name, declared)?:
                     held = try moving(statement.expression, held: held, guarded: guarded)
 
-                    guard
-                        declared?.handedOnce(in: context.types) == true
-                            || carriesObligation(statement.expression, held: held)
-                    else {
+                    if declared?.handedOnce(in: context.types) == true {
+                        held.linear.insert(name)
+                    }
+
+                    guard held.linear.contains(name) || carriesObligation(statement.expression, held: held) else {
                         continue
                     }
 
@@ -240,20 +245,22 @@ struct LinearityChecker {
                 // the same whichever way the body answers.
                 let inside = Consuming(context: context, place: place)
                 let seeded = procedure.signature.parameters
+                let taken = Set(seeded.filter { parameter in
+                    if case .consuming = parameter.declared { return true }
+
+                    return false
+                }.map(\.name))
 
                 try inside.answering(
                     block,
                     held: Held(
-                        live: Set(seeded.filter { parameter in
-                            if case .consuming = parameter.declared { return true }
-
-                            return false
-                        }.map(\.name)),
+                        live: taken,
                         borrowed: Set(seeded.filter { parameter in
                             if case .borrowing = parameter.declared { return true }
 
                             return false
-                        }.map(\.name))
+                        }.map(\.name)),
+                        linear: taken
                     )
                 )
 
@@ -426,7 +433,7 @@ struct LinearityChecker {
                 throw refusal("writes over '\(head)', which it is still holding")
             }
 
-            guard carriesObligation(expression, held: written) else { return written }
+            guard written.linear.contains(head) || carriesObligation(expression, held: written) else { return written }
 
             if let guarded {
                 throw refusal("writes one into '\(head)' \(guarded), which happens no fixed number of times")
@@ -490,6 +497,16 @@ struct LinearityChecker {
             of call: Call
         ) throws -> Held {
             guard let written = operand(argument, held: held) else {
+                // A slot that borrows leaves the obligation with the caller, so
+                // a value no name holds would be owed by nobody once it is
+                // read.
+                if case .borrowing? = parameter?.declared {
+                    throw refusal(
+                        "hands '\(call.selector)' a value no name holds, and the slot borrows it."
+                            + " \(LinearityChecker.followedByAName), so it is bound to one first"
+                    )
+                }
+
                 return try moving(argument, held: held, guarded: guarded)
             }
 
@@ -727,7 +744,11 @@ struct LinearityChecker {
         let walk = Consuming(context: context, place: place)
         try walk.answering(
             block,
-            held: Consuming.Held(live: Set(taken.map(\.name)), borrowed: Set(borrowed.map(\.name)))
+            held: Consuming.Held(
+                live: Set(taken.map(\.name)),
+                borrowed: Set(borrowed.map(\.name)),
+                linear: Set(taken.map(\.name))
+            )
         )
 
         // What a declaration answers is read off its body where nobody wrote

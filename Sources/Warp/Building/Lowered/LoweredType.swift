@@ -552,9 +552,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // The constness and isolation the build derived are facts of the one
     // value judged, so they come along only where the name holding it is
     // `fixed` and keeps that value; a box a write may fill again takes the
-    // signature. An empty list or map shows no element, so what it holds is
-    // what the expression was judged as, a cast's type among them.
+    // signature. Null, and a list or a map showing no element, say nothing
+    // the judged type does not, so what holds one is what the expression was
+    // judged as, a cast's type among them.
     func refined(by judged: LoweredType, fixed: Bool, in table: LoweredTypeTable) -> LoweredType {
+        guard self != .null, !holdsNoElement else { return judged }
+
         var written = judged.resolved(in: table)
 
         if case let .nullable(inner) = written {
@@ -562,9 +565,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, written) {
-        case (.never, _):
-            return judged
-
         case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
             guard fixed else {
                 return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
@@ -775,8 +775,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // declared, whether two types are one type, whether some value could
     // satisfy two types at once, and whether a candidate spelling could ever be
     // a value of a type. The build
-    // asks them of readings; the run asks the first of a closure value that
-    // reached a procedure slot through `Any`. A name the table does not answer
+    // asks them of readings; the run asks the first of a closure value a cast
+    // reads as a procedure type. A name the table does not answer
     // passes every judge but the second, which reads it as only itself:
     // nothing is knowable about it here, and the value judge refuses it where
     // a value arrives.
@@ -790,11 +790,10 @@ indirect enum LoweredType: Sendable, Equatable {
         accepts(other, in: table, assumingPairs: [], rigid: false)
     }
 
-    // The same question where `other` is a declaration's own, and no call
-    // fills the type parameters it names: each is one type this knows
-    // nothing about, so only that same parameter, or a slot its bounds prove
-    // it fits by structure, takes it. What a declaration answering for
-    // another is held to.
+    // The same question where nothing is judged where the value arrives: a
+    // named type answers a contract by the claims the documents already
+    // say, rather than by one the link may still find. What a declaration
+    // answering for another is held to.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
         accepts(other, in: table, assumingPairs: [], rigid: rigid)
     }
@@ -1440,6 +1439,14 @@ indirect enum LoweredType: Sendable, Equatable {
         // reading of it. Each field's value is held to a composition where it
         // stands.
         case let (.dictionary(mine), .record(theirs)):
+            // One with no field holds no entry, the way an empty map holds
+            // none.
+            guard !theirs.fields.isEmpty else {
+                mine.binding(against: .never, into: &substitution, holding: &holding, in: table, assuming: assuming)
+
+                return
+            }
+
             var fields = Substitution()
 
             for field in theirs.fields {
@@ -1470,6 +1477,13 @@ indirect enum LoweredType: Sendable, Equatable {
                 in: table,
                 assuming: assuming
             )
+
+        // What arrives as `Never` holds no value at any depth, so every
+        // parameter the slot names there is read only by what holds none.
+        case (_, .never):
+            for name in boundedParameters.keys.sorted() {
+                substitution.read(name, as: .never, in: table)
+            }
 
         default:
             return
@@ -1707,7 +1721,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {
-            return try settling(value, at: "as \(rendered(in: table))", in: table)
+            return try settling(named(value, in: table), at: "as \(rendered(in: table))", in: table)
         } catch let mismatch as ArgumentError {
             // Only a mismatch is read as the author's expectation. Naming what
             // is absorbed rather than what is not keeps the default closed:
@@ -2441,11 +2455,14 @@ indirect enum LoweredType: Sendable, Equatable {
             throw ArgumentError("\(path()): is a \(written), and the slot declares \(label)")
         }
 
-        // A nameless record holding exactly the declared fields takes the
-        // name here, which is where a literal, a value from outside and a
-        // cast are written into the type.
-        guard case let .record(held) = table.loweredTypes[nominal],
-              case let .record(settled) = try settlingFields(value, of: held, at: path(), in: table)
+        // A value under no name is no value of the record: a literal, a
+        // value from outside and a cast write the name before it is judged
+        // here, and a judgement writes none.
+        guard
+            case let .record(record) = value,
+            record.name != nil,
+            case let .record(held) = table.loweredTypes[nominal],
+            case let .record(settled) = try settlingFields(value, of: held, at: path(), in: table)
         else {
             throw mismatch(value, at: path(), in: table)
         }

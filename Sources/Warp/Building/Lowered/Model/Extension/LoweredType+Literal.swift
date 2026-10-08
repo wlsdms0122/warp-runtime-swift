@@ -10,16 +10,23 @@ import Foundation
 extension LoweredType {
     // A value written as a literal, as a place of this type holds it: each
     // whole number standing where this declares a Double is the fraction it
-    // names, at whatever depth of a list or a record it stands. Everything
-    // else is the value as written, and whether it fits is the judge's to
-    // say.
+    // names, and a nameless record where a declared record is read takes
+    // its name, at whatever depth of a list or a record it stands.
+    // Everything else is the value as written, and whether it fits is the
+    // judge's to say.
     func written(_ value: Value, in table: LoweredTypeTable) -> Value {
         switch (self, value) {
         case let (.double, .int(whole)), let (.ranged(.fraction), .int(whole)):
             return .double(Double(whole))
 
         case let (.named(row), _):
-            return table.loweredTypes[row].written(value, in: table)
+            let written = table.loweredTypes[row].written(value, in: table)
+
+            guard let nominal = table.record(of: self), case let .record(record) = written, record.name == nil else {
+                return written
+            }
+
+            return .record(record.named(table.labels[nominal]))
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.written(value, in: table)
@@ -45,17 +52,10 @@ extension LoweredType {
 
     // The same for an expression written into a place of this type: the
     // literals in it, at the depths a list, a record and the answer of a
-    // block or an attempt hand on. A record literal written where a declared
-    // record is read is the named value; one built from parts takes the name
-    // where it is built (`naming`).
+    // block or an attempt hand on. A record built from parts there takes
+    // the name where it is built (`naming`).
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
         reaching(expression, in: table) { place, standing in
-            if let nominal = table.record(of: place), case let .literal(.record(record)) = standing, record.name == nil {
-                guard case let .record(fields) = table.loweredTypes[nominal].written(.record(record), in: table) else { return nil }
-
-                return .literal(.record(fields.named(table.labels[nominal])))
-            }
-
             guard case let .literal(value) = standing else { return nil }
 
             return .literal(place.written(value, in: table))

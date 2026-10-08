@@ -49,8 +49,9 @@ struct Activation: Sendable {
         }
     }
 
-    // Every index reference read to a position: a write lands on one
-    // position, and a hold is extended by positions.
+    // Every index reference read to a position, or to a key where the
+    // container is a map: a write lands on one place, and a hold is extended
+    // by places.
     func projections(of address: Address) throws -> [Projection] {
         try address.steps.map { step in
             switch step {
@@ -64,14 +65,27 @@ struct Activation: Sendable {
                 return .index(index)
 
             case let .at(inner, _):
-                guard case let .int(index) = try value(at: inner) else {
+                switch try value(at: inner) {
+                case let .int(index):
+                    return .index(index)
+
+                // A dictionary's names are data, so a key the run settled
+                // writes an entry the way a written key does.
+                case let .string(key):
+                    guard let name = try? Name(key) else {
+                        throw ExecutionError(
+                            "'\(spelled(address).rendered)' writes under '\(key)', which is not a name"
+                        )
+                    }
+
+                    return .key(name)
+
+                default:
                     throw ExecutionError(
                         "'\(spelled(address).rendered)' indexes with"
-                            + " '\(spelled(inner).rendered)', which is not an Int"
+                            + " '\(spelled(inner).rendered)', which is not an Int or a String"
                     )
                 }
-
-                return .index(index)
             }
         }
     }

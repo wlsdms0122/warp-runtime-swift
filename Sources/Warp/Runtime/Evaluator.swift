@@ -611,10 +611,9 @@ struct Evaluator: Sendable {
         }
 
         // A parameter handed in place takes a variable, and a call hands one
-        // only where the build read the callee's type. A call of a value whose
-        // type said nothing of its parameters and a procedure the host
-        // answers hand values, so a closure taking one from them is refused
-        // here, before its body runs.
+        // only where the build read the callee's type. A procedure the host
+        // answers hands values to a closure it was handed, so a closure
+        // taking one from it is refused here, before its body runs.
         for (position, slot) in linked.slots.enumerated()
         where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
             throw ExecutionError(

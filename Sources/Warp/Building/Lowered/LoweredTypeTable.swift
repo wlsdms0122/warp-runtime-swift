@@ -148,8 +148,7 @@ final class LoweredTypeTable: Sendable {
 
     // Whether a reading stands where a contract bounds a slot. One-sided as
     // `answering` is, unless `rigid`: then nothing is judged where the value
-    // arrives, so a named type is held to what the documents say, and a
-    // parameter or a composition to what its bounds prove.
+    // arrives, so a named type is held to what the documents say.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
         if case .settled(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
     }

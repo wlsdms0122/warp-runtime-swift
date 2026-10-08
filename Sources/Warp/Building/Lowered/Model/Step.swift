@@ -16,7 +16,7 @@ enum Step: Sendable {
     case field(Int, Name, optional: Bool)
 
     // A name read from what only the run knows the keys of: a dictionary, or
-    // a value that arrived through `Any`.
+    // a value read through a type parameter, whose type the call decides.
     case key(Name, optional: Bool)
 
     case index(Int, optional: Bool)

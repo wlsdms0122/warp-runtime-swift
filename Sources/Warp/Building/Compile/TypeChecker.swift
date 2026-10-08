@@ -19,10 +19,9 @@ import Foundation
 // what it is. A wrong answer would be a refusal an author cannot act on, so
 // the walk answers only where the text says so.
 //
-// Reading through one is the exception, and it is the one place saying nothing
-// is not enough: a dot needs a type to be judged against, so a dot on `Any`
-// refuses rather than deferring to the run. The author names the type with
-// `as`, and the walk goes on from there.
+// Reading through one is held the same way: a dot needs a type to be judged
+// against, so a dot on `Any` refuses rather than deferring to the run. The
+// author names the type with `as`, and the walk goes on from there.
 //
 // A path reads a name and nothing else, so every segment a document writes
 // stays what it was written as. What each one lands on is judged here against
@@ -548,10 +547,9 @@ struct TypeChecker {
     // type parameter and is judged where it stands hands back what proves
     // nothing, unless it reaches a declaration of this document, whose proof
     // is the document's to settle; and nothing proves what the body reads as a
-    // type parameter where that reading may hold what is not a value of it: a
-    // call filled one from an argument that is not, a write left a variable
-    // reading as one while it wrote what is not, or a closure that is not
-    // isolated reached a variable whose type names one.
+    // type parameter where that reading may hold what is not a value of it,
+    // which the build leaves only where a closure that is not isolated
+    // reaches a variable whose type names one.
     private func proof(
         of readings: [LoweredType],
         declaring selector: Name,
@@ -1214,12 +1212,6 @@ struct TypeChecker {
                 declared = true
             }
 
-            if case let .indexRef(inner, _) = segment {
-                if let refusal = indexReference(inner, in: environment, with: context, at: place) {
-                    return .refused(refusal)
-                }
-            }
-
             current = context.resolve(current)
 
             switch (segment, current) {
@@ -1244,7 +1236,24 @@ struct TypeChecker {
             case let (.key, .dictionary(entry)):
                 current = entry
 
-            case let (.index, .array(element)), let (.indexRef, .array(element)):
+            // A name between the brackets is a path of its own, judged as
+            // what the container reads it as: a position in a list and a key
+            // in a map.
+            case let (.indexRef(inner, _), .dictionary(entry)):
+                if let refusal = keyReference(inner, in: environment, with: context, at: place) {
+                    return .refused(refusal)
+                }
+
+                current = entry
+
+            case let (.indexRef(inner, _), .array(element)):
+                if let refusal = indexReference(inner, in: environment, with: context, at: place) {
+                    return .refused(refusal)
+                }
+
+                current = element
+
+            case let (.index, .array(element)):
                 current = element
 
             case (.key, .any), (.index, .any), (.indexRef, .any):
@@ -1779,9 +1788,8 @@ struct TypeChecker {
             //
             // Needless means the claim and the reading are the same type, not
             // that one would accept the other. `accepts` holds between `Int`
-            // and `Int(0...10)`, and between anything and `Any`, because the
-            // value is checked when it arrives, so a narrowing cast still says
-            // something. Record names count at every depth: reading a nameless
+            // and `Int(0...10)`, because the bound is checked when the value
+            // arrives, so a narrowing cast still says something. Record names count at every depth: reading a nameless
             // record as a declared one attaches the name, so it is never a
             // cast of what the value already is.
             //
@@ -2206,9 +2214,9 @@ struct TypeChecker {
                 )
             }
 
-            // A value the build does not read as a procedure type writing its
-            // parameters is of a type the build does not know, so it is
-            // called once a cast says what it is.
+            // A value whose type writes no parameters says nothing the build
+            // can hold an argument against, so it is called once a cast says
+            // what procedure it is.
             guard case let .procedure(parameters?, _, _, _) = callee else {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
@@ -2255,8 +2263,8 @@ struct TypeChecker {
             // reads that the build did not prove of the argument, a range
             // above all, is judged against the slot there first. A record
             // built there is built as the record the slot reads.
-            for (position, pair) in zip(rewritten, parameters).enumerated() {
-                judgements.record(names: pair.1.naming(pair.0, at: place.child(.argument(position)), in: context.loweredTypes))
+            for (position, (argument, slot)) in zip(rewritten, parameters).enumerated() {
+                judgements.record(names: slot.naming(argument, at: place.child(.argument(position)), in: context.loweredTypes))
             }
 
             rewritten = zip(rewritten, parameters).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
@@ -2451,6 +2459,20 @@ struct TypeChecker {
 
             let taking = slots.map { slot in slot.type.filling(filled) }
 
+            // What fills a type parameter is the call's, so a body taking a
+            // value handed on once there has no name to carry the obligation
+            // on.
+            for (parameter, reading) in filled.sorted(by: { $0.key < $1.key })
+            where reading.spelled(in: context.loweredTypes)?.handedOnce(in: context.types) == true {
+                try refuse(
+                    "sending '\(call.selector)' fills '\(parameter)' with \(reading.rendered(in: context.loweredTypes)),"
+                        + " which is handed on exactly once. \(LinearityChecker.followedByAName), and what fills a"
+                        + " type parameter is the call's",
+                    at: place,
+                    when: ask
+                )
+            }
+
             try handedInPlace(
                 call.arguments,
                 to: taking,
@@ -2475,8 +2497,8 @@ struct TypeChecker {
             // What is written into each slot as a literal is read as the slot
             // reads it, and a record built there is built as the record the
             // slot reads.
-            for (position, pair) in zip(arguments, taking).enumerated() {
-                judgements.record(names: pair.1.naming(pair.0, at: place.child(.argument(position)), in: context.loweredTypes))
+            for (position, (argument, slot)) in zip(arguments, taking).enumerated() {
+                judgements.record(names: slot.naming(argument, at: place.child(.argument(position)), in: context.loweredTypes))
             }
 
             let rewritten = Call(
@@ -3470,16 +3492,14 @@ struct TypeChecker {
         }
 
         // A type parameter the body does not fill is one type it knows
-        // nothing about, so what is written there is a value of it already.
+        // nothing about, so a write there takes only a value of it.
         if slot.namesParameter, !written.isHeld(by: slot, inPlace: true, in: context.loweredTypes) {
-            try refuse(
+            throw BuildError(
                 "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), where it reads"
                     + " \(slot.rendered(in: context.loweredTypes)): a type parameter the body does not fill"
                     + " takes only a value of it",
-                at: place,
-                when: ask
+                at: place
             )
-            return nil
         }
 
         return slot
@@ -3626,7 +3646,9 @@ struct TypeChecker {
                 throw BuildError("\(subject): \(refusal)", at: at)
             }
 
-            if let constant = argument.constantValue {
+            // A constant is checked as the slot holds it, a record built there
+            // under the name the slot reads.
+            if let constant = argument.constantValue.map({ constant in type.written(constant, in: loweredTypes) }) {
                 do {
                     if let slot {
                         _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)

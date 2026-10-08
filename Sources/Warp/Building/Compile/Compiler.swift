@@ -519,19 +519,22 @@ struct Compiler {
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type",
+                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type or casts its start",
                             at: place
                         )
                     }
 
+                    try self.refuseHandedOnce(holding, at: place, in: context)
                     started[name] = (settled, holding)
                     return
                 }
 
+                try self.refuseHandedOnce(holding, at: place, in: context)
+
                 // What the start reads is held to what the variable declares,
                 // the way a name's value is: a nameless record takes a
-                // declared record's name only as a literal written there, or
-                // as a value read as `Any` or as a contract.
+                // declared record's name only as a literal or a record built
+                // where the declared record is read.
                 guard written.isHeld(by: holding, inPlace: false, in: context.loweredTypes) else {
                     throw BuildError(
                         "starts as \(written.rendered(in: context.loweredTypes)), and declares \(declared)",
@@ -545,16 +548,24 @@ struct Compiler {
                         holding
                     )
                 } catch {
-                    throw BuildError(
-                        "starts as \(LoweredType(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
-                            + " and declares \(declared): \(error)",
-                        at: place
-                    )
+                    throw BuildError("starts outside \(declared), which it declares: \(error)", at: place)
                 }
             }
         }
 
         return started
+    }
+
+    // A module variable is a box every run starts holding, and nothing hands
+    // its value on, so it holds no value handed on exactly once.
+    private func refuseHandedOnce(_ holding: LoweredType, at place: Place, in context: TypingContext) throws {
+        guard let spelled = holding.spelled(in: context.loweredTypes), spelled.handedOnce(in: context.types) else { return }
+
+        throw BuildError(
+            "holds \(holding.rendered(in: context.loweredTypes)), which is handed on exactly once."
+                + " Every run starts a module variable holding it, and nothing hands it on",
+            at: place
+        )
     }
 
     // What a constant or a variable's start settles to, beside the shape it

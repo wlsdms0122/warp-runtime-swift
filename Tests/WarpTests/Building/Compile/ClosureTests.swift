@@ -216,13 +216,13 @@ struct ClosureTests {
         }
     }
 
-    @Test("a slot asking for a const Procedure refuses one that reaches outside")
+    @Test("a slot asking for a const procedure type refuses one that reaches outside")
     func aClosureThatRunsIsRefusedWhereConstIsAsked() async throws {
         // Given. `twice` declares that whatever it is handed answers without
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(nil, .const))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))]
             ),
             body: [
                 Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
@@ -260,11 +260,11 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
         }
     }
 
-    @Test("a slot asking for a const Procedure takes one that answers")
+    @Test("a slot asking for a const procedure type takes one that answers")
     func aConstClosureFitsWhereConstIsAsked() async throws {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
