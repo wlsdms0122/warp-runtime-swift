@@ -1036,20 +1036,23 @@ struct Evaluator: Sendable {
     }
 
     // The two doors a native procedure answers through, what it hands back
-    // fitted to what it declares. The procedure's parameters are its own
-    // type, so the call is made where that type has a name: handing `any
-    // Query` to a generic function opens it.
+    // fitted to what it declares and judged against it, the way a body's
+    // answer is. The procedure's parameters are its own type, so the call is
+    // made where that type has a name: handing `any Query` to a generic
+    // function opens it.
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
         settled: Settled
     ) async throws -> Value {
-        callee.fitted(
-            answered: try await query.evaluate(
-                Question(
-                    settled: settled,
-                    of: callee,
-                    evaluator: self
+        try callee.settling(
+            returned: callee.fitted(
+                answered: try await query.evaluate(
+                    Question(
+                        settled: settled,
+                        of: callee,
+                        evaluator: self
+                    )
                 )
             )
         )
@@ -1062,14 +1065,16 @@ struct Evaluator: Sendable {
         holds: [(position: Int, handle: Handle)],
         trace: Trace
     ) async throws -> Value {
-        callee.fitted(
-            answered: try await effect.run(
-                Invocation(
-                    of: callee,
-                    settled: settled,
-                    holds: holds,
-                    trace: trace,
-                    evaluator: self
+        try callee.settling(
+            returned: callee.fitted(
+                answered: try await effect.run(
+                    Invocation(
+                        of: callee,
+                        settled: settled,
+                        holds: holds,
+                        trace: trace,
+                        evaluator: self
+                    )
                 )
             )
         )
