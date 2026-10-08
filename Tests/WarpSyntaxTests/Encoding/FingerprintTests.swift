@@ -53,7 +53,7 @@ struct FingerprintTests {
 
     private let program = try! Module(
         procedures: [
-            "app.main": Procedure(
+            "App.main": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "a.foo", arguments: [.literal(.null)]))
@@ -90,7 +90,7 @@ struct FingerprintTests {
         // Given
         let other = try Module(
             procedures: [
-                "app.main": Procedure(
+                "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(3))
@@ -112,7 +112,7 @@ struct FingerprintTests {
         // the native's document's, and that document's object is what this one
         // leans on.
         let first = try await fingerprint(of: program, against: native(returning: .int))
-        let second = try await fingerprint(of: program, against: native(returning: .any))
+        let second = try await fingerprint(of: program, against: native(returning: .never))
 
         // Then
         #expect(first != second)

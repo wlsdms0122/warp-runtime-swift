@@ -19,13 +19,13 @@ struct SignatureTests {
     // MARK: - Test
     @Test("a parameter written without a type declares nothing, and takes anything")
     func untypedParameterDeclaresNothing() throws {
-        // Given / When. `any` would say every type is welcome; this says nothing
+        // Given / When. `Any` would say every type is welcome; this says nothing
         // at all, and the two are not the same declaration even though neither
         // is checked
         let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
-                    "parameters": [["name": "labelled", "type": "any"], ["name": "subject"]],
+                    "parameters": [["name": "labelled", "type": "Any"], ["name": "subject"]],
                     "body": [["let": "done", "value": ["ref": "subject"]]]
                 ]
             ]
@@ -50,7 +50,7 @@ struct SignatureTests {
         let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "quiet": ["body": [["let": "done", "value": "end"]]],
-                "loud": ["returns": "any", "body": [["let": "done", "value": "end"]]]
+                "loud": ["returns": "Any", "body": [["let": "done", "value": "end"]]]
             ]
         ])
 
@@ -94,10 +94,12 @@ struct SignatureTests {
             try settled(sut, given: ["count": .double(3)])
         }
 
-        // And the conversion that loses nothing still happens
-        let widened = Signature(parameters: [Parameter(name: "ratio", type: .double)])
+        // And a whole number is no fraction either
+        let ratio = Signature(parameters: [Parameter(name: "ratio", type: .double)])
 
-        #expect(try settled(widened, given: ["ratio": .int(3)])["ratio"] == .double(3))
+        #expect(throws: ArgumentError.self) {
+            try settled(ratio, given: ["ratio": .int(3)])
+        }
     }
 
     @Test("an undeclared input name is rejected")
@@ -109,19 +111,6 @@ struct SignatureTests {
         // in
         #expect(throws: ArgumentError.self) {
             try settled(sut, given: ["a": .string("x"), "sneaky": .int(9)])
-        }
-    }
-
-    @Test("a value outside enum is rejected")
-    func valueOutsideOneOfRejected() {
-        // Given
-        let sut = Signature(parameters: [
-            Parameter(name: "mode", type: .string, candidates: ["fast", "slow"])
-        ])
-
-        // When / Then
-        #expect(throws: ArgumentError.self) {
-            try settled(sut, given: ["mode": .string("medium")])
         }
     }
 
@@ -140,7 +129,7 @@ struct SignatureTests {
     func everyParameterIsGiven() throws {
         // Given
         let sut = try #require(try Loader.testing.loadProcedure([
-            "parameters": [["name": "dir", "type": "string?"], ["name": "file", "type": "string"]],
+            "parameters": [["name": "dir", "type": "String?"], ["name": "file", "type": "String"]],
             "body": [["let": "seen", "value": ["ref": "dir"]]]
         ]).procedures[entryName]?.signature)
 

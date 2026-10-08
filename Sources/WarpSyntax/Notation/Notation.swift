@@ -25,10 +25,10 @@ import Warp
 // or not. A notation that offers none owes no procedures for spellings it never
 // spends.
 public struct Notation: Sendable {
-    // Where a declared name stands: the types, constraints and contracts a
-    // type spelling, a bound, a claim or a membership names, or the
-    // procedures a call names. A text may declare one name in both, and the
-    // reader that asks says which it is reading.
+    // Where a declared name stands: the types and contracts a type spelling, a
+    // bound or a claim names, or the procedures a call names. A text may
+    // declare one name in both, and the reader that asks says which it is
+    // reading.
     public enum Space: Sendable {
         case type
         case procedure
@@ -60,14 +60,14 @@ public struct Notation: Sendable {
     // document writes a record under `record`.
     public let readsBareRecords: Bool
 
-    // Whether a parameter may be written as one pair, `count: int` for
-    // `{ name: count, type: int }` and `count: { type: int, enum: [1, 2] }`
+    // Whether a parameter may be written as one pair, `count: Int` for
+    // `{ name: count, type: int }` and `count: { type: int, description: … }`
     // for the record with the name inside. A document writes the record.
     public let pairedParameter: Bool
 
     // What a declared name the text writes stands for, where the text writes
-    // one short: a type's name in a slot, a cast, a field, a bound, a claim or
-    // a membership, and a procedure's name in a call. Nothing for a name the
+    // one short: a type's name in a slot, a cast, a field, a bound or a
+    // claim, and a procedure's name in a call. Nothing for a name the
     // text does not declare. A document writes every name full, so a document
     // qualifies nothing; a notation that lets a text name its own declarations
     // short answers here, and the readers that know where a name stands ask

@@ -1,7 +1,7 @@
 warpt 1
 {
   imports [
-    "std.math.lessThan"
+    "Standard.Comparable.lessThan"
   ]
   procedures {
     entry {
@@ -38,7 +38,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }
@@ -48,25 +48,25 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "seen"
       }
-      returns "int"
+      returns "Int"
     }
     identity {
       parameters [
         {
           name "value"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "value"
       }
-      returns "int"
+      returns "Int"
     }
   }
   warp 1

@@ -12,19 +12,20 @@ import Testing
 @Suite("A folded constant is held to the contract it was handed to")
 struct FoldedContractTests {
     // MARK: - Property
-    private let main: Name = "app.main"
+    private let main: Name = "App.main"
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a value wearing no name is refused however much of the list is in hand")
-    func aNamelessValueIsRefused() async throws {
-        // Given. A procedure answering `any` hands a string where a contract is
+    @Test("a value that is an instance of no type is refused however much of the list is in hand")
+    func aValueOfNoTypeIsRefused() async throws {
+        // Given. A procedure answering `Any` hands null where a contract is
         // asked, and the reading says nothing about what arrives.
-        let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
+        let modules = try documents(returning: .any, giving: .literal(.null)) + Module.standard
 
-        // When / Then. No claim puts a string under a contract, so a document
-        // compiled against part of the list settles this where the whole list
-        // would. The refusal stands where the constant is folded, which is the
+        // When / Then. Null is an instance of no type a claim names, so no
+        // claim anywhere puts it under a contract, and a document compiled
+        // against part of the list settles this where the whole list would.
+        // The refusal stands where the constant is folded, which is the
         // compile itself.
         await #expect {
             var compiled: [Compiled] = []
@@ -33,13 +34,35 @@ struct FoldedContractTests {
                 compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
-            "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
+            "\(error)".contains("expected some T: App.Describable, got Null")
         }
 
         await #expect {
             try await Builder().build(modules)
         } throws: { error in
-            "\(error)".contains("string does not answer every procedure 'app.Describable' asks")
+            "\(error)".contains("expected some T: App.Describable, got Null")
+        }
+    }
+
+    @Test("a value of a type the language names leans on what the whole list claims")
+    func aValueOfALanguageTypeLeansOnTheList() async throws {
+        // Given. The same constant handing a string, which is an instance of
+        // `String`, and a claim about `String` is one any document may make.
+        let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
+
+        // When. Compiled against part of the list, the pair is written down
+        // rather than judged.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        }
+
+        // Then. The whole list holds no such claim, and the refusal says so.
+        await #expect {
+            try await Builder().build(modules)
+        } throws: { error in
+            "\(error)".contains("hands 'String' where 'App.Describable' is asked, and no document in this link says 'String' answers it")
         }
     }
 
@@ -50,45 +73,45 @@ struct FoldedContractTests {
         // which is the constant that handed it and not whichever was settled
         // last.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.count": Procedure(
+                "App.count": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .int
                     ),
                     body: [],
                     result: .literal(.int(1))
                 ),
-                "app.giveEarly": Procedure(
+                "App.giveEarly": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("zed.Plain"), optional: false)
+                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false)
                 ),
-                "app.giveLate": Procedure(
+                "App.giveLate": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("bank.Plain"), optional: false)
+                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
                 )
             ]
         )
         let typed = try Module(
-            types: ["bank.Plain": .record(["note": .string]), "zed.Plain": .record(["note": .string])],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Plain": .record(["note": .string]), "Zed.Plain": .record(["note": .string])],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        // `app.aaa` settles first and `app.zzz` last, and the pair the list
-        // reports first is `bank.Plain`, which `app.zzz` handed.
+        // `App.aaa` settles first and `App.zzz` last, and the pair the list
+        // reports first is `Bank.Plain`, which `App.zzz` handed.
         let program = try Module(
             constants: [
-                "app.aaa": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveEarly"))])),
-                "app.zzz": .call(Call(selector: "app.count", arguments: [.call(Call(selector: "app.giveLate"))]))
+                "App.aaa": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveEarly"))])),
+                "App.zzz": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveLate"))]))
             ],
             procedures: [
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("app.zzz")])
+                    result: .reference([.key("App.zzz")])
                 )
             ]
         )
@@ -97,23 +120,23 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("constants.app.zzz:")
-                && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+            "\(error)".contains("constants.App.zzz:")
+                && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
         }
     }
 
     @Test("a value wearing a name is written down where the table cannot settle")
     func aNamedValueIsWrittenDown() async throws {
-        // Given. A procedure answering `any` hands a named record where a
+        // Given. A procedure answering `Any` hands a named record where a
         // contract is asked, and the reading says nothing about what arrives,
         // so nothing is written down where the call is read.
         let typed = try Module(
-            types: ["bank.Plain": .record(["note": .string])],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Plain": .record(["note": .string])],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let modules = try documents(
             returning: .any,
-            giving: .cast(.record(["note": .literal(.string("x"))]), as: .named("bank.Plain"), optional: false)
+            giving: .cast(.record(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
         ) + [typed] + Module.standard
 
         // When. Each document compiled against the ones before it, so the
@@ -131,8 +154,8 @@ struct FoldedContractTests {
             #expect {
                 try Builder().link(link, supplying: Supplying(Module.standard))
             } throws: { error in
-                "\(error)".contains("constants.app.counted:")
-                    && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+                "\(error)".contains("constants.App.counted:")
+                    && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
             }
         }
     }
@@ -141,17 +164,17 @@ struct FoldedContractTests {
     // MARK: - Private
     private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.count": Procedure(
+                "App.count": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .int
                     ),
                     body: [],
                     result: .literal(.int(1))
                 ),
-                "app.give": Procedure(
+                "App.give": Procedure(
                     signature: Signature(returns: type),
                     body: [],
                     result: giving
@@ -160,8 +183,8 @@ struct FoldedContractTests {
         )
         let program = try Module(
             constants: [
-                "app.counted": .call(
-                    Call(selector: "app.count", arguments: [.call(Call(selector: "app.give"))])
+                "App.counted": .call(
+                    Call(selector: "App.count", arguments: [.call(Call(selector: "App.give"))])
                 )
             ],
             procedures: [
@@ -169,7 +192,7 @@ struct FoldedContractTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("app.counted")])
+                    result: .reference([.key("App.counted")])
                 )
             ]
         )

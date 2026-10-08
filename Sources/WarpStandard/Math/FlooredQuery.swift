@@ -15,21 +15,16 @@ struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("std.math.floored")
+    private let integer = IntegerConversion("Standard.Math.floored")
 
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        switch question[.number] {
-        case let .int(number):
-            return .int(number)
-
-        case let .double(real):
-            return .int(try integer.of(real, rounded: .down))
-
-        default:
-            throw ExecutionError("std.math.floored asks a number")
+        guard case let .double(real) = question[.number] else {
+            throw ExecutionError("Standard.Math.floored asks a fraction")
         }
+
+        return .int(try integer.of(real, rounded: .down))
     }
 
     // MARK: - Private

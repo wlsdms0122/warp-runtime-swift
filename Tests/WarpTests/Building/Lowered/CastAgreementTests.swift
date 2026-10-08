@@ -29,8 +29,6 @@ struct CastAgreementTests {
             // A name standing for another declared record, so an alias meets
             // the record it names in every pair.
             "Someone": .named("Person"),
-            "Byte": .ranged(.whole(from: 0, to: .through(255))),
-            "Ratio": .ranged(.fraction(from: 0, to: .upTo(1))),
             "Maybe": .nullable(.int),
             "Whole": .int,
             // A type that names itself, so the walk's own guard is exercised
@@ -43,25 +41,15 @@ struct CastAgreementTests {
             "Chain": .record(["next": .nullable(.named("Chain"))]),
             "Link": .record(["next": .nullable(.named("Link"))])
         ],
-        constraints: [
-            "Comparable": [.int, .double, .string],
-            "Listed": [.array(.any), .array(.byteElement)],
-            "People": [.named("Person"), .int],
-            "Chains": [.named("Chain"), .int],
-            "Holders": [.record(["of": .named("Person")]), .bool]
-        ]
+        contracts: ["Comparable": [:]],
+        satisfying: ["Comparable": ["Int", "Double", "String"]],
+        settled: true,
+        of: Linkage()
     )
 
     private let typeExpressions: [TypeExpression] = [
         .any, .never, .null, .bool, .int, .double, .string,
-        .ranged(.whole(from: 0, to: .through(255))),
-        .ranged(.whole(from: 300)),
-        .ranged(.whole(to: .through(-1))),
-        .ranged(.whole(from: 0, to: .upTo(256))),
-        .ranged(.fraction(from: 0, to: .through(1))),
-        .ranged(.fraction(from: 0, to: .upTo(1))),
-        .ranged(.fraction(from: 300)),
-        .array(.int), .array(.any), .array(.byteElement), .array(.double),
+        .array(.int), .array(.any), .array(.double),
         // Elements with nothing in common, because an empty list is of every
         // element type there is and the pair is not impossible for it.
         .array(.string),
@@ -70,21 +58,20 @@ struct CastAgreementTests {
         .record(["age": .int]),
         .record([:]),
         .nullable(.int), .nullable(.string), .nullable(.array(.int)),
-        .named("Person"), .named("Byte"), .named("Ratio"), .named("Maybe"), .named("Whole"),
+        .named("Person"), .named("Maybe"), .named("Whole"),
         .named("Tree"),
         .named("Nothing declares this"),
         .parameter(name: "T"),
-        .parameter(name: "N", constraints: ["Comparable"]),
+        .parameter(name: "N", bounds: ["Comparable"]),
+        .composition(["Comparable"]),
         .projection(of: "T", path: [.key("inner")]),
         .procedure(nil)
     ]
 
-    // Where a name decides the answer, and the two sides differ: a value read
-    // under a declared record wears its name, and one read as a membership
-    // may have been written into it nameless, at any depth.
+    // Where a name decides the answer: a value read under a declared record
+    // wears its name, at any depth.
     private let namedTypeExpressions: [TypeExpression] = [
         .named("Human"), .named("Chain"), .named("Link"),
-        .composition(["People"]), .composition(["Chains"]), .composition(["Holders"]),
         .nullable(.named("Human")),
         .record(["of": .named("Human")]),
         .record(["next": .named("Link")]),
@@ -135,19 +122,27 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("the question reads the same from either side")
+    @Test("the question reads the same from either side, but for a declared record beside a nameless one")
     func theQuestionIsSymmetric() {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
         // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide. The
-        // one side it tells apart is a membership with a declared record
-        // member, which these types hold none of: read, a value written into
-        // it nameless stays nameless, and cast onto, a value keeps its name.
+        // side has one, which is exactly where an asymmetry would hide. A
+        // declared record beside a nameless record or a map is the one pair
+        // it tells apart, pinned below.
+        let table = types.loweredTypes
+
+        func nominalBesideNameless(_ one: TypeExpression, _ other: TypeExpression) -> Bool {
+            let one = one.lowered(in: table)
+            let other = other.lowered(in: table)
+
+            return (table.record(of: one) != nil && other.isNamelessStructure(in: table))
+                || (table.record(of: other) != nil && one.isNamelessStructure(in: table))
+        }
 
         // When / Then
         for mine in typeExpressions {
-            for theirs in typeExpressions {
+            for theirs in typeExpressions where !nominalBesideNameless(mine, theirs) {
                 #expect(
                     couldBothHold(mine, theirs)
                         == couldBothHold(theirs, mine),
@@ -157,31 +152,16 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("two ranges with nothing between them are called impossible")
-    func rangesThatCannotMeetAreRefused() {
-        // Given. The other direction of the contract, which the sweep above
-        // cannot reach: it only checks pairs some value satisfies, and a pair
-        // no value satisfies is exactly what this walk is for. The bounds are
-        // the whole of what tells these apart, so a walk that drops them
-        // answers about `int` beside `int` and lets the cast through.
-        let pairs: [(TypeExpression, TypeExpression)] = [
-            (.ranged(.whole(from: 0, to: .through(5))), .ranged(.whole(from: 10, to: .through(15)))),
-            (.ranged(.whole(from: 0, to: .upTo(10))), .ranged(.whole(from: 10))),
-            (.ranged(.fraction(from: 0, to: .upTo(1))), .ranged(.fraction(from: 2))),
-            // Through the names, because a declared range is the same range.
-            (.named("Byte"), .ranged(.whole(from: 300)))
-        ]
+    @Test("a cast writes a declared record's name onto a nameless value and takes none off")
+    func aCastNamesAndNeverUnnames() {
+        // Given. A declared record, a nameless record of its fields and a map
+        let named = TypeExpression.named("Person")
+        let structures: [TypeExpression] = [.record(["name": .string]), .dictionary(.string)]
 
         // When / Then
-        for (mine, theirs) in pairs {
-            #expect(
-                !couldBothHold(mine, theirs),
-                "\(mine.rendered) and \(theirs.rendered) share no value"
-            )
-            #expect(
-                !couldBothHold(theirs, mine),
-                "\(theirs.rendered) and \(mine.rendered) share no value"
-            )
+        for structure in structures {
+            #expect(couldBothHold(named, structure), "reading \(structure.rendered) as Person")
+            #expect(!couldBothHold(structure, named), "reading Person as \(structure.rendered)")
         }
     }
 
@@ -196,8 +176,7 @@ struct CastAgreementTests {
         let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
             (.named("Human"), .named("Person")),
             (.named("Link"), .named("Chain")),
-            (fourDeep, .named("Chain")),
-            (fourDeep, .composition(["Chains"]))
+            (fourDeep, .named("Chain"))
         ]
 
         // When / Then

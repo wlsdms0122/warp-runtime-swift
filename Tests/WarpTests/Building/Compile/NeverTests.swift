@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// A statement typed `never` does not finish, so it binds nothing and nothing
+// A statement typed `Never` does not finish, so it binds nothing and nothing
 // after it runs. The syntactic leaves are refused where they are read; a call
 // is the build's to refuse, because only the build knows what the procedure declares.
 @Suite("What never finishes binds nothing")
@@ -22,7 +22,7 @@ struct NeverTests {
     // MARK: - Test
     @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
-        // Given. `std.control.abort` declares never, so the statement after it
+        // Given. `Standard.Control.abort` declares never, so the statement after it
         // would never run, and a name written there would never bind
         let sut = try Module(
             procedures: [
@@ -74,8 +74,9 @@ struct NeverTests {
         // Given. The run may take any exit: a condition that declines at the
         // start answers before a single round wrote anything. So the result
         // reads in the settled join of the exits (`x` holds int or string, not
-        // the one a finished round would prove) and a slot the 0-round value
-        // fits is not refused on the round's account
+        // the one a finished round would prove), so a cast to the int the
+        // 0-round value is stands, where a reading of the round's string would
+        // make it a cast no value could satisfy
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -95,7 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.cast(.reference([.key("kept")]), as: .int, optional: false)]
                         )))
                     ],
                     result: reference("kept")
@@ -181,7 +182,7 @@ struct NeverTests {
         await #expect {
             try await Builder().build([refusing] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds string")
+            "\(error)".contains("holds String")
         }
     }
 
@@ -221,7 +222,7 @@ struct NeverTests {
                     expression: .leave(
                         Leave(
                             reach: .procedure,
-                            value: .call(Call(selector: "std.collection.count", arguments: [reference("items")]))
+                            value: .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
                         )
                     )
                 )
@@ -262,7 +263,7 @@ struct NeverTests {
     func aNeverBodiedLoopStillReadsAsItsResult() async throws {
         // Given. The result reads in what the entry left, and the reading says
         // so: `kept` holds the result's string, and a slot that declared int
-        // refuses it by that reading rather than by `never`
+        // refuses it by that reading rather than by `Never`
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
@@ -294,7 +295,7 @@ struct NeverTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds string")
+            "\(error)".contains("holds String")
         }
     }
 

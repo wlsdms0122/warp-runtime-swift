@@ -11,7 +11,7 @@ import Warp
 import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.logic answers")
+@Suite("What Standard.Logic answers")
 struct LogicTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -29,7 +29,7 @@ struct LogicTests {
                                 equals(.literal(.int(1)), .literal(.int(2))),
                                 equals(
                                     .call(Call(
-                                        selector: "std.math.dividedBy",
+                                        selector: "Standard.Numeric.dividedBy",
                                         arguments: [.literal(.int(1)), .literal(.int(0))]
                                     )),
                                     .literal(.int(0))
@@ -54,7 +54,7 @@ struct LogicTests {
         // equality reads the text the way a person does, not the bytes.
         let sut = Warp.Expression.call(
             Call(
-                selector: "std.logic.equal",
+                selector: "Standard.Logic.equal",
                 arguments: [.literal(.string("caf\u{E9}")), .literal(.string("cafe\u{301}"))]
             )
         )

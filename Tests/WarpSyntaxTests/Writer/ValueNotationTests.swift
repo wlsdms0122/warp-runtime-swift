@@ -42,7 +42,7 @@ struct ValueNotationTests {
     @Test("bytes are written as the array they are, and come back as that array")
     func bytesAreWrittenAsTheArrayTheyAre() throws {
         // Given / When. A Codable carrier has no compact spelling for bytes, and
-        // `bytes = array<byte>` says what to write instead. It reads back as
+        // `bytes = Array<byte>` says what to write instead. It reads back as
         // the array rather than as bytes, which is what this carrier does to
         // `1.0` too. A spelling it cannot hold is a spelling it loses.
         let written = try JSONEncoder().encode(ValueWriter(.bytes([104, 105])))
@@ -55,7 +55,7 @@ struct ValueNotationTests {
         )
 
         // And. Refusing instead would close the only way out for a value that
-        // never spelled itself bytes: an `array<int>` slot hands on what it was
+        // never spelled itself bytes: an `Array<Int>` slot hands on what it was
         // given, and what it was given may have been written `x"6869"`.
         #expect(
             try TypeExpression.array(.int).settling(.bytes([104, 105]), at: "value")
@@ -89,7 +89,7 @@ struct ValueNotationTests {
         }
     }
 
-    @Test("a foreign numeral past the int reads as the double the carrier holds")
+    @Test("a foreign numeral past the Int reads as the Double the carrier holds")
     func aForeignNumeralPastTheIntReadsAsDouble() throws {
         // When / Then. A JSON number is a binary64 by the carrier's own nature:
         // its digits cannot be told from a fraction, and whatever exactness the

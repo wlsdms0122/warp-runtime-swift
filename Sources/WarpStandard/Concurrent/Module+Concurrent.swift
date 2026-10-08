@@ -17,39 +17,52 @@ public extension Module {
     private static let nativeConcurrent = Module(
         unchecked: Draft(
             description: "Running closures at once.",
-            constraints: [
-                // What a fan-out is handed: closures under keys, or closures in
-                // order. Two types and no third, which is what a membership says
-                // and what `any` could not.
-                "std.concurrent.Pieces": [
-                    .array(.procedure(nil, .unstated, .isolated)),
-                    .dictionary(.procedure(nil, .unstated, .isolated))
-                ]
-            ],
             procedures: [
-                // `std.collection.first` and `std.concurrent.first` are two names
+                // `Standard.Collection.first` and `Standard.Concurrent.first` are two names
                 // in one link, so concurrency shows at the call site.
                 //
-                // What comes back is `any` because it is shaped like what went in,
-                // and a membership names a set of types rather than tying one of
-                // them to another. `map`, whose types are single, says it all.
-                "std.concurrent.all": Procedure(
-                    description: "Runs every closure, and answers every answer."
-                        + " A record's under its keys, an array's in its order."
-                        + " A failure fails the whole procedure, with every piece's"
-                        + " failure reported.",
-                    signature: Signature(of: AllEffect.self, returns: .any),
-                    implementation: .effect(AllEffect())
+                // The pieces come in order or under keys, and each way has a
+                // name of its own, so what comes back is said in the type:
+                // the answers in order, or under the pieces' keys.
+                "Standard.Concurrent.all": Procedure(
+                    description: "Runs every closure, and answers every answer in the closures' order."
+                        + " A failure fails the whole procedure, with every piece's failure reported.",
+                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: .array(answer)),
+                    implementation: .effect(AllEffect(answering: "Standard.Concurrent.all"))
                 ),
-                "std.concurrent.first": Procedure(
+                "Standard.Concurrent.allKeyed": Procedure(
+                    description: "Runs every closure, and answers every answer under the closure's key."
+                        + " A failure fails the whole procedure, with every piece's failure reported.",
+                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: .dictionary(answer)),
+                    implementation: .effect(AllEffect(answering: "Standard.Concurrent.allKeyed"))
+                ),
+                "Standard.Concurrent.first": Procedure(
                     description: "Runs every closure, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(of: FirstEffect.self, returns: .any),
-                    implementation: .effect(FirstEffect())
+                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: answer),
+                    implementation: .effect(FirstEffect(answering: "Standard.Concurrent.first"))
+                ),
+                "Standard.Concurrent.firstKeyed": Procedure(
+                    description: "Runs every closure under a key, answers the first success and"
+                        + " asks the rest to stop. Which one wins is the one fact"
+                        + " here timing decides.",
+                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: answer),
+                    implementation: .effect(FirstEffect(answering: "Standard.Concurrent.firstKeyed"))
                 )
             ]
         ),
         builtin: true
     )
+
+    // What every piece answers, one type the call fills from the pieces, so
+    // what comes back is said in the type.
+    private static let answer = TypeExpression.parameter(name: "Answer")
+
+    // The pieces a fan-out runs, held in a list or under keys: closures that
+    // touch nothing another piece could touch at once, each answering the
+    // one type the call fills.
+    private static func pieces(in holding: (TypeExpression) -> TypeExpression) -> Parameter {
+        Parameter(name: "pieces", type: holding(.procedure(ProcedureType(returns: answer), .unstated, .isolated)))
+    }
 }

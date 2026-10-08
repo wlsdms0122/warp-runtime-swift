@@ -15,6 +15,6 @@ extension Notation {
     // knows anything about them.
     static let testing = Notation(
         spelling: TestConditionSpelling(),
-        interpolation: Interpolation(read: "std.text.text", joined: "std.text.joined")
+        interpolation: Interpolation(read: "Standard.Text.text", joined: "Standard.Text.joined")
     )
 }

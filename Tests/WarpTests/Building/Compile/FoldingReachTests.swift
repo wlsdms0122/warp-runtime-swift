@@ -35,18 +35,18 @@ struct FoldingReachTests {
     func aConstantSettlesFromTheStandardVocabulary() async throws {
         // Given. A constant written from a procedure the specification names.
         let document = try Module(
-            imports: ["std.math.plus"],
+            imports: ["Standard.Numeric.plus"],
             constants: [
-                "sum": .call(Call(selector: "std.math.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
+                "sum": .call(Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(2)), .literal(.int(3))]))
             ],
-            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("sum"))]
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("sum"))]
         )
 
         // When. It is built with the vocabulary it names.
         let image = try await builder.build(Module.standard + [document])
 
         // Then. The answer is in the image before anything runs.
-        #expect(try await Executor().run(image, entry: "app.entry") == .int(5))
+        #expect(try await Executor().run(image, entry: "App.entry") == .int(5))
     }
 
     @Test("a constant refuses to settle from a procedure the host brought")
@@ -55,16 +55,16 @@ struct FoldingReachTests {
         // running, and a constant written from it.
         let brought = try Module(
             procedures: [
-                "app.seat": Procedure(
+                "App.seat": Procedure(
                     signature: Signature(of: SeatQuery.self, returns: .int),
                     implementation: .query(SeatQuery())
                 )
             ]
         )
         let document = try Module(
-            imports: ["app.seat"],
-            constants: ["seat": .call(Call(selector: "app.seat"))],
-            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
+            imports: ["App.seat"],
+            constants: ["seat": .call(Call(selector: "App.seat"))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
         // When / Then. What the procedure answers is its code's, and the
@@ -72,7 +72,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
+            error is BuildError && "\(error)".contains("'App.seat' is a procedure the host brought")
         }
     }
 
@@ -83,26 +83,26 @@ struct FoldingReachTests {
         // the body is lowered and a fold could run it.
         let brought = try Module(
             procedures: [
-                "app.seat": Procedure(
+                "App.seat": Procedure(
                     signature: Signature(of: SeatQuery.self, returns: .int),
                     implementation: .query(SeatQuery())
                 )
             ]
         )
         let between = try Module(
-            imports: ["app.seat"],
+            imports: ["App.seat"],
             procedures: [
-                "app.row": Procedure(
+                "App.row": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "app.seat"))
+                    result: .call(Call(selector: "App.seat"))
                 )
             ]
         )
         let document = try Module(
-            imports: ["app.row"],
-            constants: ["row": .call(Call(selector: "app.row"))],
-            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))]
+            imports: ["App.row"],
+            constants: ["row": .call(Call(selector: "App.row"))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))]
         )
 
         // When / Then. The refusal is about what the fold reaches, not about
@@ -110,7 +110,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [brought, between, document])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
+            error is BuildError && "\(error)".contains("'App.seat' is a procedure the host brought")
         }
     }
 
@@ -121,7 +121,7 @@ struct FoldingReachTests {
         // the fold runs the body, and the closure takes a hold on its box.
         let maker = try Module(
             procedures: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
                     result: .closure(Procedure(body: [], result: reference("tally")))
@@ -129,10 +129,10 @@ struct FoldingReachTests {
             ]
         )
         let document = try Module(
-            imports: ["app.make"],
-            constants: ["held": .call(Call(selector: "app.make"))],
+            imports: ["App.make"],
+            constants: ["held": .call(Call(selector: "App.make"))],
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
@@ -154,7 +154,7 @@ struct FoldingReachTests {
         // Given. The same procedure, settling a variable's start instead.
         let maker = try Module(
             procedures: [
-                "app.make": Procedure(
+                "App.make": Procedure(
                     signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
                     result: .closure(Procedure(body: [], result: reference("tally")))
@@ -162,10 +162,10 @@ struct FoldingReachTests {
             ]
         )
         let document = try Module(
-            imports: ["app.make"],
-            variables: ["held": .call(Call(selector: "app.make"))],
+            imports: ["App.make"],
+            variables: ["held": .call(Call(selector: "App.make"))],
             procedures: [
-                "app.entry": Procedure(
+                "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
@@ -186,10 +186,10 @@ struct FoldingReachTests {
     func aConstantRefusesABodyBesideIt() async throws {
         // Given. A body declared beside the constant that calls it.
         let document = try Module(
-            constants: ["row": .call(Call(selector: "app.row"))],
+            constants: ["row": .call(Call(selector: "App.row"))],
             procedures: [
-                "app.row": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7))),
-                "app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))
+                "App.row": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7))),
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))
             ]
         )
 
@@ -209,7 +209,7 @@ struct FoldingReachTests {
         // that means to link many documents compiles a vocabulary once.
         let brought = try Module(
             procedures: [
-                "app.seat": Procedure(
+                "App.seat": Procedure(
                     signature: Signature(of: SeatQuery.self, returns: .int),
                     implementation: .query(SeatQuery())
                 )
@@ -218,9 +218,9 @@ struct FoldingReachTests {
         let supplying = try Supplying(Module.standard + [brought])
         let baked = try await builder.compile(Module.standard + [brought])
         let document = try Module(
-            imports: ["app.seat"],
-            constants: ["seat": .call(Call(selector: "app.seat"))],
-            procedures: ["app.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
+            imports: ["App.seat"],
+            constants: ["seat": .call(Call(selector: "App.seat"))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("seat"))]
         )
 
         // When / Then. The row came back from an object rather than from the
@@ -228,7 +228,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.compile([document], against: baked, supplying: supplying)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'app.seat' is a procedure the host brought")
+            error is BuildError && "\(error)".contains("'App.seat' is a procedure the host brought")
         }
     }
 
@@ -246,7 +246,7 @@ struct FoldingReachTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "std.collection.count", arguments: [reference("of")]))
+                    result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("of")]))
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -260,6 +260,64 @@ struct FoldingReachTests {
         // When / Then. Folded at the build to the value the resolved body
         // answers
         #expect(try await run(sut) == .int(2))
+    }
+
+    @Test("a constant settles through a contract alike however the host split the documents between compiles")
+    func aConstantThroughAContractIgnoresHowTheDocumentsWereSplit() async throws {
+        // Given. The contract's document names a type of a third, and the
+        // claim and its declaration stand in a document the program never
+        // names, so the program stands on the contract and the third alone
+        let thing = try Module(types: ["Z.Thing": .int], procedures: [:])
+        let contract = try Module(
+            imports: ["Z.Thing"],
+            contracts: [
+                "App.Joinable": [
+                    "join": ContractProcedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "other", type: .selfType)],
+                            returns: .selfType
+                        ),
+                        constness: .const,
+                        isolation: .isolated
+                    )
+                ]
+            ],
+            procedures: [
+                "App.keep": Procedure(signature: Signature(parameters: [Parameter(name: "it", type: .named("Z.Thing"))]), body: [], result: .literal(.null))
+            ]
+        )
+        let answering = try Module(
+            imports: ["App.Joinable"],
+            claims: ["Int": ["App.Joinable"]],
+            procedures: [
+                "Int.join": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int), Parameter(name: "other", type: .int)], returns: .int),
+                    body: [],
+                    result: reference("of")
+                )
+            ]
+        )
+        let program = try Module(
+            imports: ["App.Joinable.join"],
+            constants: ["joined": .call(Call(selector: "App.Joinable.join", arguments: [.literal(.int(1)), .literal(.int(2))]))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("joined"))]
+        )
+
+        // When / Then. Handed over at once, and compiled apart first, the
+        // constant refuses the same way
+        await #expect {
+            try await builder.build(Module.standard + [contract, answering, thing, program])
+        } throws: { error in
+            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+        }
+
+        await #expect {
+            let laid = try await builder.compile([contract, answering, thing], against: [], supplying: Supplying(Module.standard))
+
+            _ = try await builder.compile([program], against: laid, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+        }
     }
 
     // MARK: - Public

@@ -26,12 +26,12 @@ struct LinkBoundaryTests {
         // numbered in the order they sort, so one more name ahead of `Thing`
         // moves what its number stands for
         let mine = try await Builder().build(
-            try link(declaring: ["app.Thing": .record(["a": .int])])
+            try link(declaring: ["App.Thing": .record(["a": .int])])
         )
         let theirs = try await Builder().build(
             try link(declaring: [
-                "app.Alpha": .record(["z": .string]),
-                "app.Thing": .record(["a": .int])
+                "App.Alpha": .record(["z": .string]),
+                "App.Thing": .record(["a": .int])
             ])
         )
 
@@ -49,8 +49,8 @@ struct LinkBoundaryTests {
         }
 
         // Then. One number, two declarations
-        #expect(mine.types.loweredTypes.labels[row] == "app.Thing")
-        #expect(theirs.types.loweredTypes.labels[row] == "app.Alpha")
+        #expect(mine.types.loweredTypes.labels[row] == "App.Thing")
+        #expect(theirs.types.loweredTypes.labels[row] == "App.Alpha")
 
         // And the run refuses it rather than reading the other declaration
         #expect(try closure.answered().readable(in: mine.types.loweredTypes))
@@ -65,12 +65,12 @@ struct LinkBoundaryTests {
             try Module(Draft(
                 types: types,
                 procedures: [
-                    "app.hand": Procedure(
+                    "App.hand": Procedure(
                         signature: Signature(returns: .any),
                         body: [],
                         result: .closure(Procedure(
                             signature: Signature(
-                                parameters: [Parameter(name: "it", type: .named("app.Thing"))],
+                                parameters: [Parameter(name: "it", type: .named("App.Thing"))],
                                 returns: .any
                             ),
                             body: [],
@@ -81,7 +81,7 @@ struct LinkBoundaryTests {
                         access: .public,
                         signature: Signature(returns: .any),
                         body: [],
-                        result: .call(Call(selector: "app.hand"))
+                        result: .call(Call(selector: "App.hand"))
                     )
                 ]
             ))

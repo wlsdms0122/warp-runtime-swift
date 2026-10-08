@@ -13,9 +13,13 @@ struct TimesQuery: Query {
     typealias Parameters = NumericPair
 
     // MARK: - Property
-    private let arithmetic = Arithmetic(.times)
+    private let arithmetic: Arithmetic
 
     // MARK: - Initializer
+    init(answering procedure: String) {
+        self.arithmetic = Arithmetic(.times, answering: procedure)
+    }
+
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         try arithmetic.answer(question[.lhs], question[.rhs])

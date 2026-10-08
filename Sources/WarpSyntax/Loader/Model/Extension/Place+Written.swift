@@ -47,7 +47,6 @@ public extension Place {
         case .constants: [.key(ModuleReader.CodingKeys.const.stringValue)]
         case .variables: [.key(ModuleReader.CodingKeys.variables.stringValue)]
         case .types: [.key(ModuleReader.CodingKeys.types.stringValue)]
-        case .constraints: [.key(ModuleReader.CodingKeys.constraints.stringValue)]
         case .contracts: [.key(ModuleReader.CodingKeys.contracts.stringValue)]
         case .satisfies: [.key(ModuleReader.CodingKeys.satisfies.stringValue)]
         case .imports: [.key(ModuleReader.CodingKeys.imports.stringValue)]

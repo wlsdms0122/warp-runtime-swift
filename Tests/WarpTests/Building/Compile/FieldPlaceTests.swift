@@ -123,11 +123,11 @@ struct FieldPlaceTests {
         #expect(try steps(of: image) == [.field(1, "y", optional: false)])
     }
 
-    @Test("a value carrying more than the slot declares is read at the slot's places")
-    func aWiderValueSettlesToTheDeclaredLayout() async throws {
-        // Given. The argument holds a field the slot does not declare. Settling
-        // builds it on the slot's layout, so the place the build lowered is the
-        // place the field stands in.
+    @Test("a value from outside carrying more than the slot declares is read at the slot's places")
+    func aValueFromOutsideIsFittedToTheDeclaredLayout() async throws {
+        // Given. The argument holds fields the slot does not declare. The
+        // door fits it to the slot's layout, so the place the build lowered
+        // is the place the field stands in.
         let sut = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
@@ -150,10 +150,8 @@ struct FieldPlaceTests {
 
     @Test("a box that said what it holds is read by its place")
     func aDeclaredBoxIsReadByItsPlace() async throws {
-        // Given. The written record carries a field that stands before the
-        // declared ones, so a place read off the value's own layout would
-        // land on the wrong field. A write settles to what the box said it
-        // holds, so the value is laid out the way the declaration says.
+        // Given. A value read as `Any` cast to what the box said it holds is
+        // laid out the way the declaration says, and a place reads it.
         let sut = Procedure(
             signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
@@ -163,7 +161,7 @@ struct FieldPlaceTests {
                 ),
                 Statement(
                     binding: .assignment([PathSegment.key("point")]),
-                    expression: .reference([.key("given")])
+                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
                 )
             ],
             result: .reference([.key("point"), .key("y")])
@@ -174,7 +172,7 @@ struct FieldPlaceTests {
         let answer = try await run(
             sut,
             arguments: [
-                "given": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2)]))
+                "given": .record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
             ]
         )
 
@@ -211,10 +209,10 @@ struct FieldPlaceTests {
         #expect(answer == .int(2))
     }
 
-    @Test("a box takes the layout it declared, so a write drops what it does not name")
-    func aWriteSettlesToTheDeclaredLayout() async throws {
-        // Given. The declaration is the whole of what the box holds, the way
-        // it is for a parameter and for a name bound once
+    @Test("a box holds exactly the fields it declared, so a write of more refuses")
+    func aWriteOfMoreThanTheBoxDeclaresRefuses() async throws {
+        // Given. The declaration is the whole of what the box holds, so a
+        // value of more fields cast to it fails, and nothing is cut to fit
         let sut = Procedure(
             signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
@@ -224,22 +222,23 @@ struct FieldPlaceTests {
                 ),
                 Statement(
                     binding: .assignment([PathSegment.key("point")]),
-                    expression: .reference([.key("given")])
+                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
                 )
             ],
             result: .reference([.key("point")])
         )
 
-        // When
-        let answer = try await run(
-            sut,
-            arguments: [
-                "given": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2)]))
-            ]
-        )
-
-        // Then
-        #expect(answer == .record(Record(name: nil, ["x": .int(1), "y": .int(2)])))
+        // When / Then
+        await #expect {
+            try await run(
+                sut,
+                arguments: [
+                    "given": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2)]))
+                ]
+            )
+        } throws: { error in
+            "\(error)".contains("is not a field of { x: Int, y: Int }")
+        }
     }
 
     @Test("a place and a name answer the same field")

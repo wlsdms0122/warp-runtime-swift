@@ -57,10 +57,10 @@ struct UnwritableTests {
 
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
-        // When / Then. Nothing stops a module declaring a type called `int`; a
+        // When / Then. Nothing stops a module declaring a type called `Int`; a
         // document just reads the name it knows as the type it knows
         #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.named("int"))
+            try sut.value(of: TypeExpression.named("Int"))
         }
 
         #expect(throws: Never.self) {
@@ -71,17 +71,17 @@ struct UnwritableTests {
     @Test(
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
-            TypeExpression.nullable(.composition(["app.A", "app.B"])),
+            TypeExpression.nullable(.composition(["App.A", "App.B"])),
             .nullable(.nullable(.int)),
             .nullable(.any),
             .nullable(.parameter(name: "T")),
             .nullable(.variable(.int)),
-            .composition(["Foo", "int"]),
-            .composition(["Foo", "array<int>"]),
+            .composition(["Foo", "Int"]),
+            .composition(["Foo", "Array<Int>"]),
             .parameter(name: "a.b"),
             .parameter(name: "a<b>"),
-            .named("array<int>"),
-            .array(.named("int"))
+            .named("Array<Int>"),
+            .array(.named("Int"))
         ]
     )
     func aSpellingThatDoesNotReadBackIsRefused(type: TypeExpression) {
@@ -97,14 +97,14 @@ struct UnwritableTests {
         // either or null
         let module = try Module(
             contracts: [
-                "app.A": ["a": Signature(parameters: [Parameter(name: "of", type: .named("app.A"))], returns: .int)],
-                "app.B": ["b": Signature(parameters: [Parameter(name: "of", type: .named("app.B"))], returns: .int)]
+                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
+                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "either", type: .nullable(.composition(["app.A", "app.B"])))]
+                        parameters: [Parameter(name: "either", type: .nullable(.composition(["App.A", "App.B"])))]
                     ),
                     body: [],
                     result: .literal(.null)
@@ -124,48 +124,23 @@ struct UnwritableTests {
     @Test("one name composing is written as the name, and names in any order are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then
-        #expect(try sut.value(of: TypeExpression.composition(["app.A"])) == .string("app.A"))
-        #expect(try sut.value(of: TypeExpression.array(.composition(["app.A"]))) == .string("array<app.A>"))
-        #expect(try sut.value(of: TypeExpression.composition(["app.B", "app.A"])) == .string("app.A & app.B"))
+        #expect(try sut.value(of: TypeExpression.composition(["App.A"])) == .string("App.A"))
+        #expect(try sut.value(of: TypeExpression.array(.composition(["App.A"]))) == .string("Array<App.A>"))
+        #expect(try sut.value(of: TypeExpression.composition(["App.B", "App.A"])) == .string("App.A & App.B"))
     }
 
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
     func aNullableSpellsOrRefuses() throws {
         // When / Then. The trailing `?` needs a name in front of it, and a
         // record spells as a mapping rather than a name
-        #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("int?"))
+        #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("Int?"))
         #expect(
             try sut.value(of: TypeExpression.nullable(.array(.string)))
-                == .string("array<string>?")
+                == .string("Array<String>?")
         )
 
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.nullable(.record(["id": .string])))
-        }
-    }
-
-    @Test("a range bounded by a fraction with no spelling has no document")
-    func aRangeWithAnUnspellableBoundIsRefused() throws {
-        // When / Then. The bounds are the whole of what a range is written as,
-        // so a bound with no spelling leaves nothing to write. The language
-        // admits an infinity on purpose (it orders like any other bound) and
-        // what a message shows it in reads back as an error rather than as the
-        // range.
-        #expect(
-            try sut.value(of: TypeExpression.ranged(.whole(from: 0, to: .through(255))))
-                == .string("int(0...255)")
-        )
-        #expect(
-            try sut.value(of: TypeExpression.ranged(.fraction(from: 0)))
-                == .string("double(0.0...)")
-        )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.ranged(.fraction(from: 0, to: .through(.infinity))))
-        }
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.ranged(.fraction(to: .through(.nan))))
         }
     }
 

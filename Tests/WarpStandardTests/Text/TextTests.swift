@@ -11,7 +11,7 @@ import Testing
 @testable import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.text answers")
+@Suite("What Standard.Text answers")
 struct TextTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -26,7 +26,7 @@ struct TextTests {
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.text",
+                        selector: "Standard.Text.text",
                         arguments: [
                             .literal(.array([
                                 .int(1),
@@ -56,17 +56,17 @@ struct TextTests {
                     signature: Signature(parameters: [Parameter(name: "line", type: .string)]),
                     body: [
                         Statement(binding: .constant("parts"), expression: .call(Call(
-                            selector: "std.text.split",
+                            selector: "Standard.Text.split",
                             arguments: [reference("line"), .literal(.string(","))]
                         ))
                         ),
                         Statement(binding: .constant("rejoined"), expression: .call(Call(
-                            selector: "std.text.joined",
+                            selector: "Standard.Text.joined",
                             arguments: [reference("parts"), .literal(.string(" / "))]
                         ))
                         ),
                         Statement(binding: .constant("fixed"), expression: .call(Call(
-                            selector: "std.text.replacing",
+                            selector: "Standard.Text.replacing",
                             arguments: [reference("rejoined"), .literal(.string("b")), .literal(.string("B"))]
                         ))
                         )
@@ -130,29 +130,29 @@ struct TextTests {
         }
 
         // When / Then
-        #expect(try await run(procedure("std.text.decoded", on: .bytes([104, 105]))) == .string("hi"))
-        #expect(try await run(procedure("std.text.encoded", on: .string("hi"))) == .bytes([104, 105]))
+        #expect(try await run(procedure("Standard.Text.decoded", on: .bytes([104, 105]))) == .string("hi"))
+        #expect(try await run(procedure("Standard.Text.encoded", on: .string("hi"))) == .bytes([104, 105]))
 
         // Bytes carry no promise of being text, and a completed guess is a
         // text nobody sent.
         await #expect {
-            try await run(procedure("std.text.decoded", on: .bytes([0xff])))
+            try await run(procedure("Standard.Text.decoded", on: .bytes([0xff])))
         } throws: { error in
-            "\(error)".contains("std.text.decoded asks bytes that are text")
+            "\(error)".contains("Standard.Text.decoded asks bytes that are text")
         }
     }
 
-    @Test("an encoding the procedures do not name refuses at the build")
-    func anUnknownEncodingRefuses() async throws {
-        // Given. The enum names the encodings, and a constant is judged at the
-        // build
+    @Test("an encoding the procedures do not have, written as a constant, refuses at the build")
+    func anUnknownEncodingRefusesAtTheBuild() async throws {
+        // Given. The procedure judges its own constant arguments, and names
+        // the encodings it has where it refuses another
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
                     result: .call(Call(
-                        selector: "std.text.decoded",
+                        selector: "Standard.Text.decoded",
                         arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
                     ))
                 )
@@ -163,7 +163,60 @@ struct TextTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'utf16' not in enum")
+            error is BuildError && "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+        }
+    }
+
+    @Test("an encoding the procedures do not have, arriving at the run, is refused in the same words")
+    func anUnknownEncodingRefusesAtTheRun() async throws {
+        // Given. The name is what a variable holds, so only the run meets it
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
+                    result: .call(Call(
+                        selector: "Standard.Text.encoded",
+                        arguments: [.literal(.string("hi")), .reference([.key("named")])]
+                    ))
+                )
+            ]
+        )
+
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then. The build had nothing to judge, and the run refuses in the
+        // words the build would have used
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            !(error is BuildError)
+                && "\(error)".contains("Standard.Text.encoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+        }
+    }
+
+    @Test("a list holding what is no byte, written as a constant, refuses at the build by the element")
+    func aListHoldingNoByteRefusesAtTheBuild() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [],
+                    result: .call(Call(
+                        selector: "Standard.Text.decoded",
+                        arguments: [.array([.literal(.int(104)), .literal(.int(300))]), .literal(.string("utf8"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("Standard.Text.decoded asks bytes, and [1] is 300, which is no whole number from 0 to 255")
         }
     }
 

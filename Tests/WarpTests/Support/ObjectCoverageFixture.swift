@@ -16,8 +16,7 @@ enum ObjectCoverageFixture {
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
-            constraints: ["a.four": [.int, .string]],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .named("a.five")), parameter], returns: .bool), constness: .const, isolation: .isolated)]],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: .these(["a.nineteen", "a.twenty"]))]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
@@ -38,7 +37,7 @@ enum ObjectCoverageFixture {
                 declared: ["a.eleven", "a.ten"],
                 closures: [.procedure("a.eleven"): 2]
             ),
-            typeNumbering: LoweredTypeNumbering(types: ["a.one", "a.two"], memberships: ["a.four"]),
+            typeNumbering: LoweredTypeNumbering(types: ["a.one", "a.two"]),
             // One of every kind of value, and a closure standing by what it is
             // spelled by, holding one of everything.
             judging: [
@@ -51,9 +50,9 @@ enum ObjectCoverageFixture {
         )
     }()
 
-    // A closure a fold settled into a slot that wrote its answer, standing by
-    // its writing alone, whose one captured cell holds every kind of value
-    // there is, a closure that answers nothing more among them.
+    // A closure a fold made, standing by its writing alone, whose one
+    // captured cell holds every kind of value there is, a closure among
+    // them.
     static let everyValueClosure = Closure(
         writer: Closure.Writer(document: .written(Identity([1, 2, 3])), declaration: .procedure("a.eleven")),
         nth: 1,
@@ -76,14 +75,12 @@ enum ObjectCoverageFixture {
                     ])
                 )
             )
-        ],
-        slotAnswers: [.double, .any]
+        ]
     )
 
     static let parameter = Parameter(
         name: "p",
         type: .double,
-        candidates: ["one", "two"],
         description: "what it takes"
     )
 
@@ -92,23 +89,18 @@ enum ObjectCoverageFixture {
         "any": .any,
         "never": .never,
         "null": .null,
-        "bool": .bool,
-        "int": .int,
-        "double": .double,
-        "string": .string,
-        "whole": .ranged(.whole(from: -2, to: .through(9))),
-        "fraction": .ranged(.fraction(from: 0.5, to: .upTo(1.5))),
+        "Bool": .bool,
+        "Int": .int,
+        "Double": .double,
+        "String": .string,
         "array": .array(.int),
         "dictionary": .dictionary(.string),
         "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
-        "linear": .linear(.int),
-        "consuming": .consuming(.double),
-        "borrowing": .borrowing(.string),
         "nullable": .nullable(.int),
         "named": .named("a.one"),
-        "parameter": .parameter(name: "T", constraints: ["a.four"]),
+        "parameter": .parameter(name: "T", bounds: ["a.four"]),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",
@@ -132,11 +124,10 @@ enum ObjectCoverageFixture {
         ("any", .any),
         ("never", .never),
         ("null", .null),
-        ("bool", .bool),
-        ("int", .int),
-        ("double", .double),
-        ("string", .string),
-        ("ranged", .ranged(.whole(from: 1, to: .upTo(4)))),
+        ("Bool", .bool),
+        ("Int", .int),
+        ("Double", .double),
+        ("String", .string),
         ("array", .array(.string)),
         ("dictionary", .dictionary(.bool)),
         ("procedure", .procedure(
@@ -149,11 +140,10 @@ enum ObjectCoverageFixture {
         ("inoutish", .inout(.bool)),
         ("nullable", .nullable(.string)),
         ("named", .named(2)),
-        ("parameterMembership", .parameter(label: "T", bounds: [.membership(5)])),
-        ("parameterContract", .parameter(label: "U", bounds: [.contract("a.five")])),
+        ("parameterContract", .parameter(label: "U", bounds: ["a.five"])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("composition", .composition([.membership(7), .contract("a.five")])),
+        ("composition", .composition(["a.five", "a.four"])),
         ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
         ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
         ("undeclaredCycle", .undeclared(label: "Y", because: .namesItself))
@@ -180,7 +170,7 @@ enum ObjectCoverageFixture {
     }()
 
     static let everyPart: [Place.Part] = [
-        .procedures, .constants, .variables, .types, .constraints, .contracts, .satisfies,
+        .procedures, .constants, .variables, .types, .contracts, .satisfies,
         .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
@@ -215,6 +205,20 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
+            Instruction(
+                binding: nil,
+                code: .checked(
+                    .apply(
+                        .local(Address(slot: 6, steps: [])),
+                        arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
+                    ),
+                    CallJudgement(
+                        against: .int,
+                        handedBack: [HandedBack(position: 1, against: .string)]
+                    )!
+                ),
+                label: "checked"
+            ),
             Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,

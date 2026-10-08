@@ -16,7 +16,8 @@ import WarpTestSupport
 struct ConditionTests {
     // A condition read by a run against the standard vocabulary as a host
     // gets it, so the procedures written in Warp answer here the way the
-    // native ones do. The bindings are handed over as arguments.
+    // native ones do. The bindings are handed over as arguments, each
+    // declared as the type of the value it binds.
     private struct Scope {
         // MARK: - Property
         let bindings: [Name: Value]
@@ -34,7 +35,9 @@ struct ConditionTests {
                         entryName: Procedure(
                             access: .public,
                             signature: Signature(
-                                parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) }
+                                parameters: bindings.keys.sorted().map { name in
+                                    Parameter(name: name, type: declared(bindings[name] ?? .null))
+                                }
                             ),
                             body: [],
                             result: condition
@@ -44,13 +47,18 @@ struct ConditionTests {
             )
 
             guard case let .bool(answer) = try await Executor().run(image, arguments: bindings) else {
-                throw ReadingError("a condition must answer bool")
+                throw ReadingError("a condition must answer Bool")
             }
 
             return answer
         }
 
         // MARK: - Private
+        private func declared(_ value: Value) -> TypeExpression {
+            let table = TypeTable.empty.loweredTypes
+
+            return LoweredType(of: value, in: table).spelled(in: table) ?? .any
+        }
     }
 
     // MARK: - Property
@@ -71,7 +79,7 @@ struct ConditionTests {
             differs(.reference(path("kind")), .literal(.string("b")))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.array([.literal(.int(3)), .literal(.int(4))]), .reference(path("n"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.array([.literal(.int(3)), .literal(.int(4))]), .reference(path("n"))]))
         ))
         #expect(try await sut.evaluate(
             differs(.reference(path("n")), .literal(.null))
@@ -100,11 +108,11 @@ struct ConditionTests {
 
         // And one_of can draw its candidates from the scope
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("candidates")), .reference(path("left"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("candidates")), .reference(path("left"))]))
         ))
     }
 
-    @Test("numeric equality crosses int and double")
+    @Test("numeric equality crosses Int and Double")
     func numericEqualityCrossesIntAndDouble() async throws {
         // Given
         let sut = Scope(scope)
@@ -140,13 +148,13 @@ struct ConditionTests {
 
         // When / Then
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
+            .call(Call(selector: "Standard.Text.contains", arguments: [.reference(path("title")), .literal(.string("spec"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.collection.contains", arguments: [.reference(path("tags")), .literal(.string("b"))]))
+            .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("tags")), .literal(.string("b"))]))
         ))
         #expect(try await sut.evaluate(
-            .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
+            .call(Call(selector: "Standard.Text.startsWith", arguments: [.reference(path("title")), .literal(.string("hello"))]))
         ))
 
         // And. Absence is not an empty collection. `contains` walks what it was
@@ -154,15 +162,16 @@ struct ConditionTests {
         // of nothing is refused rather than answered false.
         await #expect(throws: (any Error).self) {
             try await sut.evaluate(
-                .call(Call(selector: "std.collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
+                .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
             )
         }
 
         // And. A text atom asking a number is type misuse, not a false answer.
-        // The number is refused where the argument it stands at is settled
-        await #expect(throws: ArgumentError.self) {
+        // The number is refused at the build, where the argument it stands at
+        // is judged
+        await #expect(throws: BuildError.self) {
             try await sut.evaluate(
-                .call(Call(selector: "std.text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
+                .call(Call(selector: "Standard.Text.startsWith", arguments: [.reference(path("n")), .literal(.string("3"))]))
             )
         }
     }
@@ -184,7 +193,7 @@ struct ConditionTests {
     func doubleOperatorKeysRejected() {
         // Given
         let fixture: Value = [
-            "parameters": [["name": "k", "type": "string"]],
+            "parameters": [["name": "k", "type": "String"]],
             "body": [
                 [
                     "value": ["conditional": [

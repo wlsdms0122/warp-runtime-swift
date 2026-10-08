@@ -11,7 +11,7 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// A type or constraint name is the spelling it was declared under, dot and
+// A type or contract name is the spelling it was declared under, dot and
 // all, and a mention is that spelling written out. These are the places that
 // rule decides something, and the places it refuses, because a spelling no
 // module declares names nothing.
@@ -25,14 +25,14 @@ struct DeclaredSpellingTests {
     @Test("a type name is its declared spelling, in the declaring module too")
     func aTypeNameIsItsQualifiedSpelling() async throws {
         // Given. `store` declares `Task`, and both `store` and the entry module
-        // mention it as `store.Task`
+        // mention it as `Store.Task`
         let store = try Module(
-            types: ["store.Task": .record(["id": .string])],
+            types: ["Store.Task": .record(["id": .string])],
             procedures: [
-                "store.keep": Procedure(
+                "Store.keep": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "value", type: .named("store.Task"))],
-                        returns: .named("store.Task")
+                        parameters: [Parameter(name: "value", type: .named("Store.Task"))],
+                        returns: .named("Store.Task")
                     ),
                     body: [],
                     result: reference("value")
@@ -43,10 +43,10 @@ struct DeclaredSpellingTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("store.Task")),
+                    signature: Signature(returns: .named("Store.Task")),
                     body: [],
                     result: .call(Call(
-                        selector: "store.keep",
+                        selector: "Store.keep",
                         arguments: [.literal(.record(Record(name: nil, ["id": .string("a")])))]
                     ))
                 )
@@ -57,33 +57,33 @@ struct DeclaredSpellingTests {
         let image = try await builder.build([sut, store] + Module.standard)
 
         // Then. The declaration is under the declared spelling alone
-        #expect(image.types.types["store.Task"] == .record(["id": .string]))
+        #expect(image.types.types["Store.Task"] == .record(["id": .string]))
         #expect(image.types.types["Task"] == nil)
     }
 
     @Test("a module names its own type by its declared spelling")
     func ownTypeIsNamedByItsSpelling() async throws {
         // Given. Two modules declare a `Limit`, and `mine` mentions its own as
-        // `mine.Limit` from inside: an int, where the other module's is a
+        // `Mine.Limit` from inside: an int, where the other module's is a
         // string
         let mine = try Module(
-            types: ["mine.Limit": .int],
+            types: ["Mine.Limit": .int],
             procedures: [
                 try Name("mine.\(entryName)"): Procedure(
-                    signature: Signature(returns: .named("mine.Limit")),
+                    signature: Signature(returns: .named("Mine.Limit")),
                     body: [],
                     result: .literal(.int(3))
                 )
             ]
         )
         let theirs = try Module(
-            types: ["theirs.Limit": .string],
+            types: ["Theirs.Limit": .string],
             procedures: [
-                "theirs.unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Theirs.unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
 
-        // When / Then. `mine.entry` answers an int, which `mine.Limit` admits
+        // When / Then. `Mine.entry` answers an int, which `Mine.Limit` admits
         let answer = try await run([mine, theirs], entry: try Name("mine.\(entryName)"))
 
         #expect(answer == .int(3))
@@ -91,18 +91,18 @@ struct DeclaredSpellingTests {
 
     @Test("a bare name is not a spelling of any dotted declaration")
     func aBareNameSpellsNoDottedDeclaration() async throws {
-        // Given. Two modules declare `one.Limit` and `two.Limit`, and a third
+        // Given. Two modules declare `One.Limit` and `Two.Limit`, and a third
         // mentions `Limit`, which neither of those spellings is
         let one = try Module(
-            types: ["one.Limit": .int],
+            types: ["One.Limit": .int],
             procedures: [
-                "one.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            types: ["two.Limit": .string],
+            types: ["Two.Limit": .string],
             procedures: [
-                "two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
@@ -129,22 +129,22 @@ struct DeclaredSpellingTests {
     func theDottedSpellingResolvesTheTie() async throws {
         // Given. The same link, with the mention spelled out
         let one = try Module(
-            types: ["one.Limit": .int],
+            types: ["One.Limit": .int],
             procedures: [
-                "one.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            types: ["two.Limit": .string],
+            types: ["Two.Limit": .string],
             procedures: [
-                "two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("one.Limit")),
+                    signature: Signature(returns: .named("One.Limit")),
                     body: [],
                     result: .literal(.int(1))
                 )
@@ -181,18 +181,18 @@ struct DeclaredSpellingTests {
         }
     }
 
-    @Test("a constraint is named by its declared spelling")
-    func aConstraintIsNamedByItsSpelling() async throws {
-        // Given. `std` declares `Comparable`, and a document-shaped module
-        // bounds its own parameter with that spelling, `std.Comparable`
+    @Test("a contract is named by its declared spelling")
+    func aContractIsNamedByItsSpelling() async throws {
+        // Given. `Standard` declares `Comparable`, and a document-shaped module
+        // bounds its own parameter with that spelling, `Standard.Comparable`
         let sut = try Module(
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["std.Comparable"]))
+                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))
                         ],
-                        returns: .parameter(name: "T", constraints: ["std.Comparable"])
+                        returns: .parameter(name: "T", bounds: ["Standard.Comparable"])
                     ),
                     body: [],
                     result: reference("value")
@@ -214,7 +214,7 @@ struct DeclaredSpellingTests {
 
     @Test("a bare spelling names only the bare declaration")
     func aBareSpellingNamesTheBareDeclaration() async throws {
-        // Given. One module declares `Limit`, another declares `one.Limit`, and
+        // Given. One module declares `Limit`, another declares `One.Limit`, and
         // a third mentions `Limit`: the first declaration's spelling, and
         // nothing else's
         let shared = try Module(
@@ -224,9 +224,9 @@ struct DeclaredSpellingTests {
             ]
         )
         let dotted = try Module(
-            types: ["one.Limit": .string],
+            types: ["One.Limit": .string],
             procedures: [
-                "one.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let sut = try Module(
@@ -246,11 +246,11 @@ struct DeclaredSpellingTests {
         #expect(answer == .int(3))
     }
 
-    @Test("a name declared as a type and a constraint refuses in either order", arguments: [false, true])
+    @Test("a name declared as a type and a contract refuses in either order", arguments: [false, true])
     func aCrossSpaceCollisionRefusesInEitherOrder(typeFirst: Bool) async throws {
-        // Given. One module declares `Limit` as a constraint, another as a type
-        let membership = try Module(
-            constraints: ["Limit": [.int]],
+        // Given. One module declares `Limit` as a contract, another as a type
+        let contract = try Module(
+            contracts: ["Limit": [Name: Signature]()],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -265,25 +265,26 @@ struct DeclaredSpellingTests {
         // When / Then. The build sees its whole graph at once, so the order the
         // host listed the modules cannot change the conclusion
         await #expect {
-            try await builder.build(typeFirst ? [type, membership] : [membership, type])
+            try await builder.build(typeFirst ? [type, contract] : [contract, type])
         } throws: { error in
-            error is BuildError && "\(error)".contains("both a type and a constraint")
+            error is BuildError && "\(error)".contains("both a type and a contract")
         }
     }
 
-    @Test("a document's bare constraint does not capture what std meant")
+    @Test("a document's bare contract does not capture what Standard meant")
     func aBareDeclarationDoesNotCaptureTheStandardName() async throws {
-        // Given. A module declares its own `Numeric`, admitting text, and still
-        // leans on std.math for arithmetic
+        // Given. A module declares its own `Numeric`, which text answers, and
+        // still leans on Standard for arithmetic
         let sut = try Module(
-            constraints: ["Numeric": [.string]],
+            contracts: ["Numeric": [Name: Signature]()],
+            claims: ["String": ["Numeric"]],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", constraints: ["Numeric"]))
+                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Numeric"]))
                         ],
-                        returns: .parameter(name: "T", constraints: ["Numeric"])
+                        returns: .parameter(name: "T", bounds: ["Numeric"])
                     ),
                     body: [],
                     result: reference("value")
@@ -308,17 +309,19 @@ struct DeclaredSpellingTests {
 
         #expect(answer == .string("a"))
 
-        // And std.math's arithmetic still reads std's declaration: two pieces
-        // of text refuse exactly as they do without the document's `Numeric`
+        // And Standard's arithmetic still reads Standard's declaration: two
+        // pieces of text refuse exactly as they do without the document's
+        // `Numeric`
         let arithmetic = try Module(
-            constraints: ["Numeric": [.string]],
+            contracts: ["Numeric": [Name: Signature]()],
+            claims: ["String": ["Numeric"]],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        selector: "std.math.plus",
+                        selector: "Standard.Numeric.plus",
                         arguments: [.literal(.string("a")), .literal(.string("b"))]
                     ))
                 )
@@ -328,7 +331,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([arithmetic] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'std.Numeric' does not admit")
+            error is BuildError && "\(error)".contains("no document in this link says 'String' answers it")
         }
     }
 

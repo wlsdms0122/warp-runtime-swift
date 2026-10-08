@@ -120,25 +120,25 @@ public func reference(_ names: Name...) -> Warp.Expression {
 // Equality and the connectives are procedures, so a test writing one writes
 // the call the notation lowers to.
 public func equals(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.logic.equal", arguments: [subject, operand]))
+    .call(Call(selector: "Standard.Logic.equal", arguments: [subject, operand]))
 }
 
 public func differs(_ subject: Warp.Expression, _ operand: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.logic.notEqual", arguments: [subject, operand]))
+    .call(Call(selector: "Standard.Logic.notEqual", arguments: [subject, operand]))
 }
 
 public func negating(_ condition: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.logic.not", arguments: [condition]))
+    .call(Call(selector: "Standard.Logic.not", arguments: [condition]))
 }
 
 // A connective leaves its later sides unasked, so each arrives as something
 // that has not been answered yet.
 public func every(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.and", conditions)
+    chained("Standard.Logic.and", conditions)
 }
 
 public func some(_ conditions: Warp.Expression...) -> Warp.Expression {
-    chained("std.logic.or", conditions)
+    chained("Standard.Logic.or", conditions)
 }
 
 private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.Expression {
@@ -162,7 +162,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
 // value asked how it reads. The notation spells this `{ format:, with: }` and
 // lowers it to exactly this.
 public func interpolated(_ pieces: Warp.Expression...) -> Warp.Expression {
-    .call(Call(selector: "std.text.joined", arguments: [.array(pieces), .literal(.string(""))]))
+    .call(Call(selector: "Standard.Text.joined", arguments: [.array(pieces), .literal(.string(""))]))
 }
 
 public func literal(_ text: String) -> Warp.Expression {
@@ -170,11 +170,11 @@ public func literal(_ text: String) -> Warp.Expression {
 }
 
 public func spelling(_ value: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.text.text", arguments: [value]))
+    .call(Call(selector: "Standard.Text.text", arguments: [value]))
 }
 
 // MARK: - Refusal
 
 public func aborting(_ message: Warp.Expression) -> Warp.Expression {
-    .call(Call(selector: "std.control.abort", arguments: [message]))
+    .call(Call(selector: "Standard.Control.abort", arguments: [message]))
 }

@@ -37,7 +37,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds int, and what it was given is string")
+            "\(error)".contains("holds Int, and what it was given is String")
         }
     }
 
@@ -50,7 +50,7 @@ struct DeclaredNameTests {
                     access: .public,
                     body: [
                         Statement(
-                            binding: .constant("held", declared: .named("app.Missing")),
+                            binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
                         )
                     ],
@@ -64,7 +64,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("names type 'app.Missing', which no module in this link declares")
+                && "\(error)".contains("names type 'App.Missing', which no module in this link declares")
         }
     }
 
@@ -74,18 +74,18 @@ struct DeclaredNameTests {
         // and that nothing calls, so it is not on the frontier. Its text still
         // has to compile
         let sut = try Module(
-            imports: ["app.Missing", "std.control.abort"],
+            imports: ["App.Missing", "Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "stray": Procedure(
                     body: [
                         Statement(
                             expression: .call(
-                                Call(selector: "std.control.abort", arguments: [.literal(.string("x"))])
+                                Call(selector: "Standard.Control.abort", arguments: [.literal(.string("x"))])
                             )
                         ),
                         Statement(
-                            binding: .constant("held", declared: .named("app.Missing")),
+                            binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
                         )
                     ],
@@ -98,7 +98,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("app.Missing")
+            "\(error)".contains("App.Missing")
         }
     }
 
@@ -122,7 +122,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("writes 'held' as string, and it holds int")
+            "\(error)".contains("writes 'held' as String, and it holds Int")
         }
     }
 
@@ -148,34 +148,6 @@ struct DeclaredNameTests {
 
         // Then
         #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
-    }
-
-    @Test("a name declaring a range is refused a value outside it")
-    func aDeclaredRangeRefusesWhatIsOutsideIt() async throws {
-        // Given
-        let sut = try Module(
-            types: ["app.Byte": .ranged(.whole(from: 0, to: .through(255)))],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("held", declared: .named("app.Byte")),
-                            expression: .literal(.int(300))
-                        )
-                    ],
-                    result: reference("held")
-                )
-            ]
-        )
-        let image = try await Builder().build([sut] + Module.standard)
-
-        // When / Then
-        await #expect {
-            try await Executor().run(image)
-        } throws: { error in
-            "\(error)".contains("300 is outside")
-        }
     }
 
     @Test("a construct that binds the name says what it holds, and the author does not")
@@ -235,7 +207,7 @@ struct DeclaredNameTests {
         }
 
         // Then
-        #expect(refusal?.message == "holds int, and what it was given is int or string")
+        #expect(refusal?.message == "holds Int, and what it was given is Int or String")
     }
 
     @Test("an attempt inside a list literal writes each way into the element on its own")
@@ -274,7 +246,7 @@ struct DeclaredNameTests {
         }
 
         // Then
-        #expect(refusal?.message == "holds array<int>, and what it was given is [int or string]")
+        #expect(refusal?.message == "holds Array<Int>, and what it was given is [Int or String]")
     }
 
     @Test("a name declaring a type parameter is refused, because no call fills a name")
@@ -309,7 +281,7 @@ struct DeclaredNameTests {
                     Procedure(
                         body: [
                             Statement(
-                                binding: .constant("inner", declared: .named("app.Missing")),
+                                binding: .constant("inner", declared: .named("App.Missing")),
                                 expression: .literal(.int(1))
                             )
                         ],
@@ -324,7 +296,7 @@ struct DeclaredNameTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("app.Missing")
+            "\(error)".contains("App.Missing")
         }
     }
 
@@ -373,8 +345,8 @@ struct DeclaredNameTests {
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
     func anUndeclaredClosureDoesNotFitTheSlot() async throws {
         // Given. The same program with the declaration left off. The build works
-        // out `const isolated procedure` for the literal, and the slot asks for
-        // `procedure`
+        // out `const isolated Procedure` for the literal, and the slot asks for
+        // `Procedure`
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -405,7 +377,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated procedure<(int) -> int> where inout procedure<(int) -> int> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int) -> Int> where inout Procedure<(Int) -> Int> is declared")
         }
     }
 

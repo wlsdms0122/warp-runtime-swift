@@ -57,7 +57,7 @@ struct RecordTests {
     @Test("a field the layout does not name is refused rather than made")
     func aFieldOutsideTheLayoutIsRefused() throws {
         // Given
-        let sut = Record(name: "app.Point", ["a": .int(1), "c": .int(3)])
+        let sut = Record(name: "App.Point", ["a": .int(1), "c": .int(3)])
 
         // When / Then
         #expect(try sut.writing("c", with: .int(30)).values == [.int(1), .int(30)])
@@ -67,10 +67,10 @@ struct RecordTests {
     @Test("a value that settled to a name keeps it, and is refused a field that name does not declare")
     func writingHoldsASettledNameToItsDeclaration() throws {
         // Given
-        let sut = Value.record(Record(name: "app.Point", ["a": .int(1)]))
+        let sut = Value.record(Record(name: "App.Point", ["a": .int(1)]))
 
         // When / Then. A declared field is written where it stands
-        #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "app.Point", ["a": .int(9)])))
+        #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "App.Point", ["a": .int(9)])))
 
         // A name the declaration never had would make this something other
         // than the type it settled to
@@ -103,19 +103,19 @@ struct RecordTests {
     @Test("a record's name is part of its layout")
     func aNameIsPartOfTheLayout() {
         // Given
-        let sut = Record(name: "app.Point", ["a": .int(1)])
+        let sut = Record(name: "App.Point", ["a": .int(1)])
 
         // When / Then
-        #expect(sut.name == "app.Point")
+        #expect(sut.name == "App.Point")
         #expect(sut.named(nil).name == nil)
         #expect(sut != Record(name: nil, ["a": .int(1)]))
-        #expect(sut != Record(name: "app.Vault", ["a": .int(1)]))
+        #expect(sut != Record(name: "App.Vault", ["a": .int(1)]))
     }
 
     @Test("mapping values changes every value and nothing else")
     func mappingValuesKeepsTheLayout() throws {
         // Given
-        let sut = Record(name: "app.Point", ["y": .int(2), "x": .int(1)])
+        let sut = Record(name: "App.Point", ["y": .int(2), "x": .int(1)])
 
         // When
         let doubled = try sut.mapValues { _, value in
@@ -133,7 +133,7 @@ struct RecordTests {
     func aNamelessRecordEqualsADictionary() {
         // Given
         let record = Value.record(Record(name: nil, ["a": .int(1), "b": .string("x")]))
-        let named = Value.record(Record(name: "app.T", ["a": .int(1), "b": .string("x")]))
+        let named = Value.record(Record(name: "App.T", ["a": .int(1), "b": .string("x")]))
         let dictionary = Value.dictionary(["a": .int(1), "b": .string("x")])
 
         // When / Then

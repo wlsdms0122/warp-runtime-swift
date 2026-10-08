@@ -18,7 +18,7 @@ public struct Signature: Sendable, Equatable {
     public let parameters: [Parameter]
 
     // What a call returns, or nil where nothing was declared. Absence is
-    // spelled by being absent rather than by a type meaning "no claim". `any`
+    // spelled by being absent rather than by a type meaning "no claim". `Any`
     // is a claim, so a declaration nobody wrote stays distinguishable from one
     // somebody wrote. Nothing is checked either way; they differ in what they
     // say.
@@ -53,7 +53,7 @@ public struct Signature: Sendable, Equatable {
 
     // Every type parameter mentioned in this signature, occurrence by
     // occurrence. A nested procedure type's parameters are collected too:
-    // they are this signature's own slots, so `array<some Element>` beside a
+    // they are this signature's own slots, so `Array<some Element>` beside a
     // procedure taking the same `some Element` is one parameter filled by one
     // call. Only a parameter behind a `named` type is not collected, because
     // the build refuses one anywhere but a procedure signature and never fills
@@ -131,7 +131,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // This signature with each type parameter's occurrences carrying the
-    // constraint declared for its name. The signature owns the bound and the
+    // bounds declared for its name. The signature owns the bound and the
     // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
     // `some N` in the slots, and this is where the one meets the many.
     //
@@ -146,7 +146,6 @@ public struct Signature: Sendable, Equatable {
                 Parameter(
                     name: parameter.name,
                     type: parameter.type?.bounded(by: bounds),
-                    candidates: parameter.candidates,
                     description: parameter.description
                 )
             },
@@ -154,11 +153,33 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
+    // A contract's procedure as a call through the contract reads it: `Self`
+    // as one type parameter the contract bounds, which every position
+    // writing it shares.
+    func read(of contract: Name) -> Signature {
+        replacingSelf(with: .parameter(name: TypeSpelling.selfType, bounds: [contract]))
+    }
+
+    // This signature with `Self` written as `type` wherever it stands.
+    func replacingSelf(with type: TypeExpression) -> Signature {
+        Signature(
+            parameters: parameters.map { parameter in
+                Parameter(
+                    name: parameter.name,
+                    type: parameter.type?.replacingSelf(with: type),
+                    description: parameter.description
+                )
+            },
+            returns: returns?.replacingSelf(with: type)
+        )
+    }
+
     // Arguments given by name, settled into the order a run keeps them in.
     // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. The door a host outside the build comes through, since
-    // the build resolves names itself. `subject` is what a refusal names the
-    // procedure as.
+    // was not given. A door a host outside the build comes through, since
+    // the build resolves names itself, and so a value is fitted to its type
+    // here, a field the declaration never named left out.
+    // `subject` is what a refusal names the procedure as.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
@@ -176,7 +197,12 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        return try settle(slots.map { slot in given[slot.name] }, over: slots, as: subject, in: table)
+        return try settle(
+            slots.map { slot in given[slot.name].map { value in slot.type.fitted(value, in: table) } },
+            over: slots,
+            as: subject,
+            in: table
+        )
     }
 
     // Arguments handed by position, the way every call hands them: one for

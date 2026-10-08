@@ -71,7 +71,7 @@ struct InPlaceTests {
     func moduleVariableStartsFreshEachRun() async throws {
         // Given
         let sut = try Module(
-            imports: ["std.math.plus"],
+            imports: ["Standard.Numeric.plus"],
             variables: ["total": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(
@@ -81,7 +81,7 @@ struct InPlaceTests {
                         Statement(
                             binding: .assignment([.key("total")]),
                             expression: .call(
-                                Call(selector: "std.math.plus", arguments: [reference("total"), .literal(.int(1))])
+                                Call(selector: "Standard.Numeric.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
                         )
                     ],
@@ -103,12 +103,12 @@ struct InPlaceTests {
 
     @Test("a module variable settled as a dictionary is written under new names")
     func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
-        // Given. An empty dictionary to start with: a dictionary's names are
-        // data, so what it reads as is what its entries hold, not which names
-        // it holds them under.
+        // Given. A dictionary of one name to start with: a dictionary's names
+        // are data, so what it reads as is what its entries hold, not which
+        // names it holds them under.
         let sut = try Module(
-            imports: ["std.collection.keys", "std.collection.setting"],
-            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
+            variables: ["seen": .literal(.dictionary(Value.Dictionary(["x": .int(0)])))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -118,13 +118,13 @@ struct InPlaceTests {
                             binding: .assignment([.key("seen")]),
                             expression: .call(
                                 Call(
-                                    selector: "std.collection.setting",
+                                    selector: "Standard.Collection.setting",
                                     arguments: [reference("seen"), .literal(.string("a")), .literal(.int(1))]
                                 )
                             )
                         )
                     ],
-                    result: .call(Call(selector: "std.collection.keys", arguments: [reference("seen")]))
+                    result: .call(Call(selector: "Standard.Collection.keys", arguments: [reference("seen")]))
                 )
             ]
         )
@@ -133,7 +133,27 @@ struct InPlaceTests {
         let answer = try await Executor().run(try await Builder().build([sut] + Module.standard))
 
         // Then
-        #expect(answer == .array([.string("a")]))
+        #expect(answer == .array([.string("a"), .string("x")]))
+    }
+
+    @Test("a module variable that starts empty and declares nothing is refused")
+    func moduleVariableStartedEmptyIsRefused() async throws {
+        // Given. A variable that declares nothing holds the type of its start,
+        // and an empty dictionary holds no entry, so nothing says what the box
+        // will hold
+        let sut = try Module(
+            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            procedures: [
+                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("which holds nothing, and declares no type")
+        }
     }
 
     @Test("a module variable holds the type it declares, whatever it started as")
@@ -159,7 +179,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes 'seen' as string, and it holds dictionary<int>")
+            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<Int>")
         }
     }
 
@@ -177,27 +197,27 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("starts as string, and declares int")
+            error is BuildError && "\(error)".contains("starts as String, and declares Int")
         }
     }
 
     @Test("a document writes only the variables it declares")
     func aDocumentWritesOnlyItsOwnVariables() {
-        // Given. One write of `app.total`
-        let write = Statement(binding: .assignment([.key("app.total")]), expression: .literal(.int(1)))
+        // Given. One write of `App.total`
+        let write = Statement(binding: .assignment([.key("App.total")]), expression: .literal(.int(1)))
 
         // When / Then. Taken at the load of the document declaring
-        // `app.total`, and refused at the load of one that does not
+        // `App.total`, and refused at the load of one that does not
         #expect(throws: Never.self) {
             try Module(
-                variables: ["app.total": .literal(.int(0))],
-                procedures: ["app.poke": Procedure(body: [write])]
+                variables: ["App.total": .literal(.int(0))],
+                procedures: ["App.poke": Procedure(body: [write])]
             )
         }
         #expect {
             try Module(procedures: ["other.poke": Procedure(body: [write])])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("assigns 'app.total', which is not visible here")
+            error is ValidationError && "\(error)".contains("assigns 'App.total', which is not visible here")
         }
     }
 
@@ -221,7 +241,7 @@ struct InPlaceTests {
         // Given. The callee writes through the path and then aborts; the write
         // is in the caller's array all the same
         let sut = try Module(
-            imports: ["std.control.abort"],
+            imports: ["Standard.Control.abort"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -252,7 +272,7 @@ struct InPlaceTests {
                         Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
                         Statement(
                             expression: .call(
-                                Call(selector: "std.control.abort", arguments: [.literal(.string("after"))])
+                                Call(selector: "Standard.Control.abort", arguments: [.literal(.string("after"))])
                             )
                         )
                     ]
@@ -583,14 +603,14 @@ struct InPlaceTests {
         // reached its body would answer 1
         let calling = try Module(
             procedures: [
-                "app.calling": Procedure(
+                "App.calling": Procedure(
                     signature: Signature(of: CallingEffect.self),
                     implementation: .effect(CallingEffect())
                 )
             ]
         )
         let sut = try Module(
-            imports: ["app.calling"],
+            imports: ["App.calling"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -609,7 +629,7 @@ struct InPlaceTests {
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.calling", arguments: [reference("reading")]))
+                    result: .call(Call(selector: "App.calling", arguments: [reference("reading")]))
                 )
             ]
         )
@@ -644,12 +664,12 @@ struct InPlaceTests {
             "array": .array(taking),
             "dictionary": .dictionary(taking),
             "record field": .record(["hook": taking]),
-            "declared name": .named("app.Hook")
+            "declared name": .named("App.Hook")
         ]
         let calling = try? Module(
-            types: ["app.Hook": taking],
+            types: ["App.Hook": taking],
             procedures: [
-                "app.calling": Procedure(
+                "App.calling": Procedure(
                     signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped])]),
                     implementation: .effect(InPlaceCallingEffect())
                 )
@@ -672,11 +692,11 @@ struct InPlaceTests {
 
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
-        // Given. `app.g` writes its own `some T` beside a value read as `any`, and a record of an empty list beside one of `any`, into lists it was handed in place
+        // Given. `App.g` writes its own `some T` beside a value read as `Any`, and a record of an empty list beside one of `Any`, into lists it was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [
-                "app.list": Procedure(
+                "App.list": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "xs", type: .inout(.array(generic))),
@@ -697,7 +717,7 @@ struct InPlaceTests {
         )
         let records = try Module(
             procedures: [
-                "app.records": Procedure(
+                "App.records": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "ds", type: .inout(.array(.dictionary(.array(generic))))),
@@ -728,8 +748,8 @@ struct InPlaceTests {
         }
 
         // Then
-        #expect(listRefusal?.message == "writes 'xs' as [some T, any], and it holds array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: array<any> }], and it holds array<dictionary<array<some T>>>")
+        #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
+        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<Array<some T>>>")
     }
 
     // MARK: - Public

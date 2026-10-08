@@ -1,16 +1,17 @@
 warpt 1
 {
   imports [
-    "std.collection.setting"
-    "std.math.lessThan"
-    "std.math.remainder"
-    "std.text.text"
+    "Standard.Collection.setting"
+    "Standard.Comparable.lessThan"
+    "Standard.Numeric.remainder"
+    "Standard.Text.text"
   ]
   procedures {
     entry {
       access "public"
       body [
         {
+          type "Dictionary<Int>"
           value {
             record {}
           }
@@ -40,16 +41,16 @@ warpt 1
                                     }
                                     100
                                   ]
-                                  procedure "std.math.remainder"
+                                  procedure "Standard.Numeric.remainder"
                                 }
                               }
                             ]
-                            procedure "std.text.text"
+                            procedure "Standard.Text.text"
                           }
                         }
                         1
                       ]
-                      procedure "std.collection.setting"
+                      procedure "Standard.Collection.setting"
                     }
                   }
                 }
@@ -64,7 +65,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }
@@ -74,13 +75,13 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "held"
       }
-      returns "dictionary<int>"
+      returns "Dictionary<Int>"
     }
   }
   warp 1

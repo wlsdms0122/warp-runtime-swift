@@ -64,12 +64,12 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("joined"), expression: .call(
                                 Call(
-                                    selector: "std.text.joined",
+                                    selector: "Standard.Text.joined",
                                     arguments: [
                                         .array([
                                             .call(
                                                 Call(
-                                                    selector: "std.text.text",
+                                                    selector: "Standard.Text.text",
                                                     arguments: [.reference([.key("procedure")])]
                                                 )
                                             ),
@@ -83,7 +83,7 @@ struct WriterTests {
                         Statement(binding: .constant("held"), expression: .record([
                                 "line": .reference([.key("joined")]),
                                 "size": .call(
-                                    Call(selector: "std.collection.count", arguments: [.reference([.key("procedure")])])
+                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("procedure")])])
                                 )
                             ])
                         )
@@ -121,20 +121,21 @@ struct WriterTests {
     // understand exactly what is written here and nothing else.
     private static let canonical: Value = [
         "warp": 1,
-        "imports": ["std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
+        "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
         "description": "one of every type",
-        "types": ["Task": ["record": ["done": "bool", "id": "string"]]],
-        "constraints": ["Scalar": ["int", "string"]],
+        "types": ["Task": ["record": ["done": "Bool", "id": "String"]]],
+        "contracts": ["Scalar": [:]],
+        "satisfies": ["Int": ["Scalar"], "String": ["Scalar"]],
         "const": ["limit": 10],
         "procedures": [
             "entry": [
                 "description": "every construct, once",
                 "parameters": [
-                    ["name": "kind", "type": "string", "enum": ["a", "b"]],
-                    ["name": "names", "type": "array<string>"],
-                    ["name": "procedure", "type": "string", "description": "what to match"]
+                    ["name": "kind", "type": "String"],
+                    ["name": "names", "type": "Array<String>"],
+                    ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "dictionary<any>",
+                "returns": "Dictionary<Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -147,7 +148,7 @@ struct WriterTests {
                         "value": ["loop": [
                             "while": [
                                 "call": [
-                                    "procedure": "std.logic.notEqual",
+                                    "procedure": "Standard.Logic.notEqual",
                                     "arguments": [["ref": "seen"], 3]
                                 ]
                             ],
@@ -155,7 +156,7 @@ struct WriterTests {
                                 [
                                     "set": "seen",
                                     "value": ["call": [
-                                        "procedure": "std.math.plus",
+                                        "procedure": "Standard.Numeric.plus",
                                         "arguments": [["ref": "seen"], 1]
                                     ]
                                 ]]
@@ -176,11 +177,11 @@ struct WriterTests {
                         "value": ["loop": [
                             "while": [
                                 "call": [
-                                    "procedure": "std.math.lessThan",
+                                    "procedure": "Standard.Comparable.lessThan",
                                     "arguments": [
                                         ["ref": "mapped.index"],
                                         ["call": [
-                                            "procedure": "std.collection.count",
+                                            "procedure": "Standard.Collection.count",
                                             "arguments": [["ref": "names"]]
                                         ]]
                                     ]
@@ -205,7 +206,7 @@ struct WriterTests {
                         "let": "called",
                         "value": ["call": [
                             "procedure": [
-                                "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
+                                "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
                             ],
                             "arguments": [1]
                         ]
@@ -215,14 +216,14 @@ struct WriterTests {
             ],
             "typed": [
                 "parameters": [
-                    ["name": "anything", "type": "procedure"],
+                    ["name": "anything", "type": "Procedure"],
                     ["name": "bounded", "type": "some T"],
-                    ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
-                    ["name": "of", "type": "string"],
+                    ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
+                    ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "bool", "id": "string"]]]
+                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
                 ],
-                "returns": "never",
+                "returns": "Never",
                 "bounds": ["T": "Scalar"],
                 "result": ["ref": "of"]
             ]
@@ -236,16 +237,16 @@ struct WriterTests {
         // Literals, references, records, arrays and a field named like a tag
         [
             "description": "the types that need no name",
-            "types": ["Task": ["record": ["id": "string", "done": "bool"]]],
+            "types": ["Task": ["record": ["id": "String", "done": "Bool"]]],
             "const": ["limit": 10],
             "procedures": [
                 "entry": [
                     "parameters": [
-                        ["name": "counted", "type": "int", "description": "how many"],
-                        ["name": "kind", "type": "string", "enum": ["a", "b"]],
-                        ["name": "procedure", "type": "string"]
+                        ["name": "counted", "type": "Int", "description": "how many"],
+                        ["name": "kind", "type": "String"],
+                        ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "dictionary<any>",
+                    "returns": "Dictionary<Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -259,10 +260,10 @@ struct WriterTests {
         ],
         // Branch, block and the condition spellings
         [
-            "imports": ["std.logic.and", "std.logic.equal", "std.logic.not"],
+            "imports": ["Standard.Logic.and", "Standard.Logic.equal", "Standard.Logic.not"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "procedure", "type": "string"], ["name": "ready", "type": "bool"]],
+                    "parameters": [["name": "procedure", "type": "String"], ["name": "ready", "type": "Bool"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -273,14 +274,14 @@ struct WriterTests {
                                 // writes it.
                                 "when": [
                                     "call": [
-                                        "procedure": "std.logic.and",
+                                        "procedure": "Standard.Logic.and",
                                         "arguments": [
                                             [
                                                 [
                                                     "closure": [
                                                         "result": [
                                                             "call": [
-                                                                "procedure": "std.logic.equal",
+                                                                "procedure": "Standard.Logic.equal",
                                                                 "arguments": [["ref": "procedure"], "hey"]
                                                             ]
                                                         ]
@@ -290,7 +291,7 @@ struct WriterTests {
                                                     "closure": [
                                                         "result": [
                                                             "call": [
-                                                                "procedure": "std.logic.not",
+                                                                "procedure": "Standard.Logic.not",
                                                                 "arguments": [["ref": "ready"]]
                                                             ]
                                                         ]
@@ -312,10 +313,10 @@ struct WriterTests {
         ],
         // Loop, attempt
         [
-            "imports": ["test.fail", "std.collection.count", "std.logic.notEqual", "std.math.lessThan", "std.math.plus"],
+            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
+                    "parameters": [["name": "names", "type": "Array<String>"]],
                     "body": [
                         ["var": "seen", "value": 0],
                         [
@@ -326,7 +327,7 @@ struct WriterTests {
                                     [
                                         "set": "seen",
                                         "value": ["call": [
-                                            "procedure": "std.math.plus",
+                                            "procedure": "Standard.Numeric.plus",
                                             "arguments": [["ref": "seen"], 1]
                                         ]
                                     ]]
@@ -338,7 +339,7 @@ struct WriterTests {
                             "value": ["loop": [
                                 "while": [
                                     "of": ["ref": "mapped.index"],
-                                    "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                    "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                 ],
                                 "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                             ]
@@ -358,11 +359,11 @@ struct WriterTests {
         ],
         // Leaving early, all three ways and both spellings of a target
         [
-            "imports": ["std.collection.count", "std.math.lessThan"],
+            "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"]],
-                    "returns": "any",
+                    "parameters": [["name": "names", "type": "Array<String>"]],
+                    "returns": "Any",
                     "body": [
                         [
                             "let": "outer",
@@ -374,7 +375,7 @@ struct WriterTests {
                                         "value": ["loop": [
                                             "while": [
                                                 "of": ["ref": "walked.index"],
-                                                "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                                "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                             ],
                                             "body": [
                                                 [
@@ -403,25 +404,25 @@ struct WriterTests {
         ],
         // Messages: calls by position, carried bodies, closures, invocation, templates
         [
-            "imports": ["std.collection.filter", "std.text.joined", "std.logic.notEqual", "std.text.text"],
+            "imports": ["Standard.Collection.filter", "Standard.Text.joined", "Standard.Logic.notEqual", "Standard.Text.text"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "names", "type": "Array<String>"], ["name": "procedure", "type": "String"]],
                     "body": [
                         ["let": "shouted", "value": ["call": ["procedure": "shout", "arguments": [["ref": "procedure"]]]]],
                         [
                             "let": "kept",
                             "value": ["call": [
-                                "procedure": "std.collection.filter",
+                                "procedure": "Standard.Collection.filter",
                                 "arguments": [
                                     ["ref": "names"],
                                     [
                                         "closure": [
-                                            "parameters": [["name": "item", "type": "string"]],
-                                            "returns": "bool",
+                                            "parameters": [["name": "item", "type": "String"]],
+                                            "returns": "Bool",
                                             "result": [
                                                 "call": [
-                                                    "procedure": "std.logic.notEqual",
+                                                    "procedure": "Standard.Logic.notEqual",
                                                     "arguments": [["ref": "item"], ""]
                                                 ]
                                             ]
@@ -434,7 +435,7 @@ struct WriterTests {
                             "let": "called",
                             "value": ["call": [
                                 "procedure": [
-                                    "closure": ["parameters": [["name": "n", "type": "int"]], "result": ["ref": "n"]]
+                                    "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
                                 ],
                                 "arguments": [1]
                             ]
@@ -447,17 +448,17 @@ struct WriterTests {
                     "result": ["record": ["result": ["ref": "line"]]]
                 ],
                 "shout": [
-                    "parameters": [["name": "of", "type": "string"]],
-                    "returns": "string",
+                    "parameters": [["name": "of", "type": "String"]],
+                    "returns": "String",
                     "result": ["ref": "of"]
                 ],
                 "typed": [
                     "parameters": [
-                        ["name": "anything", "type": "procedure"],
-                        ["name": "how", "type": ["const procedure": ["parameters": ["int"], "returns": "bool"]]],
+                        ["name": "anything", "type": "Procedure"],
+                        ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                         ["name": "parameter", "type": "some Element"]
                     ],
-                    "returns": "never",
+                    "returns": "Never",
                     "result": ["ref": "anything"]
                 ]
             ]
@@ -470,13 +471,13 @@ struct WriterTests {
     func differingOccurrencesAreNotWritten() throws {
         // Given
         let sut = try Module(
-            constraints: ["A": [.int], "B": [.string]],
+            contracts: ["A": [Name: Signature](), "B": [Name: Signature]()],
             procedures: [
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", constraints: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", constraints: ["B"]))
+                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
+                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
                         ]
                     ),
                     body: [],
@@ -491,13 +492,28 @@ struct WriterTests {
         }
     }
 
+    @Test("a contract's procedure that says nothing of its failures has no document to write")
+    func anUnstatedContractFailureIsNotWritten() throws {
+        // Given. A document writing no `failing` says the procedure fails
+        // with nothing, which is a claim this one does not make
+        let sut = try Module(
+            contracts: ["App.Shown": ["show": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)]), failing: .unstated)]],
+            procedures: [:]
+        )
+
+        // When / Then
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: sut)
+        }
+    }
+
     @Test("a call of literal text has no document to write")
     func aCallOfTextIsNotWritten() throws {
         // Given. Text under `procedure` reads back as a declaration's name, so
         // a value that is text cannot be written there
         let sut = try Module(
             procedures: [
-                "entry": Procedure(body: [], result: .apply(.literal(.string("app.f")), arguments: []))
+                "entry": Procedure(body: [], result: .apply(.literal(.string("App.f")), arguments: []))
             ]
         )
 
@@ -590,7 +606,7 @@ struct WriterTests {
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try loader.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -616,16 +632,16 @@ struct WriterTests {
         // out.
         let document: Value = [
             "imports": [
-                "std.collection.count",
-                "std.logic.equal",
-                "std.math.lessThan",
-                "std.math.plus",
-                "std.text.joined",
-                "std.text.text"
+                "Standard.Collection.count",
+                "Standard.Comparable.lessThan",
+                "Standard.Logic.equal",
+                "Standard.Numeric.plus",
+                "Standard.Text.joined",
+                "Standard.Text.text"
             ],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "names", "type": "array<string>"], ["name": "procedure", "type": "string"]],
+                    "parameters": [["name": "names", "type": "Array<String>"], ["name": "procedure", "type": "String"]],
                     "body": [
                         ["var": "pick"],
                         [
@@ -641,17 +657,17 @@ struct WriterTests {
                             "value": ["loop": [
                                 "while": [
                                     "of": ["ref": "sized.index"],
-                                    "lessThan": ["call": ["procedure": "std.collection.count", "arguments": [["ref": "names"]]]]
+                                    "lessThan": ["call": ["procedure": "Standard.Collection.count", "arguments": [["ref": "names"]]]]
                                 ],
                                 "body": [
                                     [
                                         "set": "walked",
                                         "value": ["call": [
-                                            "procedure": "std.math.plus",
+                                            "procedure": "Standard.Numeric.plus",
                                             "arguments": [
                                                 ["ref": "walked"],
                                                 ["call": [
-                                                    "procedure": "std.collection.count",
+                                                    "procedure": "Standard.Collection.count",
                                                     "arguments": [["ref": "names[sized.index]"]]
                                                 ]]
                                             ]
@@ -697,11 +713,11 @@ struct WriterTests {
 
     @Test("a spelling is written back as the procedures it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given. `{ of: x, <procedure>: y }` is a spelling, and what it means is a
+        // Given. `{ of: x, <Procedure>: y }` is a spelling, and what it means is a
         // message. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
-            "parameters": [["name": "procedure", "type": "string"]],
+            "parameters": [["name": "procedure", "type": "String"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -710,7 +726,7 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let written = try sut.value(of: module)
@@ -726,7 +742,7 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the message it always was.
-        #expect(message["procedure"] == .string("std.logic.equal"))
+        #expect(message["procedure"] == .string("Standard.Logic.equal"))
         #expect(message["of"] == nil)
         #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
@@ -810,7 +826,7 @@ struct WriterTests {
         // would be a document that reads back meaning something else.
         let bounded = Signature(
             parameters: [
-                Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"]))
+                Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"]))
             ],
             returns: .bool
         )
@@ -830,12 +846,12 @@ struct WriterTests {
         // declaring procedure answers the same way, whichever entry the caller
         // came through
         #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", constraints: ["Scalar"])))
+            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"])))
         }
 
         // A bounded variable declared as a type directly refuses the same way
         let variable = try Module(
-            types: ["Loose": .parameter(name: "T", constraints: ["Scalar"])],
+            types: ["Loose": .parameter(name: "T", bounds: ["Scalar"])],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]

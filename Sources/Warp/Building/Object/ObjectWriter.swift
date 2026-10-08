@@ -119,8 +119,7 @@ struct ObjectWriter {
                     }
 
                     return .array([.int(slot), try self.value(held)])
-                }),
-                .array(closure.slotAnswers.map(lowered))
+                })
             )
         }
     }
@@ -149,15 +148,15 @@ struct ObjectWriter {
         case .types:
             return try keyed(compiled.types, type)
 
-        case .constraints:
-            return try keyed(compiled.constraints) { (types) throws(ObjectUnwritable) -> Value in
-                .array(try types.map(type))
-            }
-
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
-                    .array([try signature(asked.signature), constness(asked.constness), isolation(asked.isolation)])
+                    .array([
+                        try signature(asked.signature),
+                        constness(asked.constness),
+                        isolation(asked.isolation),
+                        failing(asked.failing)
+                    ])
                 }
             }
 
@@ -260,9 +259,6 @@ struct ObjectWriter {
         case .string:
             return tagged(Tag.string)
 
-        case let .ranged(refinement):
-            return tagged(Tag.ranged, ranged(refinement))
-
         case let .array(element):
             return tagged(Tag.array, try type(element))
 
@@ -286,64 +282,23 @@ struct ObjectWriter {
         case let .inout(held):
             return tagged(Tag.`inout`, try type(held))
 
-        case let .linear(held):
-            return tagged(Tag.linear, try type(held))
-
-        case let .consuming(held):
-            return tagged(Tag.consuming, try type(held))
-
-        case let .borrowing(held):
-            return tagged(Tag.borrowing, try type(held))
-
         case let .nullable(held):
             return tagged(Tag.nullable, try type(held))
 
         case let .named(spelling):
             return tagged(Tag.named, name(spelling))
 
-        case let .parameter(spelling, constraints):
-            return tagged(Tag.parameter, name(spelling), .array(constraints.sorted().map(name)))
+        case let .parameter(spelling, bounds):
+            return tagged(Tag.parameter, name(spelling), .array(bounds.sorted().map(name)))
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
 
         case let .composition(names):
             return tagged(Tag.composition, .array(names.sorted().map(name)))
-        }
-    }
 
-    private func ranged(_ refinement: TypeExpression.Refinement) -> Value {
-        typealias Tag = ObjectLayout.RefinementTag
-
-        switch refinement {
-        case let .whole(from, to):
-            return tagged(
-                Tag.whole,
-                ObjectWriter.maybe(from) { floor in .int(floor) },
-                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
-            )
-
-        case let .fraction(from, to):
-            return tagged(
-                Tag.fraction,
-                ObjectWriter.maybe(from) { floor in .double(floor) },
-                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
-            )
-        }
-    }
-
-    private func edge<Bound>(
-        _ edge: TypeExpression.Refinement.Edge<Bound>,
-        _ write: (Bound) -> Value
-    ) -> Value {
-        typealias Tag = ObjectLayout.EdgeTag
-
-        switch edge {
-        case let .through(bound):
-            return tagged(Tag.through, write(bound))
-
-        case let .upTo(bound):
-            return tagged(Tag.upTo, write(bound))
+        case .selfType:
+            return tagged(Tag.selfType)
         }
     }
 
@@ -386,7 +341,6 @@ struct ObjectWriter {
         .array([
             name(parameter.name),
             try ObjectWriter.maybe(parameter.type, type),
-            ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -480,7 +434,6 @@ struct ObjectWriter {
         case .constants: return tagged(Tag.constants)
         case .variables: return tagged(Tag.variables)
         case .types: return tagged(Tag.types)
-        case .constraints: return tagged(Tag.constraints)
         case .contracts: return tagged(Tag.contracts)
         case .satisfies: return tagged(Tag.satisfies)
         case .imports: return tagged(Tag.imports)
@@ -558,7 +511,9 @@ struct ObjectWriter {
         case .bool:
             return tagged(Tag.bool)
 
-        case .int:
+        // What a literal reads as is an Int once a name holds it, and only
+        // a reading as a name holds it reaches an object.
+        case .int, .wholeLiteral:
             return tagged(Tag.int)
 
         case .double:
@@ -566,9 +521,6 @@ struct ObjectWriter {
 
         case .string:
             return tagged(Tag.string)
-
-        case let .ranged(refinement):
-            return tagged(Tag.ranged, ranged(refinement))
 
         case let .array(element):
             return tagged(Tag.array, lowered(element))
@@ -601,10 +553,10 @@ struct ObjectWriter {
             return tagged(Tag.named, .int(row))
 
         case let .parameter(label, bounds):
-            return tagged(Tag.parameter, name(label), .array(bounds.sorted().map(bound)))
+            return tagged(Tag.parameter, name(label), .array(bounds.sorted().map(name)))
 
         case let .composition(bounds):
-            return tagged(Tag.composition, .array(bounds.sorted().map(bound)))
+            return tagged(Tag.composition, .array(bounds.sorted().map(name)))
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
@@ -621,18 +573,6 @@ struct ObjectWriter {
         case let .noTypeNamed(name): return tagged(Tag.noTypeNamed, self.name(name))
         case let .noBoundNamed(name): return tagged(Tag.noBoundNamed, self.name(name))
         case .namesItself: return tagged(Tag.namesItself)
-        }
-    }
-
-    private func bound(_ bound: LoweredType.Bound) -> Value {
-        typealias Tag = ObjectLayout.BoundTag
-
-        switch bound {
-        case let .membership(row):
-            return tagged(Tag.membership, .int(row))
-
-        case let .contract(spelling):
-            return tagged(Tag.contract, name(spelling))
         }
     }
 
@@ -768,8 +708,7 @@ struct ObjectWriter {
                 Tag.checked,
                 try self.operation(read),
                 ObjectWriter.maybe(judging.against, lowered),
-                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) }),
-                ObjectWriter.maybe(judging.settlesTo, lowered)
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
 
         case let .block(body):

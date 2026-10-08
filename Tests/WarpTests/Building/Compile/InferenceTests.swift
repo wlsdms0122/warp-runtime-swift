@@ -24,7 +24,7 @@ struct InferenceTests {
     // MARK: - Test
     @Test("a type parameter carries the element type through the call that filled it")
     func aTypeParameterCarriesWhatFilledIt() async throws {
-        // Given. `first` takes `array<some Element>` and answers `some
+        // Given. `first` takes `Array<some Element>` and answers `some
         // Element`, so what it answers here is a string and the declaration
         // never said so
         let wants = Procedure(
@@ -41,7 +41,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
-                            selector: "std.collection.first",
+                            selector: "Standard.Collection.first",
                             arguments: [reference("names")]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -76,7 +76,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("head"), expression: .call(Call(
-                            selector: "std.collection.first",
+                            selector: "Standard.Collection.first",
                             arguments: [reference("counts")]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -93,7 +93,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
@@ -108,7 +108,7 @@ struct InferenceTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "std.collection.count", arguments: [reference("item")]))
+            result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("item")]))
         )
         let wants = Procedure(
             signature: Signature(parameters: [Parameter(name: "ns", type: .array(.string))]),
@@ -124,7 +124,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("sizes"), expression: .call(Call(
-                            selector: "std.collection.map",
+                            selector: "Standard.Collection.map",
                             arguments: [reference("names"), .closure(counting)]
                         ))),
                         Statement(binding: .constant("asked"), expression: .call(Call(
@@ -142,7 +142,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with ns, which holds array<int> where array<string> is declared")
+                && "\(error)".contains("sending 'wants' with ns, which holds Array<Int> where Array<String> is declared")
         }
     }
 
@@ -150,7 +150,7 @@ struct InferenceTests {
     func aLoopResultCarriesTheBodyNameItReads() async throws {
         // Given. A finished round's exit hands the result the body's own
         // declarations; the 0-round exit never bound them, and a name a scope
-        // does not hold reads as null. So `kept` holds int?, not an `any` for
+        // does not hold reads as null. So `kept` holds int?, not an `Any` for
         // a name the entry never saw, and not a plain int the 0-round run would
         // break
         let loop = Warp.Expression.loop(
@@ -184,7 +184,7 @@ struct InferenceTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("holds int?")
+            "\(error)".contains("holds Int?")
         }
 
         // And the 0-round run answers the null the reading admitted
@@ -308,7 +308,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         }
 
-        #expect(refusal?.message == "writes 'n' as string, and it holds int")
+        #expect(refusal?.message == "writes 'n' as String, and it holds Int")
     }
 
     @Test("a name bound to a call carries that call's declared answer")
@@ -353,7 +353,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
@@ -401,7 +401,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds bool where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Bool where String is declared")
         }
     }
 
@@ -449,14 +449,15 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
     @Test("a name a conditional may have rewritten holds neither reading")
     func disagreeingWritesAreUnknown() async throws {
         // Given. A join that guessed would be a refusal an author cannot act
-        // on, so where two readings disagree nothing is claimed
+        // on, so where two readings disagree nothing is claimed: the name
+        // reads `Any`, which a slot of a type takes only through a cast
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -496,7 +497,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds Any where String is declared")
+        }
     }
 
     @Test("a declared answer the body's answer fits builds")
@@ -558,7 +563,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(
                                 Call(
-                                    selector: "std.concurrent.map",
+                                    selector: "Standard.Concurrent.map",
                                     arguments: [
                                         .literal(.array([.int(1), .int(2)])),
                                         .closure(
@@ -599,7 +604,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("with names, which holds array<int> where array<string> is declared")
+                && "\(error)".contains("with names, which holds Array<Int> where Array<String> is declared")
         }
     }
 
@@ -652,7 +657,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds String? where String is declared")
         }
     }
 
@@ -679,7 +684,7 @@ struct InferenceTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("count.nope names 'nope', and int has no name there to read")
+            error is BuildError && "\(error)".contains("count.nope names 'nope', and Int has no name there to read")
         }
     }
 
@@ -707,7 +712,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("name[0] indexes into string, and only an array or a dictionary is indexed")
+                && "\(error)".contains("name[0] indexes into String, and only an array or a dictionary is indexed")
         }
     }
 
@@ -726,7 +731,7 @@ struct InferenceTests {
                     body: [
                         Statement(
                             binding: .constant("said"),
-                            expression: .call(Call(selector: "std.collection.count", arguments: [reference("names")]))
+                            expression: .call(Call(selector: "Standard.Collection.count", arguments: [reference("names")]))
                         )
                     ]
                 )
@@ -799,8 +804,8 @@ struct InferenceTests {
 
     @Test("a cast onto a type that proves nothing is refused, whatever it reads")
     func aCastOntoNothingIsRefused() async throws {
-        // Given. The claim is judged on itself: `as: any` opens no door over an
-        // `any` operand any more than it does over an `int` one
+        // Given. The claim is judged on itself: `as: Any` opens no door over an
+        // `Any` operand any more than it does over an `Int` one
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -826,16 +831,14 @@ struct InferenceTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("`any` is the absence of one")
+            error is BuildError && "\(error)".contains("`Any` is the absence of one")
         }
     }
 
-    @Test("a cast may name a type sharing no field with the reading")
-    func aCastOntoADisjointRecordStands() async throws {
-        // Given. Two records naming no field in common accept each other in
-        // neither direction and are still both satisfied by one value: a record
-        // says what must be there, not all there is. This is the spelling the
-        // specification gives for reading what a failure carries
+    @Test("a cast to a record of other fields is refused, since a record is exactly its fields")
+    func aCastOntoADisjointRecordIsRefused() async throws {
+        // Given. A record type says all there is, so no value is a record of
+        // these fields and of those at once
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -859,12 +862,16 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("no value is both")
+        }
     }
 
     @Test("a cast between two types that name themselves does not chase them forever")
     func aCastBetweenRecursiveTypesTerminates() async throws {
-        // Given. The reading is a declared type rather than `any`, so the walk
+        // Given. The reading is a declared type rather than `Any`, so the walk
         // actually asks whether both could hold. Both sides name themselves,
         // which is the case a guard living inside one expansion could not bound
         let sut = try Module(
@@ -901,7 +908,7 @@ struct InferenceTests {
 
     @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
     func aCastOntoAMismatchedKindIsRefusedThroughUnprovenInsides() async throws {
-        // Given. `array<any>` proves an array is there. Nothing it holds is
+        // Given. `Array<Any>` proves an array is there. Nothing it holds is
         // proven, but that says nothing about whether the whole could be a
         // string, and it cannot: this would answer null on every run
         let sut = try Module(
@@ -929,7 +936,7 @@ struct InferenceTests {
 
     @Test("repeating a cast is refused whichever way the type was spelled")
     func aRepeatedCastIsRefusedInlineToo() async throws {
-        // Given. `payload as? int` hands on `int?`, and the sameness question is
+        // Given. `payload as? int` hands on `Int?`, and the sameness question is
         // asked of what was handed on, so the repeat is refused however the
         // type is spelled
         let sut = try Module(
@@ -1073,10 +1080,10 @@ struct InferenceTests {
         }
     }
 
-    @Test("an int may become a double, so a cast onto double stands")
-    func aCastOntoDoubleStands() async throws {
-        // Given. The one widening the language has. Refusing it at the build
-        // would refuse a cast that settles on every run
+    @Test("an Int never becomes a Double, so a cast onto Double refuses")
+    func aCastOntoDoubleRefuses() async throws {
+        // Given. A value is fixed at the build to the type it is read as, and
+        // no value is both a whole number and a fraction
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1093,7 +1100,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("reads Int as Double, and no value is both")
+        }
     }
 
     @Test("a nullable and null share null, so a cast between them stands")
@@ -1147,8 +1158,8 @@ struct InferenceTests {
 
     @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
     func aCastBetweenADictionaryAndARecordStands() async throws {
-        // Given. The boundary settles both from the same runtime value, so
-        // refusing this would refuse a cast that succeeds
+        // Given. A map holding exactly the record's fields is a value of
+        // both, so refusing this would refuse a cast that succeeds
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1251,7 +1262,7 @@ struct InferenceTests {
     @Test("naming a step of a path through a parameter does not change what it means")
     func aParameterPathSurvivesBeingNamed() async throws {
         // Given. `of.a.b` in one statement stands, so `x = of.a` then `x.b`
-        // must stand too. Folding the parameter walk's reading to `any` made
+        // must stand too. Folding the parameter walk's reading to `Any` made
         // the second refuse on a type the author never wrote
         let sut = try Module(
             procedures: [
@@ -1291,7 +1302,7 @@ struct InferenceTests {
             constants: [
                 "counted": .cast(
                     .literal(.int(7)),
-                    as: .ranged(.whole(from: 0, to: .through(10))),
+                    as: .nullable(.int),
                     optional: true
                 )
             ],
@@ -1311,7 +1322,7 @@ struct InferenceTests {
 
     @Test("a cast onto a type holding any opens the door it names, and no further")
     func aCastOntoATypeHoldingAnyOpensItsOwnDoor() async throws {
-        // Given. `as: array<any>` is not `as: any`: the types then prove an
+        // Given. `as: Array<Any>` is not `as: Any`: the types then prove an
         // array is there and an index reads one. What each element holds is
         // still nothing, so a dot on one is still refused. The door it named
         // opened, and only that one
@@ -1562,7 +1573,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds String? where String is declared")
         }
     }
 
@@ -1617,7 +1628,7 @@ struct InferenceTests {
     func aRescueReadsTheBodysPartialWrites() async throws {
         // Given. The body writes a null and then risks a failing cast: the
         // rescue runs with that write in the box, so inside the rescue the name
-        // reads `string?` and the plain string slot refuses.
+        // reads `String?` and the plain string slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1657,7 +1668,7 @@ struct InferenceTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("with text, which holds string? where string is declared")
+            error is BuildError && "\(error)".contains("with text, which holds String? where String is declared")
         }
     }
 
@@ -1665,7 +1676,7 @@ struct InferenceTests {
     func aRoundReadsItsEarlierRoundsWrites() async throws {
         // Given. The first round reads the seed, but the body also writes a
         // null, and every later round reads that: inside the loop the name
-        // reads `string?`, so the plain string slot refuses.
+        // reads `String?`, so the plain string slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1708,7 +1719,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds String? where String is declared")
         }
     }
 
@@ -1757,12 +1768,12 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. `a` reads `string?` after enough rounds
+        // When / Then. `a` reads `String?` after enough rounds
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds string? where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds String? where String is declared")
         }
     }
 
@@ -1812,12 +1823,12 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. `held` reads `string?`, and the plain string slot says
+        // When / Then. `held` reads `String?`, and the plain string slot says
         // so
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("with text, which holds string? where string is declared")
+            error is BuildError && "\(error)".contains("with text, which holds String? where String is declared")
         }
     }
 
@@ -1825,8 +1836,9 @@ struct InferenceTests {
     func aBodyWriteJoinsTheRescueWrite() async throws {
         // Given. The body wrote a string or got nowhere, the rescue wrote an
         // int or never ran: the name holds any of null, the string and the int.
-        // That is `any` (where readings disagree the slot holds neither), and
-        // `any` passes the string slot below.
+        // That is `Any` (where readings disagree the slot holds neither), which
+        // the string slot below takes only through a cast. A rescue that
+        // overwrote the body's write would read `Int` instead.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1864,7 +1876,11 @@ struct InferenceTests {
         )
 
         // When / Then
-        _ = try await builder.build([sut] + Module.standard)
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with text, which holds Any where String is declared")
+        }
     }
 
     @Test("an arm that refuses does not cost the arm that writes its say")
@@ -1916,7 +1932,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
@@ -1957,7 +1973,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with number, which holds string where int is declared")
+                && "\(error)".contains("sending 'wants' with number, which holds String where Int is declared")
         }
     }
 
@@ -2057,7 +2073,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("string has no name there to read")
+                && "\(error)".contains("String has no name there to read")
                 && "\(error)".contains("sent with a written call")
         }
     }

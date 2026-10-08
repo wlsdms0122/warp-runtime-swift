@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A declaration naming a type or constraint nothing declares.
+// A declaration naming a type or contract nothing declares.
 //
 // Its own error because it is its own kind of wrong: every other refusal a
 // boundary raises says the value that arrived was not what was declared, and

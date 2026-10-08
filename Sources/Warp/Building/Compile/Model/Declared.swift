@@ -17,16 +17,16 @@ struct Declared: Sendable {
 
     // What the build worked out of the declaration, where its row stands:
     // whether it answers without running, whether it touches nothing another
-    // body could touch at once, and what its body answers where it wrote no
-    // `returns`. Nil for a declaration being compiled now, whose row does not
-    // stand yet.
-    let facts: (constness: Constness, isolation: Isolation, answer: LoweredType?)?
+    // body could touch at once, what it may fail with, and what its body
+    // answers where it wrote no `returns`. Nil for a declaration being
+    // compiled now, whose row does not stand yet.
+    let facts: (constness: Constness, isolation: Isolation, failing: Failing, answer: LoweredType?)?
 
     // MARK: - Initializer
     init(
         signature: Signature,
         access: Access,
-        facts: (constness: Constness, isolation: Isolation, answer: LoweredType?)? = nil
+        facts: (constness: Constness, isolation: Isolation, failing: Failing, answer: LoweredType?)? = nil
     ) {
         self.signature = signature
         self.access = access

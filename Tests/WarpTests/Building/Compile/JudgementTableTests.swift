@@ -39,7 +39,7 @@ struct JudgementTableTests {
         var other = JudgementTable()
 
         sut.record(.apply(inPlace: [0], judging: nil), at: first)
-        other.record(.apply(inPlace: [], judging: CallJudgement(against: .int, handedBack: [], settlesTo: .int)), at: second)
+        other.record(.apply(inPlace: [], judging: CallJudgement(against: .int, handedBack: [])), at: second)
 
         // When
         sut.absorb(other)

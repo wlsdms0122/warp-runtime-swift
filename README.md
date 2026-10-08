@@ -19,11 +19,11 @@ let greet = Procedure(
             binding: .constant("greeting"),
             expression: .call(
                 Call(
-                    selector: "std.text.joined",
+                    selector: "Standard.Text.joined",
                     arguments: [
                         .array([
                             .literal(.string("hello, ")),
-                            .call(Call(selector: "std.text.text", arguments: [.reference([.key("name", optional: false)])]))
+                            .call(Call(selector: "Standard.Text.text", arguments: [.reference([.key("name", optional: false)])]))
                         ]),
                         .literal(.string(""))
                     ]
@@ -35,12 +35,12 @@ let greet = Procedure(
 )
 
 let image = try await Builder().build(
-    [try Module(procedures: ["hello.greet": greet])] + Module.standard
+    [try Module(procedures: ["Hello.greet": greet])] + Module.standard
 )
 
 let value = try await Executor().run(
     image,
-    entry: "hello.greet",
+    entry: "Hello.greet",
     arguments: ["name": .string("warp")]
 )
 
@@ -99,9 +99,9 @@ A place is a list of steps, so a front end holding the file a document was writt
 
 A refusal from a run carries a `Trace` instead: where the run had been.
 
-A declaration's name is its key. A link calls a declaration `wallet.entry` because `wallet.entry` is the key the document wrote under `procedures`, dot and all. So a place reads `0da2e372bba7/procedures.wallet.entry.body.sent[0].call`, and the part before the slash is the only part that is not a key.
+A declaration's name is its key. A link calls a declaration `Wallet.entry` because `Wallet.entry` is the key the document wrote under `procedures`, dot and all. So a place reads `0da2e372bba7/procedures.Wallet.entry.body.sent[0].call`, and the part before the slash is the only part that is not a key.
 
-**Which document a place is in is an `Identity`, and never a name.** A link holds several documents and the steps alone do not say which. `std.collection.first` and `wallet.first` may sit in two documents or in one, and a program split across files declares names under one prefix from several documents. So identity is derived from the document: the digest of its canonical bytes, worked out by `WarpSyntax`. Two hosts holding one document get the same identity.
+**Which document a place is in is an `Identity`, and never a name.** A link holds several documents and the steps alone do not say which. `Standard.Collection.first` and `Wallet.first` may sit in two documents or in one, and a program split across files declares names under one prefix from several documents. So identity is derived from the document: the digest of its canonical bytes, worked out by `WarpSyntax`. Two hosts holding one document get the same identity.
 
 `Module.identity` is nil for a module a host built: there is no text to point back into. A reader is told which document it reads when it loads it:
 
@@ -111,7 +111,7 @@ let module = try Loader().load(document, identity: try Identity.of(document))
 
 The identity is given before reading, so a refusal from that reading already says which document it is in.
 
-A place reads `0da2e372bba7/procedures.wallet.charge…`: the part before the slash is `identity.short`, the first twelve hex digits of the identity, and the steps after it are the document's own keys, the declared spelling among them. The host that handed the bytes in knows which file an identity came from, and tells a person.
+A place reads `0da2e372bba7/procedures.Wallet.charge…`: the part before the slash is `identity.short`, the first twelve hex digits of the identity, and the steps after it are the document's own keys, the declared spelling among them. The host that handed the bytes in knows which file an identity came from, and tells a person.
 
 Whether a place has a text under it is `document.identity != nil`. A place from a program nobody wrote down says `assembled` rather than `none`, since `Optional.none` answers to that spelling too and `document == .none` would read true for a place that does not exist.
 
@@ -131,7 +131,7 @@ struct ShoutQuery: Query {
 
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("app.shout asks a string")
+            throw ExecutionError("App.shout asks a string")
         }
 
         return .string(text.uppercased())
@@ -140,7 +140,7 @@ struct ShoutQuery: Query {
 
 let vocabulary = try Module(
     procedures: [
-        "app.shout": Procedure(
+        "App.shout": Procedure(
             signature: Signature(of: ShoutQuery.self, returns: .string),
             implementation: .query(ShoutQuery())
         )
@@ -148,7 +148,7 @@ let vocabulary = try Module(
 )
 ```
 
-Linked beside `Module.standard`, it lets a document send `app.shout`. A document that sends a procedure nobody linked is refused by name before anything runs. The standard vocabulary ships the same way, as bundles a host picks from.
+Linked beside `Module.standard`, it lets a document send `App.shout`. A document that sends a procedure nobody linked is refused by name before anything runs. The standard vocabulary ships the same way, as bundles a host picks from.
 
 ## Stopping and watching
 

@@ -42,7 +42,7 @@ struct SpellingTests {
             )
         )
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "pick"],
                 [
@@ -54,7 +54,7 @@ struct SpellingTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "pick"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
@@ -116,7 +116,7 @@ struct SpellingTests {
         // When / Then
         #expect(throws: (any Error).self) {
             try loader.loadProcedure([
-                "parameters": [["name": "kind", "type": "string"]],
+                "parameters": [["name": "kind", "type": "String"]],
                 "body": [
                     [
                         "let": "pick",

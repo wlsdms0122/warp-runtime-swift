@@ -35,9 +35,6 @@ extension TypeExpression {
         case .string:
             return .string
 
-        case let .ranged(refinement):
-            return .ranged(refinement)
-
         case let .array(element):
             return .array(element.lowered(in: table))
 
@@ -71,57 +68,49 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
-        // No mark survives lowering: what one says is proven at the build, and
-        // there is nothing left for a run to keep.
-        case let .linear(inner), let .consuming(inner), let .borrowing(inner):
-            return inner.lowered(in: table)
-
-        // Types, memberships and contracts are three tables and no name is
-        // in two, so a mention is looked for in each. A membership standing
-        // as a type is a value of one of its members, and a contract standing
-        // as a type is a value of whatever answers it.
+        // Types and contracts are two tables and no name is in both, so a
+        // mention is looked for in each. A contract standing as a type is a
+        // value of whatever answers it.
         case let .named(name):
             if let row = table.row(named: name) {
                 return .named(row)
             }
 
-            guard let bound = table.bound(named: name) else {
+            guard table.declaresContract(name) else {
                 return .undeclared(label: name.spelling, because: .noTypeNamed(name))
             }
 
-            return .composition([bound])
+            return .composition([name])
 
-        // A bound names a membership or a contract, and the two are separate
-        // spaces, so each is looked for in both.
-        case let .parameter(name, constraints):
-            return lowered(bounds: constraints, in: table) { bounds in .parameter(label: name, bounds: bounds) }
+        // A bound names a contract.
+        case let .parameter(name, names):
+            return lowered(bounds: names, in: table) { bounds in .parameter(label: name, bounds: bounds) }
 
         case let .composition(names):
             return lowered(bounds: names, in: table, as: LoweredType.composition)
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
+
+        // A contract's procedures read `Self` before anything lowers them, so
+        // what is left is `Self` written where no contract stands, which is
+        // refused where it was written.
+        case .selfType:
+            return .undeclared(label: TypeSpelling.selfType.spelling, because: .noTypeNamed(TypeSpelling.selfType))
         }
     }
 
-    // What a list of names stands for: the bounds, in the one order a set of
-    // bounds is written in, or the first name that is neither a membership
-    // nor a contract.
+    // What a list of names stands for: the contracts, in the one order a set
+    // of bounds is written in, or the first name that is no contract.
     private func lowered(
         bounds names: [Name],
         in table: LoweredTypeTable,
-        as bounded: ([LoweredType.Bound]) -> LoweredType
+        as bounded: ([Name]) -> LoweredType
     ) -> LoweredType {
-        var bounds: [LoweredType.Bound] = []
-
-        for name in names {
-            guard let bound = table.bound(named: name) else {
-                return .undeclared(label: rendered, because: .noBoundNamed(name))
-            }
-
-            bounds.append(bound)
+        if let name = names.first(where: { name in !table.declaresContract(name) }) {
+            return .undeclared(label: rendered, because: .noBoundNamed(name))
         }
 
-        return bounded(bounds.sorted())
+        return bounded(names.sorted())
     }
 }

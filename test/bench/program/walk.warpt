@@ -1,8 +1,8 @@
 warpt 1
 {
   imports [
-    "std.collection.map"
-    "std.math.lessThan"
+    "Standard.Collection.map"
+    "Standard.Comparable.lessThan"
   ]
   procedures {
     entry {
@@ -32,7 +32,7 @@ warpt 1
                             parameters [
                               {
                                 name "item"
-                                type "int"
+                                type "Int"
                               }
                             ]
                             result {
@@ -41,7 +41,7 @@ warpt 1
                           }
                         }
                       ]
-                      procedure "std.collection.map"
+                      procedure "Standard.Collection.map"
                     }
                   }
                 }
@@ -56,7 +56,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }
@@ -66,13 +66,13 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "items"
       }
-      returns "array<int>"
+      returns "Array<Int>"
     }
   }
   warp 1

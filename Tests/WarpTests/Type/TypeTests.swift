@@ -48,21 +48,21 @@ struct TypeTests {
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record settles to the fields declared, and a value carrying more loses them")
+    @Test("a record holds exactly the fields declared, one short or one over refusing")
     func recordDeclaresFields() throws {
-        // Given. What arrives is data from outside, and a payload gains fields
+        // Given. A record type is its fields, and a place holds a value as
+        // it is
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
-        let settled = try sut.settling(
-            .dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]),
-            at: "task"
-        )
+        let settled = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true)]), at: "task")
 
         // Then
-        #expect(settled["extra"] == nil)
         #expect(settled["id"] == .string("a"))
 
+        #expect(throws: ArgumentError.self) {
+            try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
+        }
         #expect(throws: ArgumentError.self) {
             try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }
@@ -155,10 +155,10 @@ struct TypeTests {
     @Test("a type reads back in the spelling it was declared with")
     func typesRenderAsWritten() {
         // When / Then
-        #expect(TypeExpression.array(.string).rendered == "array<string>")
-        #expect(TypeExpression.dictionary(.named("Task")).rendered == "dictionary<Task>")
-        #expect(TypeExpression.array(.array(.int)).rendered == "array<array<int>>")
-        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: string, b: int }")
+        #expect(TypeExpression.array(.string).rendered == "Array<String>")
+        #expect(TypeExpression.dictionary(.named("Task")).rendered == "Dictionary<Task>")
+        #expect(TypeExpression.array(.array(.int)).rendered == "Array<Array<Int>>")
+        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at the build")
@@ -190,7 +190,7 @@ struct TypeTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'wants' with text, which holds int where string is declared")
+                && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
         }
     }
 
@@ -219,19 +219,24 @@ struct TypeTests {
                 [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("holds int where string is declared")
+            error is BuildError && "\(error)".contains("holds Int where String is declared")
         }
 
-        // And a body whose answer nothing can be read from says nothing. An
-        // answer worked out from its own is not one the text states.
+        // And a body whose answer nothing can be read from reads `Any`, since
+        // an answer worked out from its own is not one the text states, and a
+        // slot of a type takes a value read as `Any` only through a cast.
         let cycling = Procedure(
             body: [],
             result: .call(Call(selector: "counts"))
         )
 
-        _ = try await Builder().build(
-            [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
-        )
+        await #expect {
+            try await Builder().build(
+                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
+            )
+        } throws: { error in
+            error is BuildError && "\(error)".contains("holds Any where String is declared")
+        }
     }
 
     @Test("a dictionary slot takes a record whose fields all fit it")
@@ -265,7 +270,7 @@ struct TypeTests {
         #expect {
             try declared.settling(.string("x"), at: "limit")
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("expected int, got string")
+            error is ArgumentError && "\(error)".contains("expected Int, got String")
         }
     }
 
@@ -284,8 +289,8 @@ struct TypeTests {
     @Test("a nullable type spells itself in refusals")
     func aNullableRenders() {
         // When / Then
-        #expect(TypeExpression.nullable(.int).rendered == "int?")
-        #expect(TypeExpression.nullable(.array(.string)).rendered == "array<string>?")
+        #expect(TypeExpression.nullable(.int).rendered == "Int?")
+        #expect(TypeExpression.nullable(.array(.string)).rendered == "Array<String>?")
     }
 
     @Test("a closure a caller assembled claims nothing, and fits only a slot that asks nothing")
@@ -343,17 +348,21 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a record and answers one whose names are data")
+    @Test("a dictionary slot takes a nameless record as the map it is, and no declared record")
     func aRecordSettlesIntoADictionaryAsData() throws {
-        // Given. A name is proved where a slot declares one, and a `dictionary`
-        // slot declares none
-        let named = Value.record(Record(name: "bank.Account", ["balance": .int(1)]))
+        // Given. A nameless record holds its names as data, and a declared
+        // record is a value of its name, which nothing takes off
+        let nameless = Value.record(Record(name: nil, ["balance": .int(1)]))
+        let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
 
         // When
-        let settled = try TypeExpression.dictionary(.any).settling(named, at: "held")
+        let settled = try TypeExpression.dictionary(.any).settling(nameless, at: "held")
 
         // Then
         #expect(settled == .dictionary(["balance": .int(1)]))
+        #expect(throws: ArgumentError.self) {
+            try TypeExpression.dictionary(.any).settling(named, at: "held")
+        }
     }
 
     // MARK: - Public

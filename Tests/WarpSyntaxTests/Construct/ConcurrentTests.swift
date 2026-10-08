@@ -12,7 +12,7 @@ import Testing
 import WarpTestSupport
 
 // Running at once, as a document spells it: closures handed to the
-// `std.concurrent` procedures. There is no construct here. A fan-out is a call, and
+// `Standard.Concurrent` procedures. There is no construct here. A fan-out is a call, and
 // what makes it safe is what a closure already is.
 @Suite("Running at once, as a document spells it")
 struct ConcurrentTests {
@@ -52,7 +52,7 @@ struct ConcurrentTests {
                 [
                     "let": "par",
                     "value": ["call": [
-                        "procedure": "std.concurrent.all",
+                        "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
                             ["record": [
                                 "left": ["closure": ["result": 1]],
@@ -63,7 +63,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "par"]]]
-        ], importing: ["std.concurrent.all"])
+        ], importing: ["Standard.Concurrent.allKeyed"])
         let boundary = IsolationBoundaryProbe()
 
         // When
@@ -86,7 +86,7 @@ struct ConcurrentTests {
                             [
                                 "let": "par",
                                 "value": ["call": [
-                                    "procedure": "std.concurrent.all",
+                                    "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
                                         ["record": [
                                             "fine": ["closure": ["result": "ok"]],
@@ -109,7 +109,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "par"]]]
-        ], importing: ["std.concurrent.all", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
 
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.testing])
@@ -130,7 +130,7 @@ struct ConcurrentTests {
                             [
                                 "let": "par",
                                 "value": ["call": [
-                                    "procedure": "std.concurrent.all",
+                                    "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
                                         ["record": [
                                             "fragile": [
@@ -154,7 +154,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ]
-        ], importing: ["std.concurrent.all", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
@@ -167,17 +167,17 @@ struct ConcurrentTests {
         // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "names", "type": "array<string>"]],
+            "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 [
                     "let": "greeted",
                     "value": ["call": [
-                        "procedure": "std.concurrent.map",
+                        "procedure": "Standard.Concurrent.map",
                         "arguments": [
                             ["ref": "names"],
                             [
                                 "closure": [
-                                    "parameters": [["name": "item", "type": "string"], ["name": "index", "type": "int"]],
+                                    "parameters": [["name": "item", "type": "String"], ["name": "index", "type": "Int"]],
                                     "body": [
                                         [
                                             "let": "line",
@@ -195,7 +195,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "greeted"]]]
-        ], importing: ["std.text.joined", "std.concurrent.map", "std.text.text"])
+        ], importing: ["Standard.Text.joined", "Standard.Concurrent.map", "Standard.Text.text"])
 
         // When
         let outputs = try await run(
@@ -215,7 +215,7 @@ struct ConcurrentTests {
                 [
                     "let": "either",
                     "value": ["call": [
-                        "procedure": "std.concurrent.first",
+                        "procedure": "Standard.Concurrent.first",
                         "arguments": [
                             [
                                 [
@@ -231,7 +231,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "either"]]]
-        ], importing: ["test.fail", "std.concurrent.first"])
+        ], importing: ["test.fail", "Standard.Concurrent.first"])
 
         // When
         let outputs = try await run(sut, vocabulary: Module.standard + [.testing])

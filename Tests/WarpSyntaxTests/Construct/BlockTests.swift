@@ -22,7 +22,7 @@ struct BlockTests {
     func groupSpeaksWithDeclaredOutput() async throws {
         // Given
         let spec = try loader.loadProcedure([
-            "parameters": [["name": "who", "type": "string"]],
+            "parameters": [["name": "who", "type": "String"]],
             "body": [
                 [
                     "let": "greet",
@@ -45,7 +45,7 @@ struct BlockTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "greet"]]]
-        ], importing: ["std.text.joined", "std.text.text"])
+        ], importing: ["Standard.Text.joined", "Standard.Text.text"])
 
         // When
         let outputs = try await run(spec, arguments: ["who": .string("spec")])

@@ -12,7 +12,7 @@ import Testing
 @Suite("A claim nobody leans on refuses nobody")
 struct UnheldClaimTests {
     // MARK: - Property
-    private let main: Name = "app.main"
+    private let main: Name = "App.main"
 
     // MARK: - Initializer
     // MARK: - Test
@@ -22,37 +22,37 @@ struct UnheldClaimTests {
         // anywhere to answer it. The program names both and hands the type
         // nowhere.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])]))
+                    result: .call(Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])]))
                 )
             ]
         )
         let typed = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Account": .record(["balance": .int])],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // Claims the pair and declares no witness at all.
         let broken = try Module(
-            claims: ["bank.Account": ["app.Describable"]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: ["other.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // Names both, and leans on neither: it never hands an Account to tell.
         let program = try Module(
             procedures: [
-                "app.mine": Procedure(
+                "App.mine": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))],
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
                         returns: .string
                     ),
                     body: [],
-                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("it")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("it")])]))
                 ),
                 main: Procedure(
                     access: .public,
@@ -62,7 +62,7 @@ struct UnheldClaimTests {
                             binding: .constant("account"),
                             expression: .cast(
                                 .record(["balance": .literal(.int(7))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         )
@@ -84,38 +84,38 @@ struct UnheldClaimTests {
         // Given. One document claiming two pairs, one of them with no procedure
         // behind it, and a program leaning on the other.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
                     body: [],
                     result: .call(
-                        Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])])
+                        Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])])
                     )
                 )
             ]
         )
         let typed = try Module(
             types: [
-                "bank.Account": .record(["balance": .int]),
-                "bank.Plain": .record(["note": .string])
+                "Bank.Account": .record(["balance": .int]),
+                "Bank.Plain": .record(["note": .string])
             ],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
             claims: [
-                "bank.Account": ["app.Describable"],
-                "bank.Plain": ["app.Describable"]
+                "Bank.Account": ["App.Describable"],
+                "Bank.Plain": ["App.Describable"]
             ],
             procedures: [
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -133,12 +133,12 @@ struct UnheldClaimTests {
                             binding: .constant("account"),
                             expression: .cast(
                                 .record(["balance": .literal(.int(7))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("account")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("account")])]))
                 )
             ]
         )
@@ -154,28 +154,28 @@ struct UnheldClaimTests {
         // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
                     body: [],
                     result: .call(
-                        Call(selector: "app.Describable.describe", arguments: [.reference([.key("it")])])
+                        Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])])
                     )
                 )
             ]
         )
         let typed = try Module(
-            types: ["bank.Plain": .record(["note": .string])],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Plain": .record(["note": .string])],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let claims = try Module(
-            claims: ["bank.Plain": ["app.Describable"]],
+            claims: ["Bank.Plain": ["App.Describable"]],
             procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
@@ -188,12 +188,12 @@ struct UnheldClaimTests {
                             binding: .constant("plain"),
                             expression: .cast(
                                 .record(["note": .literal(.string("x"))]),
-                                as: .named("bank.Plain"),
+                                as: .named("Bank.Plain"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.tell", arguments: [.reference([.key("plain")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("plain")])]))
                 )
             ]
         )
@@ -204,8 +204,8 @@ struct UnheldClaimTests {
         await #expect {
             try await Builder().build([asking, typed, claims, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("procedures.app.main.result")
-                && "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
+            "\(error)".contains("procedures.App.main.result")
+                && "\(error)".contains("nothing in this link declares 'Bank.Plain.describe'")
         }
     }
 
@@ -215,12 +215,12 @@ struct UnheldClaimTests {
         // constant handing it a type, and the claim in a document the program
         // never names.
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.count": Procedure(
+                "App.count": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .int
                     ),
@@ -230,11 +230,11 @@ struct UnheldClaimTests {
             ]
         )
         let typed = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .record(["balance": .int])],
             procedures: [
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -243,18 +243,18 @@ struct UnheldClaimTests {
             ]
         )
         let claims = try Module(
-            claims: ["bank.Account": ["app.Describable"]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
             constants: [
-                "app.counted": .call(
+                "App.counted": .call(
                     Call(
-                        selector: "app.count",
+                        selector: "App.count",
                         arguments: [
                             .cast(
                                 .record(["balance": .literal(.int(7))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         ]
@@ -266,7 +266,7 @@ struct UnheldClaimTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("app.counted")])
+                    result: .reference([.key("App.counted")])
                 )
             ]
         )

@@ -13,7 +13,7 @@ import Warp
 public extension Module {
     static let shouting = try! Module(
         procedures: [
-            "app.shout": Procedure(
+            "App.shout": Procedure(
                 signature: Signature(of: ShoutEffect.self, returns: .string),
                 implementation: .effect(ShoutEffect())
             )

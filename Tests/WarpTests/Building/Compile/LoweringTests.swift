@@ -198,7 +198,7 @@ struct LoweringTests {
         func loop(_ round: Name, _ body: Body, result: Warp.Expression?) -> Warp.Expression {
             .loop(
                 while: .call(Call(
-                    selector: "std.math.lessThan",
+                    selector: "Standard.Comparable.lessThan",
                     arguments: [.reference([.key(round), .key("index")]), .literal(.int(1))]
                 )),
                 body: Block(body: body, result: result)
@@ -308,7 +308,7 @@ struct LoweringTests {
             variables: ["count": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
-                "app.tally": Procedure(
+                "App.tally": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("count")])
@@ -320,14 +320,14 @@ struct LoweringTests {
         let image = try await builder.build([module] + Module.standard)
 
         // Then
-        let tally = try #require(image["app.tally"])
+        let tally = try #require(image["App.tally"])
 
         #expect(tally.constness != .const)
     }
 
     @Test("a name is what it names, wherever a variable is handed in place")
     func aHandedVariableReadsThroughNames() async throws {
-        // Given. `Count` is a name for `int`, and a name for a scalar is what
+        // Given. `Count` is a name for `Int`, and a name for a scalar is what
         // it names: there is no representation to disagree about, so a variable
         // holding an int is what an `inout Count` slot declares.
         let sut = try Module(
@@ -336,9 +336,9 @@ struct LoweringTests {
                 entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
-                    result: .call(Call(selector: "app.bump", arguments: [.reference([.key("n")])]))
+                    result: .call(Call(selector: "App.bump", arguments: [.reference([.key("n")])]))
                 ),
-                "app.bump": Procedure(
+                "App.bump": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .inout(.named("Count")))],
                         returns: .named("Count")
@@ -374,12 +374,12 @@ struct LoweringTests {
                             )
                         ))
                     ],
-                    result: .call(Call(selector: "app.take", arguments: [.reference([.key("body")])]))
+                    result: .call(Call(selector: "App.take", arguments: [.reference([.key("body")])]))
                 ),
-                "app.take": Procedure(
+                "App.take": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "of", type: .inout(.procedure(ProcedureType(parameters: [.named("Count")]),
+                            Parameter(name: "of", type: .inout(.procedure(ProcedureType(parameters: [.named("Count")], returns: .null),
                                     .const,
                                     .isolated
                                 ))
@@ -414,14 +414,14 @@ struct LoweringTests {
                         access: .public,
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
-                            selector: "std.logic.equal",
+                            selector: "Standard.Logic.equal",
                             arguments: [
-                                .call(Call(selector: "app.tag", arguments: [.reference([.key("held")])])),
+                                .call(Call(selector: "App.tag", arguments: [.reference([.key("held")])])),
                                 .literal(.record(Record(name: "Tag", ["a": .int(1)])))
                             ]
                         ))
                     ),
-                    "app.tag": Procedure(
+                    "App.tag": Procedure(
                         signature: Signature(
                             parameters: [Parameter(name: "of", type: .inout(.named("Tag")))],
                             returns: .named("Tag")
@@ -439,7 +439,7 @@ struct LoweringTests {
             try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'app.tag' with of, which holds { a: int } where inout Tag is declared")
+                && "\(error)".contains("sending 'App.tag' with of, which holds { a: Int } where inout Tag is declared")
         }
 
         let image = try await builder.build(
@@ -451,17 +451,17 @@ struct LoweringTests {
 
     @Test("a constant folding through a procedure its own document writes is refused")
     func aConstantFoldingThroughItsOwnProcedureIsRefused() async throws {
-        // Given. `J` settles by calling `app.alpha`, a written procedure; while the
+        // Given. `J` settles by calling `App.alpha`, a written procedure; while the
         // constants settle every written body stands as its refusal, so the
         // order is not the text's
         let module = try Module(
             constants: [
                 "K": .literal(.int(1)),
-                "J": .call(Call(selector: "app.alpha", arguments: [reference("K")]))
+                "J": .call(Call(selector: "App.alpha", arguments: [reference("K")]))
             ],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
-                "app.alpha": Procedure(
+                "App.alpha": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
                     result: .reference([.key("of")])
@@ -488,9 +488,9 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],
-                    result: .call(Call(selector: "app.echo", arguments: [.reference([.key("held")])]))
+                    result: .call(Call(selector: "App.echo", arguments: [.reference([.key("held")])]))
                 ),
-                "app.echo": Procedure(
+                "App.echo": Procedure(
                     signature: Signature(of: EchoEffect.self, returns: .int),
                     implementation: .effect(EchoEffect())
                 )

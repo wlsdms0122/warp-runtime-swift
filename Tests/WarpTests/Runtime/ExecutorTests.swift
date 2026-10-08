@@ -56,7 +56,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                                            selector: "app.fail",
+                                            selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
                                     ]), rescue: Block(
@@ -91,7 +91,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                                            selector: "app.fail",
+                                            selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
                                     ]), rescue: Block(
@@ -131,7 +131,7 @@ struct ExecutorTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("fragile"), expression: .call(Call(
-                            selector: "app.fail",
+                            selector: "App.fail",
                             arguments: [.literal(.bool(true))]
                         )))
                     ]
@@ -179,7 +179,7 @@ struct ExecutorTests {
         await #expect {
             try await run(spec, arguments: ["n": .int(1)])
         } throws: { error in
-            error is BuildError && "\(error)".contains("n.field names 'field', and int has no name there to read")
+            error is BuildError && "\(error)".contains("n.field names 'field', and Int has no name there to read")
         }
     }
 

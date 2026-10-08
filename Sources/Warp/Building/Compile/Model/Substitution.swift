@@ -11,7 +11,7 @@ import Foundation
 // things in one.
 //
 // A parameter read two ways has no answer, so the disagreement is kept beside
-// the first reading rather than read as `any`: `any` is what a declaration
+// the first reading rather than read as `Any`: `Any` is what a declaration
 // says when it said nothing.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
@@ -19,7 +19,7 @@ struct Substitution: Sendable {
     struct Held: Sendable {
         // MARK: - Property
         let reading: LoweredType
-        let bounds: [LoweredType.Bound]
+        let bounds: [Name]
         let orNull: Bool
 
         // MARK: - Initializer
@@ -48,7 +48,7 @@ struct Substitution: Sendable {
     private(set) var disagreeing: [Name: LoweredType] = [:]
 
     // The readings of each parameter that what it is read as does not say,
-    // as they were read: a join with `any` is `any`, and a record's fields
+    // as they were read: a join with `Any` is `Any`, and a record's fields
     // joined say nothing of each field.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
@@ -68,11 +68,8 @@ struct Substitution: Sendable {
     // two a disagreement, which is the same question the build asks elsewhere
     // and answers correctly. Rigidly, because a parameter read here is the
     // calling body's own and nothing fills it: a whole number and a parameter
-    // bounded to numbers are held by the parameter. A range meets anything by
-    // its kind, so a range and the plain kind under it take each other both
-    // ways, and so do two ranges that overlap; a declared record and a
-    // nameless record of its fields take each other too. What holds both is
-    // `holdingBoth`, and a parameter read as `any` anywhere is `any` there.
+    // bounded to numbers are held by the parameter. What holds both is
+    // `holdingBoth`, and a parameter read as `Any` anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer
@@ -83,13 +80,15 @@ struct Substitution: Sendable {
         joining join: Join = .holdingBoth,
         in table: LoweredTypeTable
     ) {
-        guard let already = readings[parameter] else {
+        // A reading that leaves, or an empty list's element, holds no value,
+        // so it fills the parameter only where nothing else does.
+        guard let already = readings[parameter], already != .never else {
             readings[parameter] = given
 
             return
         }
 
-        guard already != given else { return }
+        guard already != given, given != .never else { return }
 
         // What else a parameter read two ways is read as is kept apart, so
         // that it is still held to the bounds.
@@ -117,12 +116,11 @@ struct Substitution: Sendable {
             return
         }
 
-        if already != both {
-            apart[parameter, default: []].append(already)
-        }
-
-        if given != both {
-            apart[parameter, default: []].append(given)
+        // What a reading reads as once the join writes it, so a whole literal
+        // the join reads as a fraction is held to the bounds as the fraction
+        // the call hands on.
+        for reading in [already, given] where both.written(reading, in: table) != both {
+            apart[parameter, default: []].append(both.written(reading, in: table))
         }
 
         readings[parameter] = both

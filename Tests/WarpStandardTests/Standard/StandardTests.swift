@@ -40,7 +40,7 @@ struct StandardTests {
         // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
         // stale
         #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
-        #expect(Module.builtinProcedures.count == 25)
+        #expect(Module.builtinProcedures.count == 36)
         #expect(Module.builtinProcedures.union(Module.derived) == shipped)
     }
 
@@ -74,7 +74,7 @@ struct StandardTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(
-                            selector: "std.collection.count",
+                            selector: "Standard.Collection.count",
                             arguments: [.literal(.array([.int(1)]))]
                         ))
                         )
@@ -104,12 +104,12 @@ struct StandardTests {
                     signature: Signature(parameters: [Parameter(name: "items", type: .array(.string))]),
                     body: [
                         Statement(binding: .constant("many"), expression: .call(Call(
-                            selector: "std.collection.count",
+                            selector: "Standard.Collection.count",
                             arguments: [reference("items")]
                         ))
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "std.text.split",
+                            selector: "Standard.Text.split",
                             arguments: [reference("many"), .literal(.string(","))]
                         ))
                         )
@@ -124,8 +124,8 @@ struct StandardTests {
         }
     }
 
-    @Test("a bundle mentioning the shared constraints needs std in the link")
-    func aBundleNeedsStdInTheLink() async throws {
+    @Test("a bundle mentioning the shared contracts needs Standard in the link")
+    func aBundleNeedsStandardInTheLink() async throws {
         // Given. Collection's procedures mention `Collection` and
         // `Comparable`, which only the foundation module declares
         let sut = try Module(
@@ -135,14 +135,14 @@ struct StandardTests {
                     signature: Signature(),
                     body: [],
                     result: .call(Call(
-                        selector: "std.collection.sorted",
+                        selector: "Standard.Collection.sorted",
                         arguments: [.literal(.array([.int(2), .int(1)]))]
                     ))
                 )
             ]
         )
 
-        // When / Then, without the foundation the constraint name resolves to
+        // When / Then, without the foundation the contract name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
             try await Builder().build([sut] + Module.collection)

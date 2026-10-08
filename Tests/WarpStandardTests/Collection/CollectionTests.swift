@@ -11,7 +11,7 @@ import Warp
 import WarpStandard
 import WarpTestSupport
 
-@Suite("What std.collection answers")
+@Suite("What Standard.Collection answers")
 struct CollectionTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -23,13 +23,13 @@ struct CollectionTests {
         let doubling = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
             body: [],
-            result: .call(Call(selector: "std.math.times", arguments: [reference("item"), .literal(.int(2))]))
+            result: .call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))]))
         )
         let odd = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
-                    selector: "std.math.remainder",
+                    selector: "Standard.Numeric.remainder",
                     arguments: [reference("item"), .literal(.int(2))]
                 ))
                 )
@@ -45,7 +45,7 @@ struct CollectionTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "std.math.plus", arguments: [reference("carried"), reference("item")]))
+            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")]))
         )
 
         let sut = try Module(
@@ -55,17 +55,17 @@ struct CollectionTests {
                     signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
-                            selector: "std.collection.map",
+                            selector: "Standard.Collection.map",
                             arguments: [reference("ns"), .closure(doubling)]
                         ))
                         ),
                         Statement(binding: .constant("kept"), expression: .call(Call(
-                            selector: "std.collection.filter",
+                            selector: "Standard.Collection.filter",
                             arguments: [reference("ns"), .closure(odd)]
                         ))
                         ),
                         Statement(binding: .constant("total"), expression: .call(Call(
-                            selector: "std.collection.reduce",
+                            selector: "Standard.Collection.reduce",
                             arguments: [reference("ns"), .literal(.int(0)), .closure(adding)]
                         ))
                         )
@@ -106,7 +106,7 @@ struct CollectionTests {
                 returns: .int
             ),
             body: [],
-            result: .call(Call(selector: "std.math.plus", arguments: [reference("carried"), .literal(.int(1))]))
+            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))]))
         )
         let sut = try Module(
             procedures: [
@@ -115,7 +115,7 @@ struct CollectionTests {
                     signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
                     body: [],
                     result: .call(Call(
-                        selector: "std.collection.reduce",
+                        selector: "Standard.Collection.reduce",
                         arguments: [reference("ns"), .literal(.int(0)), .closure(counting)]
                     ))
                 )
@@ -134,12 +134,12 @@ struct CollectionTests {
 
     @Test("a walk refuses a procedure that reaches outside")
     func aWalkRefusesAProcedureThatRuns() async throws {
-        // Given. `map` declares `const procedure`, so a body that shouts is
+        // Given. `map` declares `const Procedure`, so a body that shouts is
         // refused at the build
         let loud = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .string)]),
             body: [],
-            result: .call(Call(selector: "app.shout", arguments: [reference("item")]))
+            result: .call(Call(selector: "App.shout", arguments: [reference("item")]))
         )
         let sut = try Module(
             procedures: [
@@ -147,7 +147,7 @@ struct CollectionTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "names", type: .array(.string))]),
                     body: [],
-                    result: .call(Call(selector: "std.collection.map", arguments: [reference("names"), .closure(loud)]))
+                    result: .call(Call(selector: "Standard.Collection.map", arguments: [reference("names"), .closure(loud)]))
                 )
             ]
         )
@@ -164,7 +164,7 @@ struct CollectionTests {
         // an element that is null was still an element of the collection
         let sut = Warp.Expression.call(
             Call(
-                selector: "std.collection.map",
+                selector: "Standard.Collection.map",
                 arguments: [
                     .literal(.array([.int(1), .null])),
                     .closure(
@@ -208,22 +208,22 @@ struct CollectionTests {
                     ),
                     body: [
                         Statement(binding: .constant("stepped"), expression: .call(Call(
-                            selector: "std.math.plus",
+                            selector: "Standard.Numeric.plus",
                             arguments: [reference("head"), .literal(.int(1))]
                         ))
                         ),
                         Statement(binding: .constant("wrapped"), expression: .call(Call(
-                            selector: "std.math.remainder",
+                            selector: "Standard.Numeric.remainder",
                             arguments: [reference("stepped"), reference("side")]
                         ))
                         ),
                         Statement(binding: .constant("grown"), expression: .call(Call(
-                            selector: "std.collection.prepending",
+                            selector: "Standard.Collection.prepending",
                             arguments: [reference("trail"), reference("wrapped")]
                         ))
                         ),
                         Statement(binding: .constant("moved"), expression: .call(Call(
-                            selector: "std.collection.dropLast",
+                            selector: "Standard.Collection.dropLast",
                             arguments: [reference("grown")]
                         ))
                         )
@@ -265,17 +265,17 @@ struct CollectionTests {
                     signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
-                            selector: "std.collection.keys",
+                            selector: "Standard.Collection.keys",
                             arguments: [reference("counts")]
                         ))
                         ),
                         Statement(binding: .constant("held"), expression: .call(Call(
-                            selector: "std.collection.values",
+                            selector: "Standard.Collection.values",
                             arguments: [reference("counts")]
                         ))
                         ),
                         Statement(binding: .constant("changed"), expression: .call(Call(
-                            selector: "std.collection.setting",
+                            selector: "Standard.Collection.setting",
                             arguments: [reference("counts"), .literal(.string("b")), .literal(.int(9))]
                         ))
                         )
@@ -317,7 +317,7 @@ struct CollectionTests {
                     body: [],
                     result: .call(
                         Call(
-                            selector: "std.collection.sorted",
+                            selector: "Standard.Collection.sorted",
                             arguments: [.literal(.array([.double(1.5), .double(.nan)]))]
                         )
                     )
@@ -333,21 +333,21 @@ struct CollectionTests {
         // Given. Each procedure declares an array first, and bytes are one
         let asks: [(Warp.Expression, Value)] = [
             (
-                .call(Call(selector: "std.collection.count", arguments: [reference("data")])),
+                .call(Call(selector: "Standard.Collection.count", arguments: [reference("data")])),
                 .int(2)
             ),
             (
-                .call(Call(selector: "std.collection.first", arguments: [reference("data")])),
+                .call(Call(selector: "Standard.Collection.first", arguments: [reference("data")])),
                 .int(104)
             ),
             (
-                .call(Call(selector: "std.collection.reversed", arguments: [reference("data")])),
+                .call(Call(selector: "Standard.Collection.reversed", arguments: [reference("data")])),
                 // The argument's own elements, in the other order, so the
                 // spelling they arrived in is the spelling they leave in.
                 .bytes([105, 104])
             ),
             (
-                .call(Call(selector: "std.collection.contains", arguments: [reference("data"), .literal(.int(105))])),
+                .call(Call(selector: "Standard.Collection.contains", arguments: [reference("data"), .literal(.int(105))])),
                 .bool(true)
             )
         ]

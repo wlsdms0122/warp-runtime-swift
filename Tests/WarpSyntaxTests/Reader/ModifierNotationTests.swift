@@ -16,12 +16,10 @@ struct ModifierNotationTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a mark stands in front of the whole type", arguments: [
-        ("inout int", TypeExpression.inout(.int)),
-        ("inout int?", .inout(.nullable(.int))),
-        ("var array<int>", .variable(.array(.int))),
-        ("inout procedure", .inout(.procedure(nil))),
-        ("consuming Handle", .consuming(.named("Handle"))),
-        ("borrowing Handle", .borrowing(.named("Handle")))
+        ("inout Int", TypeExpression.inout(.int)),
+        ("inout Int?", .inout(.nullable(.int))),
+        ("var Array<Int>", .variable(.array(.int))),
+        ("inout Procedure", .inout(.procedure(nil)))
     ])
     func everyMarkStandsInFrontOfTheWholeType(written: String, expected: TypeExpression) throws {
         // When / Then
@@ -48,7 +46,7 @@ struct ModifierNotationTests {
 
         #expect(
             writtenForm == .dictionary([
-                try Name("\(mark.rawValue) procedure"): .dictionary(["returns": "int"])
+                try Name("\(mark.rawValue) procedure"): .dictionary(["returns": "Int"])
             ])
         )
 
@@ -151,7 +149,7 @@ struct ModifierNotationTests {
 
     @Test(
         "a record's only field may be named for a key the reading takes another way",
-        arguments: ["procedure", "var procedure", "const isolated procedure", "linear", "array", "record"]
+        arguments: ["procedure", "var procedure", "const isolated Procedure", "array", "record"]
     )
     func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) throws {
         // Given. A record type is written under `record`, so its field names
@@ -167,13 +165,13 @@ struct ModifierNotationTests {
         ])
 
         // Then
-        #expect(written == .dictionary(["record": .dictionary([try Name(spelling): "int"])]))
+        #expect(written == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
         #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test(
         "a name is written only where the reading takes the spelling back as it",
-        arguments: ["var Task", "array<int>", "some T", "int", "Task?"]
+        arguments: ["var Task", "Array<Int>", "some T", "Int", "Task?"]
     )
     func aNameTheReadingTakesOtherwiseIsNotWritten(spelling: String) throws {
         // Given. A name is written as itself, so a spelling the reading makes
@@ -189,17 +187,17 @@ struct ModifierNotationTests {
     @Test("a plain name is written as itself and read back as itself")
     func aPlainNameRoundTrips() throws {
         // Given
-        let type = TypeExpression.named("app.Task")
+        let type = TypeExpression.named("App.Task")
 
         // When / Then
-        #expect(try Writer().value(of: type) == .string("app.Task"))
-        #expect(try TypeReader.parse("app.Task") == type)
+        #expect(try Writer().value(of: type) == .string("App.Task"))
+        #expect(try TypeReader.parse("App.Task") == type)
     }
 
     @Test("isolated is read in either order and written in one", arguments: [
-        ("isolated procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated procedure"),
-        ("const isolated procedure", .procedure(nil, .const, .isolated), "const isolated procedure"),
-        ("isolated const procedure", .procedure(nil, .const, .isolated), "const isolated procedure")
+        ("isolated Procedure", TypeExpression.procedure(nil, .unstated, .isolated), "isolated Procedure"),
+        ("const isolated Procedure", .procedure(nil, .const, .isolated), "const isolated Procedure"),
+        ("isolated const Procedure", .procedure(nil, .const, .isolated), "const isolated Procedure")
     ])
     func isolationIsReadEitherWay(written: String, expected: TypeExpression, canonical: String) throws {
         // When
@@ -212,7 +210,7 @@ struct ModifierNotationTests {
 
     @Test("a mark and a modifier on one procedure form survive the round trip")
     func aMarkAndAModifierRoundTrip() throws {
-        // Given. A parameter typed `inout const procedure<...>`, which the
+        // Given. A parameter typed `inout const Procedure<...>`, which the
         // writer spells as a form under one key
         let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int), .const))
 
@@ -225,13 +223,12 @@ struct ModifierNotationTests {
         ])
 
         // Then
-        #expect(written == .dictionary(["inout const procedure": .dictionary(["returns": "int"])]))
+        #expect(written == .dictionary(["inout const procedure": .dictionary(["returns": "Int"])]))
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
     @Test("a keyword written twice is refused", arguments: [
-        "inout inout int", "var var int", "const const procedure", "isolated isolated procedure",
-        "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
+        "inout inout Int", "var var Int", "const const Procedure", "isolated isolated Procedure"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
         // When / Then

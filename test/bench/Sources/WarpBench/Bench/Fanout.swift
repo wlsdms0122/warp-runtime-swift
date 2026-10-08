@@ -95,9 +95,9 @@ struct Fanout {
     }
 
     // MARK: - Private
-    private static func name(_ number: Int) throws -> Name { try Name("fanout.procedure\(number)") }
+    private static func name(_ number: Int) throws -> Name { try Name("Fanout.procedure\(number)") }
 
-    private static func type(_ number: Int) throws -> Name { try Name("fanout.Type\(number)") }
+    private static func type(_ number: Int) throws -> Name { try Name("Fanout.Type\(number)") }
 
     // One document: a type for each procedure it holds, and each procedure standing on
     // its own type and answering what it was sent. It imports nothing, which is

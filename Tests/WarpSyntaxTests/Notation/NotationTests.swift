@@ -59,17 +59,17 @@ struct NotationTests {
         // the language. Nothing is lost by giving them up; the message a
         // spelling would have stood for is written out instead.
         let module = try sut.loadDocument([
-            "imports": ["std.logic.equal"],
+            "imports": ["Standard.Logic.equal"],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "word", "type": "string"]],
+                    "parameters": [["name": "word", "type": "String"]],
                     "body": [
                         ["var": "pick"],
                         [
                             "value": ["conditional": [
                                 "when": [
                                     "call": [
-                                        "procedure": "std.logic.equal",
+                                        "procedure": "Standard.Logic.equal",
                                         "arguments": [["ref": "word"], "hey"]
                                     ]
                                 ],
@@ -97,7 +97,7 @@ struct NotationTests {
         // notation's keys never was a condition type, which is what keeps the
         // spellings optional wherever a condition is asked for.
         let sut = try Loader.testing.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -203,10 +203,10 @@ struct NotationTests {
         // next door, and nothing would say so.
         #expect {
             try sut.loadDocument([
-                "imports": ["std.text.joined", "std.text.text"],
+                "imports": ["Standard.Text.joined", "Standard.Text.text"],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "word", "type": "string"]],
+                        "parameters": [["name": "word", "type": "String"]],
                         "body": [
                             [
                                 "let": "line",
@@ -226,11 +226,11 @@ struct NotationTests {
         // Given / When. Which procedures a template lowers to is the notation's
         // answer, and the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
-            "parameters": [["name": "word", "type": "string"]],
+            "parameters": [["name": "word", "type": "String"]],
             "body": [
                 ["let": "line", "value": ["format": "${w}!", "with": ["w": ["ref": "word"]]]]
             ]
-        ], importing: ["std.text.joined", "std.text.text"])
+        ], importing: ["Standard.Text.joined", "Standard.Text.text"])
 
         // Then
         guard
@@ -253,11 +253,11 @@ struct NotationTests {
         // written inside the cast, so the same document is a cast in every
         // notation rather than a send in some.
         let written: Value = [
-            "parameters": [["name": "flag", "type": "any"]],
+            "parameters": [["name": "flag", "type": "Any"]],
             "body": [
                 [
                     "value": ["conditional": [
-                        "when": ["as": ["of": ["ref": "flag"], "type": "bool"]],
+                        "when": ["as": ["of": ["ref": "flag"], "type": "Bool"]],
                         "then": [["let": "kept", "value": "yes"]]
                     ]
                 ]]
@@ -291,7 +291,7 @@ struct NotationTests {
                 "imports": [],
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "word", "type": "string"]],
+                        "parameters": [["name": "word", "type": "String"]],
                         "body": [
                             ["let": "asked", "value": asked]
                         ],

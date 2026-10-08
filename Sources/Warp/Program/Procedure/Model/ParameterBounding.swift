@@ -47,21 +47,21 @@ public enum ParameterBounding: Equatable {
 
         for occurrence in occurrences {
             let name = occurrence.name
-            let constraints = occurrence.constraints
+            let named = occurrence.bounds
 
-            guard !constraints.isEmpty else {
+            guard !named.isEmpty else {
                 if bounds[name] == nil { bounds[name] = [] }
 
                 continue
             }
 
             guard let held = bounds[name], !held.isEmpty else {
-                bounds[name] = constraints
+                bounds[name] = named
 
                 continue
             }
 
-            let sorted = constraints.sorted()
+            let sorted = named.sorted()
 
             guard held.sorted() != sorted else { continue }
 

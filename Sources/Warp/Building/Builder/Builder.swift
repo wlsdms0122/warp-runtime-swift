@@ -27,7 +27,7 @@ import Foundation
 // another module in the same link.
 //
 // A name is its declared spelling and nothing else. A call site says
-// `std.math.plus`, and that is the one declaration it can mean, wherever it was
+// `Standard.Math.floored`, and that is the one declaration it can mean, wherever it was
 // written; the image the executor runs is spelled the way the documents were,
 // so a run never has to ask again. Constants settle here: compiling folds a
 // read of one into its value wherever the run has nothing left to settle.
@@ -35,10 +35,10 @@ import Foundation
 // Two stages. Compiling (`Compiler`, one document at a time) settles
 // everything a document says against the interfaces it reaches: its
 // declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
-// facts nobody declared (`Derivation`), its bodies (`TypeChecker`,
-// `LinearityChecker`) and lowering (`Lowering`). It runs the procedures a
-// constant calls, which is what folding is. Linking takes what that
-// answered, judges what only the whole list can answer, and runs nothing.
+// facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
+// lowering (`Lowering`). It runs the procedures a constant calls, which is
+// what folding is. Linking takes what that answered, judges what only the
+// whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
@@ -322,8 +322,20 @@ public struct Builder: Sendable {
         var declarers = laid.declarers
         var built: [Compiled] = []
 
+        // What each document declares to the others and which of them it
+        // stands on, by the place it stands at: the ones declaring what it
+        // names, read off its object where it is compiled already, so how the
+        // host split the documents between compiles changes nothing.
+        let supplied = compiled.map(\.declares) + laying.map(\.supplies)
+        let named = compiled.map(\.reaches) + laying.map(\.references)
+        let standingOn = named.map { reaches in
+            Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
+        }
+
         for offset in laying.indices {
-            let object = try await Compiler().compile(
+            let witnesses = Self.witnesses(of: compiled.count + offset, standingOn: standingOn, supplied: supplied)
+
+            let object = try await Compiler(foldingThrough: witnesses).compile(
                 laying[offset],
                 at: compiled.count + offset,
                 declaring: holding[offset],
@@ -347,7 +359,7 @@ public struct Builder: Sendable {
     //
     // What is judged here is what no document could answer about itself, and
     // is the second judgement for that reason: every claimed type answers the
-    // contract it is claimed under, and every constraint a document leaned on
+    // contract it is claimed under, and every claim a document leaned on
     // is held by some document beside it. `supplying` is the native code the
     // documents named. An object says which of its procedures are native and
     // holds none of the code, so the modules that declared them are handed
@@ -405,6 +417,28 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Private
+    // The declarations a fold of the document at `origin` may run where it
+    // calls through a contract: those of every document it stands on, near
+    // or far, since a body it runs may run one of theirs, and its own.
+    private static func witnesses(of origin: Int, standingOn: [Set<Int>], supplied: [Set<Reference>]) -> Set<Name> {
+        var reached: Set<Int> = [origin]
+        var waiting = [origin]
+
+        while let next = waiting.popLast() {
+            for other in standingOn[next] where reached.insert(other).inserted {
+                waiting.append(other)
+            }
+        }
+
+        return Set(reached.flatMap { position in
+            supplied[position].compactMap { reference -> Name? in
+                guard case let .procedure(name) = reference else { return nil }
+
+                return name
+            }
+        })
+    }
+
     // Every object standing beside what it was compiled against. An object
     // says what it leaned on by fingerprint, and what it settled, a closure
     // spelled by a document's name and count among them, is true against
@@ -474,7 +508,7 @@ public struct Builder: Sendable {
                 Declared(
                     signature: row.judged.signature,
                     access: row.judged.access,
-                    facts: (row.judged.constness, row.judged.isolation, answer)
+                    facts: (row.judged.constness, row.judged.isolation, row.judged.failing, answer)
                 ),
                 at: place,
                 of: row.origin

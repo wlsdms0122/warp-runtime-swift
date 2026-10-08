@@ -14,21 +14,16 @@ struct RoundedQuery: Query {
     typealias Parameters = NumberOperand
 
     // MARK: - Property
-    private let integer = IntegerConversion("std.math.rounded")
+    private let integer = IntegerConversion("Standard.Math.rounded")
 
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        switch question[.number] {
-        case let .int(number):
-            return .int(number)
-
-        case let .double(real):
-            return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))
-
-        default:
-            throw ExecutionError("std.math.rounded asks a number")
+        guard case let .double(real) = question[.number] else {
+            throw ExecutionError("Standard.Math.rounded asks a fraction")
         }
+
+        return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))
     }
 
     // MARK: - Private

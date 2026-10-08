@@ -67,7 +67,7 @@ struct ReturnTypeTests {
         await #expect {
             try await builder.build([sut])
         } throws: { error in
-            error is BuildError && "\(error)".contains("answers int, and its declaration promises string")
+            error is BuildError && "\(error)".contains("answers Int, and its declaration promises String")
         }
     }
 
@@ -93,44 +93,51 @@ struct ReturnTypeTests {
             ]
         )
 
-        // When / Then. Two answers that disagree would join to `any`, and
-        // `any` fits everything, so each is held on its own.
+        // When / Then. Two answers that disagree would join to `Any`, and
+        // `Any` fits everything, so each is held on its own.
         let refusal = await #expect(throws: BuildError.self) {
             try await builder.build([sut])
         }
 
-        #expect(refusal?.message.contains("declaration promises int") == true)
+        #expect(refusal?.message.contains("declaration promises Int") == true)
     }
 
-    @Test("a declared type is settled on the way out, not only on the way in")
-    func declaredTypeSettlesOnTheWayOut() async throws {
-        // Given
-        let sut = try Module(
-            types: [
-                "Task": .record(["id": .string])
-            ],
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(
-                        returns: .array(.named("Task"))
-                    ),
-                    body: [
-                        Statement(binding: .constant("made"), expression: .array([
-                            .record(["id": .literal(.string("a"))])
-                        ]))
-                    ],
-                    result: .reference([.key("made")])
-                )
-            ]
+    @Test("a record literal answered where a declared record is promised takes the name, and a nameless value does not")
+    func aLiteralAnsweredTakesTheDeclaredName() async throws {
+        // Given. The same list written straight into the answer, and held
+        // first by a name that says nothing of the record
+        func module(answering result: Warp.Expression, holding body: Body = []) throws -> Module {
+            try Module(
+                types: ["Task": .record(["id": .string])],
+                procedures: [
+                    "entry": Procedure(
+                        access: .public,
+                        signature: Signature(returns: .array(.named("Task"))),
+                        body: body,
+                        result: result
+                    )
+                ]
+            )
+        }
+
+        let written = try module(answering: .array([.record(["id": .literal(.string("a"))])]))
+        let held = try module(
+            answering: .reference([.key("made")]),
+            holding: [Statement(binding: .constant("made"), expression: .array([.record(["id": .literal(.string("a"))])]))]
         )
 
-        // When
-        let image = try await builder.build([sut])
-        let answer = try await Executor().run(image)
+        // When / Then. A literal is written where the promise stands, so it
+        // is a `Task`; a name holds a list of nameless records, and a place
+        // gives no value a name
+        let image = try await builder.build([written])
 
-        // Then
-        #expect(answer == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
+        #expect(try await Executor().run(image) == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
+
+        await #expect {
+            try await builder.build([held])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("declaration promises Array<Task>")
+        }
     }
 
     @Test("an answer naming a type nobody declared is refused at the build")
@@ -194,7 +201,7 @@ struct ReturnTypeTests {
         }
 
         // Then
-        #expect(refusal?.message == "answers int or string, and its declaration promises int")
+        #expect(refusal?.message == "answers Int or String, and its declaration promises Int")
     }
 
     // MARK: - Public

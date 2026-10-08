@@ -41,7 +41,7 @@ struct AppendingQuery: Query {
         // stays compact until an element that is not a byte is put among them,
         // which `adding` reads for itself.
         guard let appended = question[.array].adding(question[.element], atFront: false) else {
-            throw ExecutionError("std.collection.appending asks an array")
+            throw ExecutionError("Standard.Collection.appending asks an array")
         }
 
         return appended

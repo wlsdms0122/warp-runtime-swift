@@ -7,18 +7,17 @@
 
 import Foundation
 
-// The type namespace of a list of documents: every type, membership and
-// contract they declare, each at the place it was written, and what they claim
-// about the names in it.
+// The type namespace of a list of documents: every type and contract they
+// declare, each at the place it was written, and what they claim about the
+// names in it.
 //
-// Types, memberships and contracts share the namespace, so no name in it is
-// two of them and none is declared twice. Each space is gathered whole before
-// the spaces are held against each other, so what is refused does not depend
-// on the order the documents were listed in.
+// Types and contracts share the namespace, so no name in it is both and none
+// is declared twice. Each space is gathered whole before the spaces are held
+// against each other, so what is refused does not depend on the order the
+// documents were listed in.
 struct TypeNamespace {
     // MARK: - Property
     let types: [Name: Placed<TypeExpression>]
-    let constraints: [Name: Placed<[TypeExpression]>]
     let contracts: [Name: Placed<[Name: ContractProcedure]>]
 
     // What each document said one of its types, or another document's,
@@ -30,7 +29,6 @@ struct TypeNamespace {
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
         var types: [Name: Placed<TypeExpression>] = [:]
-        var constraints: [Name: Placed<[TypeExpression]>] = [:]
         var contracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
 
         for (handed, held) in documents.enumerated() {
@@ -52,36 +50,6 @@ struct TypeNamespace {
         }
 
         for (handed, held) in documents.enumerated() {
-            for (name, members) in held.constraints.sorted(by: { $0.key < $1.key }) {
-                let declaration = Placed(
-                    members,
-                    at: .constraint(name.spelling, in: held.document),
-                    of: handed
-                )
-
-                if let declared = types[name] {
-                    throw BuildError(
-                        "'\(name)' is declared as both a type and a constraint in"
-                            + " this link, as a type by \(declared.spelled) and as a"
-                            + " constraint by \(declaration.spelled). One name cannot"
-                            + " stand for a type and a membership at once",
-                        at: declaration.place
-                    )
-                }
-
-                if let first = constraints[name] {
-                    throw BuildError(
-                        "constraint '\(name)' is declared more than once in this"
-                            + " link, by \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
-                }
-
-                constraints[name] = declaration
-            }
-        }
-
-        for (handed, held) in documents.enumerated() {
             for (name, procedures) in held.contracts.sorted(by: { $0.key < $1.key }) {
                 let declaration = Placed(
                     procedures,
@@ -89,12 +57,12 @@ struct TypeNamespace {
                     of: handed
                 )
 
-                if let declared = types[name]?.spelled ?? constraints[name]?.spelled {
+                if let declared = types[name] {
                     throw BuildError(
-                        "'\(name)' is declared as a contract in this link and as"
-                            + " something else by \(declared). One name"
-                            + " cannot be a type, a membership and a contract"
-                            + " at once",
+                        "'\(name)' is declared as both a type and a contract in"
+                            + " this link, as a type by \(declared.spelled) and as a"
+                            + " contract by \(declaration.spelled). One name cannot"
+                            + " stand for a type and a contract at once",
                         at: declaration.place
                     )
                 }
@@ -133,7 +101,6 @@ struct TypeNamespace {
         }
 
         self.types = types
-        self.constraints = constraints
         self.contracts = contracts
         self.claims = claims
     }

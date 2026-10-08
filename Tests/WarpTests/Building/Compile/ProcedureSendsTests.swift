@@ -34,7 +34,7 @@ struct ProcedureSendsTests {
             case times
 
             // MARK: - Property
-            var selector: Name { "std.math.times" }
+            var selector: Name { "Int.times" }
 
             var handing: Int { 2 }
 
@@ -71,7 +71,7 @@ struct ProcedureSendsTests {
             case shout
 
             // MARK: - Property
-            var selector: Name { "app.shout" }
+            var selector: Name { "App.shout" }
 
             var handing: Int { 1 }
 
@@ -100,7 +100,7 @@ struct ProcedureSendsTests {
             case ticket
 
             // MARK: - Property
-            var selector: Name { "app.ticket" }
+            var selector: Name { "App.ticket" }
 
             // MARK: - Initializer
             // MARK: - Public
@@ -131,7 +131,7 @@ struct ProcedureSendsTests {
             case nowhere
 
             // MARK: - Property
-            var selector: Name { "app.nowhere" }
+            var selector: Name { "App.nowhere" }
 
             // MARK: - Initializer
             // MARK: - Public
@@ -156,7 +156,7 @@ struct ProcedureSendsTests {
             case hidden
 
             // MARK: - Property
-            var selector: Name { "app.hidden" }
+            var selector: Name { "App.hidden" }
 
             // MARK: - Initializer
             // MARK: - Public
@@ -181,7 +181,7 @@ struct ProcedureSendsTests {
             case describe
 
             // MARK: - Property
-            var selector: Name { "app.Describable.describe" }
+            var selector: Name { "App.Describable.describe" }
 
             var handing: Int { 1 }
 
@@ -208,7 +208,7 @@ struct ProcedureSendsTests {
             case shout
 
             // MARK: - Property
-            var selector: Name { "app.shout" }
+            var selector: Name { "App.shout" }
 
             // MARK: - Initializer
             // MARK: - Public
@@ -234,7 +234,7 @@ struct ProcedureSendsTests {
             case pick
 
             // MARK: - Property
-            var selector: Name { "app.pick" }
+            var selector: Name { "App.pick" }
 
             var handing: Int { 2 }
 
@@ -261,7 +261,7 @@ struct ProcedureSendsTests {
             case pick
 
             // MARK: - Property
-            var selector: Name { "app.pick" }
+            var selector: Name { "App.pick" }
 
             var handing: Int { 3 }
 
@@ -288,7 +288,7 @@ struct ProcedureSendsTests {
             case pick
 
             // MARK: - Property
-            var selector: Name { "app.pick" }
+            var selector: Name { "App.pick" }
 
             var handing: Int { 2 }
 
@@ -315,7 +315,7 @@ struct ProcedureSendsTests {
             case pick
 
             // MARK: - Property
-            var selector: Name { "app.pick" }
+            var selector: Name { "App.pick" }
 
             var handing: Int { 1 }
 
@@ -342,7 +342,7 @@ struct ProcedureSendsTests {
             case speak
 
             // MARK: - Property
-            var selector: Name { "app.speak" }
+            var selector: Name { "App.speak" }
 
             var handing: Int { 1 }
 
@@ -369,7 +369,7 @@ struct ProcedureSendsTests {
             case reporting
 
             // MARK: - Property
-            var selector: Name { "app.reporting" }
+            var selector: Name { "App.reporting" }
 
             var handing: Int { 1 }
 
@@ -423,10 +423,10 @@ struct ProcedureSendsTests {
             var selector: Name {
                 switch self {
                 case .first:
-                    return "std.math.plus"
+                    return "Int.plus"
 
                 case .apart:
-                    return "std.math.minus"
+                    return "Int.minus"
                 }
             }
 
@@ -448,11 +448,11 @@ struct ProcedureSendsTests {
     // MARK: - Property
     private static let sending = try! Module(
         procedures: [
-            "app.twice": Procedure(
+            "App.twice": Procedure(
                 signature: Signature(of: TwiceQuery.self, returns: .int),
                 implementation: .query(TwiceQuery())
             ),
-            "app.announce": Procedure(
+            "App.announce": Procedure(
                 signature: Signature(of: AnnounceEffect.self, returns: .string),
                 implementation: .effect(AnnounceEffect())
             )
@@ -461,7 +461,7 @@ struct ProcedureSendsTests {
 
     private static let strayed = try! Module(
         procedures: [
-            "app.stray": Procedure(
+            "App.stray": Procedure(
                 signature: Signature(of: StrayQuery.self, returns: .null),
                 implementation: .query(StrayQuery())
             )
@@ -470,7 +470,7 @@ struct ProcedureSendsTests {
 
     private static let reaching = try! Module(
         procedures: [
-            "app.reach": Procedure(
+            "App.reach": Procedure(
                 signature: Signature(of: ReachingQuery.self, returns: .int),
                 implementation: .query(ReachingQuery())
             )
@@ -479,7 +479,7 @@ struct ProcedureSendsTests {
 
     private static let telling = try! Module(
         procedures: [
-            "app.telling": Procedure(
+            "App.telling": Procedure(
                 signature: Signature(of: TellingQuery.self, returns: .string),
                 implementation: .query(TellingQuery())
             )
@@ -488,21 +488,21 @@ struct ProcedureSendsTests {
 
     // A contract, a type answering it, and the declaration that answers.
     private static let describing = try! Module(
-        types: ["bank.Account": .record(["balance": .int])],
+        types: ["Bank.Account": .record(["balance": .int])],
         contracts: [
-            "app.Describable": [
+            "App.Describable": [
                 "describe": ContractProcedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string),
                     constness: .const,
                     isolation: .isolated
                 )
             ]
         ],
-        claims: ["bank.Account": ["app.Describable"]],
+        claims: ["Bank.Account": ["App.Describable"]],
         procedures: [
-            "bank.Account.describe": Procedure(
+            "Bank.Account.describe": Procedure(
                 access: .public,
-                signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account"))], returns: .string),
+                signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
                 body: [],
                 result: .literal(.string("an account"))
             )
@@ -511,7 +511,7 @@ struct ProcedureSendsTests {
 
     private static let contradicting = try! Module(
         procedures: [
-            "app.shouting": Procedure(
+            "App.shouting": Procedure(
                 signature: Signature(of: ShoutingQuery.self, returns: .null),
                 implementation: .query(ShoutingQuery())
             )
@@ -519,11 +519,11 @@ struct ProcedureSendsTests {
         identity: Identity([0x01])
     )
 
-    // `app.counted` twice: here it says it touches nothing shared and is refused
+    // `App.counted` twice: here it says it touches nothing shared and is refused
     // for sending the ticketing procedure, and in `counting` it says it does.
     private static let claims = try! Module(
         procedures: [
-            "app.counted": Procedure(
+            "App.counted": Procedure(
                 signature: Signature(of: CountedQuery.self, returns: .int),
                 implementation: .query(CountedQuery(isolated: true))
             )
@@ -532,7 +532,7 @@ struct ProcedureSendsTests {
 
     private static let counting = try! Module(
         procedures: [
-            "app.counted": Procedure(
+            "App.counted": Procedure(
                 signature: Signature(of: CountedQuery.self, returns: .int),
                 implementation: .query(CountedQuery(isolated: false))
             )
@@ -543,7 +543,7 @@ struct ProcedureSendsTests {
     // an argument standing at the wrong place shows in the answer.
     private static let picked = try! Module(
         procedures: [
-            "app.pick": Procedure(
+            "App.pick": Procedure(
                 signature: Signature(
                     parameters: [Parameter(name: "a", type: .int), Parameter(name: "z", type: .int)],
                     returns: .int
@@ -556,7 +556,7 @@ struct ProcedureSendsTests {
 
     private static let pickedInPlace = try! Module(
         procedures: [
-            "app.pick": Procedure(
+            "App.pick": Procedure(
                 signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
                 body: [],
                 result: .reference([.key("a")])
@@ -566,7 +566,7 @@ struct ProcedureSendsTests {
 
     private static let picking = try! Module(
         procedures: [
-            "app.picking": Procedure(
+            "App.picking": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(PickingEffect())
             )
@@ -575,7 +575,7 @@ struct ProcedureSendsTests {
 
     private static let overcounting = try! Module(
         procedures: [
-            "app.overcounting": Procedure(
+            "App.overcounting": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(OvercountingEffect())
             )
@@ -584,7 +584,7 @@ struct ProcedureSendsTests {
 
     private static let undercounting = try! Module(
         procedures: [
-            "app.undercounting": Procedure(
+            "App.undercounting": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(UndercountingEffect())
             )
@@ -593,7 +593,7 @@ struct ProcedureSendsTests {
 
     private static let overhanding = try! Module(
         procedures: [
-            "app.overhanding": Procedure(
+            "App.overhanding": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .effect(OverhandingEffect())
             )
@@ -602,7 +602,7 @@ struct ProcedureSendsTests {
 
     private static let spoken = try! Module(
         procedures: [
-            "app.speak": Procedure(
+            "App.speak": Procedure(
                 signature: Signature(
                     parameters: [Parameter(name: "said", type: .string)],
                     returns: .string
@@ -615,7 +615,7 @@ struct ProcedureSendsTests {
 
     private static let mistyping = try! Module(
         procedures: [
-            "app.mistyping": Procedure(
+            "App.mistyping": Procedure(
                 signature: Signature(returns: .string),
                 implementation: .effect(MistypingEffect())
             )
@@ -624,7 +624,7 @@ struct ProcedureSendsTests {
 
     private static let reporting = try! Module(
         procedures: [
-            "app.reporting": Procedure(
+            "App.reporting": Procedure(
                 signature: Signature(of: ReportingEffect.self, returns: .string),
                 implementation: .effect(ReportingEffect())
             )
@@ -633,7 +633,7 @@ struct ProcedureSendsTests {
 
     private static let nullingToAParameter = try! Module(
         procedures: [
-            "app.nullingToAParameter": Procedure(
+            "App.nullingToAParameter": Procedure(
                 signature: Signature(returns: .string),
                 implementation: .effect(NullingEffect())
             )
@@ -649,7 +649,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.twice", arguments: [.literal(.int(2))]))
+                result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
             )])] + [Self.sending, .shouting] + Module.standard
         )
 
@@ -667,7 +667,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.announce", arguments: [.literal(.string("hi"))]))
+                result: .call(Call(selector: "App.announce", arguments: [.literal(.string("hi"))]))
             )])] + [Self.sending, .shouting] + Module.standard
         )
 
@@ -687,13 +687,13 @@ struct ProcedureSendsTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sends 'app.nowhere', which no module in this link declares")
+                && "\(error)".contains("sends 'App.nowhere', which no module in this link declares")
         }
     }
 
     @Test("a procedure sending a contract's procedure is refused at the build")
     func aSendNamingAContractsProcedureIsRefused() async throws {
-        // Given. `app.telling` sends `app.Describable.describe`, which the
+        // Given. `App.telling` sends `App.Describable.describe`, which the
         // contract declares and no declaration wears
         let describing = try await Builder().compile([Self.describing])
 
@@ -710,7 +710,7 @@ struct ProcedureSendsTests {
 
         for refusal in [together, against] {
             #expect(
-                refusal?.message == "sends 'app.Describable.describe', which is a contract's procedure. A send names"
+                refusal?.message == "sends 'App.Describable.describe', which is a contract's procedure. A send names"
                     + " the declaration it reaches, and which declaration answers a contract's procedure is a"
                     + " call's first argument to say"
             )
@@ -719,11 +719,11 @@ struct ProcedureSendsTests {
 
     @Test("a procedure sending another document's private declaration is refused at the build")
     func aSendReachingAPrivateDeclarationIsRefused() async throws {
-        // Given. A document declares `app.hidden` privately, and a procedure the
+        // Given. A document declares `App.hidden` privately, and a procedure the
         // host brings declares it sends that spelling.
         let document = try Module(procedures: [
-            "app.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
-            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "app.reach")))
+            "App.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
+            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "App.reach")))
         ])
 
         // When / Then
@@ -736,8 +736,8 @@ struct ProcedureSendsTests {
 
     @Test("a query sending something that answers only by running is refused in its own document")
     func aQuerySendingAnEffectIsRefused() async {
-        // Given / When. `app.shouting` claims it answers without running and
-        // sends `app.shout`, which does not
+        // Given / When. `App.shouting` claims it answers without running and
+        // sends `App.shout`, which does not
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [Self.contradicting, .shouting]
@@ -745,13 +745,13 @@ struct ProcedureSendsTests {
         }
 
         // Then
-        #expect(refusal?.place == Place.procedure("app.shouting", in: .of(Self.contradicting)).part(.imports))
+        #expect(refusal?.place == Place.procedure("App.shouting", in: .of(Self.contradicting)).part(.imports))
     }
 
-    @Test("an isolated procedure sending one that keeps state is refused")
+    @Test("an isolated Procedure sending one that keeps state is refused")
     func anIsolatedProcedureSendingSharedStateIsRefused() async {
-        // Given / When / Then. `app.counted` says it touches nothing shared
-        // and sends `app.ticket`, which answers from a box it keeps between
+        // Given / When / Then. `App.counted` says it touches nothing shared
+        // and sends `App.ticket`, which answers from a box it keeps between
         // calls
         await #expect {
             try await Builder().build(
@@ -759,17 +759,17 @@ struct ProcedureSendsTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
+                && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'App.ticket'")
         }
     }
 
-    @Test("an isolated procedure compiled apart from the stateful one it sends is refused at the build")
+    @Test("an isolated Procedure compiled apart from the stateful one it sends is refused at the build")
     func anIsolatedProcedureCompiledApartIsRefused() async throws {
-        // Given. `app.ticket` is compiled on its own
+        // Given. `App.ticket` is compiled on its own
         let ticketing = try await Builder().compile([.ticketing])
 
-        // When / Then. Compiled alone, `app.counted` sends a spelling nothing
-        // standing declares, and compiled against `app.ticket` it is held to
+        // When / Then. Compiled alone, `App.counted` sends a spelling nothing
+        // standing declares, and compiled against `App.ticket` it is held to
         // what that procedure keeps
         let alone = await #expect(throws: BuildError.self) {
             let counted = try await Builder().compile([Self.claims])
@@ -780,20 +780,20 @@ struct ProcedureSendsTests {
             try await Builder().compile([Self.claims], against: ticketing, supplying: Supplying([.ticketing]))
         }
 
-        #expect(alone?.message == "sends 'app.ticket', which no module in this link declares")
+        #expect(alone?.message == "sends 'App.ticket', which no module in this link declares")
         #expect(
-            against?.message.contains("says it touches no name another body could touch at the same time, and sends 'app.ticket'")
+            against?.message.contains("says it touches no name another body could touch at the same time, and sends 'App.ticket'")
                 == true
         )
     }
 
     @Test("a query compiled apart from the effect it sends is refused at the build")
     func aQueryCompiledApartIsRefused() async throws {
-        // Given. `app.shout` is compiled on its own
+        // Given. `App.shout` is compiled on its own
         let shouting = try await Builder().compile([.shouting])
 
-        // When / Then. Compiled alone, `app.shouting` sends a spelling nothing
-        // standing declares, and compiled against `app.shout` it is held to
+        // When / Then. Compiled alone, `App.shouting` sends a spelling nothing
+        // standing declares, and compiled against `App.shout` it is held to
         // answering only by running
         let alone = await #expect(throws: BuildError.self) {
             let contradicting = try await Builder().compile([Self.contradicting])
@@ -804,8 +804,8 @@ struct ProcedureSendsTests {
             try await Builder().compile([Self.contradicting], against: shouting, supplying: Supplying([.shouting]))
         }
 
-        #expect(alone?.message == "sends 'app.shout', which no module in this link declares")
-        #expect(against?.message.contains("answers without running and sends 'app.shout', which answers only by running") == true)
+        #expect(alone?.message == "sends 'App.shout', which no module in this link declares")
+        #expect(against?.message.contains("answers without running and sends 'App.shout', which answers only by running") == true)
     }
 
     @Test("a procedure that says it touches shared state may send one that does")
@@ -815,7 +815,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.counted"))
+                result: .call(Call(selector: "App.counted"))
             )])] + [Self.counting, .ticketing]
         )
 
@@ -830,7 +830,7 @@ struct ProcedureSendsTests {
     func nativeSendsAreDisclosed() throws {
         // Given / When / Then. The list is what a host reads to decide what
         // to grant, so a procedure's own sends are in it
-        #expect(Self.sending.imports == ["std.math.times", "app.shout"])
+        #expect(Self.sending.imports == ["Int.times", "App.shout"])
     }
 
     @Test("a module claiming a list its procedures contradict is refused")
@@ -840,14 +840,14 @@ struct ProcedureSendsTests {
             try Module(
                 imports: [],
                 procedures: [
-                    "app.twice": Procedure(
+                    "App.twice": Procedure(
                         signature: Signature(of: TwiceQuery.self, returns: .int),
                         implementation: .query(TwiceQuery())
                     )
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("uses [\"std.math.times\"], which it does not import")
+            error is ValidationError && "\(error)".contains("uses [\"Int.times\"], which it does not import")
         }
     }
 
@@ -858,7 +858,7 @@ struct ProcedureSendsTests {
         #expect {
             try Module(
                 procedures: [
-                    "app.scattered": Procedure(
+                    "App.scattered": Procedure(
                         signature: Signature(returns: .int),
                         implementation: .query(ScatteredQuery())
                     )
@@ -871,13 +871,13 @@ struct ProcedureSendsTests {
 
     @Test("what a procedure hands over stands at the callee's first positions")
     func handedArgumentsStandAtTheCalleesPositions() async throws {
-        // Given. `app.picking` hands two values, and the callee answers the one
+        // Given. `App.picking` hands two values, and the callee answers the one
         // standing at its second position
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.picking"))
+                result: .call(Call(selector: "App.picking"))
             )])] + [Self.picking, Self.picked]
         )
 
@@ -890,7 +890,7 @@ struct ProcedureSendsTests {
 
     @Test("a procedure handing more than the callee takes is refused at the build")
     func handingMoreThanTheCalleeTakesIsRefused() async {
-        // Given / When / Then. `app.pick` takes two, and a third would stand at
+        // Given / When / Then. `App.pick` takes two, and a third would stand at
         // a position the callee does not have
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
@@ -898,12 +898,12 @@ struct ProcedureSendsTests {
             )
         }
 
-        #expect(refusal?.message.contains("sends 'app.pick' 3 arguments, and it takes 2") == true)
+        #expect(refusal?.message.contains("sends 'App.pick' 3 arguments, and it takes 2") == true)
     }
 
     @Test("a procedure handing fewer than the callee takes is refused at the build")
     func handingFewerThanTheCalleeTakesIsRefused() async {
-        // Given / When / Then. `app.pick` takes two, and a send handing one is
+        // Given / When / Then. `App.pick` takes two, and a send handing one is
         // a count every run would refuse
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
@@ -911,12 +911,12 @@ struct ProcedureSendsTests {
             )
         }
 
-        #expect(refusal?.message.contains("sends 'app.pick' 1 arguments, and it takes 2") == true)
+        #expect(refusal?.message.contains("sends 'App.pick' 1 arguments, and it takes 2") == true)
     }
 
     @Test("a procedure sending one that takes a parameter in place is refused at the build")
     func aSendToAParameterInPlaceIsRefused() async {
-        // Given / When / Then. A send hands values, and `app.pick` here takes
+        // Given / When / Then. A send hands values, and `App.pick` here takes
         // its one parameter in place
         let refusal = await #expect(throws: BuildError.self) {
             try await Builder().build(
@@ -925,7 +925,7 @@ struct ProcedureSendsTests {
             )
         }
 
-        #expect(refusal?.message.contains("sends 'app.pick', which takes 'a' in place, and a send hands values") == true)
+        #expect(refusal?.message.contains("sends 'App.pick', which takes 'a' in place, and a send hands values") == true)
     }
 
     @Test("a procedure handing more than it declared it hands is refused when it sends")
@@ -936,7 +936,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.overhanding"))
+                result: .call(Call(selector: "App.overhanding"))
             )])] + [Self.overhanding, Self.picked]
         )
 
@@ -945,19 +945,19 @@ struct ProcedureSendsTests {
             try await Executor().run(image)
         } throws: { error in
             error is ExecutionError
-                && "\(error)".contains("'app.pick' is handed 3 here, and the procedure sending it declares it hands 2")
+                && "\(error)".contains("'App.pick' is handed 3 here, and the procedure sending it declares it hands 2")
         }
     }
 
     @Test("a procedure handing what the callee cannot take is refused at the boundary")
     func aMistypedArgumentIsRefused() async throws {
-        // Given. `app.mistyping` hands an int to a procedure whose first
+        // Given. `App.mistyping` hands an int to a procedure whose first
         // parameter is declared string
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.mistyping"))
+                result: .call(Call(selector: "App.mistyping"))
             )])] + [Self.mistyping, Self.spoken]
         )
 
@@ -970,13 +970,13 @@ struct ProcedureSendsTests {
 
     @Test("a value a send hands over is held to the parameter it fills")
     func aHandedNullIsHeldToItsType() async throws {
-        // Given. `app.reporting` declares `said: string`, and null is not a
+        // Given. `App.reporting` declares `said: String`, and null is not a
         // string. The same gate an argument a body writes goes through
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 body: [],
-                result: .call(Call(selector: "app.nullingToAParameter"))
+                result: .call(Call(selector: "App.nullingToAParameter"))
             )])] + [Self.nullingToAParameter, Self.reporting]
         )
 
@@ -985,7 +985,7 @@ struct ProcedureSendsTests {
             try await Executor().run(image)
         }
 
-        #expect(refusal?.message.contains("expected string, got null") == true)
+        #expect(refusal?.message.contains("expected String, got Null") == true)
     }
 
     // MARK: - Public

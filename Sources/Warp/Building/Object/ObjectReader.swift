@@ -60,7 +60,6 @@ struct ObjectReader {
         // every part is in.
         var dependencies: [Fingerprint] = []
         var types: [Name: TypeExpression] = [:]
-        var constraints: [Name: [TypeExpression]] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Name: Set<Name>] = [:]
         var leaned: [Claim: Place] = [:]
@@ -68,7 +67,7 @@ struct ObjectReader {
         var liftedRows: [Value] = []
         var answers: [Name: LoweredType] = [:]
         var numbered: Value = .null
-        var typeNumbering = LoweredTypeNumbering(types: [], memberships: [])
+        var typeNumbering = LoweredTypeNumbering(types: [])
         var variables: [(name: Name, value: Value)] = []
         var constants: [Name] = []
 
@@ -88,11 +87,6 @@ struct ObjectReader {
 
             case .types:
                 types = try keyed(part, of: "types", expression)
-
-            case .constraints:
-                constraints = try keyed(part, of: "constraints") { written in
-                    try Field(written, of: "constraints").list(expression)
-                }
 
             case .contracts:
                 contracts = try keyed(part, of: "contracts") { written in
@@ -124,8 +118,8 @@ struct ObjectReader {
             case .numbering:
                 numbered = part
 
-            // The types its bodies stand on and the memberships, which is what
-            // they number their types from.
+            // The types its bodies stand on, which is what they number their
+            // types from.
             case .typeNumbering:
                 typeNumbering = try LoweredTypeNumbering(written: part)
 
@@ -157,7 +151,6 @@ struct ObjectReader {
         return try Compiled(
             document: Place.Document(identity: identity),
             types: types,
-            constraints: constraints,
             contracts: contracts,
             claims: claims,
             leaned: leaned,
@@ -231,9 +224,7 @@ struct ObjectReader {
                 return read
             }
 
-            let slotAnswers = try cursor.field().list(lowered)
-
-            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured, slotAnswers: slotAnswers))
+            read = .procedure(Closure(writer: writer, nth: nth, linked: nil, captured: captured))
 
         case nil: throw ObjectRefused("'value' answers in a way this reads none of")
         }
@@ -339,7 +330,6 @@ struct ObjectReader {
         case .int: read = .int
         case .double: read = .double
         case .string: read = .string
-        case .ranged: read = .ranged(try ranged(cursor.next()))
         case .array: read = .array(try expression(cursor.next()))
         case .dictionary: read = .dictionary(try expression(cursor.next()))
         case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
@@ -352,15 +342,12 @@ struct ObjectReader {
 
         case .variable: read = .variable(try expression(cursor.next()))
         case .`inout`: read = .inout(try expression(cursor.next()))
-        case .linear: read = .linear(try expression(cursor.next()))
-        case .consuming: read = .consuming(try expression(cursor.next()))
-        case .borrowing: read = .borrowing(try expression(cursor.next()))
         case .nullable: read = .nullable(try expression(cursor.next()))
         case .named: read = .named(try name(cursor.next()))
         case .parameter:
             read = .parameter(
                 name: try name(cursor.next()),
-                constraints: try Field(cursor.next(), of: "bounds").ordered(name)
+                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
             )
 
         case .composition:
@@ -378,6 +365,9 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
+        case .selfType:
+            read = .selfType
+
         case nil:
             throw ObjectRefused("'type' names a kind this reads none of")
         }
@@ -387,60 +377,12 @@ struct ObjectReader {
         return read
     }
 
-    private func ranged(_ value: Value) throws -> TypeExpression.Refinement {
-        var cursor = try FieldCursor(value, of: "range")
-        let read: TypeExpression.Refinement
-
-        switch ObjectLayout.RefinementTag(rawValue: try cursor.field().integer()) {
-        case .whole:
-            read = .whole(
-                from: try cursor.field().maybe(integer),
-                to: try cursor.field().maybe { written in try edge(written, integer) }
-            )
-
-        case .fraction:
-            read = .fraction(
-                from: try cursor.field().maybe(fraction),
-                to: try cursor.field().maybe { written in try edge(written, fraction) }
-            )
-
-        case nil:
-            throw ObjectRefused("'range' is over neither whole numbers nor fractions")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func edge<Bound>(
-        _ value: Value,
-        _ read: (Value) throws -> Bound
-    ) throws -> TypeExpression.Refinement.Edge<Bound> {
-        var cursor = try FieldCursor(value, of: "edge")
-        let held: TypeExpression.Refinement.Edge<Bound>
-
-        switch ObjectLayout.EdgeTag(rawValue: try cursor.field().integer()) {
-        case .through: held = .through(try read(cursor.next()))
-        case .upTo: held = .upTo(try read(cursor.next()))
-        case nil: throw ObjectRefused("'edge' says neither that its bound is inside nor that it is out")
-        }
-
-        try cursor.end()
-
-        return held
-    }
-
     private func counted(_ value: Value) throws -> Int {
         try Field(value, of: "a count").count()
     }
 
     private func integer(_ value: Value) throws -> Int {
         try Field(value, of: "a number").integer()
-    }
-
-    private func fraction(_ value: Value) throws -> Double {
-        try Field(value, of: "a fraction").double()
     }
 
     private func text(_ value: Value) throws -> String {
@@ -478,7 +420,8 @@ struct ObjectReader {
         let read = ContractProcedure(
             signature: try signature(cursor.next()),
             constness: try constness(cursor.next()),
-            isolation: try isolation(cursor.next())
+            isolation: try isolation(cursor.next()),
+            failing: try failing(cursor.next())
         )
 
         try cursor.end()
@@ -515,7 +458,6 @@ struct ObjectReader {
         let read = Parameter(
             name: try name(cursor.next()),
             type: try cursor.field().maybe(expression),
-            candidates: try cursor.field().maybe { written in try Field(written, of: "candidates").list(text) },
             description: try cursor.field().maybe(text)
         )
 
@@ -603,7 +545,6 @@ struct ObjectReader {
         case .constants: read = .constants
         case .variables: read = .variables
         case .types: read = .types
-        case .constraints: read = .constraints
         case .contracts: read = .contracts
         case .satisfies: read = .satisfies
         case .imports: read = .imports
@@ -710,7 +651,6 @@ struct ObjectReader {
         case .int: read = .int
         case .double: read = .double
         case .string: read = .string
-        case .ranged: read = .ranged(try ranged(cursor.next()))
         case .array: read = .array(try lowered(cursor.next()))
         case .dictionary: read = .dictionary(try lowered(cursor.next()))
         case .record: read = .record(try loweredRecord(cursor.next()))
@@ -731,11 +671,11 @@ struct ObjectReader {
         case .parameter:
             read = .parameter(
                 label: try name(cursor.next()),
-                bounds: try Field(cursor.next(), of: "bounds").ordered(bound)
+                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
             )
 
         case .composition:
-            let bounds = try Field(cursor.next(), of: "composition").ordered(bound)
+            let bounds = try Field(cursor.next(), of: "composition").ordered(name)
 
             guard !bounds.isEmpty else {
                 throw ObjectRefused("'composition' holds a value to nothing")
@@ -767,21 +707,6 @@ struct ObjectReader {
         case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
         case .namesItself: read = .namesItself
         case nil: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func bound(_ value: Value) throws -> LoweredType.Bound {
-        var cursor = try FieldCursor(value, of: "bound")
-        let read: LoweredType.Bound
-
-        switch ObjectLayout.BoundTag(rawValue: try cursor.field().integer()) {
-        case .membership: read = .membership(try cursor.field().count())
-        case .contract: read = .contract(try name(cursor.next()))
-        case nil: throw ObjectRefused("'bound' holds a parameter to nothing this reads")
         }
 
         try cursor.end()
@@ -1008,9 +933,7 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
-            let settlesTo = try cursor.field().maybe(lowered)
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack, settlesTo: settlesTo) else {
+            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
                 throw ObjectRefused("a judgement where a call stands judges nothing")
             }
 

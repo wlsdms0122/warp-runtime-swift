@@ -465,23 +465,20 @@ struct Lowering {
     // document's last body is lowered and not while one is.
     func numbered(
         _ rows: [Int],
-        answering answers: [Name: LoweredType],
-        starting variables: [(name: Name, value: Value)]
+        answering answers: [Name: LoweredType]
     ) throws -> (
         table: [Linked],
         numbering: LoweredTypeNumbering,
-        answers: [Name: LoweredType],
-        starting: [(name: Name, value: Value)]
+        answers: [Name: LoweredType]
     ) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies, the answers read off them and its variables' starts.
-        // Read through the walks that rewrite them, so which cases hold a type
-        // is answered in one place; what those walks rebuild is dropped.
+        // rows' bodies and the answers read off them. Read through the walks
+        // that rewrite them, so which cases hold a type is answered in one
+        // place; what those walks rebuild is dropped.
         var types: Set<Int> = []
-        var memberships: Set<Int> = []
 
         func stand(_ type: LoweredType) -> LoweredType {
-            type.standing(into: &types, and: &memberships)
+            type.standing(into: &types)
 
             return type
         }
@@ -496,26 +493,12 @@ struct Lowering {
             _ = stand(answer)
         }
 
-        for (_, value) in variables {
-            _ = value.rewritten(types: stand)
-        }
-
-        let numbering = LoweredTypeNumbering(
-            types: Set(types.map { row in loweredTypes.labels[row] }),
-            memberships: Set(memberships.map { row in loweredTypes.constraintLabels[row] })
-        )
+        let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
 
         // Which number each row of this link stands at, so the walk that
         // writes them reads a place rather than hashing a name at every
         // type it meets.
-        let place = (
-            types: Self.placed(types, among: numbering.types, spelling: loweredTypes.labels),
-            memberships: Self.placed(
-                memberships,
-                among: numbering.memberships,
-                spelling: loweredTypes.constraintLabels
-            )
-        )
+        let place = Self.placed(types, among: numbering.types, spelling: loweredTypes.labels)
 
         let numbered = try rows.map { row -> Linked in
             let held = table[row]
@@ -535,11 +518,7 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        let starting = try variables.map { name, value in
-            (name: name, value: try value.rewritten(types: { type in try renumbered(type, in: place, of: name) }))
-        }
-
-        return (numbered, numbering, read, starting)
+        return (numbered, numbering, read)
     }
 
     // MARK: - Private
@@ -572,28 +551,30 @@ struct Lowering {
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
             let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
+            let asItIs = context.judgements.landsAsItIs(at: here)
             let binding: Instruction.Binding?
 
             switch statement.binding {
             // A name that says what it holds settles to it, so what stands in
             // the slot is the declared type. One that says nothing holds what
-            // the code it was given stands as.
+            // the code it was given stands as. What the build proved a value
+            // of the type as it stands is not judged again.
             case let .constant(name, declared)?:
                 let slot = context.slots.allocate(name)
-                let settling = declared?.lowered(in: loweredTypes)
+                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, settling ?? standing(code, on: context.slots))
-                binding = .bind(slot, settling: settling)
+                context.slots.hold(slot, holding ?? standing(code, on: context.slots))
+                binding = .bind(slot, settling: asItIs ? nil : holding)
 
             // A box that said what it holds is settled to it by its
             // declaration and by every write, so what stands in it is that
             // type. One that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = context.slots.allocate(name)
-                let settling = declared?.lowered(in: loweredTypes)
+                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, settling)
-                binding = .declare(slot, settling: settling)
+                context.slots.hold(slot, holding)
+                binding = .declare(slot, settling: asItIs ? nil : holding)
 
             // A write settles to what the check held it to, so a box that
             // said what it holds holds it after a write as it did after its
@@ -601,7 +582,7 @@ struct Lowering {
             case let .assignment(path)?:
                 let address = try lower(path, in: scope, on: context.slots, at: here)
                 let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
-                binding = .assign(address, settling: settling)
+                binding = .assign(address, settling: asItIs ? nil : settling)
 
             case nil:
                 binding = nil
@@ -752,7 +733,7 @@ struct Lowering {
 
         return .record(
             RecordOperation(
-                layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                layout: Layout(name: context.judgements.name(ofRecordAt: place), ordered: ordered.map(\.key)),
                 fields: try ordered.map { name, field in
                     try lower(field, naming: nil, in: scope, on: context, at: place.child(.field(name)))
                 }
@@ -1143,32 +1124,19 @@ struct Lowering {
     // something it did not read, which is this pass's own mistake.
     private func renumbered(
         _ type: LoweredType,
-        in place: (types: [Int: Int], memberships: [Int: Int]),
+        in place: [Int: Int],
         of label: Name
     ) throws -> LoweredType {
-        try type.renumbered(
-            type: { number in
-                guard let stands = place.types[number] else {
-                    throw BuildError.unjudged(
-                        "type \'\(loweredTypes.labels[number])\', which its document never numbered",
-                        at: Place.procedure(label.spelling, in: .assembled)
-                    )
-                }
-
-                return stands
-            },
-            membership: { number in
-                guard let stands = place.memberships[number] else {
-                    throw BuildError.unjudged(
-                        "membership \'\(loweredTypes.constraintLabels[number])\',"
-                            + " which its document never numbered",
-                        at: Place.procedure(label.spelling, in: .assembled)
-                    )
-                }
-
-                return stands
+        try type.renumbered { number in
+            guard let stands = place[number] else {
+                throw BuildError.unjudged(
+                    "type \'\(loweredTypes.labels[number])\', which its document never numbered",
+                    at: Place.procedure(label.spelling, in: .assembled)
+                )
             }
-        )
+
+            return stands
+        }
     }
 
     // Where each of a link's rows stands in the document's numbering, read

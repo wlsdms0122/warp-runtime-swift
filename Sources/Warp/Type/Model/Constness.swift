@@ -12,9 +12,9 @@ import Foundation
 // Which procedures answer without running is worked out for bodies and
 // declared by a native. This is how a slot asks for one: a procedure that runs
 // its argument inside a condition or a path needs an argument that can be run
-// there, and `procedure` alone does not say so.
+// there, and `Procedure` alone does not say so.
 public enum Constness: Sendable, Equatable {
-    // No claim. Either kind fits, the way `any` fits any value.
+    // No claim. Either kind fits, the way `Any` fits any value.
     case unstated
 
     // Must answer without running. What stands here may be asked wherever a

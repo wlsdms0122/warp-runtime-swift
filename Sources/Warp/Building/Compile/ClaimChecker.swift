@@ -21,8 +21,8 @@ import Foundation
 //
 // A claim that does not hold puts its type under no contract, and where that
 // is refused turns on whether another document could put it right. A name this
-// list declares as a membership never becomes a contract, so the claim is
-// refused where it is written. A procedure nothing declares may be in a document
+// list declares as a type never becomes a contract, so the claim is refused
+// where it is written. A procedure nothing declares may be in a document
 // this list does not hold, so that reason waits beside the claim and is said
 // to whoever leans on the pair.
 //
@@ -165,8 +165,8 @@ struct ClaimChecker {
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
     //
-    // The run reads a row out of the first by the name its first argument
-    // wears, and a type standing in it has every procedure behind it.
+    // The run reads a row out of the first by the type its first argument is
+    // an instance of, and a type standing in it has every procedure behind it.
     private func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
@@ -212,13 +212,17 @@ struct ClaimChecker {
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)
 
-        guard types[type] != nil else {
+        // A type the language names stands for itself, and one a document
+        // declares for the record behind it.
+        let languageType = TypeExpression.nominalTypes[type]
+
+        guard languageType != nil || types[type] != nil else {
             let reason = "'\(type)' is not a type this link declares, and only a"
                 + " type answers a contract"
 
             // Declared as something else here, which no document arriving
             // later undoes: one name has one declarer.
-            guard contracts[type] == nil, table.constraints[type] == nil else {
+            guard contracts[type] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 
@@ -229,35 +233,27 @@ struct ClaimChecker {
             let reason = "'\(contract)' is not a contract this link declares,"
                 + " so there are no procedures for '\(type)' to answer"
 
-            guard types[contract] == nil, table.constraints[contract] == nil else {
+            guard types[contract] == nil else {
                 throw BuildError(reason, at: claim.place)
             }
 
             return .waits("\(claim.spelled) says " + reason)
         }
 
-        // A value wears the name of the record it is and no other, so a claim
-        // about a name that is not itself a record, an alias included, is one
-        // no run could read.
-        guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
-            throw BuildError(
-                "'\(type)' is not itself a record, and a value of it wears no name of its own for a run"
-                    + " to read. A claim is about a declared record, under the name it was declared",
-                at: claim.place
-            )
+        // A value of a declared type is an instance of the record it is and of
+        // no other name, so a claim about a declared name that is not itself
+        // a record, an alias included, is about no type a value is.
+        if languageType == nil {
+            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
+                throw BuildError(
+                    "'\(type)' is not itself a record, and no value is an instance of it under that name."
+                        + " A claim about a declared type is about a record, under the name it was declared",
+                    at: claim.place
+                )
+            }
         }
 
-        // A value written `linear` is followed by the name that holds it, and
-        // a contract standing where a type is written holds a value under no
-        // name of its own.
-        guard !TypeExpression.named(type).handedOnce(in: table) else {
-            throw BuildError(
-                "'\(type)' is handed on once and answers no contract. A value written"
-                    + " `linear` is followed by the name that holds it, and a contract"
-                    + " standing where a type is written holds a value under no name",
-                at: claim.place
-            )
-        }
+        let claimed = languageType ?? .named(type)
 
         var answering: [Name: Name] = [:]
 
@@ -289,9 +285,10 @@ struct ClaimChecker {
             // and this sentence stands where the pair was leaned on.
             if let reason = answers(
                 wanted.signature,
-                as: witness.held.signature,
+                by: witness.held.signature,
                 reading: witness.held.facts?.answer,
                 answering: type,
+                claimed: claimed,
                 of: contract,
                 procedure: procedure,
                 in: table
@@ -314,6 +311,13 @@ struct ClaimChecker {
                     return .waits(
                         "\(witness.spelled) declares '\(spelling)', which touches a name another"
                             + " body could touch at once, and '\(contract)' asks '\(procedure)' to touch none"
+                    )
+                }
+
+                if case let .these(allowed) = wanted.failing, !facts.failing.fails(within: allowed) {
+                    return .waits(
+                        "\(witness.spelled) declares '\(spelling)', which may fail with \(facts.failing.rendered),"
+                            + " and '\(contract)' lets '\(procedure)' fail with \(wanted.failing.rendered)"
                     )
                 }
             }
@@ -346,9 +350,10 @@ struct ClaimChecker {
     // reading yet, and the link holds it when every row has one.
     private func answers(
         _ asked: Signature,
-        as given: Signature,
+        by given: Signature,
         reading read: LoweredType?,
         answering type: Name,
+        claimed: TypeExpression,
         of contract: Name,
         procedure: Name,
         in table: TypeTable
@@ -361,9 +366,11 @@ struct ClaimChecker {
                     + " parameters where the contract asks \(asked.parameters.count)"
         }
 
+        // The contract's procedure as the claim reads it: `Self` is the type
+        // the claim is about, wherever it stands.
+        let substituted = asked.replacingSelf(with: claimed)
         let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        let asks = [TypeExpression.named(type).lowered(in: loweredTypes)]
-            + asked.parameters.dropFirst().map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        let asks = substituted.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
         var substitution = Substitution()
 
         for (taken, written) in zip(takes, asks) {
@@ -376,12 +383,18 @@ struct ClaimChecker {
         // reading of it that its join is not. A bound nothing declares was
         // refused where the declaration was judged.
         for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
-            let bounds = names.compactMap { name in loweredTypes.bound(named: name) }.sorted()
+            let bounds = names.filter { name in loweredTypes.declaresContract(name) }.sorted()
 
             for reading in substitution.everyReading(of: parameter)
                 where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+                // An element of a list or a map the claim is about is whatever
+                // it holds, which no spelling of a document names.
+                let read = reading == .parameter(label: TypeSpelling.selfElement, bounds: [])
+                    ? "whatever element a value of '\(type)' holds"
+                    : reading.rendered(in: loweredTypes)
+
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
-                        + " '\(contract)' asks, and reads '\(parameter)' as \(reading.rendered(in: loweredTypes))"
+                        + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
                         + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
             }
         }
@@ -390,8 +403,8 @@ struct ClaimChecker {
             where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                        + " asks, and takes \(given.parameters[0].declared.rendered) first. A contract's"
-                        + " procedure takes the type that answers it first"
+                        + " asks, and takes \(given.parameters[0].declared.rendered) first, where a call"
+                        + " through the contract hands it any value of '\(type)'"
             }
 
             return "is named for '\(type)' and the procedure '\(procedure)' that"
@@ -399,9 +412,8 @@ struct ClaimChecker {
                     + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
         }
 
-        guard let answer = asked.returns else { return nil }
+        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes) else { return nil }
 
-        let promised = answer.lowered(in: loweredTypes)
         let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
             .filling(substitution.readings)
 

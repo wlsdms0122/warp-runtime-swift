@@ -53,7 +53,7 @@ struct VariableTests {
         let sut: Body = [
             Statement(binding: .constant("both"), expression: .call(
                     Call(
-                        selector: "std.concurrent.all",
+                        selector: "Standard.Concurrent.allKeyed",
                         arguments: [
                             .record([
                                 "left": .closure(
@@ -73,13 +73,13 @@ struct VariableTests {
             )
         ]
 
-        // When. `all` answers `any` by its declaration, so the type the author
+        // When. `all` answers `Any` by its declaration, so the type the author
         // expects is named before a dot reads it
         let answer = try await answer(
             of: Body(sut.statements + [
                 Statement(binding: .constant("read"), expression: .cast(
                         reference("both"),
-                        as: .record(["left": .int]),
+                        as: .record(["left": .int, "right": .int]),
                         optional: false
                     )
                 )

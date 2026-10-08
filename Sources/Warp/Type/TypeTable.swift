@@ -10,22 +10,14 @@ import Foundation
 // The type table: every type the modules in a link declared, and what each
 // name stands for. A named type is kept rather than expanded, so a type that
 // names itself is a row and not a regress.
-//
-// Constraints live beside the types rather than among them. A constraint is a
-// name for a membership (which types a bounded parameter admits) and nothing is
-// ever *of* one, so a slot cannot declare it and a value cannot arrive as it.
-// Two tables keep the two questions apart: "what type is this name" and "what
-// does this name admit".
 public struct TypeTable: Sendable {
     // MARK: - Property
     public let types: [Name: TypeExpression]
-    public let constraints: [Name: [TypeExpression]]
 
-    // Contracts declared in this link: a name bound to the procedures a value must
-    // answer. Beside the constraints for the same reason those are beside the
-    // types. A membership is a closed set of types and a contract is the open
-    // set of types that declare some procedures, so listing answers one and not
-    // the other.
+    // Contracts declared in this link: a name bound to the procedures a value's
+    // type must answer. Beside the types rather than among them: a contract is
+    // the open set of types that answer some procedures, and what puts a type
+    // in it is a claim, not the type language.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every
@@ -37,11 +29,10 @@ public struct TypeTable: Sendable {
     // body already holds.
     private let linkage: Linkage
 
-    // The order the rows of each space stand in, where a link said one. Kept
-    // for the same reason the linkage is: remaking the table has to hand back
-    // the rows a body already holds.
+    // The order the rows stand in, where a link said one. Kept for the same
+    // reason the linkage is: remaking the table has to hand back the rows a
+    // body already holds.
     private let standing: [Name]?
-    private let constraintStanding: [Name]?
 
     // A table declaring nothing, for a judgment asked with no declarations
     // behind it.
@@ -52,44 +43,37 @@ public struct TypeTable: Sendable {
     // made by one is at home in it.
     public init(
         types: [Name: TypeExpression] = [:],
-        constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) {
-        self.init(types: types, constraints: constraints, contracts: contracts, of: Linkage())
+        self.init(types: types, contracts: contracts, of: Linkage())
     }
 
     // The same declarations as one link's, which owns the identity its rows
     // are numbered against.
     init(
         types: [Name: TypeExpression],
-        constraints: [Name: [TypeExpression]],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = false,
         unsettled: Fulfillment? = nil,
         standing: [Name]? = nil,
-        constraintStanding: [Name]? = nil,
         of linkage: Linkage
     ) {
         self.types = types
-        self.constraints = constraints
         self.contracts = contracts
         self.standing = standing
-        self.constraintStanding = constraintStanding
         self.linkage = linkage
         // Every declared contract has an entry, so a contract's name stands
         // as one wherever a type is asked for, whether or not the claims
         // have been gathered yet.
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
-            constraints: constraints,
             satisfying: satisfying.merging(
                 contracts.keys.map { contract in (contract, Set<Name>()) }
             ) { held, _ in held },
             settled: settled,
             unsettled: unsettled,
             standing: standing,
-            constraintStanding: constraintStanding,
             of: linkage
         )
     }
@@ -108,43 +92,13 @@ public struct TypeTable: Sendable {
     ) -> TypeTable {
         TypeTable(
             types: types,
-            constraints: constraints,
             contracts: contracts,
             satisfying: satisfying,
             settled: unsettled == nil,
             unsettled: unsettled,
             standing: standing,
-            constraintStanding: constraintStanding,
             of: linkage
         )
-    }
-
-    // Whether a reading could be a member of a constraint, or nil when nothing
-    // declares the name. The caller says what an undeclared constraint means on
-    // its surface, rather than this deciding for both. Membership is one-sided
-    // the way every judgment before the run is: only what is provably outside
-    // is refused, and a reading nothing can be said about (`any`, or another
-    // type parameter with no constraint of its own) passes here and is judged
-    // again where the value actually arrives.
-    //
-    // A constrained reading is judged by its own membership rather than by its
-    // name: it stands for some member of its constraint, so it fits where every
-    // one of those members would. The table ends its own recursion the way
-    // `LoweredTypeTable.admits` does, so a table built by hand refuses or
-    // answers where a linked one would, and never chases a declaration the link
-    // would have refused.
-    public func admits(constraint name: Name, reading: TypeExpression) -> Bool? {
-        guard let row = loweredTypes.constraintRow(named: name) else { return nil }
-
-        return loweredTypes.admits(constraint: row, reading: reading.lowered(in: loweredTypes), rigid: false, orNull: false)
-    }
-
-    // The same membership, asked of a value at the boundary. Nil again
-    // where nothing declares the constraint.
-    public func admits(constraint name: Name, value: Value) -> Bool? {
-        guard let row = loweredTypes.constraintRow(named: name) else { return nil }
-
-        return loweredTypes.admits(constraint: row, value: value, asking: .nothing)
     }
 
     // MARK: - Private

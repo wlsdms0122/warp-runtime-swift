@@ -57,8 +57,8 @@ struct NormalFormTests {
     }
 
     @Test("a type's name is identifiers joined by dots, and never a scalar's keyword", arguments: [
-        ("Account", true), ("bank.Account", true), ("_x1", true),
-        ("true", false), ("bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
+        ("Account", true), ("Bank.Account", true), ("_x1", true),
+        ("true", false), ("Bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
     ])
     func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
         // When / Then

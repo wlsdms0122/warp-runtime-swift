@@ -25,7 +25,7 @@ struct VariableNotationTests {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
@@ -36,7 +36,7 @@ struct VariableNotationTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "verdict"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
@@ -49,7 +49,7 @@ struct VariableNotationTests {
     func untakenBranchLeavesVariableAlone() async throws {
         // Given
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "kind", "type": "string"]],
+            "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
                 [
@@ -60,7 +60,7 @@ struct VariableNotationTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "verdict"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("b")])
@@ -107,7 +107,7 @@ struct VariableNotationTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "verdict"]]]
-        ], importing: ["std.logic.notEqual"])
+        ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(sut)
@@ -179,7 +179,7 @@ struct VariableNotationTests {
                 [
                     "let": "both",
                     "value": ["call": [
-                        "procedure": "std.concurrent.all",
+                        "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
                             ["record": [
                                 "left": [
@@ -198,11 +198,11 @@ struct VariableNotationTests {
                 ]],
                 [
                     "let": "read",
-                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "int"]]]]
+                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int", "right": "Int"]]]]
                 ]
             ],
             "result": ["record": ["result": ["ref": "read.left"]]]
-        ], importing: ["std.concurrent.all"])
+        ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When
         let outputs = try await run(sut)

@@ -2,12 +2,12 @@
 //  Library.swift
 //  WarpStandard
 //
-//  Written by script/embed-library.sh. Edit lib/std and run it again.
+//  Written by script/embed-library.sh. Edit lib/standard and run it again.
 //
 
 import Foundation
 
-// The documents of `lib/std`, as they stand in the repository.
+// The documents of `lib/standard`, as they stand in the repository.
 enum Library {
     static let documents: [String: String] = [
         "collection": """
@@ -15,18 +15,18 @@ enum Library {
             {
               description "Reading a collection by walking it, written from its count and its index."
               imports [
-                "std.Comparable"
-                "std.collection.appending"
-                "std.collection.count"
-                "std.collection.gathering"
-                "std.collection.keys"
-                "std.logic.equal"
-                "std.math.lessThan"
-                "std.math.minus"
-                "std.math.plus"
+                "Standard.Collection.appending"
+                "Standard.Collection.count"
+                "Standard.Collection.gathering"
+                "Standard.Collection.keys"
+                "Standard.Comparable"
+                "Standard.Comparable.lessThan"
+                "Standard.Logic.equal"
+                "Standard.Numeric.minus"
+                "Standard.Numeric.plus"
               ]
               procedures {
-                "std.collection.append" {
+                "Standard.Collection.append" {
                   body [
                     {
                       set "array"
@@ -40,7 +40,7 @@ enum Library {
                               ref "element"
                             }
                           ]
-                          procedure "std.collection.appending"
+                          procedure "Standard.Collection.appending"
                         }
                       }
                     }
@@ -49,16 +49,16 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "inout array<some Element>"
+                      type "inout Array<some Element>"
                     }
                     {
                       name "element"
                       type "some Element"
                     }
                   ]
-                  returns "null"
+                  returns "Null"
                 }
-                "std.collection.contains" {
+                "Standard.Collection.contains" {
                   body [
                     {
                       value false
@@ -93,7 +93,7 @@ enum Library {
                                           ref "element"
                                         }
                                       ]
-                                      procedure "std.logic.equal"
+                                      procedure "Standard.Logic.equal"
                                     }
                                   }
                                 }
@@ -113,11 +113,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -128,7 +128,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "element"
@@ -138,9 +138,9 @@ enum Library {
                   result {
                     ref "found"
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.collection.dropFirst" {
+                "Standard.Collection.dropFirst" {
                   body [
                     {
                       value []
@@ -167,11 +167,11 @@ enum Library {
                                           }
                                           1
                                         ]
-                                        procedure "std.math.plus"
+                                        procedure "Standard.Numeric.plus"
                                       }
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -192,16 +192,16 @@ enum Library {
                                               ref "array"
                                             }
                                           ]
-                                          procedure "std.collection.count"
+                                          procedure "Standard.Collection.count"
                                         }
                                       }
                                       1
                                     ]
-                                    procedure "std.math.minus"
+                                    procedure "Standard.Numeric.minus"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -212,7 +212,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -225,12 +225,12 @@ enum Library {
                           ref "places"
                         }
                       ]
-                      procedure "std.collection.gathering"
+                      procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.dropLast" {
+                "Standard.Collection.dropLast" {
                   body [
                     {
                       value []
@@ -253,7 +253,7 @@ enum Library {
                                       ref "walk.index"
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -274,16 +274,16 @@ enum Library {
                                               ref "array"
                                             }
                                           ]
-                                          procedure "std.collection.count"
+                                          procedure "Standard.Collection.count"
                                         }
                                       }
                                       1
                                     ]
-                                    procedure "std.math.minus"
+                                    procedure "Standard.Numeric.minus"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -294,7 +294,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -307,12 +307,12 @@ enum Library {
                           ref "places"
                         }
                       ]
-                      procedure "std.collection.gathering"
+                      procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.filter" {
+                "Standard.Collection.filter" {
                   body [
                     {
                       value []
@@ -354,7 +354,7 @@ enum Library {
                                               ref "walk.index"
                                             }
                                           ]
-                                          procedure "std.collection.appending"
+                                          procedure "Standard.Collection.appending"
                                         }
                                       }
                                     }
@@ -379,11 +379,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -394,7 +394,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "isIncluded"
@@ -403,7 +403,7 @@ enum Library {
                           parameters [
                             "some Element"
                           ]
-                          returns "bool"
+                          returns "Bool"
                         }
                       }
                     }
@@ -418,17 +418,17 @@ enum Library {
                           ref "places"
                         }
                       ]
-                      procedure "std.collection.gathering"
+                      procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.first" {
+                "Standard.Collection.first" {
                   description "The first element."
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -436,7 +436,7 @@ enum Library {
                   }
                   returns "some Element"
                 }
-                "std.collection.last" {
+                "Standard.Collection.last" {
                   body [
                     {
                       let "at"
@@ -450,12 +450,12 @@ enum Library {
                                     ref "array"
                                   }
                                 ]
-                                procedure "std.collection.count"
+                                procedure "Standard.Collection.count"
                               }
                             }
                             1
                           ]
-                          procedure "std.math.minus"
+                          procedure "Standard.Numeric.minus"
                         }
                       }
                     }
@@ -464,7 +464,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -472,7 +472,7 @@ enum Library {
                   }
                   returns "some Element"
                 }
-                "std.collection.map" {
+                "Standard.Collection.map" {
                   body [
                     {
                       value []
@@ -510,7 +510,7 @@ enum Library {
                                       ref "answered"
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -528,11 +528,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -543,7 +543,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "transform"
@@ -560,9 +560,9 @@ enum Library {
                   result {
                     ref "answers"
                   }
-                  returns "array<some Answer>"
+                  returns "Array<some Answer>"
                 }
-                "std.collection.prepending" {
+                "Standard.Collection.prepending" {
                   body [
                     {
                       let "back"
@@ -573,7 +573,7 @@ enum Library {
                               ref "array"
                             }
                           ]
-                          procedure "std.collection.reversed"
+                          procedure "Standard.Collection.reversed"
                         }
                       }
                     }
@@ -589,7 +589,7 @@ enum Library {
                               ref "element"
                             }
                           ]
-                          procedure "std.collection.appending"
+                          procedure "Standard.Collection.appending"
                         }
                       }
                     }
@@ -598,7 +598,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "element"
@@ -612,12 +612,12 @@ enum Library {
                           ref "grown"
                         }
                       ]
-                      procedure "std.collection.reversed"
+                      procedure "Standard.Collection.reversed"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.reduce" {
+                "Standard.Collection.reduce" {
                   body [
                     {
                       value {
@@ -668,11 +668,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -683,7 +683,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "initialResult"
@@ -707,7 +707,7 @@ enum Library {
                   }
                   returns "some Carried"
                 }
-                "std.collection.reversed" {
+                "Standard.Collection.reversed" {
                   body [
                     {
                       value []
@@ -736,7 +736,7 @@ enum Library {
                                                   ref "array"
                                                 }
                                               ]
-                                              procedure "std.collection.count"
+                                              procedure "Standard.Collection.count"
                                             }
                                           }
                                           {
@@ -747,15 +747,15 @@ enum Library {
                                                 }
                                                 1
                                               ]
-                                              procedure "std.math.plus"
+                                              procedure "Standard.Numeric.plus"
                                             }
                                           }
                                         ]
-                                        procedure "std.math.minus"
+                                        procedure "Standard.Numeric.minus"
                                       }
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -773,11 +773,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -788,7 +788,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -801,12 +801,12 @@ enum Library {
                           ref "places"
                         }
                       ]
-                      procedure "std.collection.gathering"
+                      procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.sorted" {
+                "Standard.Collection.sorted" {
                   body [
                     {
                       let "total"
@@ -817,7 +817,7 @@ enum Library {
                               ref "array"
                             }
                           ]
-                          procedure "std.collection.count"
+                          procedure "Standard.Collection.count"
                         }
                       }
                     }
@@ -857,7 +857,7 @@ enum Library {
                                                     }
                                                     1
                                                   ]
-                                                  procedure "std.math.plus"
+                                                  procedure "Standard.Numeric.plus"
                                                 }
                                               }
                                             }
@@ -876,7 +876,7 @@ enum Library {
                                                   ref "array[outer.index]"
                                                 }
                                               ]
-                                              procedure "std.math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -901,7 +901,7 @@ enum Library {
                                                   ref "array[inner.index]"
                                                 }
                                               ]
-                                              procedure "std.math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -925,7 +925,7 @@ enum Library {
                                                             }
                                                             1
                                                           ]
-                                                          procedure "std.math.plus"
+                                                          procedure "Standard.Numeric.plus"
                                                         }
                                                       }
                                                     }
@@ -940,7 +940,7 @@ enum Library {
                                                           ref "outer.index"
                                                         }
                                                       ]
-                                                      procedure "std.math.lessThan"
+                                                      procedure "Standard.Comparable.lessThan"
                                                     }
                                                   }
                                                 }
@@ -964,7 +964,7 @@ enum Library {
                                           ref "total"
                                         }
                                       ]
-                                      procedure "std.math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -982,7 +982,7 @@ enum Library {
                                       ref "rank"
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -997,7 +997,7 @@ enum Library {
                                   ref "total"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1040,7 +1040,7 @@ enum Library {
                                                   ref "pick.index"
                                                 }
                                               ]
-                                              procedure "std.math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -1065,7 +1065,7 @@ enum Library {
                                                   ref "ranks[scan.index]"
                                                 }
                                               ]
-                                              procedure "std.math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -1087,7 +1087,7 @@ enum Library {
                                                       ref "scan.index"
                                                     }
                                                   ]
-                                                  procedure "std.collection.appending"
+                                                  procedure "Standard.Collection.appending"
                                                 }
                                               }
                                             }
@@ -1109,7 +1109,7 @@ enum Library {
                                           ref "total"
                                         }
                                       ]
-                                      procedure "std.math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -1126,7 +1126,7 @@ enum Library {
                                   ref "total"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1134,13 +1134,13 @@ enum Library {
                     }
                   ]
                   bounds {
-                    Element "std.Comparable"
+                    Element "Standard.Comparable"
                   }
                   description "The elements in order, for numbers or for strings."
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                   ]
                   result {
@@ -1153,12 +1153,12 @@ enum Library {
                           ref "places"
                         }
                       ]
-                      procedure "std.collection.gathering"
+                      procedure "Standard.Collection.gathering"
                     }
                   }
-                  returns "array<some Element>"
+                  returns "Array<some Element>"
                 }
-                "std.collection.values" {
+                "Standard.Collection.values" {
                   body [
                     {
                       let "names"
@@ -1169,7 +1169,7 @@ enum Library {
                               ref "dictionary"
                             }
                           ]
-                          procedure "std.collection.keys"
+                          procedure "Standard.Collection.keys"
                         }
                       }
                     }
@@ -1200,7 +1200,7 @@ enum Library {
                                       ref "dictionary[name]"
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -1218,11 +1218,11 @@ enum Library {
                                         ref "names"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1233,13 +1233,13 @@ enum Library {
                   parameters [
                     {
                       name "dictionary"
-                      type "dictionary<some Entry>"
+                      type "Dictionary<some Entry>"
                     }
                   ]
                   result {
                     ref "held"
                   }
-                  returns "array<some Entry>"
+                  returns "Array<some Entry>"
                 }
               }
               warp 1
@@ -1250,13 +1250,13 @@ enum Library {
             {
               description "Running one closure once per element, written from the fan-out that runs a list of them."
               imports [
-                "std.collection.appending"
-                "std.collection.count"
-                "std.concurrent.all"
-                "std.math.lessThan"
+                "Standard.Collection.appending"
+                "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
+                "Standard.Concurrent.all"
               ]
               procedures {
-                "std.concurrent.map" {
+                "Standard.Concurrent.map" {
                   body [
                     {
                       value []
@@ -1321,7 +1321,7 @@ enum Library {
                                       ref "piece"
                                     }
                                   ]
-                                  procedure "std.collection.appending"
+                                  procedure "Standard.Collection.appending"
                                 }
                               }
                             }
@@ -1339,11 +1339,11 @@ enum Library {
                                         ref "array"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1354,7 +1354,7 @@ enum Library {
                   parameters [
                     {
                       name "array"
-                      type "array<some Element>"
+                      type "Array<some Element>"
                     }
                     {
                       name "transform"
@@ -1362,7 +1362,7 @@ enum Library {
                         "isolated procedure" {
                           parameters [
                             "some Element"
-                            "int"
+                            "Int"
                           ]
                           returns "some Answer"
                         }
@@ -1376,10 +1376,10 @@ enum Library {
                           ref "pieces"
                         }
                       ]
-                      procedure "std.concurrent.all"
+                      procedure "Standard.Concurrent.all"
                     }
                   }
-                  returns "array<some Answer>"
+                  returns "Array<some Answer>"
                 }
               }
               warp 1
@@ -1390,12 +1390,12 @@ enum Library {
             {
               description "Negation, difference, choosing and the connectives, written from equality."
               imports [
-                "std.collection.count"
-                "std.logic.equal"
-                "std.math.lessThan"
+                "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
+                "Standard.Logic.equal"
               ]
               procedures {
-                "std.logic.and" {
+                "Standard.Logic.and" {
                   body [
                     {
                       let "walk"
@@ -1435,7 +1435,7 @@ enum Library {
                                           ref "answered"
                                         }
                                       ]
-                                      procedure "std.logic.not"
+                                      procedure "Standard.Logic.not"
                                     }
                                   }
                                 }
@@ -1455,11 +1455,11 @@ enum Library {
                                         ref "conditions"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1473,21 +1473,21 @@ enum Library {
                       type {
                         array {
                           "const procedure" {
-                            returns "bool"
+                            returns "Bool"
                           }
                         }
                       }
                     }
                   ]
                   result true
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.logic.not" {
+                "Standard.Logic.not" {
                   description "The opposite of a truth."
                   parameters [
                     {
                       name "value"
-                      type "bool"
+                      type "Bool"
                     }
                   ]
                   result {
@@ -1498,21 +1498,21 @@ enum Library {
                         }
                         false
                       ]
-                      procedure "std.logic.equal"
+                      procedure "Standard.Logic.equal"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.logic.notEqual" {
+                "Standard.Logic.notEqual" {
                   description "Whether two values differ."
                   parameters [
                     {
                       name "lhs"
-                      type "any"
+                      type "Any"
                     }
                     {
                       name "rhs"
-                      type "any"
+                      type "Any"
                     }
                   ]
                   result {
@@ -1528,17 +1528,17 @@ enum Library {
                                 ref "rhs"
                               }
                             ]
-                            procedure "std.logic.equal"
+                            procedure "Standard.Logic.equal"
                           }
                         }
                         false
                       ]
-                      procedure "std.logic.equal"
+                      procedure "Standard.Logic.equal"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.logic.or" {
+                "Standard.Logic.or" {
                   body [
                     {
                       let "walk"
@@ -1591,11 +1591,11 @@ enum Library {
                                         ref "conditions"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1609,16 +1609,16 @@ enum Library {
                       type {
                         array {
                           "const procedure" {
-                            returns "bool"
+                            returns "Bool"
                           }
                         }
                       }
                     }
                   ]
                   result false
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.logic.select" {
+                "Standard.Logic.select" {
                   body [
                     {
                       value {
@@ -1663,7 +1663,7 @@ enum Library {
                   parameters [
                     {
                       name "condition"
-                      type "bool"
+                      type "Bool"
                     }
                     {
                       name "then"
@@ -1696,14 +1696,30 @@ enum Library {
             {
               description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus."
               imports [
-                "std.Comparable"
-                "std.Numeric"
-                "std.math.lessThan"
-                "std.math.minus"
+                "Standard.Comparable"
+                "Standard.Comparable.lessThan"
+                "Standard.Numeric"
+                "Standard.Numeric.minus"
               ]
               procedures {
-                "std.math.absolute" {
+                "Standard.Math.absolute" {
                   body [
+                    {
+                      let "zero"
+                      value {
+                        call {
+                          arguments [
+                            {
+                              ref "number"
+                            }
+                            {
+                              ref "number"
+                            }
+                          ]
+                          procedure "Standard.Numeric.minus"
+                        }
+                      }
+                    }
                     {
                       value {
                         conditional {
@@ -1719,12 +1735,14 @@ enum Library {
                           when {
                             call {
                               arguments [
-                                0
+                                {
+                                  ref "zero"
+                                }
                                 {
                                   ref "number"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1732,7 +1750,7 @@ enum Library {
                     }
                   ]
                   bounds {
-                    N "std.Numeric"
+                    N "Standard.Comparable & Standard.Numeric"
                   }
                   description "The number without its sign."
                   parameters [
@@ -1744,19 +1762,21 @@ enum Library {
                   result {
                     call {
                       arguments [
-                        0
+                        {
+                          ref "zero"
+                        }
                         {
                           ref "number"
                         }
                       ]
-                      procedure "std.math.minus"
+                      procedure "Standard.Numeric.minus"
                     }
                   }
                   returns "some N"
                 }
-                "std.math.greaterThan" {
+                "Standard.Math.greaterThan" {
                   bounds {
-                    T "std.Comparable"
+                    T "Standard.Comparable"
                   }
                   description "Whether the first is larger, by the one order."
                   parameters [
@@ -1779,12 +1799,12 @@ enum Library {
                           ref "lhs"
                         }
                       ]
-                      procedure "std.math.lessThan"
+                      procedure "Standard.Comparable.lessThan"
                     }
                   }
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.math.max" {
+                "Standard.Math.max" {
                   body [
                     {
                       value {
@@ -1808,7 +1828,7 @@ enum Library {
                                   ref "lhs"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1816,7 +1836,7 @@ enum Library {
                     }
                   ]
                   bounds {
-                    T "std.Comparable"
+                    T "Standard.Comparable"
                   }
                   description "The larger of two of a kind, by the one order."
                   parameters [
@@ -1834,7 +1854,7 @@ enum Library {
                   }
                   returns "some T"
                 }
-                "std.math.min" {
+                "Standard.Math.min" {
                   body [
                     {
                       value {
@@ -1858,7 +1878,7 @@ enum Library {
                                   ref "lhs"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -1866,7 +1886,7 @@ enum Library {
                     }
                   ]
                   bounds {
-                    T "std.Comparable"
+                    T "Standard.Comparable"
                   }
                   description "The smaller of two of a kind, by the one order."
                   parameters [
@@ -1893,19 +1913,19 @@ enum Library {
             {
               description "Scanning text, written from its characters."
               imports [
-                "std.collection.appending"
-                "std.collection.count"
-                "std.control.abort"
-                "std.logic.equal"
-                "std.logic.not"
-                "std.math.lessThan"
-                "std.math.minus"
-                "std.math.plus"
-                "std.text.characters"
-                "std.text.joined"
+                "Standard.Collection.appending"
+                "Standard.Collection.count"
+                "Standard.Comparable.lessThan"
+                "Standard.Control.abort"
+                "Standard.Logic.equal"
+                "Standard.Logic.not"
+                "Standard.Numeric.minus"
+                "Standard.Numeric.plus"
+                "Standard.Text.characters"
+                "Standard.Text.joined"
               ]
               procedures {
-                "std.text.contains" {
+                "Standard.Text.contains" {
                   body [
                     {
                       let "held"
@@ -1916,7 +1936,7 @@ enum Library {
                               ref "text"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -1929,7 +1949,7 @@ enum Library {
                               ref "other"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -1959,7 +1979,7 @@ enum Library {
                                               ref "probe.index"
                                             }
                                           ]
-                                          procedure "std.math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -1990,11 +2010,11 @@ enum Library {
                                                         ref "wanted[probe.index]"
                                                       }
                                                     ]
-                                                    procedure "std.logic.equal"
+                                                    procedure "Standard.Logic.equal"
                                                   }
                                                 }
                                               ]
-                                              procedure "std.logic.not"
+                                              procedure "Standard.Logic.not"
                                             }
                                           }
                                         }
@@ -2014,11 +2034,11 @@ enum Library {
                                                 ref "wanted"
                                               }
                                             ]
-                                            procedure "std.collection.count"
+                                            procedure "Standard.Collection.count"
                                           }
                                         }
                                       ]
-                                      procedure "std.math.lessThan"
+                                      procedure "Standard.Comparable.lessThan"
                                     }
                                   }
                                 }
@@ -2060,7 +2080,7 @@ enum Library {
                                                     ref "held"
                                                   }
                                                 ]
-                                                procedure "std.collection.count"
+                                                procedure "Standard.Collection.count"
                                               }
                                             }
                                             {
@@ -2070,20 +2090,20 @@ enum Library {
                                                     ref "wanted"
                                                   }
                                                 ]
-                                                procedure "std.collection.count"
+                                                procedure "Standard.Collection.count"
                                               }
                                             }
                                           ]
-                                          procedure "std.math.minus"
+                                          procedure "Standard.Numeric.minus"
                                         }
                                       }
                                       1
                                     ]
-                                    procedure "std.math.plus"
+                                    procedure "Standard.Numeric.plus"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2094,17 +2114,17 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "other"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result false
-                  returns "bool"
+                  returns "Bool"
                 }
-                "std.text.replacing" {
+                "Standard.Text.replacing" {
                   body [
                     {
                       value {
@@ -2116,7 +2136,7 @@ enum Library {
                                   arguments [
                                     "replacing asks an empty piece"
                                   ]
-                                  procedure "std.control.abort"
+                                  procedure "Standard.Control.abort"
                                 }
                               }
                             }
@@ -2129,7 +2149,7 @@ enum Library {
                                 }
                                 ""
                               ]
-                              procedure "std.logic.equal"
+                              procedure "Standard.Logic.equal"
                             }
                           }
                         }
@@ -2140,15 +2160,15 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "target"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "replacement"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result {
@@ -2164,19 +2184,19 @@ enum Library {
                                 ref "target"
                               }
                             ]
-                            procedure "std.text.split"
+                            procedure "Standard.Text.split"
                           }
                         }
                         {
                           ref "replacement"
                         }
                       ]
-                      procedure "std.text.joined"
+                      procedure "Standard.Text.joined"
                     }
                   }
-                  returns "string"
+                  returns "String"
                 }
-                "std.text.split" {
+                "Standard.Text.split" {
                   body [
                     {
                       let "held"
@@ -2187,7 +2207,7 @@ enum Library {
                               ref "text"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -2200,7 +2220,7 @@ enum Library {
                               ref "held"
                             }
                           ]
-                          procedure "std.collection.count"
+                          procedure "Standard.Collection.count"
                         }
                       }
                     }
@@ -2213,7 +2233,7 @@ enum Library {
                               ref "separator"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -2226,7 +2246,7 @@ enum Library {
                               ref "wanted"
                             }
                           ]
-                          procedure "std.collection.count"
+                          procedure "Standard.Collection.count"
                         }
                       }
                     }
@@ -2240,7 +2260,7 @@ enum Library {
                                   arguments [
                                     "split asks an empty separator"
                                   ]
-                                  procedure "std.control.abort"
+                                  procedure "Standard.Control.abort"
                                 }
                               }
                             }
@@ -2253,7 +2273,7 @@ enum Library {
                                 }
                                 0
                               ]
-                              procedure "std.logic.equal"
+                              procedure "Standard.Logic.equal"
                             }
                           }
                         }
@@ -2296,15 +2316,15 @@ enum Library {
                                                   ref "wantedCount"
                                                 }
                                               ]
-                                              procedure "std.math.plus"
+                                              procedure "Standard.Numeric.plus"
                                             }
                                           }
                                         ]
-                                        procedure "std.math.lessThan"
+                                        procedure "Standard.Comparable.lessThan"
                                       }
                                     }
                                   ]
-                                  procedure "std.logic.not"
+                                  procedure "Standard.Logic.not"
                                 }
                               }
                               var "matched"
@@ -2330,7 +2350,7 @@ enum Library {
                                                       ref "probe.index"
                                                     }
                                                   ]
-                                                  procedure "std.math.plus"
+                                                  procedure "Standard.Numeric.plus"
                                                 }
                                               }
                                             }
@@ -2361,11 +2381,11 @@ enum Library {
                                                                 ref "wanted[probe.index]"
                                                               }
                                                             ]
-                                                            procedure "std.logic.equal"
+                                                            procedure "Standard.Logic.equal"
                                                           }
                                                         }
                                                       ]
-                                                      procedure "std.logic.not"
+                                                      procedure "Standard.Logic.not"
                                                     }
                                                   }
                                                 }
@@ -2382,7 +2402,7 @@ enum Library {
                                                   ref "wantedCount"
                                                 }
                                               ]
-                                              procedure "std.math.lessThan"
+                                              procedure "Standard.Comparable.lessThan"
                                             }
                                           }
                                         }
@@ -2411,7 +2431,7 @@ enum Library {
                                               ref "held[at]"
                                             }
                                           ]
-                                          procedure "std.collection.appending"
+                                          procedure "Standard.Collection.appending"
                                         }
                                       }
                                     }
@@ -2425,7 +2445,7 @@ enum Library {
                                             }
                                             1
                                           ]
-                                          procedure "std.math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -2447,11 +2467,11 @@ enum Library {
                                                   }
                                                   ""
                                                 ]
-                                                procedure "std.text.joined"
+                                                procedure "Standard.Text.joined"
                                               }
                                             }
                                           ]
-                                          procedure "std.collection.appending"
+                                          procedure "Standard.Collection.appending"
                                         }
                                       }
                                     }
@@ -2471,7 +2491,7 @@ enum Library {
                                               ref "wantedCount"
                                             }
                                           ]
-                                          procedure "std.math.plus"
+                                          procedure "Standard.Numeric.plus"
                                         }
                                       }
                                     }
@@ -2493,7 +2513,7 @@ enum Library {
                                   ref "heldCount"
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2504,11 +2524,11 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "separator"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result {
@@ -2525,16 +2545,16 @@ enum Library {
                               }
                               ""
                             ]
-                            procedure "std.text.joined"
+                            procedure "Standard.Text.joined"
                           }
                         }
                       ]
-                      procedure "std.collection.appending"
+                      procedure "Standard.Collection.appending"
                     }
                   }
-                  returns "array<string>"
+                  returns "Array<String>"
                 }
-                "std.text.startsWith" {
+                "Standard.Text.startsWith" {
                   body [
                     {
                       let "held"
@@ -2545,7 +2565,7 @@ enum Library {
                               ref "text"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -2558,7 +2578,7 @@ enum Library {
                               ref "prefix"
                             }
                           ]
-                          procedure "std.text.characters"
+                          procedure "Standard.Text.characters"
                         }
                       }
                     }
@@ -2582,7 +2602,7 @@ enum Library {
                                         ref "held"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                                 {
@@ -2592,11 +2612,11 @@ enum Library {
                                         ref "wanted"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2630,11 +2650,11 @@ enum Library {
                                                 ref "wanted[walk.index]"
                                               }
                                             ]
-                                            procedure "std.logic.equal"
+                                            procedure "Standard.Logic.equal"
                                           }
                                         }
                                       ]
-                                      procedure "std.logic.not"
+                                      procedure "Standard.Logic.not"
                                     }
                                   }
                                 }
@@ -2654,11 +2674,11 @@ enum Library {
                                         ref "wanted"
                                       }
                                     ]
-                                    procedure "std.collection.count"
+                                    procedure "Standard.Collection.count"
                                   }
                                 }
                               ]
-                              procedure "std.math.lessThan"
+                              procedure "Standard.Comparable.lessThan"
                             }
                           }
                         }
@@ -2669,15 +2689,15 @@ enum Library {
                   parameters [
                     {
                       name "text"
-                      type "string"
+                      type "String"
                     }
                     {
                       name "prefix"
-                      type "string"
+                      type "String"
                     }
                   ]
                   result true
-                  returns "bool"
+                  returns "Bool"
                 }
               }
               warp 1

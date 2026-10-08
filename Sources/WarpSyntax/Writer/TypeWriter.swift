@@ -48,7 +48,6 @@ struct TypeWriter {
                 Parameter(
                     name: parameter.name,
                     type: parameter.type.map(stripped),
-                    candidates: parameter.candidates,
                     description: parameter.description
                 )
             },
@@ -69,8 +68,8 @@ struct TypeWriter {
         }
 
         let bounds = held.table
-            .filter { _, constraints in !constraints.isEmpty }
-            .mapValues { constraints in Value.string(constraints.sorted().map(\.spelling).joined(separator: " & ")) }
+            .filter { _, named in !named.isEmpty }
+            .mapValues { named in Value.string(named.sorted().map(\.spelling).joined(separator: " & ")) }
 
         return bounds.isEmpty ? nil : .dictionary(bounds)
     }
@@ -79,29 +78,14 @@ struct TypeWriter {
     // What a type is written as, before the reading is asked about it.
     private func form(of type: TypeExpression) throws -> Value {
         switch type {
-        case .any: return .string("any")
-        case .never: return .string("never")
-        case .null: return .string("null")
-        case .bool: return .string("bool")
-        case .int: return .string("int")
-        case .double: return .string("double")
-        case .string: return .string("string")
-
-        // The range rides in the name's spelling (`int(0...255)`) the way the
-        // reader takes it in. A bound with no spelling has nothing to ride in:
-        // the language admits an infinity, because it orders like any other
-        // bound, and a document that carried the words a message shows it in
-        // would read back as an error. Said rather than written as something
-        // else, the way an unwritable type is.
-        case let .ranged(refinement):
-            guard refinement.spellable else {
-                throw WritingError(
-                    "'\(type.rendered)' is bounded by a fraction no document spells,"
-                        + " and a range is written as its bounds"
-                )
-            }
-
-            return .string(type.rendered)
+        case .any: return .string(TypeSpelling.any.spelling)
+        case .never: return .string(TypeSpelling.never.spelling)
+        case .null: return .string(TypeSpelling.null.spelling)
+        case .bool: return .string(TypeSpelling.bool.spelling)
+        case .int: return .string(TypeSpelling.int.spelling)
+        case .double: return .string(TypeSpelling.double.spelling)
+        case .string: return .string(TypeSpelling.string.spelling)
+        case .selfType: return .string(TypeSpelling.selfType.spelling)
 
         case let .named(name):
             return .string(name.spelling)
@@ -118,17 +102,17 @@ struct TypeWriter {
                     + " fills"
             )
 
-        // Bare, because an occurrence names the parameter and its constraint is
+        // Bare, because an occurrence names the parameter and its bound is
         // written once, in the `bounds` of the signature that declares the
         // name. A signature entry strips the bound before writing and emits it
         // there, so a bound still on the type here means no signature owns it,
         // and no surface of the document could carry it: writing the name alone
         // would be a document that reads back meaning something else.
-        case let .parameter(name, constraints):
-            guard constraints.isEmpty else {
+        case let .parameter(name, bounds):
+            guard bounds.isEmpty else {
                 throw WritingError(
                     "'some \(name)' is bounded by"
-                        + " '\(constraints.map(\.spelling).joined(separator: " & "))', and nothing"
+                        + " '\(bounds.map(\.spelling).joined(separator: " & "))', and nothing"
                         + " here declares it. A bound is written in the `bounds` of"
                         + " a procedure's signature, which this type is not part of"
                 )
@@ -156,18 +140,12 @@ struct TypeWriter {
                 "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
 
-        // A record, a procedure and a type handed on once are all written as a
-        // mapping, and the one key is what tells them apart.
+        // A record and a procedure are both written as a mapping, and the one
+        // key is what tells them apart.
         case let .record(fields):
             return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
 
-        // Written under its own key, which is where a record can carry it: the
-        // type a declared type is handed on once is usually written inline,
-        // and there is no front of a record to write a keyword on.
-        case let .linear(inner):
-            return .dictionary([TypeReader.linearKey: try value(of: inner)])
-
-        // All four marks are written the same way, so the writing is said once
+        // Both marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries
         // is what the writing needs and a pattern cannot hand it over.
         case let .variable(inner):
@@ -176,16 +154,10 @@ struct TypeWriter {
         case let .inout(inner):
             return try value(of: inner, under: .inout)
 
-        case let .consuming(inner):
-            return try value(of: inner, under: .consuming)
-
-        case let .borrowing(inner):
-            return try value(of: inner, under: .borrowing)
-
         case let .procedure(type, constness, isolation):
-            let spelling = TypeReader.procedureSpelling(constness, isolation)
+            guard let type else { return .string(TypeReader.procedureSpelling(constness, isolation, as: .name)) }
 
-            guard let type else { return .string(spelling) }
+            let spelling = TypeReader.procedureSpelling(constness, isolation, as: .key)
 
             // No bound check of its own: a procedure type written as a type has
             // no `bounds` surface, and the `.parameter` case refuses any bound
@@ -222,8 +194,6 @@ struct TypeWriter {
         case let .nullable(inner): return .nullable(canonical(inner))
         case let .variable(inner): return .variable(canonical(inner))
         case let .inout(inner): return .inout(canonical(inner))
-        case let .consuming(inner): return .consuming(canonical(inner))
-        case let .borrowing(inner): return .borrowing(canonical(inner))
         default: return type
         }
     }
@@ -234,7 +204,7 @@ struct TypeWriter {
             return .dictionary([Name(normal: holding.rawValue): try value(of: element)])
         }
 
-        return .string("\(holding.rawValue)<\(spelling)>")
+        return .string("\(holding.spelling)<\(spelling)>")
     }
 
     // A marked slot is written with the mark in front of the inner type,
@@ -281,7 +251,7 @@ struct TypeWriter {
 
         // Neither carries a bound to strip: a composition is its bounds, and
         // a slot spells it whole.
-        case .projection, .composition:
+        case .projection, .composition, .selfType:
             return type
 
         case let .array(element):
@@ -305,16 +275,7 @@ struct TypeWriter {
         case let .inout(inner):
             return .inout(stripped(inner))
 
-        case let .linear(inner):
-            return .linear(stripped(inner))
-
-        case let .consuming(inner):
-            return .consuming(stripped(inner))
-
-        case let .borrowing(inner):
-            return .borrowing(stripped(inner))
-
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .named:
             return type
         }
     }

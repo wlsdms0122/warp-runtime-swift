@@ -10,8 +10,9 @@ import Warp
 
 public extension Module {
     // The procedures an implementation writes in its own language. What makes
-    // one of these builtin is that the language cannot express it: arithmetic
-    // and ordering are the machine's, case mapping and encoding carry
+    // one of these builtin is that the language cannot express it: arithmetic,
+    // ordering and counting are the machine's, answered for each type the
+    // standard contracts are claimed for, case mapping and encoding carry
     // Unicode's tables with them, running at once is the host's scheduler, and
     // `appending` is the only way an array grows and `gathering` the only way
     // an answer keeps the spelling its collection arrived in.
@@ -20,20 +21,22 @@ public extension Module {
     // character is whitespace is a question about the code points inside it,
     // and `characters` answers characters.
     static let builtinProcedures: Set<Name> = [
-        "std.logic.equal",
+        "Standard.Logic.equal",
 
-        "std.math.plus", "std.math.minus", "std.math.times", "std.math.dividedBy",
-        "std.math.remainder", "std.math.lessThan", "std.math.floored", "std.math.rounded",
+        "Int.plus", "Int.minus", "Int.times", "Int.dividedBy", "Int.remainder", "Int.lessThan",
+        "Double.plus", "Double.minus", "Double.times", "Double.dividedBy", "Double.remainder", "Double.lessThan",
+        "String.lessThan", "Standard.Math.floored", "Standard.Math.rounded",
 
-        "std.text.text", "std.text.joined", "std.text.characters", "std.text.uppercased",
-        "std.text.lowercased", "std.text.encoded", "std.text.decoded", "std.text.trimmed",
+        "Standard.Text.text", "Standard.Text.joined", "Standard.Text.characters", "Standard.Text.uppercased",
+        "Standard.Text.lowercased", "Standard.Text.encoded", "Standard.Text.decoded", "Standard.Text.trimmed",
 
-        "std.collection.count", "std.collection.appending", "std.collection.gathering",
-        "std.collection.keys", "std.collection.setting",
+        "Array.count", "Dictionary.count", "String.count", "Standard.Collection.appending",
+        "Standard.Collection.gathering", "Standard.Collection.keys", "Standard.Collection.setting",
 
-        "std.control.abort",
+        "Standard.Control.abort",
 
-        "std.concurrent.all", "std.concurrent.first"
+        "Standard.Concurrent.all", "Standard.Concurrent.allKeyed", "Standard.Concurrent.first",
+        "Standard.Concurrent.firstKeyed"
     ]
 
     // The procedures that are written in Warp from the builtin ones. Named by

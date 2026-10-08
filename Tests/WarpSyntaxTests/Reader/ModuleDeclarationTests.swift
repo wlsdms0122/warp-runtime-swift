@@ -139,7 +139,7 @@ struct ModuleDeclarationTests {
     func constantsMayComposeButNotCycle() async throws {
         // Given
         let composed = try loader.loadDocument([
-            "imports": ["std.text.joined", "std.text.text"],
+            "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "const": [
                 "host": "example.com",
                 "url": ["format": "https://${host}/api", "with": ["host": ["ref": "host"]]]
@@ -187,42 +187,42 @@ struct ModuleDeclarationTests {
         // neither
         let sut = try loader.loadDocument([
             "types": [
-                "bank.Account": ["record": ["balance": "int"]],
-                "bank.Card": ["record": ["last": "string"]]
+                "Bank.Account": ["record": ["balance": "Int"]],
+                "Bank.Card": ["record": ["last": "String"]]
             ],
             "contracts": [
-                "app.Describable": [
-                    "describe": ["parameters": [["name": "of", "type": "app.Describable"]], "returns": "string"]
+                "App.Describable": [
+                    "describe": ["parameters": [["name": "of", "type": "Self"]], "returns": "String"]
                 ]
             ],
             "satisfies": [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
+                "Bank.Account": ["App.Describable"],
+                "Bank.Card": ["App.Describable"]
             ],
             "procedures": [
                 "entry": [
                     "body": [
                         [
                             "let": "card",
-                            "value": ["as": ["of": ["record": ["last": "42"]], "type": "bank.Card"]]
+                            "value": ["as": ["of": ["record": ["last": "42"]], "type": "Bank.Card"]]
                         ]
                     ],
-                    "result": ["record": ["result": ["call": ["procedure": "app.tell", "arguments": [["ref": "card"]]]]]]
+                    "result": ["record": ["result": ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]
                 ],
-                "app.tell": [
+                "App.tell": [
                     "parameters": [["name": "it", "type": "some T"]],
-                    "bounds": ["T": "app.Describable"],
-                    "returns": "string",
-                    "result": ["call": ["procedure": "app.Describable.describe", "arguments": [["ref": "it"]]]]
+                    "bounds": ["T": "App.Describable"],
+                    "returns": "String",
+                    "result": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]
                 ],
-                "bank.Account.describe": [
-                    "parameters": [["name": "of", "type": "bank.Account"]],
-                    "returns": "string",
+                "Bank.Account.describe": [
+                    "parameters": [["name": "of", "type": "Bank.Account"]],
+                    "returns": "String",
                     "result": "an account"
                 ],
-                "bank.Card.describe": [
-                    "parameters": [["name": "of", "type": "bank.Card"]],
-                    "returns": "string",
+                "Bank.Card.describe": [
+                    "parameters": [["name": "of", "type": "Bank.Card"]],
+                    "returns": "String",
                     "result": "a card"
                 ]
             ]

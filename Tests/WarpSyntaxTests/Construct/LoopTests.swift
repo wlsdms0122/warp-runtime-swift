@@ -35,7 +35,7 @@ struct LoopTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "gate"]]]
-        ], importing: ["std.logic.notEqual"])
+        ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(spec)
@@ -61,7 +61,7 @@ struct LoopTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "gate"]]]
-        ], importing: ["std.logic.notEqual"])
+        ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(spec)
@@ -102,7 +102,7 @@ struct LoopTests {
                     "value": ["loop": ["while": ["of": ["ref": "gate.index"], "notEqual": .null], "body": []]
                 ]]
             ]
-        ], importing: ["std.logic.notEqual"])
+        ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let task = Task {
@@ -136,7 +136,7 @@ struct LoopTests {
 
         // When / Then
         #expect(throws: Never.self) {
-            try loader.loadProcedure(fixture, importing: ["std.logic.equal"])
+            try loader.loadProcedure(fixture, importing: ["Standard.Logic.equal"])
         }
     }
 

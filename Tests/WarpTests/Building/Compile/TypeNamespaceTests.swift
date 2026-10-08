@@ -21,11 +21,11 @@ struct TypeNamespaceTests {
     // however they are handed over.
     private let modules: [Module] = [
         try! Module(
-            types: ["a.T": .record(["x": .int]), "a.S": .string],
+            types: ["A.T": .record(["x": .int]), "A.S": .string],
             procedures: [
                 "a.make": Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("a.T")),
+                    signature: Signature(returns: .named("A.T")),
                     body: [],
                     result: .record(["x": .literal(.int(3))])
                 )
@@ -33,11 +33,11 @@ struct TypeNamespaceTests {
             identity: Identity([0x0a])
         ),
         try! Module(
-            types: ["b.U": .array(.named("a.T"))],
+            types: ["B.U": .array(.named("A.T"))],
             procedures: [
                 "b.use": Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("b.U")),
+                    signature: Signature(returns: .named("B.U")),
                     body: [],
                     result: .array([.call(Call(selector: "a.make"))])
                 )
@@ -45,11 +45,11 @@ struct TypeNamespaceTests {
             identity: Identity([0x0b])
         ),
         try! Module(
-            types: ["c.V": .record(["u": .named("b.U")])],
+            types: ["C.V": .record(["u": .named("B.U")])],
             procedures: [
                 "c.go": Procedure(
                     access: .public,
-                    signature: Signature(returns: .named("c.V")),
+                    signature: Signature(returns: .named("C.V")),
                     body: [],
                     result: .record(["u": .call(Call(selector: "b.use"))])
                 )
@@ -76,21 +76,21 @@ struct TypeNamespaceTests {
         #expect(shuffled == standing)
     }
 
-    @Test("a name declared as a type and as a constraint is refused the same way in either order")
-    func aTypeAndAConstraintAreRefusedInEitherOrder() async throws {
+    @Test("a name declared as a type and as a contract is refused the same way in either order")
+    func aTypeAndAContractAreRefusedInEitherOrder() async throws {
         // Given
-        let typing = try Module(types: ["t.T": .int], procedures: [:], identity: Identity([0x01]))
-        let constraining = try Module(constraints: ["t.T": [.int]], procedures: [:], identity: Identity([0x02]))
+        let typing = try Module(types: ["T.T": .int], procedures: [:], identity: Identity([0x01]))
+        let contracting = try Module(contracts: ["T.T": [Name: Signature]()], procedures: [:], identity: Identity([0x02]))
 
-        for given in [[typing, constraining], [constraining, typing]] {
+        for given in [[typing, contracting], [contracting, typing]] {
             // When
             let refused = await #expect(throws: BuildError.self) {
                 try await builder.build(given + Module.standard)
             }
 
             // Then
-            #expect(refused?.message.contains("declared as both a type and a constraint") == true)
-            #expect(refused?.place == .constraint("t.T", in: .of(constraining)))
+            #expect(refused?.message.contains("declared as both a type and a contract") == true)
+            #expect(refused?.place == .contract("T.T", in: .of(contracting)))
         }
     }
 

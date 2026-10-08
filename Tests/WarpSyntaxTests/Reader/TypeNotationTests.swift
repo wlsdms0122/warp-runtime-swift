@@ -21,117 +21,32 @@ struct TypeNotationTests {
     @Test("a built-in reads as its own name, applied or not")
     func builtinsParse() throws {
         // When / Then
-        #expect(try TypeReader.parse("string") == .string)
-        #expect(try TypeReader.parse("array<any>") == .array(.any))
-        #expect(throws: (any Error).self) { try TypeReader.parse("array") }
-        #expect(throws: (any Error).self) { try TypeReader.parse("dictionary") }
-        #expect(try TypeReader.parse("array<string>") == .array(.string))
-        #expect(try TypeReader.parse("dictionary<array<int>>") == .dictionary(.array(.int)))
-        #expect(try TypeReader.parse("procedure") == .procedure(nil))
-        #expect(try TypeReader.parse("never") == .never)
-    }
-
-    @Test("a range is spelled into the name, either bound optional")
-    func rangesParse() throws {
-        // When / Then
-        #expect(try TypeReader.parse("int(0...255)") == .ranged(.whole(from: 0, to: .through(255))))
-        #expect(try TypeReader.parse("int(0...)") == .ranged(.whole(from: 0)))
-        #expect(try TypeReader.parse("int(...255)") == .ranged(.whole(to: .through(255))))
-        #expect(try TypeReader.parse("int(-10...-1)") == .ranged(.whole(from: -10, to: .through(-1))))
-        #expect(
-            try TypeReader.parse("array<int(0...255)>")
-                == .array(.ranged(.whole(from: 0, to: .through(255))))
-        )
-        #expect(
-            try TypeReader.parse("int(0...255)?")
-                == .nullable(.ranged(.whole(from: 0, to: .through(255))))
-        )
-        #expect(
-            try TypeReader.parse("int(9223372036854775807...)")
-                == .ranged(.whole(from: Int.max))
-        )
-
-        // And. A bound past the int is a whole number's one spelling of a
-        // number no int holds. Refused as that fact, not as a spelling defect.
-        #expect {
-            try TypeReader.parse("int(18446744073709551615...)")
-        } throws: { error in
-            "\(error)".contains("past what an int holds")
-        }
-    }
-
-    @Test("the far bound may be left outside, and the kind under it is written")
-    func openRangesAndFractionsParse() throws {
-        // When / Then. `..<` says the far bound is outside. The half-open
-        // interval a position below a length is written against.
-        #expect(try TypeReader.parse("int(0..<256)") == .ranged(.whole(from: 0, to: .upTo(256))))
-        #expect(try TypeReader.parse("int(..<0)") == .ranged(.whole(to: .upTo(0))))
-
-        // And. A fraction range writes the kind it refines, and a bound is a
-        // value of that kind: `1` spells a whole number and `1.0` a fraction, so
-        // neither range can be written with the other's bounds.
-        #expect(
-            try TypeReader.parse("double(0.0...1.0)")
-                == .ranged(.fraction(from: 0, to: .through(1)))
-        )
-        #expect(
-            try TypeReader.parse("double(0.0..<1.0)")
-                == .ranged(.fraction(from: 0, to: .upTo(1)))
-        )
-        #expect(try TypeReader.parse("double(0.0...)") == .ranged(.fraction(from: 0)))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("double(0...1)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0.0...1.0)") }
-    }
-
-    @Test("a range that is not one spelling of one range is refused")
-    func malformedRangesAreRefused() {
-        // When / Then. Two dots are not the spelling, a bound is written once
-        // and canonically, and a range with nothing in it says nothing.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0..255)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(...)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(007...9)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(+1...9)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0 ... 255)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(a...b)") }
-
-        // And. `..<` says the far bound is outside, so there has to be one, and
-        // `..<` with nothing on either side says nothing twice.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(0..<)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int(..<)") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("double(..<)") }
-    }
-
-    @Test("every range writes back out as the one spelling it was read from")
-    func rangesRoundTrip() throws {
-        // Given / When / Then. `rendered` is the type's identity and what a
-        // document is written with, so a range that read one way and wrote
-        // another would be a type a round trip changes.
-        for written in [
-            "int(0...255)", "int(0...)", "int(...255)", "int(-10...-1)",
-            "int(0..<256)", "int(..<0)",
-            "double(0.0...1.0)", "double(0.0..<1.0)", "double(0.0...)",
-            "double(...1.0)", "double(-2.5..<2.5)"
-        ] {
-            #expect(try TypeReader.parse(written).rendered == written)
-        }
+        #expect(try TypeReader.parse("String") == .string)
+        #expect(try TypeReader.parse("Array<Any>") == .array(.any))
+        #expect(throws: (any Error).self) { try TypeReader.parse("Array") }
+        #expect(throws: (any Error).self) { try TypeReader.parse("Dictionary") }
+        #expect(try TypeReader.parse("Array<String>") == .array(.string))
+        #expect(try TypeReader.parse("Dictionary<Array<Int>>") == .dictionary(.array(.int)))
+        #expect(try TypeReader.parse("Procedure") == .procedure(nil))
+        #expect(try TypeReader.parse("Never") == .never)
     }
 
     @Test("a slot asks for constness by writing it in front")
     func constnessIsWrittenAndRead() throws {
         // Given / When / Then
-        #expect(try TypeReader.parse("const procedure") == .procedure(nil, .const))
-        #expect(try TypeReader.parse("procedure") == .procedure(nil, .unstated))
+        #expect(try TypeReader.parse("const Procedure") == .procedure(nil, .const))
+        #expect(try TypeReader.parse("Procedure") == .procedure(nil, .unstated))
 
         // Only a procedure answers without running, so only a procedure is
         // written const.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("const string") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("const String") }
     }
 
     @Test("a type parameter is written some, and is not a declared name")
     func typeParametersAreWrittenAndRead() throws {
         // Given / When / Then
         #expect(try TypeReader.parse("some Element") == .parameter(name: "Element"))
-        #expect(try TypeReader.parse("array<some Element>") == .array(.parameter(name: "Element")))
+        #expect(try TypeReader.parse("Array<some Element>") == .array(.parameter(name: "Element")))
 
         // A bare name is looked up in the table of declared types; only `some`
         // says the call decides.
@@ -143,14 +58,14 @@ struct TypeNotationTests {
     @Test("a trailing ? reads as the nullable of the whole spelling")
     func nullableParses() throws {
         // When / Then
-        #expect(try TypeReader.parse("int?") == .nullable(.int))
-        #expect(try TypeReader.parse("string?") == .nullable(.string))
-        #expect(try TypeReader.parse("array<int>?") == .nullable(.array(.int)))
+        #expect(try TypeReader.parse("Int?") == .nullable(.int))
+        #expect(try TypeReader.parse("String?") == .nullable(.string))
+        #expect(try TypeReader.parse("Array<Int>?") == .nullable(.array(.int)))
         #expect(try TypeReader.parse("Task?") == .nullable(.named("Task")))
 
         // And. `?` wraps the whole spelling, so inside the brackets it is the
         // element that is nullable.
-        #expect(try TypeReader.parse("array<int?>") == .array(.nullable(.int)))
+        #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
     }
 
     @Test("a ? that says nothing new is refused")
@@ -158,22 +73,22 @@ struct TypeNotationTests {
         // When / Then. Twice says it once too often; what already admits null
         // gains nothing; never admits nothing; a parameter stands for the whole
         // filled type.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("int??") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("null?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("any?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("never?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Int??") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Null?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Any?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Never?") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T?") }
     }
 
     @Test("names joined with & read as a composition, in name order, and write back the same way")
     func compositionsParse() throws {
         // When / Then
-        #expect(try TypeReader.parse("app.B & app.A") == .composition(["app.A", "app.B"]))
-        #expect(try TypeReader.parse("array<app.A & app.B>") == .array(.composition(["app.A", "app.B"])))
-        #expect(try Writer().value(of: .composition(["app.A", "app.B"])) == .string("app.A & app.B"))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.B?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & array<int>") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("app.A & app.A") }
+        #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
+        #expect(try TypeReader.parse("Array<App.A & App.B>") == .array(.composition(["App.A", "App.B"])))
+        #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.B?") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & Array<Int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.A") }
     }
 
     @Test("a signature bounds its type parameters once, in bounds")
@@ -192,19 +107,19 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameter(named: "of")?.type
-                == .parameter(name: "T", constraints: ["Comparable"])
+                == .parameter(name: "T", bounds: ["Comparable"])
         )
         #expect(
             signature?.parameter(named: "value")?.type
-                == .parameter(name: "T", constraints: ["Comparable"])
+                == .parameter(name: "T", bounds: ["Comparable"])
         )
-        #expect(signature?.returns == .parameter(name: "T", constraints: ["Comparable"]))
+        #expect(signature?.returns == .parameter(name: "T", bounds: ["Comparable"]))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
     func aBoundBelongsToTheSignature() throws {
         // When / Then. The slot names the parameter and nothing else. The
-        // constraint is declared once, in the signature's `bounds`.
+        // bound is declared once, in the signature's `bounds`.
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
 
@@ -212,15 +127,15 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
-                "parameters": [["name": "of", "type": "int"]],
+                "parameters": [["name": "of", "type": "Int"]],
                 "result": ["ref": "of"]
             ])
         }
 
-        // And. A bound is a constraint's name, never a type.
+        // And. A bound is a contract's name, never a type.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
-                "bounds": ["T": "array<int>"],
+                "bounds": ["T": "Array<Int>"],
                 "parameters": [["name": "of", "type": "some T"]],
                 "result": ["ref": "of"]
             ])
@@ -238,7 +153,7 @@ struct TypeNotationTests {
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
                                 "parameters": ["some T"],
-                                "returns": "bool"
+                                "returns": "Bool"
                             ]
                         ]
                     ]
@@ -260,10 +175,10 @@ struct TypeNotationTests {
                     "type": [
                         "procedure": [
                             "parameters": ["some Element"],
-                            "returns": "bool"
+                            "returns": "Bool"
                         ]
                     ]
-                ], ["name": "of", "type": "array<some Element>"]
+                ], ["name": "of", "type": "Array<some Element>"]
             ],
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
@@ -273,7 +188,7 @@ struct TypeNotationTests {
 
         #expect(
             signature?.parameter(named: "of")?.type
-                == .array(.parameter(name: "Element", constraints: ["Comparable"]))
+                == .array(.parameter(name: "Element", bounds: ["Comparable"]))
         )
 
         guard case let .procedure(.some(inner), _, _) = signature?.parameter(named: "by")?.type else {
@@ -284,7 +199,7 @@ struct TypeNotationTests {
 
         #expect(
             inner.parameters.first
-                == .parameter(name: "Element", constraints: ["Comparable"])
+                == .parameter(name: "Element", bounds: ["Comparable"])
         )
     }
 
@@ -297,19 +212,19 @@ struct TypeNotationTests {
     @Test("an unbalanced argument is an author mistake, caught while reading")
     func unbalancedArgumentRejected() {
         // When / Then
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("array<string") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("string>") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("string<int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Array<String") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("String>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("String<Int>") }
     }
 
     @Test("a module declares types its procedures name")
     func moduleDeclaresTypes() throws {
         // Given / When
         let sut = try loader.loadDocument([
-            "types": ["Task": ["record": ["id": "string", "done": "bool"]]],
+            "types": ["Task": ["record": ["id": "String", "done": "Bool"]]],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "tasks", "type": "array<Task>"]],
+                    "parameters": [["name": "tasks", "type": "Array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]]
                 ]
             ]
@@ -330,7 +245,7 @@ struct TypeNotationTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "rows", "type": ["array": ["record": ["id": "string"]]]]],
+                    "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
@@ -342,7 +257,7 @@ struct TypeNotationTests {
                 == .array(.record(["id": .string]))
         )
 
-        // And. An element with a spelling is written `array<string>`. A document
+        // And. An element with a spelling is written `Array<String>`. A document
         // says it that one way, and the form around it is a second spelling
         #expect {
             try loader.load(
@@ -351,7 +266,7 @@ struct TypeNotationTests {
                     "imports": [],
                     "procedures": [
                         "entry": [
-                            "parameters": [["name": "rows", "type": ["array": "string"]]],
+                            "parameters": [["name": "rows", "type": ["array": "String"]]],
                             "body": [["let": "seen", "value": ["ref": "rows"]]]
                         ]
                     ]
@@ -359,7 +274,7 @@ struct TypeNotationTests {
                 identity: nil
             )
         } throws: { error in
-            "\(error)".contains("The one way writes \"array<string>\"")
+            "\(error)".contains("The one way writes \"Array<String>\"")
         }
     }
 
@@ -367,10 +282,10 @@ struct TypeNotationTests {
     func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([
-            "types": ["Task": ["record": ["id": "string"]]],
+            "types": ["Task": ["record": ["id": "String"]]],
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "tasks", "type": "array<Task>"]],
+                    "parameters": [["name": "tasks", "type": "Array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["record": ["result": ["ref": "seen"]]]
                 ]

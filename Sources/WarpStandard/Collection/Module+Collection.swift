@@ -15,12 +15,7 @@ public extension Module {
         unchecked: Draft(
             description: "Counting, appending, gathering and the names of a record.",
             procedures: [
-                "std.collection.count": Procedure(
-                    description: "How many, of what std.Collection admits.",
-                    signature: Signature(of: CountQuery.self, returns: .int),
-                    implementation: .query(CountQuery())
-                ),
-                "std.collection.appending": Procedure(
+                "Standard.Collection.appending": Procedure(
                     description: "The elements with one more at the end.",
                     signature: Signature(
                         of: AppendingQuery.self,
@@ -28,7 +23,7 @@ public extension Module {
                     ),
                     implementation: .query(AppendingQuery())
                 ),
-                "std.collection.gathering": Procedure(
+                "Standard.Collection.gathering": Procedure(
                     description: "The collection's own elements, at the positions given.",
                     signature: Signature(
                         of: GatheringQuery.self,
@@ -36,7 +31,7 @@ public extension Module {
                     ),
                     implementation: .query(GatheringQuery())
                 ),
-                "std.collection.keys": Procedure(
+                "Standard.Collection.keys": Procedure(
                     description: "The names a record holds, in order.",
                     signature: Signature(
                         of: KeysQuery.self,
@@ -44,11 +39,11 @@ public extension Module {
                     ),
                     implementation: .query(KeysQuery())
                 ),
-                "std.collection.setting": Procedure(
+                "Standard.Collection.setting": Procedure(
                     description: "The record with one name bound to another value.",
                     signature: Signature(
                         of: SettingQuery.self,
-                        returns: .dictionary(.any)
+                        returns: .dictionary(.parameter(name: "Value"))
                     ),
                     implementation: .query(SettingQuery())
                 )

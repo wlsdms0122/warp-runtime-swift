@@ -14,8 +14,8 @@ import Foundation
 // types agree.
 public struct ProcedureType: Sendable, Equatable {
     // MARK: - Property
-    // Each parameter's type, marks included, since `inout`, `consuming` and
-    // `borrowing` are facts about the slot a value is applied through.
+    // Each parameter's type, marks included, since `inout` is a fact about the
+    // slot a value is applied through.
     public let parameters: [TypeExpression]
 
     // What an application answers, or nil where nothing was declared.
@@ -58,6 +58,14 @@ public struct ProcedureType: Sendable, Equatable {
     }
 
     // MARK: - Public
+    // This type with `Self` written as `type` wherever it stands.
+    func replacingSelf(with type: TypeExpression) -> ProcedureType {
+        ProcedureType(
+            parameters: parameters.map { parameter in parameter.replacingSelf(with: type) },
+            returns: returns?.replacingSelf(with: type)
+        )
+    }
+
     // This type with each occurrence carrying the bound declared for its
     // name. The one `bounds` at the declaration speaks for a nested type.
     public func bounded(by bounds: [Name: [Name]]) -> ProcedureType {

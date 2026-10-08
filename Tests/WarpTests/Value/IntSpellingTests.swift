@@ -10,14 +10,14 @@ import Testing
 @testable import Warp
 
 // The int-boundary judges in one place: every judge that meets a fraction or
-// a spelled candidate reads through these, so the edges are pinned here once
+// a spelled number reads through these, so the edges are pinned here once
 // rather than rediscovered at each caller.
 @Suite("Int readings and spellings")
 struct IntSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a fraction reads as the int it is, and misses by the fact it is")
+    @Test("a fraction reads as the Int it is, and misses by the fact it is")
     func readingNamesTheFact() {
         // When / Then
         #expect({ if case .int(42) = IntNarrowing(42.0) { true } else { false } }())

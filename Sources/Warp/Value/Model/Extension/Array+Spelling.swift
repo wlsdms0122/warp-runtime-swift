@@ -15,7 +15,7 @@ public extension [UInt8] {
     //
     // The `x` and the quotes belong to the position, not to the digits: the
     // encoding writes `x"…"` around this, and a rendering in a carrier's
-    // position writes no digits at all. Bytes are `array<byte>` there.
+    // position writes no digits at all. Bytes are `Array<Int>` there.
     var spelling: String {
         map { byte in String(format: "%02x", byte) }.joined()
     }

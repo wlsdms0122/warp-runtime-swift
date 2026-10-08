@@ -16,7 +16,7 @@ extension Module {
     // bodies calling it meet in that box.
     static let ticketing = try! Module(
         procedures: [
-            "app.ticket": Procedure(
+            "App.ticket": Procedure(
                 signature: Signature(returns: .int),
                 implementation: .query(TicketQuery())
             )
@@ -25,7 +25,7 @@ extension Module {
 
     static let failing = try! Module(
         procedures: [
-            "app.fail": Procedure(
+            "App.fail": Procedure(
                 signature: Signature(of: FailEffect.self),
                 implementation: .effect(FailEffect())
             )

@@ -22,9 +22,9 @@ struct NotationGateTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a type that opens an argument it never closes is refused", arguments: [
-        "array<string",
-        "array<string>>",
-        "array<>",
+        "Array<String",
+        "Array<String>>",
+        "Array<>",
         ""
     ])
     func malformedTypeIsRefused(written: String) {

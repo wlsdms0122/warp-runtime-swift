@@ -40,12 +40,11 @@ public struct Compiled: Sendable, Declaring {
     // which text it is about.
     let document: Place.Document
 
-    // What it declares in the three type tables, as it wrote them. A
+    // What it declares in the two type tables, as it wrote them. A
     // link lays these down in the order it was handed the documents to
     // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.
     let types: [Name: TypeExpression]
-    let constraints: [Name: [TypeExpression]]
     let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts it said each type answers, as it wrote them. The link
@@ -138,10 +137,46 @@ public struct Compiled: Sendable, Declaring {
     var declares: Set<Reference> {
         Set(
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
+                + contracts.flatMap { contract, procedures in
+                    procedures.keys.map { procedure in
+                        Reference.procedure(ContractProcedure.spelling(of: contract, procedure: procedure))
+                    }
+                }
                 + types.keys.map(Reference.type)
-                + constraints.keys.map(Reference.type)
                 + contracts.keys.map(Reference.type)
         )
+    }
+
+    // Every name this document reaches outside itself, read off what its
+    // object holds: what its bodies send, the types they and its signatures
+    // stand on, and the names its claims and the pairs it leaned on write.
+    // An object keeps no list of what its document named, so this is that
+    // list worked out again from the facts the object does keep.
+    var reaches: Set<Reference> {
+        var reached = Set(numbering.sending.map(Reference.procedure))
+
+        reached.formUnion(typeNumbering.types.map(Reference.type))
+
+        for row in table {
+            reached.formUnion(row.signature.mentions.map(Reference.type))
+        }
+
+        for procedures in contracts.values {
+            for asked in procedures.values {
+                reached.formUnion(asked.signature.mentions.map(Reference.type))
+            }
+        }
+
+        for (type, claimed) in claims {
+            reached.insert(.type(type))
+            reached.formUnion(claimed.map(Reference.type))
+        }
+
+        for claim in leaned.keys {
+            reached.formUnion([.type(claim.type), .type(claim.contract)])
+        }
+
+        return reached.subtracting(declares)
     }
 
     // Which document this stands against, which is what a host keeps it
@@ -154,7 +189,6 @@ public struct Compiled: Sendable, Declaring {
     private init(
         document: Place.Document,
         types: [Name: TypeExpression],
-        constraints: [Name: [TypeExpression]],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
@@ -173,7 +207,6 @@ public struct Compiled: Sendable, Declaring {
         self.constants = constants
         self.token = token
         self.types = types
-        self.constraints = constraints
         self.contracts = contracts
         self.claims = claims
         self.leaned = leaned
@@ -202,7 +235,6 @@ public struct Compiled: Sendable, Declaring {
     init(
         document: Place.Document,
         types: [Name: TypeExpression],
-        constraints: [Name: [TypeExpression]],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
@@ -225,7 +257,6 @@ public struct Compiled: Sendable, Declaring {
         self.init(
             document: document,
             types: types,
-            constraints: constraints,
             contracts: contracts,
             claims: claims,
             leaned: leaned,
@@ -310,7 +341,6 @@ public struct Compiled: Sendable, Declaring {
         Compiled(
             document: document,
             types: types,
-            constraints: constraints,
             contracts: contracts,
             claims: claims,
             leaned: leaned,

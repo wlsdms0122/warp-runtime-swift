@@ -17,9 +17,13 @@ struct AllEffect: Effect {
     // Every recoverable failure a piece raises is gathered into one.
     let failing = Failing.these([ConcurrentFailed.type])
 
-    private let fanout = Fanout("std.concurrent.all")
+    private let fanout: Fanout
 
     // MARK: - Initializer
+    init(answering procedure: String) {
+        self.fanout = Fanout(procedure)
+    }
+
     // MARK: - Public
     func run(_ invocation: Invocation<Self>) async throws -> Value {
         try await fanout.all(invocation)

@@ -19,7 +19,6 @@ enum ObjectLayout {
         case document
         case dependencies
         case types
-        case constraints
         case contracts
         case claims
         case leaned
@@ -68,31 +67,18 @@ enum ObjectLayout {
         case int
         case double
         case string
-        case ranged
         case array
         case dictionary
         case record
         case procedure
         case variable
         case `inout`
-        case linear
-        case consuming
-        case borrowing
         case nullable
         case named
         case parameter
         case composition
         case projection
-    }
-
-    enum RefinementTag: Int {
-        case whole
-        case fraction
-    }
-
-    enum EdgeTag: Int {
-        case through
-        case upTo
+        case selfType
     }
 
     enum SegmentTag: Int {
@@ -138,7 +124,6 @@ enum ObjectLayout {
         case constants
         case variables
         case types
-        case constraints
         case contracts
         case satisfies
         case imports
@@ -192,7 +177,6 @@ enum ObjectLayout {
         case int
         case double
         case string
-        case ranged
         case array
         case dictionary
         case record
@@ -211,11 +195,6 @@ enum ObjectLayout {
         case noTypeNamed
         case noBoundNamed
         case namesItself
-    }
-
-    enum BoundTag: Int {
-        case membership
-        case contract
     }
 
     enum ImplementationTag: Int {

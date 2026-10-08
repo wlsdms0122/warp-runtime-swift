@@ -138,7 +138,7 @@ struct ControlFlowTests {
             )
         )
         let sut = try Module(
-            imports: ["std.logic.notEqual"],
+            imports: ["Standard.Logic.notEqual"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -188,14 +188,14 @@ struct ControlFlowTests {
         // is a procedure's failure like any other
         let sut = Warp.Expression.loop(
             while: .call(
-                Call(selector: "std.math.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
+                Call(selector: "Standard.Comparable.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
             ),
             body: Block(body: [
                 Statement(
                     expression: .conditional(
                         .call(
                             Call(
-                                selector: "std.logic.equal",
+                                selector: "Standard.Logic.equal",
                                 arguments: [reference("probe", "index"), .literal(.int(2))]
                             )
                         ),
@@ -203,7 +203,7 @@ struct ControlFlowTests {
                             Statement(
                                 expression: .call(
                                     Call(
-                                        selector: "std.control.abort",
+                                        selector: "Standard.Control.abort",
                                         arguments: [.literal(.string("too many rounds"))]
                                     )
                                 )
@@ -234,7 +234,7 @@ struct ControlFlowTests {
             element: "element",
             body: [
                 Statement(binding: .assignment([.key("sum")]), expression: .call(
-                    Call(selector: "std.math.plus", arguments: [reference("sum"), reference("element")])
+                    Call(selector: "Standard.Numeric.plus", arguments: [reference("sum"), reference("element")])
                 ))
             ]
         )
@@ -261,7 +261,7 @@ struct ControlFlowTests {
         let sut = Warp.Expression.attempt(
             Block(body: [
                 Statement(binding: .constant("boom"), expression: .call(
-                    Call(selector: "app.fail", arguments: [.literal(.bool(false))])
+                    Call(selector: "App.fail", arguments: [.literal(.bool(false))])
                 ))
             ]),
             rescue: Block(body: [], result: .literal(.string("recovered")))
@@ -296,7 +296,7 @@ struct ControlFlowTests {
             body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
             result: .call(
                 Call(
-                    selector: "std.collection.filter",
+                    selector: "Standard.Collection.filter",
                     arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
                 )
             )

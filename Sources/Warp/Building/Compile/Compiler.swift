@@ -12,7 +12,19 @@ import Foundation
 // before it.
 struct Compiler {
     // MARK: - Property
+    // The declarations a fold of this document may run where it calls
+    // through a contract: those of every document it stands on, near or far,
+    // and its own. A claim another document makes is a fact of the whole
+    // list, and what this document settles at the build stands on what it
+    // names alone, so which documents the host handed over beside it changes
+    // nothing it settles.
+    private let witnesses: Set<Name>
+
     // MARK: - Initializer
+    init(foldingThrough witnesses: Set<Name>) {
+        self.witnesses = witnesses
+    }
+
     // MARK: - Public
     // What the document proves is written into `compiling`. Its own rows stand
     // as the refusal they would earn until it lowers them, so a procedure
@@ -118,6 +130,8 @@ struct Compiler {
                     constants: constants,
                     origin: origin,
                     in: compiling.folding(),
+                    answering: context().contractProcedures,
+                    through: witnesses,
                     loweredTypes: loweredTypes
                 )
 
@@ -151,17 +165,6 @@ struct Compiler {
             resolvedBodies[symbol.declared] = answer.procedure
 
             try TypeChecker().checked(answer.calls, in: context(), writing: fulfillment)
-
-            // Read off the body the build is about to lower, so what is proven
-            // is what runs. The environment is the one the body was judged in.
-            if let rewritten = answer.procedure.block {
-                try LinearityChecker().consumed(
-                    rewritten,
-                    at: symbol.place,
-                    holding: declaration.signature,
-                    in: context()
-                )
-            }
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
@@ -354,16 +357,16 @@ struct Compiler {
             compiling.record(try row(of: symbol), handsBackAsDeclared: proven.contains(symbol.declared))
         }
 
-        // The types its bodies stand on, written as this document's own
-        // numbers. Lowering read the link's table to judge, so what it wrote
-        // is that link's rows; what leaves here is the document's.
+        // The types its bodies and the answers read off them stand on,
+        // written as this document's own numbers. Lowering read the link's
+        // table to judge, so what it wrote is that link's rows; what leaves
+        // here is the document's.
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
             Array(block) + compiling.lowering.documents[origin].closureRows,
-            answering: read,
-            starting: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) }
+            answering: read
         )
 
         // Through the one door an object read back goes through, so what a
@@ -371,7 +374,6 @@ struct Compiler {
         return try Compiled(
             document: .of(module),
             types: module.types,
-            constraints: module.constraints,
             contracts: module.contracts,
             claims: module.claims,
             leaned: fulfillment.claims(of: origin),
@@ -381,7 +383,7 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: lowered.starting,
+            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
             dependencies: dependencies,
             token: token
         )
@@ -424,9 +426,10 @@ struct Compiler {
             let place = Place.constant(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
-                let (value, reading) = try await settled(
+                let (value, written) = try await settled(
                     expression,
                     as: name,
+                    into: nil,
                     at: place,
                     beside: known,
                     of: origin,
@@ -439,7 +442,7 @@ struct Compiler {
                 known[name] = (
                     value,
                     LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: reading, fixed: true, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: true, in: context.loweredTypes)
                 )
             }
         }
@@ -450,8 +453,8 @@ struct Compiler {
     // What a document's variables start a run holding. Settled the way a
     // constant is, from what a constant settles from, reading those beside it
     // and no variable; the starting value is a fact the link reads. A variable
-    // that declares what it holds has its start settled into that, the way an
-    // argument is settled into its slot, and holds that type; one that
+    // that declares what it holds has its start held to that at the build,
+    // the way an argument is held to its slot, and holds that type; one that
     // declares nothing holds the type of the settled value, read the way a
     // constant's is.
     private func variables(
@@ -471,10 +474,21 @@ struct Compiler {
         for (name, variable) in module.variables.sorted { $0.key < $1.key } {
             let place = Place.variable(name.spelling, in: .of(module))
 
+            // A start written as a literal, or as a closure literal that
+            // writes no answer, is read as what the variable declares.
+            let declaredType = variable.declared?.lowered(in: context.loweredTypes)
+            let start = declaredType.map { declaredType in
+                declaredType.written(
+                    declaredType.completing(variable.start, in: context.loweredTypes),
+                    in: context.loweredTypes
+                )
+            } ?? variable.start
+
             try await fulfillment.folding(place) {
-                let (settled, reading) = try await self.settled(
-                    variable.start,
+                let (settled, written) = try await self.settled(
+                    start,
                     as: name,
+                    into: declaredType,
                     at: place,
                     beside: known,
                     of: origin,
@@ -485,12 +499,34 @@ struct Compiler {
                 )
 
                 guard let declared = variable.declared, let holding = declaredTypes[name] else {
-                    started[name] = (
-                        settled,
-                        LoweredType(of: settled, in: context.loweredTypes)
-                            .refined(by: reading, fixed: false, in: context.loweredTypes)
-                    )
+                    let holding = LoweredType(of: settled, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: false, in: context.loweredTypes)
+
+                    // A variable that declares nothing holds the type its
+                    // start reads as, and an empty list or map holds no
+                    // element, so a start of one says nothing of what the box
+                    // will hold.
+                    guard !holding.holdsNoElement else {
+                        throw BuildError(
+                            "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
+                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type or casts its start",
+                            at: place
+                        )
+                    }
+
+                    started[name] = (settled, holding)
                     return
+                }
+
+                // What the start reads is held to what the variable declares,
+                // the way a name's value is: a nameless record takes a
+                // declared record's name only as a literal or a record built
+                // where the declared record is read.
+                guard written.isHeld(by: holding, inPlace: false, in: context.loweredTypes) else {
+                    throw BuildError(
+                        "starts as \(written.rendered(in: context.loweredTypes)), and declares \(declared)",
+                        at: place
+                    )
                 }
 
                 do {
@@ -499,11 +535,7 @@ struct Compiler {
                         holding
                     )
                 } catch {
-                    throw BuildError(
-                        "starts as \(LoweredType(of: settled, in: context.loweredTypes).rendered(in: context.loweredTypes)),"
-                            + " and declares \(declared): \(error)",
-                        at: place
-                    )
+                    throw BuildError("starts outside \(declared), which it declares: \(error)", at: place)
                 }
             }
         }
@@ -511,17 +543,20 @@ struct Compiler {
         return started
     }
 
-    // What a constant or a variable's start settles to, beside what it was
-    // judged to read. Its dots are judged before it settles, the way a body's
-    // are: the settled constants' types are the environment, so an absent
-    // field or a needless `?.` refuses here by the one rule, and carries its
-    // own place. A closure it holds runs later, so settling proves nothing
-    // about the sends inside it, and they pass the gate every gathered call
-    // does. What it is written from is read rather than run, so it passes the
-    // gate an operand does.
+    // What a constant or a variable's start settles to, beside the shape it
+    // was written as and what it was judged to read. Its dots are judged
+    // before it settles, the way a body's are: the settled constants' types
+    // are the environment, so an absent field or a needless `?.` refuses here
+    // by the one rule, and carries its own place. A closure it holds runs
+    // later, so settling proves nothing about the sends inside it, and they
+    // pass the gate every gathered call does. What it is written from is read
+    // rather than run, so it passes the gate an operand does. A record it
+    // builds where what it is written into reads a declared record is built
+    // as that record.
     private func settled(
         _ expression: Expression,
         as name: Name,
+        into declared: LoweredType?,
         at place: Place,
         beside known: [Name: (value: Value, type: LoweredType)],
         of origin: Int,
@@ -529,8 +564,8 @@ struct Compiler {
         writing lowering: inout Lowering,
         leaning fulfillment: Fulfillment,
         in context: TypingContext
-    ) async throws -> (value: Value, reading: LoweredType) {
-        let (judged, calls, judgements, reading) = try await TypeChecker().resolvedSites(
+    ) async throws -> (value: Value, written: LiteralShape) {
+        let (judged, calls, sites, written) = try await TypeChecker().resolvedSites(
             in: expression,
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
@@ -542,15 +577,23 @@ struct Compiler {
         try TypeChecker().checked(calls, in: context, writing: fulfillment)
         try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
 
+        var judgements = sites
+
+        if let declared {
+            judgements.record(names: declared.naming(judged, at: place, in: context.loweredTypes))
+        }
+
         do {
             let value = try await Folding(
                 constants: known.mapValues(\.value),
                 origin: origin,
                 in: resolved,
+                answering: context.contractProcedures,
+                through: witnesses,
                 loweredTypes: context.loweredTypes
             ).read(judged, as: .binding(name), judgements: judgements, writing: &lowering, at: place)
 
-            return (value, reading)
+            return (value, written)
         } catch let refused as BuildError {
             throw refused
         } catch {

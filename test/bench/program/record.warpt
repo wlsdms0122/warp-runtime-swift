@@ -1,26 +1,27 @@
 warpt 1
 {
   imports [
-    "std.math.lessThan"
+    "Standard.Comparable.lessThan"
   ]
   procedures {
-    "app.read" {
+    "App.read" {
       parameters [
         {
           name "account"
-          type "app.Account"
+          type "App.Account"
         }
       ]
       result {
         ref "account.balance"
       }
-      returns "int"
+      returns "Int"
     }
     entry {
       access "public"
       body [
         {
           let "account"
+          type "App.Account"
           value {
             record {
               balance 1
@@ -45,7 +46,7 @@ warpt 1
                           ref "account"
                         }
                       ]
-                      procedure "app.read"
+                      procedure "App.read"
                     }
                   }
                 }
@@ -60,7 +61,7 @@ warpt 1
                       ref "rounds"
                     }
                   ]
-                  procedure "std.math.lessThan"
+                  procedure "Standard.Comparable.lessThan"
                 }
               }
             }
@@ -70,19 +71,19 @@ warpt 1
       parameters [
         {
           name "rounds"
-          type "int"
+          type "Int"
         }
       ]
       result {
         ref "seen"
       }
-      returns "int"
+      returns "Int"
     }
   }
   types {
-    "app.Account" {
+    "App.Account" {
       record {
-        balance "int"
+        balance "Int"
       }
     }
   }

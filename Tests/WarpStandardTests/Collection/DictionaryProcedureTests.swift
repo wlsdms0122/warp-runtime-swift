@@ -22,7 +22,7 @@ struct DictionaryProcedureTests {
     func settingAnswersADictionary() async throws {
         // Given
         let question = Question<SettingQuery>(
-            arguments: ["dictionary": .record(Record(name: "app.Point", ["a": .int(1)])), "key": .string("b"), "value": .int(2)]
+            arguments: ["dictionary": .record(Record(name: "App.Point", ["a": .int(1)])), "key": .string("b"), "value": .int(2)]
         )
 
         // When
@@ -49,14 +49,14 @@ struct DictionaryProcedureTests {
 
     @Test("a procedure that counts fields counts either spelling")
     func countingReadsEitherSpelling() async throws {
-        // Given. The declaration answers `int`, so neither spelling may answer
+        // Given. The declaration answers `Int`, so neither spelling may answer
         // absence
         let held = Question<CountQuery>(arguments: ["collection": .dictionary(["a": .int(1), "b": .int(2)])])
-        let laid = Question<CountQuery>(arguments: ["collection": .record(Record(name: "app.Point", ["a": .int(1)]))])
+        let laid = Question<CountQuery>(arguments: ["collection": .record(Record(name: "App.Point", ["a": .int(1)]))])
 
         // When / Then
-        #expect(try await CountQuery().evaluate(held) == .int(2))
-        #expect(try await CountQuery().evaluate(laid) == .int(1))
+        #expect(try await CountQuery(answering: "Dictionary.count").evaluate(held) == .int(2))
+        #expect(try await CountQuery(answering: "Dictionary.count").evaluate(laid) == .int(1))
     }
 
     // MARK: - Public

@@ -76,15 +76,18 @@ public struct Image: Sendable {
         rows[declared].map { row in linked[row] }
     }
 
-    // A value settled by a type this link declared: the declaration gives the
-    // layout and holds every field to its type, so what comes back is what a
-    // slot of that type holds.
+    // A value from outside settled by a type this link declared: fitted to it
+    // first, a field the declaration never named left outside, then held to
+    // it, the declaration giving the layout and every field its type, so what
+    // comes back is what a slot of that type holds.
     public func settling(_ value: Value, as declared: Name) throws -> Value {
         guard let row = loweredTypes.row(named: declared) else {
             throw ValueRefused("no type named '\(declared)' is declared here")
         }
 
-        return try LoweredType.named(row).settling(value, at: declared.spelling, in: loweredTypes)
+        let type = LoweredType.named(row)
+
+        return try type.settling(type.fitted(value, in: loweredTypes), at: declared.spelling, in: loweredTypes)
     }
 
     // MARK: - Private

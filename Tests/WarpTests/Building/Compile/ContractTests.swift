@@ -10,11 +10,11 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// A contract: the procedures a value must answer. A document says which types
-// answer one, a signature bounds a type parameter by it, and a body calls the
-// procedures without knowing which type it holds. The link finds the declaration
-// behind each claimed procedure, and the run reads a row out of that by the name
-// the value wears.
+// A contract: the procedures a value's type must answer. A document says which
+// types answer one, a signature bounds a type parameter by it, and a body calls
+// the procedures without knowing which type it holds. The link finds the
+// declaration behind each claimed procedure, and the run reads a row out of
+// that by the type the value is an instance of.
 @Suite("What a value is able to do")
 struct ContractTests {
     // MARK: - Property
@@ -29,7 +29,7 @@ struct ContractTests {
                     binding: .constant("account"),
                     expression: .cast(
                         .record(["balance": .literal(.int(7))]),
-                        as: .named("bank.Account"),
+                        as: .named("Bank.Account"),
                         optional: false
                     )
                 ),
@@ -37,14 +37,14 @@ struct ContractTests {
                     binding: .constant("card"),
                     expression: .cast(
                         .record(["last": .literal(.string("42"))]),
-                        as: .named("bank.Card"),
+                        as: .named("Bank.Card"),
                         optional: false
                     )
                 )
             ],
             result: .array([
-                .call(Call(selector: "app.tell", arguments: [reference("account")])),
-                .call(Call(selector: "app.tell", arguments: [reference("card")]))
+                .call(Call(selector: "App.tell", arguments: [reference("account")])),
+                .call(Call(selector: "App.tell", arguments: [reference("card")]))
             ])
         )
 
@@ -54,20 +54,20 @@ struct ContractTests {
 
     @Test("a type that does not answer every procedure does not stand in the slot")
     func anUnsatisfyingTypeRefuses() async throws {
-        // Given. `bank.Plain` declares no `describe`
+        // Given. `Bank.Plain` declares no `describe`
         let sut = try describing(
-            types: ["bank.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .record(["note": .string])],
             body: [
                 Statement(
                     binding: .constant("plain"),
                     expression: .cast(
                         .record(["note": .literal(.string("x"))]),
-                        as: .named("bank.Plain"),
+                        as: .named("Bank.Plain"),
                         optional: false
                     )
                 )
             ],
-            result: .call(Call(selector: "app.tell", arguments: [reference("plain")]))
+            result: .call(Call(selector: "App.tell", arguments: [reference("plain")]))
         )
 
         // When / Then
@@ -75,19 +75,19 @@ struct ContractTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("procedures.entry.result")
-                && "\(error)".contains("no document in this link says 'bank.Plain' answers it")
+                && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
         }
     }
 
     @Test("a declaration cannot take a contract procedure's spelling")
     func aDeclarationCannotTakeAContractProcedureSpelling() async throws {
-        // Given. `app.Describable.describe` is both a contract's procedure and a
+        // Given. `App.Describable.describe` is both a contract's procedure and a
         // declaration, so a call writing that spelling has two readings
         let sut = try describing(
             procedures: [
-                "app.Describable.describe": Procedure(
+                "App.Describable.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -117,14 +117,14 @@ struct ContractTests {
                     binding: .constant("account"),
                     expression: .cast(
                         .record(["balance": .literal(.int(7))]),
-                        as: .named("bank.Account"),
+                        as: .named("Bank.Account"),
                         optional: false
                     )
                 )
             ],
             result: .call(
                 Call(
-                    selector: "app.Describable.describe",
+                    selector: "App.Describable.describe",
                     arguments: [reference("account"), .literal(.string("short"))]
                 )
             )
@@ -134,23 +134,22 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("sending 'app.Describable.describe' with 2 arguments, and it takes 1")
+            "\(error)".contains("sending 'App.Describable.describe' with 2 arguments, and it takes 1")
         }
     }
 
     @Test("an argument sent through a contract passes the gates an argument sent to a declaration does")
     func aContractCallHoldsItsArgumentsAsADeclaredCallDoes() async throws {
-        // Given. `app.Sized.size` takes a whole number up to 10, and
-        // `app.Bumping.bump` takes a variable in place
-        let small = TypeExpression.ranged(.whole(from: 0, to: .through(10)))
+        // Given. `App.Sized.size` takes a whole number, and `App.Bumping.bump`
+        // takes a variable in place
         func sending(_ contract: Name, _ procedure: Name, _ parameter: TypeExpression, _ argument: Warp.Expression) throws -> Module {
             try Module(
-                types: ["bank.Account": .record(["balance": .int])],
-                contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .named(contract)), Parameter(name: "n", type: parameter)], returns: .int)]],
-                claims: ["bank.Account": [contract]],
+                types: ["Bank.Account": .record(["balance": .int])],
+                contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "n", type: parameter)], returns: .int)]],
+                claims: ["Bank.Account": [contract]],
                 procedures: [
-                    Name(stringLiteral: "bank.Account.\(procedure.spelling)"): Procedure(
-                        signature: Signature(parameters: [Parameter(name: "of", type: .named("bank.Account")), Parameter(name: "n", type: parameter)], returns: .int),
+                    Name(stringLiteral: "Bank.Account.\(procedure.spelling)"): Procedure(
+                        signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account")), Parameter(name: "n", type: parameter)], returns: .int),
                         body: [],
                         result: .literal(.int(1))
                     ),
@@ -160,7 +159,7 @@ struct ContractTests {
                         body: [
                             Statement(
                                 binding: .constant("account"),
-                                expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("bank.Account"), optional: false)
+                                expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
                             )
                         ],
                         result: .call(
@@ -175,32 +174,32 @@ struct ContractTests {
         }
 
         // When
-        let outside = await #expect(throws: BuildError.self) {
-            try await Builder().build([try sending("app.Sized", "size", small, .literal(.int(99)))] + Module.standard)
+        let mistyped = await #expect(throws: BuildError.self) {
+            try await Builder().build([try sending("App.Sized", "size", .int, .literal(.string("ninety-nine")))] + Module.standard)
         }
         let inPlace = await #expect(throws: BuildError.self) {
-            try await Builder().build([try sending("app.Bumping", "bump", .inout(.int), .literal(.int(3)))] + Module.standard)
+            try await Builder().build([try sending("App.Bumping", "bump", .inout(.int), .literal(.int(3)))] + Module.standard)
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(outside?.message == "sending 'app.Sized.size': input 'n': 99 is outside int(0...10)")
-        #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
+        #expect(mistyped?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
+        #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
     }
 
     @Test("a declaration named for a type and a procedure is held to the contract")
     func aMismatchedWitnessRefuses() async throws {
-        // Given. `bank.Account.describe` answers an int where the contract
+        // Given. `Bank.Account.describe` answers an int where the contract
         // writes a string
         let sut = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            claims: ["bank.Account": ["app.Describable"]],
-            procedures: leaning(on: "bank.Account", holding: ["balance": .literal(.int(1))]).merging([
-                "bank.Account.describe": Procedure(
+            types: ["Bank.Account": .record(["balance": .int])],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            claims: ["Bank.Account": ["App.Describable"]],
+            procedures: leaning(on: "Bank.Account", holding: ["balance": .literal(.int(1))]).merging([
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -214,23 +213,23 @@ struct ContractTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
-                && "\(error)".contains("declares 'bank.Account.describe', which is named for")
-                && "\(error)".contains("answers int where the contract writes string")
+                && "\(error)".contains("declares 'Bank.Account.describe', which is named for")
+                && "\(error)".contains("answers Int where the contract writes String")
         }
     }
 
     @Test("a declaration named for a type and a procedure answers nothing nobody claimed")
     func anUnclaimedSpellingIsAnOrdinaryProcedure() async throws {
-        // Given. One document declares `bank.Account.describe` and says
+        // Given. One document declares `Bank.Account.describe` and says
         // nothing about any contract. Another, which it never names, declares
         // a contract asking `describe` and answering a string
         let held = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .record(["balance": .int])],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -239,9 +238,9 @@ struct ContractTests {
             ]
         )
         let asking = try Module(
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "app.ask": Procedure(body: [], result: .literal(.null))
+                "App.ask": Procedure(body: [], result: .literal(.null))
             ]
         )
 
@@ -254,20 +253,20 @@ struct ContractTests {
 
     @Test("a claim is held to every procedure the contract asks")
     func aClaimMissingAProcedureRefuses() async throws {
-        // Given. `bank.Plain` is said to answer, and nothing declares
-        // `bank.Plain.describe`
+        // Given. `Bank.Plain` is said to answer, and nothing declares
+        // `Bank.Plain.describe`
         let sut = try Module(
-            types: ["bank.Plain": .record(["note": .string])],
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            claims: ["bank.Plain": ["app.Describable"]],
-            procedures: leaning(on: "bank.Plain", holding: ["note": .literal(.string("x"))])
+            types: ["Bank.Plain": .record(["note": .string])],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            claims: ["Bank.Plain": ["App.Describable"]],
+            procedures: leaning(on: "Bank.Plain", holding: ["note": .literal(.string("x"))])
         )
 
         // When / Then
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("nothing in this link declares 'bank.Plain.describe'")
+            "\(error)".contains("nothing in this link declares 'Bank.Plain.describe'")
         }
     }
 
@@ -277,30 +276,30 @@ struct ContractTests {
         // that says one's type answers the other's contract and writes the
         // procedure that answers it.
         let charting = try Module(
-            contracts: ["chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .named("chart.Plottable"))], returns: .int)]],
+            contracts: ["Chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
             procedures: [
-                "chart.draw": Procedure(
+                "Chart.draw": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["chart.Plottable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["Chart.Plottable"]))
                         ],
                         returns: .int
                     ),
                     body: [],
-                    result: .call(Call(selector: "chart.Plottable.height", arguments: [reference("it")]))
+                    result: .call(Call(selector: "Chart.Plottable.height", arguments: [reference("it")]))
                 )
             ]
         )
         let banking = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            procedures: ["bank.nothing": Procedure(body: [], result: .literal(.null))]
+            types: ["Bank.Account": .record(["balance": .int])],
+            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
-            claims: ["bank.Account": ["chart.Plottable"]],
+            claims: ["Bank.Account": ["Chart.Plottable"]],
             procedures: [
-                "bank.Account.height": Procedure(
+                "Bank.Account.height": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
                     body: [],
@@ -318,12 +317,12 @@ struct ContractTests {
                             binding: .constant("account"),
                             expression: .cast(
                                 .record(["balance": .literal(.int(7))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .call(Call(selector: "chart.draw", arguments: [reference("account")]))
+                    result: .call(Call(selector: "Chart.draw", arguments: [reference("account")]))
                 )
             ]
         )
@@ -338,14 +337,14 @@ struct ContractTests {
     func twoDocumentsClaimingOnePairIsOneClaim() async throws {
         // Given. Two documents say the same type answers the same contract
         let held = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
-            claims: ["bank.Account": ["app.Describable"]],
+            types: ["Bank.Account": .record(["balance": .int])],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -354,8 +353,8 @@ struct ContractTests {
             ]
         )
         let again = try Module(
-            claims: ["bank.Account": ["app.Describable"]],
-            procedures: ["app.ask": Procedure(body: [], result: .literal(.null))]
+            claims: ["Bank.Account": ["App.Describable"]],
+            procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
         )
 
         // When / Then. A claim holds nothing but the pair, so the second says
@@ -367,11 +366,10 @@ struct ContractTests {
 
     @Test("a claim names a type and a contract, and nothing else")
     func aClaimNamesWhatItIsAbout() async throws {
-        // Given. A constraint stands where the contract should
+        // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["bank.Account": .record(["balance": .int])],
-            constraints: ["app.Scalar": [.int, .string]],
-            claims: ["bank.Account": ["app.Scalar"]],
+            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .int],
+            claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
@@ -379,32 +377,85 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("'app.Scalar' is not a contract this link declares")
+            "\(error)".contains("'App.Scalar' is not a contract this link declares")
         }
     }
 
-    @Test("a contract asking nothing is refused, since every type answers it")
-    func anEmptyContractRefuses() async throws {
-        // Given
+    @Test("a claim about Array answered for a bounded element names the element as whatever a list holds")
+    func aClaimAboutArrayNamesItsElementPlainly() async throws {
+        // Given. A list's element is whatever it holds, which a bound on the
+        // declaration's own parameter does not take
         let sut = try Module(
-            contracts: ["app.Anything": [:] as [Name: ContractProcedure]],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+            contracts: ["App.Sortable": ["sort": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
+            claims: ["Array": ["App.Sortable"]],
+            procedures: [
+                "Array.sort": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T", bounds: ["Standard.Comparable"])))],
+                        returns: .int
+                    ),
+                    body: [],
+                    result: .literal(.int(0))
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "App.Sortable.sort", arguments: [.array([.literal(.int(1))])]))
+                )
+            ]
         )
 
         // When / Then
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("asks nothing, so every type satisfies it")
+            "\(error)".contains("reads 'T' as whatever element a value of 'Array' holds") && !"\(error)".contains("Self.Element")
         }
     }
 
-    @Test("a name is a type or a membership or a contract, and never two of them")
+    @Test("a contract asking nothing is answered by the types claimed for it alone")
+    func anEmptyContractIsAMark() async throws {
+        // Given. `Int` is claimed for a contract asking nothing, and `String` is not.
+        let module = { (handed: Warp.Expression) in
+            try Module(
+                contracts: ["App.Marked": [:] as [Name: ContractProcedure]],
+                claims: ["Int": ["App.Marked"]],
+                procedures: [
+                    "App.take": Procedure(
+                        signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Marked"))], returns: .int),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int),
+                        body: [],
+                        result: .call(Call(selector: "App.take", arguments: [handed]))
+                    )
+                ]
+            )
+        }
+
+        // When
+        let image = try await Builder().build([try module(.literal(.int(1)))] + Module.standard)
+
+        // Then
+        #expect(try await Executor().run(image) == .int(1))
+
+        await #expect {
+            try await Builder().build([try module(.literal(.string("x")))] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("no document in this link says 'String' answers it")
+        }
+    }
+
+    @Test("a name is a type or a contract, and never both")
     func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
-            types: ["app.Thing": .int],
-            contracts: ["app.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Thing"))], returns: .string)]],
+            types: ["App.Thing": .int],
+            contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
 
@@ -412,7 +463,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("cannot be a type, a membership and a contract at once")
+            "\(error)".contains("cannot stand for a type and a contract at once")
         }
     }
 
@@ -438,7 +489,7 @@ struct ContractTests {
             try await run([sut])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("reads 'app.Describable.describe', which answers only by running")
+                && "\(error)".contains("reads 'App.Describable.describe', which answers only by running")
         }
     }
 
@@ -448,33 +499,33 @@ struct ContractTests {
     // through it inside an operand.
     private func operand(asking constness: Constness) throws -> Module {
         try Module(
-            imports: ["std.text.uppercased"],
-            types: ["bank.Account": .record(["balance": .int])],
-            contracts: ["app.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string), constness: constness)]],
-            claims: ["bank.Account": ["app.Describable"]],
+            imports: ["Standard.Text.uppercased"],
+            types: ["Bank.Account": .record(["balance": .int])],
+            contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string), constness: constness)]],
+            claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
                     result: .literal(.string("an account"))
                 ),
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
                     body: [],
                     result: .call(
                         Call(
-                            selector: "std.text.uppercased",
+                            selector: "Standard.Text.uppercased",
                             arguments: [
                                 .call(
-                                    Call(selector: "app.Describable.describe", arguments: [reference("it")])
+                                    Call(selector: "App.Describable.describe", arguments: [reference("it")])
                                 )
                             ]
                         )
@@ -488,12 +539,12 @@ struct ContractTests {
                             binding: .constant("held"),
                             expression: .cast(
                                 .record(["balance": .literal(.int(1))]),
-                                as: .named("bank.Account"),
+                                as: .named("Bank.Account"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .call(Call(selector: "app.tell", arguments: [reference("held")]))
+                    result: .call(Call(selector: "App.tell", arguments: [reference("held")]))
                 )
             ]
         )
@@ -505,15 +556,15 @@ struct ContractTests {
     // where that contract is asked.
     private func leaning(on type: Name, holding fields: [Name: Warp.Expression]) -> [Name: Procedure] {
         [
-            "app.tell": Procedure(
+            "App.tell": Procedure(
                 signature: Signature(
                     parameters: [
-                        Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                     ],
                     returns: .string
                 ),
                 body: [],
-                result: .call(Call(selector: "app.Describable.describe", arguments: [reference("it")]))
+                result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
             ),
             entryName: Procedure(
                 access: .public,
@@ -524,7 +575,7 @@ struct ContractTests {
                         expression: .cast(.record(fields), as: .named(type), optional: false)
                     )
                 ],
-                result: .call(Call(selector: "app.tell", arguments: [reference("held")]))
+                result: .call(Call(selector: "App.tell", arguments: [reference("held")]))
             )
         ]
     }
@@ -539,31 +590,31 @@ struct ContractTests {
     ) throws -> Module {
         try Module(
             types: [
-                "bank.Account": .record(["balance": .int]),
-                "bank.Card": .record(["last": .string])
+                "Bank.Account": .record(["balance": .int]),
+                "Bank.Card": .record(["last": .string])
             ].merging(extra) { _, added in added },
-            contracts: ["app.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .named("app.Describable"))], returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: [
-                "bank.Account": ["app.Describable"],
-                "bank.Card": ["app.Describable"]
+                "Bank.Account": ["App.Describable"],
+                "Bank.Card": ["App.Describable"]
             ],
             procedures: [
                 entryName: Procedure(access: .public, body: body, result: result),
-                "app.tell": Procedure(
+                "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", constraints: ["app.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
                         ],
                         returns: .string
                     ),
                     body: [],
                     result: .call(
-                        Call(selector: "app.Describable.describe", arguments: [reference("it")])
+                        Call(selector: "App.Describable.describe", arguments: [reference("it")])
                     )
                 ),
-                "bank.Account.describe": Procedure(
+                "Bank.Account.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Account"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
                     body: [],
@@ -572,9 +623,9 @@ struct ContractTests {
                         spelling(.reference([.key("of"), .key("balance")]))
                     )
                 ),
-                "bank.Card.describe": Procedure(
+                "Bank.Card.describe": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .named("bank.Card"))],
+                        parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                         returns: .string
                     ),
                     body: [],

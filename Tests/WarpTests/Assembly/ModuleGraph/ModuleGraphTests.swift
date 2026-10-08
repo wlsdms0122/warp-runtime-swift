@@ -27,7 +27,7 @@ struct ModuleGraphTests {
         // order that puts the needing one first.
         let library = try Module(
             procedures: [
-                "lib.twice": Procedure(
+                "Lib.twice": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
@@ -42,7 +42,7 @@ struct ModuleGraphTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "lib.twice", arguments: [.literal(.int(1))]))
+                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(1))]))
                 )
             ]
         )
@@ -52,7 +52,7 @@ struct ModuleGraphTests {
 
         // Then. What is needed stands first.
         #expect(graph.modules.count == 2)
-        #expect(graph.modules[0].procedures["lib.twice"] != nil)
+        #expect(graph.modules[0].procedures["Lib.twice"] != nil)
         #expect(graph.modules[1].procedures[entryName] != nil)
     }
 

@@ -15,7 +15,7 @@ public extension Module {
         unchecked: Draft(
             description: "Equality.",
             procedures: [
-                "std.logic.equal": Procedure(
+                "Standard.Logic.equal": Procedure(
                     description: "Whether two values are the same.",
                     signature: Signature(of: EqualQuery.self, returns: .bool),
                     implementation: .query(EqualQuery())

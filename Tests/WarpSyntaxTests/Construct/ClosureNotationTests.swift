@@ -47,7 +47,7 @@ struct ClosureNotationTests {
                     "result": ["record": ["result": ["ref": "ran"]]]
                 ],
                 "twice": [
-                    "parameters": [["name": "body", "type": "procedure"]],
+                    "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
                     "body": [
                         ["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]],
                         ["let": "second", "value": ["call": ["procedure": ["ref": "body"]]]]
@@ -91,7 +91,7 @@ struct ClosureNotationTests {
                     "result": ["record": ["result": ["ref": "said"]]]
                 ],
                 "runner": [
-                    "parameters": [["name": "body", "type": "procedure"]],
+                    "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
                     "body": [
                         ["let": "outer", "value": "called"],
                         ["let": "ran", "value": ["call": ["procedure": ["ref": "body"]]]]
@@ -112,7 +112,7 @@ struct ClosureNotationTests {
     func closureDeclaresParameters() async throws {
         // Given
         let sut = try loader.loadDocument([
-            "imports": ["std.text.joined", "std.text.text"],
+            "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "procedures": [
                 "entry": [
                     "body": [
@@ -120,7 +120,7 @@ struct ClosureNotationTests {
                             "let": "doubler",
                             "value": [
                                 "closure": [
-                                    "parameters": [["name": "n", "type": "int"]],
+                                    "parameters": [["name": "n", "type": "Int"]],
                                     "body": [
                                         [
                                             "let": "out",
@@ -190,7 +190,7 @@ struct ClosureNotationTests {
                                 "arguments": [
                                     [
                                         "closure": [
-                                            "returns": "int",
+                                            "returns": "Int",
                                             "body": [["let": "said", "value": 1]]
                                         ]
                                     ]
@@ -200,7 +200,7 @@ struct ClosureNotationTests {
                     ]
                 ],
                 "twice": [
-                    "parameters": [["name": "body", "type": ["procedure": ["returns": "string"]]]],
+                    "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
                     "body": [["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]]]
                 ]
             ]
@@ -228,7 +228,7 @@ struct ClosureNotationTests {
                                 "arguments": [
                                     [
                                         "closure": [
-                                            "returns": "string",
+                                            "returns": "String",
                                             "body": [["let": "said", "value": "hi"]],
                                             "result": ["ref": "said"]
                                         ]
@@ -239,7 +239,7 @@ struct ClosureNotationTests {
                     ]
                 ],
                 "twice": [
-                    "parameters": [["name": "body", "type": ["procedure": ["returns": "string"]]]],
+                    "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
                     "body": [["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]]]
                 ]
             ]

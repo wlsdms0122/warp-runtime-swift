@@ -79,7 +79,7 @@ struct ReferenceLookupTests {
         }
 
         guard case .unfit = await lookup([.key("name"), .index(0)], in: sut) else {
-            Issue.record("expected unfit for indexing into a string")
+            Issue.record("expected unfit for indexing into a String")
 
             return
         }
@@ -96,7 +96,7 @@ struct ReferenceLookupTests {
         }
 
         guard case .unfit = await lookup([.key("name"), .key("count")], in: sut) else {
-            Issue.record("expected unfit for a key on a string")
+            Issue.record("expected unfit for a key on a String")
 
             return
         }
@@ -134,7 +134,7 @@ struct ReferenceLookupTests {
             [.key("items"), .indexRef([.key("far")])],
             in: folding
         ) else {
-            Issue.record("expected unfit for an index reference past the int")
+            Issue.record("expected unfit for an index reference past the Int")
 
             return
         }

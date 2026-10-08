@@ -70,12 +70,12 @@ public struct Draft: Sendable {
     public private(set) var imports: Set<Name>?
 
     public let types: [Name: TypeExpression]
-    public let constraints: [Name: [TypeExpression]]
 
-    // Contracts this module declares: a name bound to the procedures a value must
-    // answer to stand under it. Each procedure is a signature the implementing
-    // declaration is held to, taking the contract itself first, where the
-    // implementing declaration takes its own type.
+    // Contracts this module declares: a name bound to the procedures a value's
+    // type must answer to stand under it. Each procedure is a signature the
+    // implementing declaration is held to, taking `Self`, the type answering
+    // the contract, first, where the implementing declaration takes its own
+    // type.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts each type this document names answers, by the name of
@@ -116,11 +116,11 @@ public struct Draft: Sendable {
         })
     }
 
-    // What this declares in the type namespace. Types, constraints and
-    // contracts share it: the build refuses a name standing for a type and a
-    // membership at once.
+    // What this declares in the type namespace. Types and contracts share
+    // it: the build refuses a name standing for a type and a contract at
+    // once.
     var declaredTypes: Set<Name> {
-        Set(types.keys).union(constraints.keys).union(contracts.keys)
+        Set(types.keys).union(contracts.keys)
     }
 
     // MARK: - Initializer
@@ -128,7 +128,6 @@ public struct Draft: Sendable {
         description: String? = nil,
         imports: Set<Name>? = nil,
         types: [Name: TypeExpression] = [:],
-        constraints: [Name: [TypeExpression]] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
@@ -138,7 +137,6 @@ public struct Draft: Sendable {
         self.description = description
         self.imports = imports
         self.types = types
-        self.constraints = constraints
         self.contracts = contracts
         self.claims = claims
         self.constants = constants
@@ -220,12 +218,6 @@ public struct Draft: Sendable {
             named.formUnion(type.mentions)
         }
 
-        for members in constraints.values {
-            for member in members {
-                named.formUnion(member.mentions)
-            }
-        }
-
         for procedures in contracts.values {
             for asked in procedures.values {
                 named.formUnion(asked.signature.mentions)
@@ -235,9 +227,13 @@ public struct Draft: Sendable {
         // A claim names two types, and both are mentions like any other: the
         // type it is about and the contract it says that type answers. The
         // link reads the contract's procedures to hold the claim to them, so a
-        // document making one stands behind the document that wrote it.
+        // document making one stands behind the document that wrote it. A type
+        // the language names is no document's to stand behind.
         for (type, contracts) in claims {
-            named.insert(type)
+            if TypeExpression.nominalTypes[type] == nil {
+                named.insert(type)
+            }
+
             named.formUnion(contracts)
         }
 

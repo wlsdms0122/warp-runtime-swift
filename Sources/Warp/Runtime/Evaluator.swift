@@ -32,6 +32,13 @@ struct Evaluator: Sendable {
     // that declared it, in the order its frame reads them.
     let boxes: [[Handle]]
 
+    // The rows answering each contract's procedure, by the procedure's
+    // spelling and the type that answers, for a call through a contract the
+    // link has not laid out yet: what a build folding before the link knows
+    // from the claims standing so far. Empty for a run of an image, whose
+    // calls the link laid out.
+    let witnesses: [Name: [Name: Int]]
+
     // MARK: - Initializer
     // A run of an image: its table, relocated, and a box for each variable
     // its documents declared.
@@ -60,7 +67,8 @@ struct Evaluator: Sendable {
         resolving: Resolving,
         naming: [Closure.Document],
         loweredTypes: LoweredTypeTable,
-        boxes: [[Handle]] = []
+        boxes: [[Handle]] = [],
+        witnesses: [Name: [Name: Int]] = [:]
     ) {
         self.observer = observer
         self.environment = environment
@@ -69,6 +77,7 @@ struct Evaluator: Sendable {
         self.naming = naming
         self.loweredTypes = loweredTypes
         self.boxes = boxes
+        self.witnesses = witnesses
     }
 
     // MARK: - Public
@@ -363,9 +372,9 @@ struct Evaluator: Sendable {
             return try await self.call(call, in: &activation, at: trace)
 
         case let .dispatch(dispatch):
-            let (call, first) = try await picked(dispatch, in: &activation, at: trace)
+            let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
 
-            return try await self.call(call, first: first, in: &activation, at: trace)
+            return try await self.call(call, reaching: row, first: first, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
@@ -419,7 +428,26 @@ struct Evaluator: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
-        let callee = linked[try row(call.procedure, from: activation.origin)]
+        try await self.call(
+            call,
+            reaching: try row(call.procedure, from: activation.origin),
+            first: first,
+            judging: handedBack,
+            in: &activation,
+            at: trace
+        )
+    }
+
+    // The same call, its row already found.
+    private func call(
+        _ call: CallOperation,
+        reaching row: Int,
+        first: Value? = nil,
+        judging handedBack: [HandedBack] = [],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[row]
 
         switch callee.implementation {
         case .native(.query, _):
@@ -572,10 +600,9 @@ struct Evaluator: Sendable {
         }
 
         // A parameter handed in place takes a variable, and a call hands one
-        // only where the build read the callee's type. A call of a value whose
-        // type said nothing of its parameters and a procedure the host
-        // answers hand values, so a closure taking one from them is refused
-        // here, before its body runs.
+        // only where the build read the callee's type. A procedure the host
+        // answers hands values to a closure it was handed, so a closure
+        // taking one from it is refused here, before its body runs.
         for (position, slot) in linked.slots.enumerated()
         where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
             throw ExecutionError(
@@ -602,14 +629,12 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        let answered = try await answer(
+        return try await answer(
             body,
             of: linked,
             in: &activation,
             at: trace.appending(linked.hop)
         )
-
-        return try closure.settling(answered, in: loweredTypes)
     }
 
     // A row answered with its arguments settled and nothing handed in place:
@@ -780,8 +805,8 @@ struct Evaluator: Sendable {
 
     // A call judged where it stands: what it answers against what the call
     // reads, and what it handed back in place against what the caller holds
-    // it as, which the call judges through the holds it makes. A call
-    // handing nothing back is judged on its answer alone.
+    // it as, which the call judges through the holds it makes. A call handing
+    // nothing back is judged on its answer alone.
     private func checked(
         _ read: Operation,
         judging: CallJudgement,
@@ -799,12 +824,18 @@ struct Evaluator: Sendable {
                 answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
 
             case let .dispatch(dispatch):
-                let (call, first) = try await picked(dispatch, in: &activation, at: trace)
+                let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
 
-                answered = try await self.call(call, first: first, judging: handedBack, in: &activation, at: trace)
+                answered = try await self.call(call, reaching: row, first: first, judging: handedBack, in: &activation, at: trace)
 
             case let .apply(callee, arguments):
-                answered = try await apply(callee, arguments: arguments, judging: handedBack, in: &activation, at: trace)
+                answered = try await apply(
+                    callee,
+                    arguments: arguments,
+                    judging: handedBack,
+                    in: &activation,
+                    at: trace
+                )
 
             default:
                 throw ExecutionError("a judgement where a call stands wraps what is no call")
@@ -813,20 +844,9 @@ struct Evaluator: Sendable {
 
         guard let against = judging.against else { return answered }
 
-        // Judged against what the call reads, and settled to what a
-        // declaration wrote, where one did: a position naming a type
-        // parameter there stands as it came.
-        guard let settlesTo = judging.settlesTo else {
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-
-            return answered
-        }
-
-        if settlesTo != against {
-            try against.admitting(answered, at: "answer", in: loweredTypes)
-        }
-
-        return try settlesTo.settling(answered, at: "answer", in: loweredTypes)
+        // Judged against what the call reads. An answer of the type it is
+        // read as comes out as it went in, and one outside it is refused.
+        return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 
     // What a call answers, once what it handed back in place is judged
@@ -871,25 +891,52 @@ struct Evaluator: Sendable {
     }
 
     // Which row answers a call through a contract, and the value it answers
-    // about. The name the first argument wears is the whole of the choosing:
-    // the link gathered every type that answers this procedure and lowered a
-    // call for each, so nothing is resolved here.
+    // about. The type the first argument is an instance of is the whole of
+    // the choosing: the link gathered every type that answers this procedure
+    // and lowered a call for each, so nothing is resolved here.
     private func picked(
         _ dispatch: DispatchOperation,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> (CallOperation, Value) {
+    ) async throws -> (call: CallOperation, row: Int, first: Value) {
         let first = try await evaluate(dispatch.first, in: &activation, at: trace)
+        let spelling = ContractProcedure.spelling(of: dispatch.contract, procedure: dispatch.procedure)
 
-        guard let name = first.nominal, let call = dispatch.calls[name] else {
-            throw ExecutionError(
-                "'\(dispatch.contract).\(dispatch.procedure)' is sent to"
-                    + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)"),"
-                    + " which answers no procedure of '\(dispatch.contract)'"
-            )
+        if let name = first.nominal, let call = dispatch.calls[name] {
+            return (call, try row(call.procedure, from: activation.origin), first)
         }
 
-        return (call, first)
+        // A call the link has not laid out reaches the row a claim standing
+        // so far names, placed against it the way the link would place it.
+        // What it ran on is the claim, which the link still holds to the
+        // declarations behind it, so the pair is written down for the link.
+        if dispatch.calls.isEmpty, let name = first.nominal, let row = witnesses[spelling]?[name] {
+            loweredTypes.unsettled?.require(folded: Claim(type: name, contract: dispatch.contract))
+
+            let call = try CallOperation(
+                handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
+                to: linked[row],
+                row: row,
+                picked: true,
+                in: loweredTypes,
+                at: .procedure(linked[row].rendered, in: .assembled)
+            )
+
+            return (call, row, first)
+        }
+
+        // Before the link, what answers is a declaration a claim names in a
+        // document this one stands on, and one anywhere else is not one a
+        // fold may run.
+        let because = dispatch.calls.isEmpty && first.nominal != nil
+            ? ", and no document this one stands on declares what answers '\(dispatch.contract)' for it"
+            : ", which answers no procedure of '\(dispatch.contract)'"
+
+        throw ExecutionError(
+            "'\(spelling)' is sent to"
+                + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)")"
+                + because
+        )
     }
 
     // The arguments settled against the declaration, in parameter order: the
@@ -968,25 +1015,28 @@ struct Evaluator: Sendable {
 
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
-            throw ExecutionError("a condition must answer bool, got \(value.type)")
+            throw ExecutionError("a condition must answer Bool, got \(value.type)")
         }
 
         return answer
     }
 
-    // The two doors a native procedure answers through. The procedure's parameters are
-    // its own type, so the call is made where that type has a name: handing
-    // `any Query` to a generic function opens it.
+    // The two doors a native procedure answers through, what it hands back
+    // settled by the procedure as a value from outside. The procedure's
+    // parameters are its own type, so the call is made where that type has
+    // a name: handing `any Query` to a generic function opens it.
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
         settled: Settled
     ) async throws -> Value {
-        try await query.evaluate(
-            Question(
-                settled: settled,
-                of: callee,
-                evaluator: self
+        try callee.settling(
+            answered: try await query.evaluate(
+                Question(
+                    settled: settled,
+                    of: callee,
+                    evaluator: self
+                )
             )
         )
     }
@@ -998,13 +1048,15 @@ struct Evaluator: Sendable {
         holds: [(position: Int, handle: Handle)],
         trace: Trace
     ) async throws -> Value {
-        try await effect.run(
-            Invocation(
-                of: callee,
-                settled: settled,
-                holds: holds,
-                trace: trace,
-                evaluator: self
+        try callee.settling(
+            answered: try await effect.run(
+                Invocation(
+                    of: callee,
+                    settled: settled,
+                    holds: holds,
+                    trace: trace,
+                    evaluator: self
+                )
             )
         )
     }

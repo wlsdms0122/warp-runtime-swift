@@ -59,6 +59,11 @@ struct Numbering: Sendable {
     // the build happened to lower in.
     private let runs: [(declaration: Closure.Declaration, count: Int)]
 
+    // What the document sends, in name order.
+    var sending: [Name] {
+        Array(spellings.prefix(sent))
+    }
+
     // Every declaration that wrote a closure here.
     var writers: [Closure.Declaration] {
         runs.map(\.declaration)
@@ -121,7 +126,7 @@ struct Numbering: Sendable {
             let (summed, overflowed) = standing.addingReportingOverflow(count)
 
             guard !overflowed else {
-                throw ObjectRefused("a numbering gives numbers past what an int holds")
+                throw ObjectRefused("a numbering gives numbers past what an Int holds")
             }
 
             standing = summed

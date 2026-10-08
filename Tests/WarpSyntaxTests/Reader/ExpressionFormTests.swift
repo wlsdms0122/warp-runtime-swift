@@ -18,7 +18,7 @@ struct ExpressionFormTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a string spelling a placeholder stays a literal")
+    @Test("a String spelling a placeholder stays a literal")
     func placeholderStringStaysLiteral() throws {
         // Given / When. The injection doctrine: no string is ever re-parsed
         // into a ref
@@ -109,7 +109,7 @@ struct ExpressionFormTests {
         ["ref": 3],
         ["record": ["a": 1], "extra": "b"],
         ["record": "a"],
-        ["as": "int"],
+        ["as": "Int"],
         ["with": ["a": 1]],
         ["format": "x", "extra": "b"],
         ["format": "x", "with": [1, 2]],

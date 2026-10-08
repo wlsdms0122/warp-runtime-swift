@@ -79,14 +79,6 @@ public struct Writer: Sendable {
             written[ModuleReader.CodingKeys.types.name] = .dictionary(try draft.types.mapValues(value(of:)))
         }
 
-        if !draft.constraints.isEmpty {
-            written[ModuleReader.CodingKeys.constraints.name] = .dictionary(
-                try draft.constraints.mapValues { members in
-                    .array(try members.map(value(of:)))
-                }
-            )
-        }
-
         if !draft.contracts.isEmpty {
             written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
                 try draft.contracts.mapValues { procedures in
@@ -100,6 +92,24 @@ public struct Writer: Sendable {
 
                             if asked.isolation == .isolated {
                                 written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
+                            }
+
+                            // A contract's procedure that writes no `failing`
+                            // fails with nothing, so one that may fail with
+                            // anything has no document to say it.
+                            switch asked.failing {
+                            case let .these(failures):
+                                if !failures.isEmpty {
+                                    written[ContractProcedureReader.CodingKeys.failing.name] = .array(
+                                        failures.sorted().map(Value.string)
+                                    )
+                                }
+
+                            case .unstated:
+                                throw WritingError(
+                                    "a contract's procedure says nothing of what it may fail with,"
+                                        + " and a document writing none says it fails with nothing"
+                                )
                             }
 
                             return .dictionary(written)
@@ -185,10 +195,6 @@ public struct Writer: Sendable {
 
         if let type = parameter.type {
             written[ParameterReader.CodingKeys.type.name] = try value(of: type)
-        }
-
-        if let candidates = parameter.candidates {
-            written[ParameterReader.CodingKeys.candidates.name] = .array(candidates.map(Value.string))
         }
 
         if let description = parameter.description {
@@ -501,7 +507,7 @@ public struct Writer: Sendable {
         case .dictionary:
             throw WritingError(
                 "a dictionary has no document of its own. Write a record and cast it"
-                    + " to the `dictionary<T>` it is"
+                    + " to the `Dictionary<T>` it is"
             )
 
         case .record:

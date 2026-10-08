@@ -28,12 +28,13 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under names, and the name of the declared type the record
-    // settled to, where it has. A record made by a literal, answered by a
-    // native procedure or read out of a document has no name; it takes one the
-    // first time it settles into a slot that declares a type, and from then
-    // on it fits only that name. Two records of one structure under two names
-    // are two values.
+    // Fields under names, and the name of the declared record type it is a
+    // value of, where it has one. A record made by a literal, answered by a
+    // native procedure or read out of a document has no name; it takes one
+    // where it is written into a declared record, by a literal, at the door
+    // a host hands it through or by a cast, and from then on it fits only
+    // that name. Two records of one structure under two names are two
+    // values.
     case record(Record)
 
     // Names and values where the names are data: what a document hands in,
@@ -215,10 +216,10 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The elements a value is indexed by, and nil for what has none. This is
-    // where the `bytes = array<byte>` equation lives on the value side: an
+    // where the `bytes = Array<Int>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
     // are, lazily, so a compact spelling is not unpacked to read one element,
-    // and a procedure taking either through `any` reads this one projection
+    // and a procedure taking either through `Any` reads this one projection
     // instead of knowing the equation itself.
     public var elements: AnyRandomAccessCollection<Value>? {
         switch self {
@@ -259,12 +260,38 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The name this value wears, where it wears one. A record settled under a
-    // declared type carries its label; nothing else names itself.
+    // The type this value is an instance of, under the name a claim writes:
+    // a record under the declared name it settled to, and every other kind
+    // under the name the language gives it. Bytes are a list in a compact
+    // spelling and a record with no name holds its names as data, so they
+    // are `Array` and `Dictionary`. Null and a procedure are an instance of
+    // no type a claim can name.
     public var nominal: Name? {
-        guard case let .record(record) = self else { return nil }
+        switch self {
+        case .null, .procedure:
+            return nil
 
-        return record.name
+        case .bool:
+            return TypeSpelling.bool
+
+        case .int:
+            return TypeSpelling.int
+
+        case .double:
+            return TypeSpelling.double
+
+        case .string:
+            return TypeSpelling.string
+
+        case .bytes, .array:
+            return TypeSpelling.array
+
+        case .dictionary:
+            return TypeSpelling.dictionary
+
+        case let .record(record):
+            return record.name ?? TypeSpelling.dictionary
+        }
     }
 
     // Whether this holds fields under names: a record's layout's, or a
@@ -354,17 +381,6 @@ public indirect enum Value: Sendable, Equatable {
             body(closure)
 
             return true
-        }
-    }
-
-    // The same value with the type every closure in it answers read again:
-    // the one place a value holds a type, so a walk renumbering the types of
-    // a body reaches its literal values the way it reaches its code.
-    func rewritten(types type: (LoweredType) throws -> LoweredType) rethrows -> Value {
-        guard holdsProcedure else { return self }
-
-        return try rewritten { closure in
-            try closure.retyped(type)
         }
     }
 

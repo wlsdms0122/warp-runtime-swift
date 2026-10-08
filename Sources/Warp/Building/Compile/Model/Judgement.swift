@@ -20,7 +20,7 @@ enum Judgement: Sendable {
     // write to it.
     case apply(inPlace: [Int], judging: CallJudgement?)
 
-    // A call whose callee settles a wider answer than the call reads, or
+    // A call whose callee declares a wider answer than the call reads, or
     // hands back in place what it holds as its own type parameter: what it
     // is judged on where it stands.
     case call(CallJudgement)

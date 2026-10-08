@@ -28,25 +28,23 @@ indirect enum Operation: Sendable {
     case closure(Int, captures: [(Int, Int)])
 
     // Calling a value. The arguments are positional and settle against the
-    // closure's own row. One the build found handed in place is the caller's
-    // place.
+    // closure's own row, after the judgement the call stands in holds each
+    // the build did not prove a value of what the slot reads there against
+    // that slot. One the build found handed in place is the caller's place.
     case apply(Operation, arguments: [Argument])
 
     case cast(Operation, as: LoweredType, optional: Bool)
 
     // A call's answer judged against what the call reads it as, where the
-    // callee settles a wider one: a type parameter the call filled, the
+    // callee declares a wider one: a type parameter the call filled, the
     // `returns` a value's slot wrote, a contract's answer. Refused at the run
-    // the way a value arriving at a parameter is. Where a declaration wrote
-    // what the call reads, a value's slot or a contract, the answer then
-    // settles to that, the type parameters it names standing as they came;
-    // one read through a type parameter the call filled is handed on as it
-    // came, which is what lets a tie answer the side that arrived. Nothing
-    // after it stands on this type's shape: a field read stands on the call
-    // inside, and a binding or a parameter that declares a type settles the
-    // value where it lands. Each variable it handed back in place is judged
-    // once the call is over, whether it answered or failed. The build makes
-    // one only around a call.
+    // the way a value arriving at a parameter is. An answer of the type the
+    // call reads is handed on as it came, which is what lets a tie answer the
+    // side that arrived. Nothing after it stands on this type's shape: a field
+    // read stands on the call inside, and a binding or a parameter that
+    // declares a type judges the value where it lands. Each variable it handed
+    // back in place is judged once the call is over, whether it answered or
+    // failed. The build makes one only around a call.
     case checked(Operation, CallJudgement)
 
     case block(LoweredBody)
@@ -176,10 +174,7 @@ indirect enum Operation: Sendable {
         let inside: Operation
 
         switch self {
-        case let .literal(value):
-            inside = .literal(try value.rewritten(types: type))
-
-        case .local, .closure:
+        case .literal, .local, .closure:
             inside = self
 
         case let .array(elements):

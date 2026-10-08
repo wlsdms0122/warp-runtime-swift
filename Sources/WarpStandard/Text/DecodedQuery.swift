@@ -24,11 +24,7 @@ struct DecodedQuery: Query {
                 return Parameter(name: "bytes", type: .bytes)
 
             case .encoding:
-                return Parameter(
-                    name: "encoding",
-                    type: .string,
-                    candidates: CharacterEncoding.names
-                )
+                return Parameter(name: "encoding", type: .string)
             }
         }
 
@@ -38,26 +34,63 @@ struct DecodedQuery: Query {
     }
 
     // MARK: - Property
+    // Said once, so the build judging constant bytes and the run judging what
+    // arrived refuse in the same words.
+    private static let notText = "Standard.Text.decoded asks bytes that are text in the encoding named"
+
     // MARK: - Initializer
     // MARK: - Public
-    func evaluate(_ question: Question<Self>) async throws -> Value {
-        guard let bytes = question[.bytes].bytes else {
-            throw ExecutionError("std.text.decoded asks bytes")
+    func validate(_ question: Question<Self>) throws {
+        if let refusal = Self.refusal(bytes: question[.bytes]) {
+            throw ValidationError(refusal, at: nil)
         }
 
-        guard
+        if let refusal = CharacterEncoding.refusal(naming: question[.encoding], for: "Standard.Text.decoded") {
+            throw ValidationError(refusal, at: nil)
+        }
+
+        if
+            let bytes = question[.bytes].bytes,
             case let .string(name) = question[.encoding],
-            let encoding = CharacterEncoding(rawValue: name)
-        else {
-            throw ExecutionError("std.text.decoded asks the name of an encoding it has")
+            let encoding = CharacterEncoding(rawValue: name),
+            encoding.text(of: bytes) == nil
+        {
+            throw ValidationError(Self.notText, at: nil)
+        }
+    }
+
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        guard let bytes = question[.bytes].bytes else {
+            throw ExecutionError(Self.refusal(bytes: question[.bytes]) ?? "Standard.Text.decoded asks bytes")
+        }
+
+        guard case let .string(name) = question[.encoding], let encoding = CharacterEncoding(rawValue: name) else {
+            throw ExecutionError(
+                CharacterEncoding.refusal(naming: question[.encoding], for: "Standard.Text.decoded")
+                    ?? "Standard.Text.decoded asks the name of an encoding"
+            )
         }
 
         guard let text = encoding.text(of: bytes) else {
-            throw ExecutionError("std.text.decoded asks bytes that are text in the encoding named")
+            throw ExecutionError(Self.notText)
         }
 
         return .string(text)
     }
 
     // MARK: - Private
+    // Why a list is no bytes, naming the first element that is not a whole
+    // number from 0 to 255, and nothing where every element is one or where
+    // nothing is written yet.
+    private static func refusal(bytes written: Value) -> String? {
+        guard case let .array(elements) = written else { return nil }
+
+        for (position, element) in elements.enumerated() {
+            guard case let .int(number) = element, UInt8(exactly: number) != nil else {
+                return "Standard.Text.decoded asks bytes, and [\(position)] is \(Rendering(element).text()), which is no whole number from 0 to 255"
+            }
+        }
+
+        return nil
+    }
 }

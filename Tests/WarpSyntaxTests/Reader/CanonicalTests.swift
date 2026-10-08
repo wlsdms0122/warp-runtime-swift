@@ -31,14 +31,14 @@ struct CanonicalTests {
         // Given. `{ of: x, is: 1 }` is one way to arrive at a condition. The
         // slot asks for an expression, and this is another.
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "count", "type": "int"]],
+            "parameters": [["name": "count", "type": "Int"]],
             "body": [
                 ["var": "pick"],
                 [
                     "value": ["conditional": [
                         "when": [
                             "call": [
-                                "procedure": "std.logic.equal",
+                                "procedure": "Standard.Logic.equal",
                                 "arguments": [["ref": "count"], 1]
                             ]
                         ],
@@ -48,7 +48,7 @@ struct CanonicalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "pick"]]]
-        ], importing: ["std.logic.equal"])
+        ], importing: ["Standard.Logic.equal"])
 
         // When
         let one = try await run(sut, arguments: ["count": .int(1)])
@@ -70,7 +70,7 @@ struct CanonicalTests {
                     "value": ["loop": [
                         "while": [
                             "call": [
-                                "procedure": "std.logic.notEqual",
+                                "procedure": "Standard.Logic.notEqual",
                                 "arguments": [["ref": "seen"], 3]
                             ]
                         ],
@@ -78,7 +78,7 @@ struct CanonicalTests {
                             [
                                 "set": "seen",
                                 "value": ["call": [
-                                    "procedure": "std.math.plus",
+                                    "procedure": "Standard.Numeric.plus",
                                     "arguments": [["ref": "seen"], 1]
                                 ]
                             ]]
@@ -87,7 +87,7 @@ struct CanonicalTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "seen"]]]
-        ], importing: ["std.logic.notEqual", "std.math.plus"])
+        ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When
         let outputs = try await run(sut)
@@ -103,7 +103,7 @@ struct CanonicalTests {
         // to is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) throws -> Module {
             try loader.loadProcedure([
-                "parameters": [["name": "word", "type": "string"]],
+                "parameters": [["name": "word", "type": "String"]],
                 "body": [
                     ["var": "pick"],
                     [
@@ -115,13 +115,13 @@ struct CanonicalTests {
                     ]]
                 ],
                 "result": ["record": ["result": ["ref": "pick"]]]
-            ], importing: ["std.logic.equal"])
+            ], importing: ["Standard.Logic.equal"])
         }
 
         let spelled = try picking(on: ["of": ["ref": "word"], "equal": "hey"])
         let plainly = try picking(on: [
             "call": [
-                "procedure": "std.logic.equal",
+                "procedure": "Standard.Logic.equal",
                 "arguments": [["ref": "word"], "hey"]
             ]
         ])
@@ -149,7 +149,7 @@ struct CanonicalTests {
         // boolean already is one, and demanding it be spelled as `{ of: x, is:
         // true }` would be the notation making up a requirement.
         let sut = try loader.loadProcedure([
-            "parameters": [["name": "ready", "type": "bool"]],
+            "parameters": [["name": "ready", "type": "Bool"]],
             "body": [
                 ["var": "pick"],
                 [

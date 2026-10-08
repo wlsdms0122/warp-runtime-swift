@@ -11,14 +11,14 @@ import Warp
 // How a document spells a type. Two readings, because a type is written two
 // ways:
 //
-//   string / any / procedure  . A built-in, by its own name
-//   array<string>             . A built-in applied to another type
-//   dictionary<Task>          . The same, for a map of string keys
+//   String / Any / Procedure  . A built-in, by its own name
+//   Array<String>             . A built-in applied to another type
+//   Dictionary<Task>          . The same, for a map of string keys
 //   Task                      . A name some module declares
-//   { record: { id: string } }. A record, its fields under `record`
+//   { record: { id: String } }. A record, its fields under `record`
 //   { procedure: { parameters: [], returns: } }
 //                             . A procedure, written as the types it is called
-//                                with and what it answers. Bare `procedure` says
+//                                with and what it answers. Bare `Procedure` says
 //                                only that it is one
 //
 // A mapping is one of these by its one key, so a record's field names are
@@ -65,14 +65,28 @@ public struct TypeReader: Decodable {
     }
 
     // A built-in taking another type, written under its own key where the
-    // inner type has no spelling of its own. `array<string>` is a name; an
-    // array of procedures is not, and this is the form that carries it.
+    // inner type has no spelling of its own. `Array<String>` is a name; an
+    // array of procedures is not, and this is the form that carries it. The
+    // key is the raw value, and the name is spelled like every type's.
     enum Holding: String, CaseIterable {
         case array
         case dictionary
 
         // MARK: - Property
+        var spelling: String {
+            switch self {
+            case .array: TypeSpelling.array.spelling
+            case .dictionary: TypeSpelling.dictionary.spelling
+            }
+        }
+
         // MARK: - Initializer
+        init?(spelling: String) {
+            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else { return nil }
+
+            self = holding
+        }
+
         // MARK: - Public
         func holding(_ inner: TypeExpression) -> TypeExpression {
             switch self {
@@ -87,16 +101,13 @@ public struct TypeReader: Decodable {
     // MARK: - Property
     public let type: TypeExpression
 
-    // The one key a type handed on once is written under.
-    public static let linearKey: Name = "linear"
-
     // The one key a record type is written under.
     public static let recordKey: Name = "record"
 
     // What a type that is neither a spelling nor a form is refused with.
-    private static let unread = "a type is a name like `string`, `array<string>` or"
-        + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
-        + " and `dictionary`. A record type is written { record: { id: string } }"
+    private static let unread = "a type is a name like `String`, `Array<String>` or"
+        + " `Task`, or a mapping under one of `record`, `procedure`, `array`"
+        + " and `dictionary`. A record type is written { record: { id: String } }"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -125,7 +136,7 @@ public struct TypeReader: Decodable {
         }
 
         // A trailing `?` reads first because it wraps the whole spelling:
-        // `array<int>?` is a nullable array, and what may be inside the
+        // `Array<Int>?` is a nullable array, and what may be inside the
         // brackets never carries one. `?` speaks about a slot, and only the
         // whole spelling is one. `inout` and `var` stand in front of the whole
         // type, including a trailing `?`, so they are read before anything else
@@ -163,7 +174,7 @@ public struct TypeReader: Decodable {
                 guard case let .named(name) = parsed else {
                     throw TypeFormError(
                         "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                            + " and `&` joins the names of contracts and memberships, each a bare name"
+                            + " and `&` joins the names of contracts, each a bare name"
                     )
                 }
 
@@ -193,7 +204,7 @@ public struct TypeReader: Decodable {
 
             case .never:
                 throw TypeFormError(
-                    "type '\(text)' writes `?` on never, which no value is"
+                    "type '\(text)' writes `?` on Never, which no value is"
                 )
 
             // A type parameter stands for what the call puts there, and what
@@ -215,7 +226,7 @@ public struct TypeReader: Decodable {
         // it. The same place a reader expects an adjective. A type parameter
         // rather than a name: `some T` is worked out from the call, where `T`
         // alone would be looked up in the table of declared types. A slot only
-        // names the parameter. Its constraint is declared once, in the
+        // names the parameter. Its bound is declared once, in the
         // signature's `bounds`, because the signature owns what its names mean
         // and a bound repeated per slot is one claim written several times.
         if text == "some" || text.hasPrefix("some ") {
@@ -229,61 +240,20 @@ public struct TypeReader: Decodable {
             guard isName(bare), !bare.contains(".") else {
                 throw TypeFormError(
                     "type '\(text)' names no type parameter. Write `some` and one"
-                        + " bare name; a constraint is declared in the signature's `bounds`"
+                        + " bare name; a bound is declared in the signature's `bounds`"
+                )
+            }
+
+            // `Self` is the type answering a contract, read as such in that
+            // contract's procedures, so no type parameter takes its name.
+            guard bare != TypeSpelling.selfType.spelling else {
+                throw TypeFormError(
+                    "type '\(text)' names no type parameter. `Self` is the type answering a contract,"
+                        + " written bare in that contract's procedures"
                 )
             }
 
             return .parameter(name: try named(bare))
-        }
-
-        // A range is spelled into the name: `int(0...255)`,
-        // `double(0.0..<1.0)`. Either bound optional but not both, and `..<`
-        // leaving the far bound outside. Only a number takes one: a range is a
-        // condition on a number, and no other kind is one. Which kind is
-        // written out, because a bound is a value of the kind it bounds and the
-        // two read their spellings differently.
-        for kind in ["int", "double"] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
-            let inner = String(text.dropFirst("\(kind)(".count).dropLast())
-
-            // `..<` first: `...` is inside neither spelling of the other, but
-            // `..<` holds two of the three dots `...` is looked for by.
-            let open = inner.range(of: "..<")
-            let dots = open ?? inner.range(of: "...")
-
-            guard let dots else {
-                throw TypeFormError(
-                    "type '\(text)' writes a range without `...` or `..<`. A"
-                        + " range is spelled `\(kind)(0...255)`, either bound"
-                        + " optional"
-                )
-            }
-
-            let written = (lower: inner[..<dots.lowerBound], upper: inner[dots.upperBound...])
-
-            guard !written.upper.isEmpty || open == nil else {
-                throw TypeFormError(
-                    "type '\(text)' writes `..<` with nothing after it. `..<`"
-                        + " says the far bound is outside the range, and there"
-                        + " is no far bound"
-                )
-            }
-
-            guard !written.lower.isEmpty || !written.upper.isEmpty else {
-                throw TypeFormError(
-                    "type '\(text)' writes a range with neither bound. A range"
-                        + " that says nothing is spelled `\(kind)`"
-                )
-            }
-
-            return kind == "int"
-                ? .ranged(.whole(
-                    from: try whole(written.lower, of: text),
-                    to: edge(try whole(written.upper, of: text), excluding: open != nil)
-                ))
-                : .ranged(.fraction(
-                    from: try fraction(written.lower, of: text),
-                    to: edge(try fraction(written.upper, of: text), excluding: open != nil)
-                ))
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -291,11 +261,11 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            // A list or a map says what it holds. `array<any>` is a list of
+            // A list or a map says what it holds. `Array<Any>` is a list of
             // anything, and the bare word is not a second spelling of it.
-            guard Holding(rawValue: text) == nil else {
+            guard Holding(spelling: text) == nil else {
                 throw TypeFormError(
-                    "type '\(text)' says nothing of what it holds. Write `\(text)<any>`"
+                    "type '\(text)' says nothing of what it holds. Write `\(text)<Any>`"
                         + " for one of anything"
                 )
             }
@@ -313,10 +283,10 @@ public struct TypeReader: Decodable {
 
         let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
 
-        guard let holding = Holding(rawValue: head) else {
+        guard let holding = Holding(spelling: head) else {
             throw TypeFormError(
                 "type '\(head)' takes no argument. Only "
-                    + Holding.allCases.map { holding in "`\(holding.rawValue)<…>`" }.joined(separator: " and ")
+                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: " and ")
                     + " do"
             )
         }
@@ -358,10 +328,17 @@ public struct TypeReader: Decodable {
         return (mark, constness, isolation)
     }
 
+    // Where a procedure type's head is written: as a type's name, `Procedure`,
+    // or as the key of the form that carries its signature, `procedure`.
+    public enum ProcedureHead {
+        case name
+        case key
+    }
+
     // The one spelling of a procedure type's head: `const` before `isolated`,
-    // both before `procedure`.
-    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, "procedure"]
+    // both before the head.
+    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
+        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")
     }
@@ -415,8 +392,7 @@ public struct TypeReader: Decodable {
 
         for index in text.indices {
             switch text[index] {
-            // `..<` is a range's far edge, and opens nothing.
-            case "<" where !text[..<index].hasSuffix(".."): depth += 1
+            case "<": depth += 1
             case ">": depth -= 1
             case "&" where depth == 0:
                 parts.append(text[start ..< index])
@@ -453,10 +429,6 @@ public struct TypeReader: Decodable {
 
             return mark?.marking(written) ?? written
 
-        // A declared type handed on once.
-        case let .one(.linear, key):
-            return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
-
         // An array or a dictionary of something with no spelling of its own:
         // an array of procedures has no name, so it is written here.
         case let .one(.holding(holding), key):
@@ -489,57 +461,6 @@ public struct TypeReader: Decodable {
         // Each field read where it stands, so a refusal inside one keeps its
         // own place and its own sentence.
         return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
-    }
-
-    // One value, one spelling (a padded or signed-zero bound would be a second
-    // spelling of the same range) and the two whole-number refusals are
-    // different facts, told apart by the one reading the grammar lives in.
-    private static func whole(_ written: Substring, of text: String) throws -> Int? {
-        guard !written.isEmpty else { return nil }
-
-        switch IntSpelling(String(written)) {
-        case let .int(number):
-            return number
-
-        case .notOneSpelling:
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " which is not a whole number's one spelling"
-            )
-
-        case .overflow:
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " a whole number past what an int holds"
-            )
-        }
-    }
-
-    // A fraction bound reads a fraction's one spelling (the same door the
-    // boundary and the writer read) so `1` bounds a whole range and `1.0` a
-    // fraction one, and neither spells the other's.
-    private static func fraction(_ written: Substring, of text: String) throws -> Double? {
-        guard !written.isEmpty else { return nil }
-
-        guard let number = Double(spelling: String(written)) else {
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " which is not a fraction's one spelling"
-            )
-        }
-
-        return number
-    }
-
-    // Which dots were written, said once: `..<` leaves the bound outside and
-    // `...` holds it, and a range with no far bound has no edge to say it of.
-    private static func edge<Bound: Sendable & Equatable & Comparable>(
-        _ bound: Bound?,
-        excluding: Bool
-    ) -> TypeExpression.Refinement.Edge<Bound>? {
-        guard let bound else { return nil }
-
-        return excluding ? .upTo(bound) : .through(bound)
     }
 
     // The rest of the text where it begins with this, and nothing where it does

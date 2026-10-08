@@ -13,59 +13,17 @@ public extension Module {
 
     private static let nativeMath = Module(
         unchecked: Draft(
-            description: "Arithmetic, and the ordering of numbers and strings.",
+            description: "Rounding fractions to whole numbers.",
             procedures: [
-                "std.math.plus": Procedure(
-                    description: "The sum, whole where both sides are.",
-                    signature: Signature(
-                        of: PlusQuery.self,
-                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
-                    ),
-                    implementation: .query(PlusQuery())
-                ),
-                "std.math.minus": Procedure(
-                    description: "The difference.",
-                    signature: Signature(
-                        of: MinusQuery.self,
-                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
-                    ),
-                    implementation: .query(MinusQuery())
-                ),
-                "std.math.times": Procedure(
-                    description: "The product.",
-                    signature: Signature(
-                        of: TimesQuery.self,
-                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
-                    ),
-                    implementation: .query(TimesQuery())
-                ),
-                "std.math.dividedBy": Procedure(
-                    description: "The quotient, which is not generally whole.",
-                    signature: Signature(of: DividedByQuery.self, returns: .double),
-                    implementation: .query(DividedByQuery())
-                ),
-                "std.math.remainder": Procedure(
-                    description: "What is left of a division truncated toward zero.",
-                    signature: Signature(
-                        of: RemainderQuery.self,
-                        returns: .parameter(name: "N", constraints: ["std.Numeric"])
-                    ),
-                    implementation: .query(RemainderQuery())
-                ),
-                "std.math.floored": Procedure(
-                    description: "The whole number at or below a number.",
+                "Standard.Math.floored": Procedure(
+                    description: "The whole number at or below a fraction.",
                     signature: Signature(of: FlooredQuery.self, returns: .int),
                     implementation: .query(FlooredQuery())
                 ),
-                "std.math.rounded": Procedure(
+                "Standard.Math.rounded": Procedure(
                     description: "The nearest whole number.",
                     signature: Signature(of: RoundedQuery.self, returns: .int),
                     implementation: .query(RoundedQuery())
-                ),
-                "std.math.lessThan": Procedure(
-                    description: "Whether one orders before the other.",
-                    signature: Signature(of: LessThanQuery.self, returns: .bool),
-                    implementation: .query(LessThanQuery())
                 )
             ]
         ),

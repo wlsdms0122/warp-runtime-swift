@@ -371,7 +371,7 @@ struct BinaryEncodingTests {
     }
 
     @Test(
-        "a byte order mark is text like any other, in a string and in a key",
+        "a byte order mark is text like any other, in a String and in a key",
         arguments: [
             (Value.string("\u{FEFF}A"), [0x05, 0x04, 0xEF, 0xBB, 0xBF, 0x41]),
             (Value.dictionary(["\u{FEFF}": .int(1)]), [0x07, 0x01, 0x03, 0xEF, 0xBB, 0xBF, 0x03, 0x02]),
