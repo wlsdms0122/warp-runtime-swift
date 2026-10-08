@@ -404,7 +404,7 @@ struct LinearityChecker {
 
                 for local in held.moved.sorted() where reached(local, false) {
                     throw refusal(
-                        "reads '\(local.name)' in a closure after handing it on. A value"
+                        "reaches into '\(local.name)' in a closure after handing it on. A value"
                             + " written `linear` is gone from the name that held it once it"
                             + " is given away"
                     )
@@ -610,6 +610,9 @@ struct LinearityChecker {
                 throw refusal("writes over '\(head)', which it is still holding")
             }
 
+            // A whole write gives the name a value again.
+            written.moved.remove(written.local(head))
+
             guard written.linear.contains(written.local(head)) || written.carriesObligation else { return written }
 
             if let guarded {
@@ -772,7 +775,11 @@ struct LinearityChecker {
                         return index
                     }
 
-                    if writing ? path.head == name : indexes.contains(where: { index in reads(index, name: name) }) {
+                    // A write below the head reads the value the head holds.
+                    let read = path.segments.count > 1 && path.head == name
+                        || indexes.contains { index in reads(index, name: name) }
+
+                    if writing ? path.head == name : read {
                         return true
                     }
                 }
