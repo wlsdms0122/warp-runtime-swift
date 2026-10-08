@@ -142,10 +142,10 @@ struct TextTests {
         }
     }
 
-    @Test("an encoding the procedures do not name refuses at the run")
-    func anUnknownEncodingRefuses() async throws {
-        // Given. The procedure knows the encodings it has, and says them where
-        // it refuses another
+    @Test("an encoding the procedures do not have, written as a constant, refuses at the build")
+    func anUnknownEncodingRefusesAtTheBuild() async throws {
+        // Given. The procedure judges its own constant arguments, and names
+        // the encodings it has where it refuses another
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -161,9 +161,33 @@ struct TextTests {
 
         // When / Then
         await #expect {
-            try await run(sut)
+            try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has: utf8")
+            error is BuildError && "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+        }
+    }
+
+    @Test("a list holding what is no byte, written as a constant, refuses at the build by the element")
+    func aListHoldingNoByteRefusesAtTheBuild() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [],
+                    result: .call(Call(
+                        selector: "Standard.Text.decoded",
+                        arguments: [.array([.literal(.int(104)), .literal(.int(300))]), .literal(.string("utf8"))]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("Standard.Text.decoded asks bytes, and [1] is 300, which is no whole number from 0 to 255")
         }
     }
 

@@ -35,17 +35,21 @@ struct EncodedQuery: Query {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
+    func validate(_ question: Question<Self>) throws {
+        if let refusal = CharacterEncoding.refusal(naming: question[.encoding], for: "Standard.Text.encoded") {
+            throw ValidationError(refusal, at: nil)
+        }
+    }
+
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
             throw ExecutionError("Standard.Text.encoded asks a String")
         }
 
-        guard
-            case let .string(name) = question[.encoding],
-            let encoding = CharacterEncoding(rawValue: name)
-        else {
+        guard case let .string(name) = question[.encoding], let encoding = CharacterEncoding(rawValue: name) else {
             throw ExecutionError(
-                "Standard.Text.encoded asks the name of an encoding it has: \(CharacterEncoding.names.joined(separator: ", "))"
+                CharacterEncoding.refusal(naming: question[.encoding], for: "Standard.Text.encoded")
+                    ?? "Standard.Text.encoded asks the name of an encoding"
             )
         }
 

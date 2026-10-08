@@ -18,6 +18,15 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
+    // Why a written name is no encoding this has, and nothing where it is one
+    // or where nothing is written yet. Said once, so the build judging a
+    // constant and the run judging what arrived refuse in the same words.
+    static func refusal(naming written: Value, for procedure: String) -> String? {
+        guard case let .string(name) = written, CharacterEncoding(rawValue: name) == nil else { return nil }
+
+        return "\(procedure) asks the name of an encoding it has (\(names.joined(separator: ", "))), and '\(name)' is not one"
+    }
+
     func bytes(of text: String) -> [UInt8] {
         switch self {
         case .utf8:
