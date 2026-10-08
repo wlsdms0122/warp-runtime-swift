@@ -24,7 +24,8 @@ extension Double {
     }
 
     // The one spelling a document writes a fraction in, and every judge of a
-    // fraction's spelling reads this one answer. Nil for what no document carries.
+    // fraction's spelling reads this one answer. Nil for what no document
+    // carries.
     public var spelling: String? {
         guard isFinite else { return nil }
 

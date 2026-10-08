@@ -7,8 +7,9 @@
 
 import Foundation
 
-// One parameter of a declaration: the name its body reads it by and what it
-// takes. The name is the declaration's; a procedure type carries none.
+// One parameter of a declaration: the name its body reads it by, what it
+// takes, and what it says of itself to a reader. The name is the
+// declaration's; a procedure type carries none.
 public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     public let name: Name

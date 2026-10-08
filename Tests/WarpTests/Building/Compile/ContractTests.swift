@@ -174,7 +174,7 @@ struct ContractTests {
         }
 
         // When
-        let outside = await #expect(throws: BuildError.self) {
+        let mistyped = await #expect(throws: BuildError.self) {
             try await Builder().build([try sending("App.Sized", "size", .int, .literal(.string("ninety-nine")))] + Module.standard)
         }
         let inPlace = await #expect(throws: BuildError.self) {
@@ -182,8 +182,8 @@ struct ContractTests {
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(outside?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
-        #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
+        #expect(mistyped?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
+        #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
     }

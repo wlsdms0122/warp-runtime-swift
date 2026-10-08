@@ -44,9 +44,7 @@ indirect enum Operation: Sendable {
     // read stands on the call inside, and a binding or a parameter that
     // declares a type judges the value where it lands. Each variable it handed
     // back in place is judged once the call is over, whether it answered or
-    // failed, and each argument a call of a value hands on is judged against
-    // the slot holding the value before the value takes it. The build makes
-    // one only around a call.
+    // failed. The build makes one only around a call.
     case checked(Operation, CallJudgement)
 
     case block(LoweredBody)

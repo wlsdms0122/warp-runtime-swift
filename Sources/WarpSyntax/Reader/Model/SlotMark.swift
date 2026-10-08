@@ -8,10 +8,11 @@
 import Foundation
 import Warp
 
-// What a slot may write in front of a whole type, and how this notation spells
-// it. The two do not stand in the same place (`var` is a field's and `inout` a
-// parameter's), but a document writes them the same way, so the spelling is said once here and
-// the reading, the writing and the document's own vocabulary come off it.
+// What a slot may write in front of a whole type, and how this notation
+// spells it. The two do not stand in the same place (`var` is a field's and
+// `inout` a parameter's), but a document writes them the same way, so the
+// spelling is said once here and the reading, the writing and the document's
+// own vocabulary come off it.
 //
 // The language's own record of which types are marked is the cases of
 // `TypeExpression`. What is here is their spelling, which is this notation's

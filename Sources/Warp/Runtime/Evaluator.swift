@@ -804,11 +804,9 @@ struct Evaluator: Sendable {
     }
 
     // A call judged where it stands: what it answers against what the call
-    // reads, what it handed back in place against what the caller holds it
-    // as, which the call judges through the holds it makes, and, for a call
-    // of a value, what it hands on against the slot holding the value. A
-    // call handing nothing back and nothing on is judged on its answer
-    // alone.
+    // reads, and what it handed back in place against what the caller holds
+    // it as, which the call judges through the holds it makes. A call handing
+    // nothing back is judged on its answer alone.
     private func checked(
         _ read: Operation,
         judging: CallJudgement,

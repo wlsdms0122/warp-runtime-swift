@@ -1769,9 +1769,9 @@ struct TypeChecker {
             // reading is fully proven.
             //
             // Needless means the claim and the reading are the same type, not
-            // that one would accept the other. `accepts` holds between `Int`
-            // and `Int(0...10)`, because the bound is checked when the value
-            // arrives, so a narrowing cast still says something. Record names
+            // that one would accept the other. `accepts` holds between `Int?`
+            // and `Int`, and a reading of `Int?` cast to `Int` still says
+            // something the run has to answer. Record names
             // count at every depth: reading a nameless record as a declared
             // one attaches the name, so it is never a cast of what the value
             // already is.

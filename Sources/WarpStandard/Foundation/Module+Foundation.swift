@@ -10,11 +10,10 @@ import Warp
 
 public extension Module {
     // The contracts the other bundles mention, declared once where every
-    // bundle can name them, and the types the language names
-    // answering them: what a number, an ordering and a count are for `Int`,
-    // `Double`, `String`, `Array` and `Dictionary`. A document calling a
-    // contract's procedure stands behind this one, so what answers stands
-    // before it.
+    // bundle can name them, and the types the language names answering them:
+    // what a number, an ordering and a count are for `Int`, `Double`,
+    // `String`, `Array` and `Dictionary`. A document calling a contract's
+    // procedure stands behind this one, so what answers stands before it.
     static let foundation: [Module] = [
         Module(
             unchecked: Draft(

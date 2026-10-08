@@ -201,9 +201,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The spelling with what only a reading says dropped: a literal whole
-    // number is an Int.
-    var unrefined: LoweredType {
+    // The type a reading widens to where nothing reads it as a literal: a
+    // literal whole number is an Int.
+    var widened: LoweredType {
         switch self {
         case .wholeLiteral:
             return .int
@@ -622,7 +622,7 @@ indirect enum LoweredType: Sendable, Equatable {
         if self == .wholeLiteral || other == .wholeLiteral {
             if self == other { return self }
 
-            let number = self == .wholeLiteral ? other.unrefined : unrefined
+            let number = self == .wholeLiteral ? other.widened : widened
 
             return number == .double ? .double : LoweredType.int.joined(number)
         }
@@ -647,18 +647,13 @@ indirect enum LoweredType: Sendable, Equatable {
 
         guard self != other else { return self }
 
-        // Unequal spellings may still be one type: the equations (a whole
-        // literal is an int, bytes are `Array<Int>`) are read through their
-        // normal forms before the join gives up, and two arrays join by their
-        // elements so the equation holds inside one.
-        let mine = unrefined
-        let theirs = other.unrefined
-
-        if case let .array(myElement) = mine, case let .array(theirElement) = theirs {
+        // Two arrays join by their elements, so what a literal inside one
+        // joins to holds inside the list too.
+        if case let .array(myElement) = self, case let .array(theirElement) = other {
             return .array(myElement.joined(theirElement))
         }
 
-        return mine == theirs ? mine : .any
+        return .any
     }
 
     // Two parts held side by side, as one type: joined as two readings join,
@@ -687,11 +682,12 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The type a value read as this is an instance of, under the name a
-    // claim writes and `Value.nominal` answers once the value arrives: a
-    // declared record by its name, bytes as the list they are, and a record with no name as the map it is. Nil where the
-    // reading names no such type: null, a procedure, and every reading that
-    // stands for a type only a value decides.
+    // The type a value read as this is an instance of, under the name a claim
+    // writes and `Value.nominal` answers once the value arrives: a declared
+    // record by its name, bytes as the list they are, and a record with no
+    // name as the map it is. Nil where the reading names no such type: null,
+    // a procedure, and every reading that stands for a type only a value
+    // decides.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
         case .bool:
@@ -765,11 +761,11 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
-    // satisfy two types at once. The build asks them of readings; the run asks the
-    // first of a closure value a cast reads as a procedure type. A name the
-    // table does not answer passes every judge but the second, which reads it
-    // as only itself: nothing is knowable about it here, and the value judge
-    // refuses it where a value arrives.
+    // satisfy two types at once. The build asks them of readings; the run
+    // asks the first of a closure value a cast reads as a procedure type. A
+    // name the table does not answer passes every judge but the second, which
+    // reads it as only itself: nothing is knowable about it here, and the
+    // value judge refuses it where a value arrives.
     //
     // Whether a value of `other` may stand where this is declared. Exact on
     // records, a declared one by its name and a nameless one by its fields,
@@ -1264,13 +1260,13 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The reading that holds two readings of one type parameter where one
     // takes the other, walked in step through lists, dictionaries, what may
-    // be null and record fields, a record read as a dictionary by each of
-    // its fields. Which was read first says nothing. At each position a
-    // reading of `Any` makes its position `Any`; a name that stands for no record meets
-    // the other reading as what it stands for.
-    // Elsewhere it is the one that takes the other. Rigidly, because a
-    // parameter read in a body is that body's own and nothing fills it. Nil
-    // where neither takes the other.
+    // be null and record fields, a record read as a dictionary by each of its
+    // fields. Which was read first says nothing. At each position a reading
+    // of `Any` makes its position `Any`; a name that stands for no record
+    // meets the other reading as what it stands for. Elsewhere it is the one
+    // that takes the other. Rigidly, because a parameter read in a body is
+    // that body's own and nothing fills it. Nil where neither takes the
+    // other.
     func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
         guard self != given else { return self }
 
@@ -2058,7 +2054,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Literals are read as their kind first: whether a value could be
         // both is a question about kinds.
-        switch (unrefined, other.unrefined) {
+        switch (widened, other.widened) {
         case let (.nullable(inner), theirs):
             return inner.couldBothHold(theirs, in: table, assumingQuestions: assumingQuestions)
 

@@ -10,7 +10,7 @@ import Testing
 @testable import Warp
 
 // The int-boundary judges in one place: every judge that meets a fraction or
-// a spelled candidate reads through these, so the edges are pinned here once
+// a spelled number reads through these, so the edges are pinned here once
 // rather than rediscovered at each caller.
 @Suite("Int readings and spellings")
 struct IntSpellingTests {

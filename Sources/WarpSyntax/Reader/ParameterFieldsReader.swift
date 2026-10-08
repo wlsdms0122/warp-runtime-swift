@@ -8,8 +8,9 @@
 import Foundation
 import Warp
 
-// What a parameter says beside its name: the type and a description. Read apart from the name because the pair form a notation
-// offers writes the name as the key and these under it.
+// What a parameter says beside its name: the type and a description. Read
+// apart from the name because the pair form a notation offers writes the name
+// as the key and these under it.
 struct ParameterFieldsReader: Decodable {
     private enum CodingKeys: String, CodingKey, CaseIterable {
         case type

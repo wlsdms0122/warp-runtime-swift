@@ -36,9 +36,9 @@ import Foundation
 // everything a document says against the interfaces it reaches: its
 // declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
 // facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
-// lowering (`Lowering`). It runs the procedures a
-// constant calls, which is what folding is. Linking takes what that
-// answered, judges what only the whole list can answer, and runs nothing.
+// lowering (`Lowering`). It runs the procedures a constant calls, which is
+// what folding is. Linking takes what that answered, judges what only the
+// whole list can answer, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
