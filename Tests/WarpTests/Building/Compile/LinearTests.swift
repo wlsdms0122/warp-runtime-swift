@@ -1105,11 +1105,10 @@ struct LinearTests {
         }
     }
 
-    @Test("a break carries what the arm opened out of the loop, and it is still owed")
+    @Test("a name an arm opens before a break is dropped where the arm ends")
     func aBreakDoesNotExcuseTheArmItLeavesFrom() async throws {
-        // Given. A run does come back from a `break`: it comes back out of the
-        // loop still holding what the arm opened, so such an arm is judged the
-        // way any other is
+        // Given. The arm opens 'own' and breaks. 'own' is read nowhere after
+        // the arm, so the arm ends still holding it
         let sut = try holding(
             body: [
                 Statement(

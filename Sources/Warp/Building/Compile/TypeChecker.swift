@@ -2940,15 +2940,15 @@ struct TypeChecker {
             )
 
             // A write's path settles its constant indexes the way a read's
-            // does, so no constant name survives into the image either.
-            var binding = statement.binding
+            // path does, so no constant name survives into the image.
+            var settled = statement.binding
 
-            if case let .assignment(path)? = binding, case let .judging(folding, _, _) = ask, let folding {
-                binding = .assignment(try await foldedIndexReferences(path, at: here, folding: folding))
+            if case let .assignment(path)? = settled, case let .judging(folding, _, _) = ask, let folding {
+                settled = .assignment(try await foldedIndexReferences(path, at: here, folding: folding))
             }
 
             rewritten.append(
-                Statement(binding: binding, expression: inner.rewritten)
+                Statement(binding: settled, expression: inner.rewritten)
             )
             calls += inner.calls
             judgements.absorb(inner.judgements)

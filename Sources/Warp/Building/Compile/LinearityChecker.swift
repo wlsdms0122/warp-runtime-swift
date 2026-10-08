@@ -24,7 +24,8 @@ struct LinearityChecker {
         // are apart because they answer different refusals: one is a value
         // dropped, the other a value handed on twice, and a name that has
         // gone from the first without reaching the second is a name that was
-        // never one of these.
+        // never one of these. Beside them, which name each spelling reads,
+        // and whether the value just read carries an obligation.
         struct Held {
             // How a name is being held, where it is one of these at all. One
             // reading, so every judgment about an operand is made from the
@@ -35,90 +36,96 @@ struct LinearityChecker {
                 case gone
             }
 
-            // A name the body around a nested one holds, hidden while the
-            // nested body introduces its spelling and held again as it was
-            // once that body ends. Nothing reaches the outer name meanwhile:
-            // every reading of the spelling inside is the new name.
-            struct Hidden {
+            // One name as a body introduced it. A nested body may introduce a
+            // spelling the body around it holds, and the two are different
+            // names, each holding its own value: which of them a spelling
+            // reads is the scope's to say. A name no body introduced, a
+            // parameter or one the module binds, is its spelling's first, and
+            // no body introduces that spelling again.
+            struct Local: Hashable, Comparable {
+                // MARK: - Property
                 let name: Name
-                let holding: Holding?
-                let linear: Bool
+                let introduction: Int
+
+                // MARK: - Initializer
+                init(_ name: Name, introduction: Int = 0) {
+                    self.name = name
+                    self.introduction = introduction
+                }
+
+                // MARK: - Public
+                static func < (lhs: Local, rhs: Local) -> Bool {
+                    (lhs.name, lhs.introduction) < (rhs.name, rhs.introduction)
+                }
+
+                // MARK: - Private
             }
 
             // MARK: - Property
-            var live: Set<Name>
-            var moved: Set<Name> = []
+            // Which name each spelling reads here. A spelling missing from it
+            // reads its first.
+            var scope: [Name: Local] = [:]
+
+            var live: Set<Local>
+            var moved: Set<Local> = []
 
             // What the body was handed to read and not to keep. A borrowed
             // name may be read and passed on to another slot that borrows, and
             // that is all: the obligation stayed with whoever handed it over,
             // and a body cannot give away what it never took.
-            var borrowed: Set<Name> = []
+            var borrowed: Set<Local> = []
 
             // The names whose slot declares a type written `linear`: a write
             // into one takes the obligation whatever wrote the value, since
             // the slot naming the type carries it.
-            var linear: Set<Name> = []
+            var linear: Set<Local> = []
 
             // Whether this way through ended the body. Only leaving the
             // procedure does: a run comes back out of a loop from a `break`
             // still holding what the way through held.
             var endsTheBody = false
 
-            // Whether the value just read carries an obligation: read off a
+            // Whether what was just read carries an obligation: read off a
             // name that held one, or answered by a call or a cast declaring
-            // one. Whatever takes the value takes the obligation with it. Read
-            // where the value is, so a block's answer is judged among the
-            // names the block introduced.
-            var owed = false
+            // one. Whatever takes the value takes the obligation with it.
+            var carriesObligation = false
 
             // MARK: - Initializer
+            // A body's start: what it was handed to keep, which declares a
+            // type written `linear`, and what it was handed to read.
+            init(taking taken: Set<Name>, borrowing borrowed: Set<Name>) {
+                live = Set(taken.map { name in Local(name) })
+                linear = live
+                self.borrowed = Set(borrowed.map { name in Local(name) })
+            }
+
             // MARK: - Public
+            func local(_ name: Name) -> Local {
+                scope[name] ?? Local(name)
+            }
+
             func holding(_ name: Name) -> Holding? {
-                if live.contains(name) { return .live }
-                if borrowed.contains(name) { return .borrowed }
-                if moved.contains(name) { return .gone }
+                let local = local(name)
+
+                if live.contains(local) { return .live }
+                if borrowed.contains(local) { return .borrowed }
+                if moved.contains(local) { return .gone }
 
                 return nil
             }
 
-            // The spelling taken by a name a body introduces: the name around
-            // it is hidden, and the new one starts holding nothing.
-            mutating func hiding(_ name: Name) -> Hidden {
-                let hidden = Hidden(name: name, holding: holding(name), linear: linear.contains(name))
+            mutating func move(_ name: Name) {
+                let local = local(name)
 
-                live.remove(name)
-                moved.remove(name)
-                borrowed.remove(name)
-                linear.remove(name)
-
-                return hidden
+                live.remove(local)
+                moved.insert(local)
             }
 
-            // The name a nested body hid, held again as it was.
-            mutating func restoring(_ hidden: Hidden) {
-                live.remove(hidden.name)
-                moved.remove(hidden.name)
-                borrowed.remove(hidden.name)
-                linear.remove(hidden.name)
+            mutating func take(_ name: Name) {
+                let local = local(name)
 
-                switch hidden.holding {
-                case .live?:
-                    live.insert(hidden.name)
-
-                case .borrowed?:
-                    borrowed.insert(hidden.name)
-
-                case .gone?:
-                    moved.insert(hidden.name)
-
-                case nil:
-                    break
-                }
-
-                if hidden.linear {
-                    linear.insert(hidden.name)
-                }
+                moved.remove(local)
+                live.insert(local)
             }
 
             // Two ways through, joined. Being handed on and being borrowed are
@@ -126,13 +133,14 @@ struct LinearityChecker {
             // still held has to be the same on both, which the arms say where
             // they are judged.
             func merged(with other: Held) -> Held {
-                Held(
-                    live: live,
-                    moved: moved.union(other.moved),
-                    borrowed: borrowed.union(other.borrowed),
-                    linear: linear.union(other.linear),
-                    endsTheBody: endsTheBody && other.endsTheBody
-                )
+                var joined = self
+                joined.moved.formUnion(other.moved)
+                joined.borrowed.formUnion(other.borrowed)
+                joined.linear.formUnion(other.linear)
+                joined.endsTheBody = endsTheBody && other.endsTheBody
+                joined.carriesObligation = false
+
+                return joined
             }
 
             // MARK: - Private
@@ -147,6 +155,10 @@ struct LinearityChecker {
         // `Held`, and what its body handed out stays handed out.
         private(set) var handsOut = false
 
+        // How many names the walk has seen a body introduce, so each one is
+        // told from any other of its spelling.
+        private var introductions = 0
+
         // MARK: - Initializer
         init(context: TypingContext, place: Place) {
             self.context = context
@@ -156,13 +168,19 @@ struct LinearityChecker {
         // MARK: - Public
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed. A name the block
-        // introduces goes no further than the block, so one still holding
-        // its value where the block ends has dropped it, and a name it hid
-        // is held again as it was. `asPart` says the block stands as an
-        // element or a field, where its result is written as one.
-        func through(_ block: Block, held: Held, guarded: String?, asPart: Bool = false) throws -> Held {
+        // introduces is read nowhere after it, so one still holding its value
+        // where the block ends has dropped it. `reading` judges the result
+        // where the block stands somewhere other than a place a value is
+        // answered to, such as an element or a field.
+        func through(
+            _ block: Block,
+            held: Held,
+            guarded: String?,
+            reading: ((Expression, Held, String?) throws -> Held)? = nil
+        ) throws -> Held {
+            let scope = held.scope
             var held = held
-            var hidden: [Held.Hidden] = []
+            var introduced: [Held.Local] = []
 
             for statement in block.body.statements {
                 // A borrowed name written bare is judged here, before the walk,
@@ -171,8 +189,9 @@ struct LinearityChecker {
                 if case let (borrowed, .borrowed)? = operand(statement.expression, held: held) {
                     switch statement.binding {
                     case let .constant(name, _)?:
-                        hidden.append(held.hiding(name))
-                        held.borrowed.insert(name)
+                        let local = introducing(name, into: &held)
+                        introduced.append(local)
+                        held.borrowed.insert(local)
 
                     case .variable?, .assignment?:
                         throw refusal(kept: borrowed)
@@ -186,44 +205,57 @@ struct LinearityChecker {
 
                 switch statement.binding {
                 case let .constant(name, declared)?, let .variable(name, declared)?:
-                    held = try moving(statement.expression, held: held, guarded: guarded)
-                    hidden.append(held.hiding(name))
+                    held = try moving(statement.expression, held: held, guarded: guarded, naming: name)
+
+                    let carries = held.carriesObligation
+                    let local = introducing(name, into: &held)
+                    introduced.append(local)
 
                     if declared?.handedOnce(in: context.types) == true {
-                        held.linear.insert(name)
+                        held.linear.insert(local)
                     }
 
-                    guard held.linear.contains(name) || held.owed else { continue }
+                    guard held.linear.contains(local) || carries else { continue }
 
-                    held.live.insert(name)
+                    held.live.insert(local)
 
                 case let .assignment(path)?:
                     held = try written(statement.expression, into: path, held: held, guarded: guarded)
 
+                // A statement naming nothing drops its answer, so an answer
+                // carrying an obligation would be handed on to nobody.
                 case nil:
                     held = try moving(statement.expression, held: held, guarded: guarded)
+
+                    guard !held.carriesObligation else {
+                        throw refusal(
+                            "drops a value handed on once. A statement naming nothing"
+                                + " drops what it answers, so the value is bound to a name"
+                                + " or handed on where it is read"
+                        )
+                    }
                 }
             }
 
             if let result = block.result {
-                if case let (name, .borrowed)? = operand(result, held: held) {
-                    throw refusal(answered: name)
+                if let reading {
+                    held = try reading(result, held, guarded)
+                } else {
+                    if case let (name, .borrowed)? = operand(result, held: held) {
+                        throw refusal(answered: name)
+                    }
+
+                    held = try moving(result, held: held, guarded: guarded)
                 }
-
-                held = try asPart
-                    ? carrying(result, held: held, guarded: guarded)
-                    : moving(result, held: held, guarded: guarded)
             } else {
-                held.owed = false
+                held.carriesObligation = false
             }
 
-            if let stranded = hidden.map(\.name).first(where: held.live.contains) {
-                throw refusal(stranded: stranded)
+            if let stranded = introduced.first(where: held.live.contains) {
+                throw refusal(stranded: stranded.name)
             }
 
-            for outer in hidden.reversed() {
-                held.restoring(outer)
-            }
+            held.scope = scope
 
             return held
         }
@@ -234,20 +266,23 @@ struct LinearityChecker {
         func answering(_ block: Block, held: Held) throws {
             let left = try through(block, held: held, guarded: nil)
 
-            if left.owed {
+            if left.carriesObligation {
                 handsOut = true
             }
 
             guard let stranded = left.live.sorted().first else { return }
 
-            throw refusal(stranded: stranded)
+            throw refusal(stranded: stranded.name)
         }
 
         // MARK: - Private
-        // What is still held after this expression is read.
-        private func moving(_ expression: Expression, held: Held, guarded: String?) throws -> Held {
+        // What is still held after this expression is read, and whether what
+        // it answers carries an obligation. `naming` is the name of the
+        // statement this is the value of, which a loop binds its round to and
+        // an attempt its failure.
+        private func moving(_ expression: Expression, held: Held, guarded: String?, naming: Name? = nil) throws -> Held {
             var held = held
-            held.owed = false
+            held.carriesObligation = false
 
             switch expression {
             case .literal:
@@ -262,29 +297,32 @@ struct LinearityChecker {
                 // reaches it: an operand of a slot that borrows, a second name
                 // for the same borrow, and the two places a body answers from.
                 // So reaching here is the name leaving by some other way.
-                guard !held.borrowed.contains(head) else { throw refusal(gaveAway: head) }
+                switch held.holding(head) {
+                case .borrowed?:
+                    throw refusal(gaveAway: head)
 
-                guard held.live.contains(head) else {
-                    guard held.moved.contains(head) else { return held }
-
+                case .gone?:
                     throw refusal(handedTwice: head)
+
+                case nil:
+                    return held
+
+                case .live?:
+                    if let guarded {
+                        throw refusal("hands '\(head)' on \(guarded), which happens no fixed number of times")
+                    }
+
+                    held.move(head)
+                    held.carriesObligation = true
+
+                    return held
                 }
-
-                if let guarded {
-                    throw refusal("hands '\(head)' on \(guarded), which happens no fixed number of times")
-                }
-
-                held.live.remove(head)
-                held.moved.insert(head)
-                held.owed = true
-
-                return held
 
             // A cast hands on what it read. Where that is nothing a name
             // held, the type it names is what says the value is one.
             case let .cast(value, type, _):
                 var cast = try moving(value, held: held, guarded: guarded)
-                cast.owed = cast.owed || type.handedOnce(in: context.types)
+                cast.carriesObligation = cast.carriesObligation || type.handedOnce(in: context.types)
 
                 return cast
 
@@ -316,22 +354,20 @@ struct LinearityChecker {
                 // the same whichever way the body answers.
                 let inside = Consuming(context: context, place: place)
                 let seeded = procedure.signature.parameters
-                let taken = Set(seeded.filter { parameter in
-                    if case .consuming = parameter.declared { return true }
-
-                    return false
-                }.map(\.name))
 
                 try inside.answering(
                     block,
                     held: Held(
-                        live: taken,
-                        borrowed: Set(seeded.filter { parameter in
-                            if case .borrowing = parameter.declared { return true }
+                        taking: Set(seeded.filter { parameter in
+                            if case .consuming = parameter.declared { return true }
 
                             return false
                         }.map(\.name)),
-                        linear: taken
+                        borrowing: Set(seeded.filter { parameter in
+                            if case .borrowing = parameter.declared { return true }
+
+                            return false
+                        }.map(\.name))
                     )
                 )
 
@@ -343,18 +379,31 @@ struct LinearityChecker {
                     )
                 }
 
-                for name in held.live.sorted() where reads(procedure, name: name) {
+                // A name another name of its spelling hides is one the
+                // closure cannot reach.
+                let reached = { (local: Held.Local, writing: Bool) in
+                    held.local(local.name) == local && self.reaches(procedure, name: local.name, writing: writing)
+                }
+
+                for local in held.live.sorted() where reached(local, false) {
                     throw refusal(
-                        "captures '\(name)' in a closure, which runs no fixed"
+                        "captures '\(local.name)' in a closure, which runs no fixed"
                             + " number of times"
                     )
                 }
 
-                for name in held.borrowed.sorted() where reads(procedure, name: name) {
+                for local in held.borrowed.sorted() where reached(local, false) {
                     throw refusal(
-                        "captures '\(name)' in a closure, and it borrowed"
-                            + " '\(name)' rather than taking it. A closure runs"
+                        "captures '\(local.name)' in a closure, and it borrowed"
+                            + " '\(local.name)' rather than taking it. A closure runs"
                             + " where the lending call cannot see"
+                    )
+                }
+
+                for local in held.linear.sorted() where reached(local, true) {
+                    throw refusal(
+                        "writes '\(local.name)' in a closure, and '\(local.name)' declares a"
+                            + " value handed on once. A closure runs no fixed number of times"
                     )
                 }
 
@@ -367,9 +416,11 @@ struct LinearityChecker {
 
                 for argument in arguments {
                     carried = try moving(argument, held: carried, guarded: "in a call of a value")
-                }
 
-                carried.owed = false
+                    guard !carried.carriesObligation else {
+                        throw refusal("hands one on in a call of a value, which happens no fixed number of times")
+                    }
+                }
 
                 return carried
 
@@ -378,7 +429,7 @@ struct LinearityChecker {
             // so a declaration whose body answers one is held to writing it.
             case let .call(call):
                 var called = try moving(call, held: held, guarded: guarded)
-                called.owed = context.signature(of: call.selector)?.returns?.handedOnce(in: context.types) == true
+                called.carriesObligation = context.signature(of: call.selector)?.returns?.handedOnce(in: context.types) == true
 
                 return called
 
@@ -414,7 +465,7 @@ struct LinearityChecker {
                         let parted = taken.live.symmetricDifference(left.live).sorted()
 
                         throw refusal(
-                            "hands '\(parted[0])' on in one arm and not in the other."
+                            "hands '\(parted[0].name)' on in one arm and not in the other."
                                 + " What a body holds after a conditional is the same"
                                 + " whichever arm ran"
                         )
@@ -423,13 +474,22 @@ struct LinearityChecker {
                     return taken.merged(with: left)
                 }
 
+            // The round is read in the condition, the body and the result,
+            // under the statement's name.
             case let .loop(condition, body):
-                let asked = try moving(condition, held: held, guarded: guarded)
+                var round = held
+
+                if let naming {
+                    introducing(naming, into: &round)
+                }
+
+                let asked = try moving(condition, held: round, guarded: guarded)
                 var rounds = try through(body, held: asked, guarded: "inside a loop")
 
                 // A round may not run at all, so a loop is a way through
                 // whatever its body does.
                 rounds.endsTheBody = false
+                rounds.scope = held.scope
 
                 return rounds
 
@@ -439,11 +499,21 @@ struct LinearityChecker {
             // of them do, holding what either way took.
             case let .attempt(body, rescue):
                 let attempted = try through(body, held: held, guarded: "inside an attempt")
-                var rescued = try through(rescue, held: held, guarded: "inside an attempt")
+
+                // The failure is read in the rescue alone, under the
+                // statement's name.
+                var failed = held
+
+                if let naming {
+                    introducing(naming, into: &failed)
+                }
+
+                var rescued = try through(rescue, held: failed, guarded: "inside an attempt")
 
                 rescued.live.formUnion(attempted.live)
                 rescued.endsTheBody = attempted.endsTheBody && rescued.endsTheBody
-                rescued.owed = attempted.owed || rescued.owed
+                rescued.carriesObligation = attempted.carriesObligation || rescued.carriesObligation
+                rescued.scope = held.scope
 
                 return rescued
 
@@ -466,13 +536,15 @@ struct LinearityChecker {
 
                 carried.endsTheBody = true
 
-                if carried.owed {
+                if carried.carriesObligation {
                     handsOut = true
                 }
 
+                carried.carriesObligation = false
+
                 guard let stranded = carried.live.sorted().first else { return carried }
 
-                throw refusal("leaves while still holding '\(stranded)'")
+                throw refusal("leaves while still holding '\(stranded.name)'")
             }
         }
 
@@ -509,18 +581,17 @@ struct LinearityChecker {
 
             var written = try moving(expression, held: held, guarded: guarded)
 
-            guard !written.live.contains(head) else {
+            guard written.holding(head) != .live else {
                 throw refusal("writes over '\(head)', which it is still holding")
             }
 
-            guard written.linear.contains(head) || written.owed else { return written }
+            guard written.linear.contains(written.local(head)) || written.carriesObligation else { return written }
 
             if let guarded {
                 throw refusal("writes one into '\(head)' \(guarded), which happens no fixed number of times")
             }
 
-            written.live.insert(head)
-            written.moved.remove(head)
+            written.take(head)
 
             return written
         }
@@ -535,12 +606,12 @@ struct LinearityChecker {
             }
 
             if case let .block(block) = expression {
-                return try through(block, held: held, guarded: guarded, asPart: true)
+                return try through(block, held: held, guarded: guarded, reading: carrying)
             }
 
             let carried = try moving(expression, held: held, guarded: guarded)
 
-            guard !carried.owed else { throw refusal(carriedValue: expression) }
+            guard !carried.carriesObligation else { throw refusal(carriedValue: expression) }
 
             return carried
         }
@@ -579,7 +650,20 @@ struct LinearityChecker {
                     )
                 }
 
-                return try moving(argument, held: held, guarded: guarded)
+                let handed = try moving(argument, held: held, guarded: guarded)
+
+                // A value no name holds is taken by the slot or by nobody.
+                if handed.carriesObligation {
+                    guard case .consuming? = parameter?.declared else {
+                        throw refusal(
+                            "hands '\(call.selector)' a value handed on once, and the slot says"
+                                + " nothing about what it does with one. A slot takes the"
+                                + " obligation by writing `consuming`"
+                        )
+                    }
+                }
+
+                return handed
             }
 
             switch (written.holding, parameter?.declared) {
@@ -615,69 +699,107 @@ struct LinearityChecker {
             }
         }
 
-        // Whether a closure's body reads the name around it, at any depth. A
-        // body introducing the spelling reads its own name from the statement
-        // after on, and a closure taking it as a parameter reads its own
+        // Whether a closure's body reaches the name around it, at any depth:
+        // reads or writes it, or, `writing`, writes it. A body introducing the
+        // spelling reaches its own name from the statement after on, a loop
+        // its round from the start of the loop and an attempt its failure in
+        // the rescue, and a closure taking it as a parameter its own
         // throughout.
-        private func reads(_ procedure: Procedure, name: Name) -> Bool {
+        private func reaches(_ procedure: Procedure, name: Name, writing: Bool) -> Bool {
             guard !procedure.signature.names.contains(name), let block = procedure.block else { return false }
 
-            return reads(block.body, then: block.result, name: name)
+            return reaches(block.body, result: block.result, name: name, writing: writing)
         }
 
-        private func reads(_ body: Body, then result: Expression?, name: Name) -> Bool {
+        private func reaches(_ body: Body, result: Expression?, name: Name, writing: Bool) -> Bool {
             for statement in body.statements {
-                if reads(statement.expression, name: name) { return true }
-                if statement.binding?.introduced == name { return false }
+                if case let .assignment(path)? = statement.binding {
+                    if path.head == name { return true }
+                    if !writing, reads(path, name: name) { return true }
+                }
+
+                guard statement.binding?.introduced == name else {
+                    if reaches(statement.expression, name: name, writing: writing) { return true }
+
+                    continue
+                }
+
+                switch statement.expression {
+                case .loop:
+                    return false
+
+                case let .attempt(attempted, _):
+                    return reaches(attempted.body, result: attempted.result, name: name, writing: writing)
+
+                default:
+                    return reaches(statement.expression, name: name, writing: writing)
+                }
             }
 
-            return result.map { result in reads(result, name: name) } ?? false
+            return result.map { result in reaches(result, name: name, writing: writing) } ?? false
         }
 
-        private func reads(_ expression: Expression, name: Name) -> Bool {
+        private func reaches(_ expression: Expression, name: Name, writing: Bool) -> Bool {
             switch expression {
             case .literal:
                 return false
 
             case let .reference(path):
-                return path.expandingIndexReferences.contains { path in path.head == name }
+                return !writing && reads(path, name: name)
 
             case let .array(elements):
-                return elements.contains { element in reads(element, name: name) }
+                return elements.contains { element in reaches(element, name: name, writing: writing) }
 
             case let .record(fields):
-                return fields.values.contains { field in reads(field, name: name) }
+                return fields.values.contains { field in reaches(field, name: name, writing: writing) }
 
             case let .closure(procedure):
-                return reads(procedure, name: name)
+                return reaches(procedure, name: name, writing: writing)
 
             case let .apply(callee, arguments):
-                return ([callee] + arguments).contains { operand in reads(operand, name: name) }
+                return ([callee] + arguments).contains { operand in reaches(operand, name: name, writing: writing) }
 
             case let .cast(value, _, _):
-                return reads(value, name: name)
+                return reaches(value, name: name, writing: writing)
 
             case let .block(block):
-                return reads(block.body, then: block.result, name: name)
+                return reaches(block.body, result: block.result, name: name, writing: writing)
 
             case let .conditional(condition, then, otherwise):
-                return reads(condition, name: name)
-                    || reads(then, then: nil, name: name)
-                    || reads(otherwise ?? [], then: nil, name: name)
+                return reaches(condition, name: name, writing: writing)
+                    || reaches(then, result: nil, name: name, writing: writing)
+                    || reaches(otherwise ?? [], result: nil, name: name, writing: writing)
 
             case let .loop(condition, body):
-                return reads(condition, name: name) || reads(body.body, then: body.result, name: name)
+                return reaches(condition, name: name, writing: writing)
+                    || reaches(body.body, result: body.result, name: name, writing: writing)
 
             case let .attempt(body, rescue):
-                return reads(body.body, then: body.result, name: name)
-                    || reads(rescue.body, then: rescue.result, name: name)
+                return reaches(body.body, result: body.result, name: name, writing: writing)
+                    || reaches(rescue.body, result: rescue.result, name: name, writing: writing)
 
             case let .call(call):
-                return call.arguments.contains { argument in reads(argument, name: name) }
+                return call.arguments.contains { argument in reaches(argument, name: name, writing: writing) }
 
             case let .leave(leave):
-                return leave.value.map { value in reads(value, name: name) } ?? false
+                return leave.value.map { value in reaches(value, name: name, writing: writing) } ?? false
             }
+        }
+
+        private func reads(_ path: Path, name: Name) -> Bool {
+            path.expandingIndexReferences.contains { path in path.head == name }
+        }
+
+        // A name the body introduces, told from any other of its spelling, and
+        // what the spelling reads from here on.
+        @discardableResult
+        private func introducing(_ name: Name, into held: inout Held) -> Held.Local {
+            introductions += 1
+
+            let local = Held.Local(name, introduction: introductions)
+            held.scope[name] = local
+
+            return local
         }
 
         private func refusal(stranded name: Name) -> BuildError {
@@ -794,9 +916,8 @@ struct LinearityChecker {
         try walk.answering(
             block,
             held: Consuming.Held(
-                live: Set(taken.map(\.name)),
-                borrowed: Set(borrowed.map(\.name)),
-                linear: Set(taken.map(\.name))
+                taking: Set(taken.map(\.name)),
+                borrowing: Set(borrowed.map(\.name))
             )
         )
 
