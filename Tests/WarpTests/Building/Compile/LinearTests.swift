@@ -1147,7 +1147,7 @@ struct LinearTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("in one arm and not in the other")
+            "\(error)".contains("still holds 'own' where it ends")
         }
     }
 
