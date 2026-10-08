@@ -19,9 +19,9 @@ import Foundation
 // what it is. A wrong answer would be a refusal an author cannot act on, so
 // the walk answers only where the text says so.
 //
-// Reading through one is held the same way: a dot needs a type to be judged
-// against, so a dot on `Any` refuses rather than deferring to the run. The
-// author names the type with `as`, and the walk goes on from there.
+// A dot on `Any` is held the same way: a dot needs a type to be judged
+// against, so it refuses rather than deferring to the run. The author names
+// the type with `as`, and the walk goes on from there.
 //
 // A path reads a name and nothing else, so every segment a document writes
 // stays what it was written as. What each one lands on is judged here against
@@ -1473,33 +1473,24 @@ struct TypeChecker {
             throw BuildError("reading constant \'\(head)\': \(error)", at: place)
         }
 
-        // The mark rides the fold: which element is read settles now,
-        // whether the array is there to be read stays the run\'s question.
+        // The mark rides the fold: which element or entry is read settles
+        // now, whether the list or the map is there to be read stays the
+        // run\'s question. A key is a name, so text that is not one names no
+        // entry.
         switch settled {
         case let .int(index):
             return .index(index, optional: optionally)
 
-        case let .double(fraction):
-            switch IntNarrowing(fraction) {
-            case let .int(whole):
-                return .index(whole, optional: optionally)
-
-            case .notANumber, .fractional:
-                throw BuildError(
-                    "index reference \(inner.rendered) is not a whole number",
-                    at: place
-                )
-
-            case .overflow:
-                throw BuildError(
-                    "index reference \(inner.rendered) indexes past the end of any array",
-                    at: place
-                )
+        case let .string(key):
+            guard let name = try? Name(key) else {
+                throw BuildError("key reference \(inner.rendered) is '\(key)', which is not a name", at: place)
             }
+
+            return .key(name, optional: optionally)
 
         default:
             throw BuildError(
-                "index reference \(inner.rendered) is \(settled.type), expected Int",
+                "index reference \(inner.rendered) is \(settled.type), expected Int or String",
                 at: place
             )
         }
@@ -1789,9 +1780,10 @@ struct TypeChecker {
             // Needless means the claim and the reading are the same type, not
             // that one would accept the other. `accepts` holds between `Int`
             // and `Int(0...10)`, because the bound is checked when the value
-            // arrives, so a narrowing cast still says something. Record names count at every depth: reading a nameless
-            // record as a declared one attaches the name, so it is never a
-            // cast of what the value already is.
+            // arrives, so a narrowing cast still says something. Record names
+            // count at every depth: reading a nameless record as a declared
+            // one attaches the name, so it is never a cast of what the value
+            // already is.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.

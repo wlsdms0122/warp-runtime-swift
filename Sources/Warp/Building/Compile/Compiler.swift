@@ -513,9 +513,10 @@ struct Compiler {
                     let holding = LoweredType(of: settled, in: context.loweredTypes)
                         .refined(by: written.folded, fixed: false, in: context.loweredTypes)
 
-                    // A variable that declares nothing holds the type of its
-                    // start, and an empty list or map holds no element, so a
-                    // start of one says nothing of what the box will hold.
+                    // A variable that declares nothing holds the type its
+                    // start reads as, and an empty list or map holds no
+                    // element, so a start of one says nothing of what the box
+                    // will hold.
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"

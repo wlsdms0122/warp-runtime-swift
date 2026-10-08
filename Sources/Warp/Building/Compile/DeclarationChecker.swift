@@ -117,8 +117,16 @@ struct DeclarationChecker {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
             }
 
-            for (name, variable) in module.variables.sorted { $0.key < $1.key } {
-                try judge(subexpressions: variable.start, at: .variable(name.spelling, in: .of(module)), in: table)
+            // A module variable saying what it holds is held to the type it
+            // says the way a name inside a body is.
+            for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
+                let place = Place.variable(name.spelling, in: .of(module))
+
+                if let declared = variable.declared {
+                    try mentioned(in: declared, at: place, parameterized: false, resolve: table)
+                }
+
+                try judge(subexpressions: variable.start, at: place, in: table)
             }
         }
     }

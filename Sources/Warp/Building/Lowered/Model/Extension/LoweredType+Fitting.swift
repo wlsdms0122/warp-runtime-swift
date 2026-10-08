@@ -54,11 +54,17 @@ extension LoweredType {
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.shaped(value, leavingOut: leavingOut, in: table)
 
-        case let (.array(element), .array(items)):
+        case let (.array(element), .array(items)) where element.reachesRecord:
             return .array(items.map { item in element.shaped(item, leavingOut: leavingOut, in: table) })
 
-        case let (.dictionary(entry), .dictionary(entries)):
+        case let (.dictionary(entry), .dictionary(entries)) where entry.reachesRecord:
             return .dictionary(entries.mapValues { _, held in entry.shaped(held, leavingOut: leavingOut, in: table) })
+
+        // A nameless record read as a map holds its entries as fields.
+        case let (.dictionary(entry), .record(record)) where entry.reachesRecord:
+            return .record(Record(name: record.name, Dictionary(uniqueKeysWithValues: record.names.compactMap { name in
+                record[name].map { held in (name, entry.shaped(held, leavingOut: leavingOut, in: table)) }
+            })))
 
         case let (.record(declared), .record(record)):
             return .record(Record(name: record.name, fields(record.names, of: { name in record[name] }, along: declared, leavingOut: leavingOut, in: table)))
@@ -68,6 +74,21 @@ extension LoweredType {
 
         default:
             return value
+        }
+    }
+
+    // Whether a value of this may hold a record, which is all the walk
+    // writes or leaves out: what holds none comes back as it is, unwalked.
+    var reachesRecord: Bool {
+        switch self {
+        case .named, .record:
+            return true
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.reachesRecord
+
+        default:
+            return false
         }
     }
 

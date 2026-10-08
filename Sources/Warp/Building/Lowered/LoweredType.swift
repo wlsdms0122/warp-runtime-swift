@@ -773,13 +773,12 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
-    // satisfy two types at once, and whether a candidate spelling could ever be
-    // a value of a type. The build
-    // asks them of readings; the run asks the first of a closure value a cast
-    // reads as a procedure type. A name the table does not answer
-    // passes every judge but the second, which reads it as only itself:
-    // nothing is knowable about it here, and the value judge refuses it where
-    // a value arrives.
+    // satisfy two types at once, and whether a candidate spelling could ever
+    // be a value of a type. The build asks them of readings; the run asks the
+    // first of a closure value a cast reads as a procedure type. A name the
+    // table does not answer passes every judge but the second, which reads it
+    // as only itself: nothing is knowable about it here, and the value judge
+    // refuses it where a value arrives.
     //
     // Whether a value of `other` may stand where this is declared. Exact on
     // records, a declared one by its name and a nameless one by its fields,
@@ -2456,8 +2455,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         // A value under no name is no value of the record: a literal, a
-        // value from outside and a cast write the name before it is judged
-        // here, and a judgement writes none.
+        // record built where the record is read, a value from outside and a
+        // cast write the name before it is judged here, and a judgement
+        // writes none.
         guard
             case let .record(record) = value,
             record.name != nil,

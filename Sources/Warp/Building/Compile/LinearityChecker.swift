@@ -108,6 +108,7 @@ struct LinearityChecker {
         // What is still held after this block. `guarded` is why a move is
         // refused here, and nil where one is allowed.
         func through(_ block: Block, held: Held, guarded: String?) throws -> Held {
+            let linear = held.linear
             var held = held
 
             for statement in block.body.statements {
@@ -135,6 +136,8 @@ struct LinearityChecker {
 
                     if declared?.handedOnce(in: context.types) == true {
                         held.linear.insert(name)
+                    } else {
+                        held.linear.remove(name)
                     }
 
                     guard held.linear.contains(name) || carriesObligation(statement.expression, held: held) else {
@@ -151,6 +154,10 @@ struct LinearityChecker {
                     held = try moving(statement.expression, held: held, guarded: guarded)
                 }
             }
+
+            // A name the block declared does not leave it, so what declares
+            // a linear type outside is what it was on the way in.
+            held.linear = linear
 
             guard let result = block.result else { return held }
 

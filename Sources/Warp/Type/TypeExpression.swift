@@ -820,7 +820,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // refusal saying which part disagreed. `at` is the path into the value so
     // the message names the field rather than the whole argument. A value a
     // host holds comes from outside, so a nameless record where a declared
-    // record is read takes the name first, as at any door.
+    // record is read takes the name first, as a cast does; a field the type
+    // does not declare is not left out.
     public func settling(
         _ value: Value,
         at path: @autoclosure () -> String,

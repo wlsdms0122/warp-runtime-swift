@@ -55,7 +55,7 @@ extension LoweredType {
     // block or an attempt hand on. A record built from parts there takes
     // the name where it is built (`naming`).
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, in: table) { place, standing in
+        reaching(expression, at: nil, in: table) { place, standing, _ in
             guard case let .literal(value) = standing else { return nil }
 
             return .literal(place.written(value, in: table))
@@ -66,62 +66,28 @@ extension LoweredType {
     // where a declared record is read, by the place each is built at, with
     // the name it takes there: the build held each part to its field, so
     // the record is the declared one and the run builds it under the name,
-    // with nothing to cast. The depths are the ones `reaching` walks, and
-    // what builds nothing there is not walked into, so its place is never
-    // spelled.
+    // with nothing to cast. What builds no record is not walked, so its place
+    // is never spelled.
     func naming(_ expression: Expression, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
         switch expression {
-        case .record, .array, .block, .attempt:
+        case .record, .array, .block, .attempt, .loop:
             break
 
         default:
             return [:]
         }
 
-        let place = place()
+        var names: [Place: Name] = [:]
 
-        switch self {
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.naming(expression, at: place, in: table)
-
-        case let .named(row):
-            var names = table.loweredTypes[row].naming(expression, at: place, in: table)
-
-            if case .record = expression, let nominal = table.record(of: self) {
+        _ = reaching(expression, at: place(), in: table) { type, standing, place in
+            if case .record = standing, case .named = type, let nominal = table.record(of: type), let place {
                 names[place] = table.labels[nominal]
             }
 
-            return names
-
-        default:
-            break
+            return nil
         }
 
-        switch expression {
-        case let .array(items):
-            guard let element = element(in: table) else { return [:] }
-
-            return items.enumerated().reduce(into: [:]) { names, item in
-                names.merge(element.naming(item.element, at: place.child(.element(item.offset)), in: table)) { _, inner in inner }
-            }
-
-        case let .record(fields):
-            return fields.reduce(into: [:]) { names, field in
-                guard let dotted = dotted(field.key, in: table) else { return }
-
-                names.merge(dotted.naming(field.value, at: place.child(.field(field.key)), in: table)) { _, inner in inner }
-            }
-
-        case let .block(block):
-            return naming(block, at: place.child(.held), in: table)
-
-        case let .attempt(block, rescue):
-            return naming(block, at: place.child(.held), in: table)
-                .merging(naming(rescue, at: place.child(.rescue), in: table)) { _, rescued in rescued }
-
-        default:
-            return [:]
-        }
+        return names
     }
 
     // The same for a block standing at a place, whose answer stands where
@@ -183,7 +149,7 @@ extension LoweredType {
     // not decide when what it answers is judged. An answer a call fills is no
     // place's to say, and anything else stands as written.
     func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, in: table) { place, standing in
+        reaching(expression, at: nil, in: table) { place, standing, _ in
             guard case let .closure(written) = standing else { return nil }
 
             guard
@@ -204,59 +170,79 @@ extension LoweredType {
         Block(body: block.body, result: block.result.map { result in completing(result, in: table) })
     }
 
-    // The walk `written` and `completing` share: an expression standing where
-    // this is read, through what may be null and the names around it, at the
-    // depths a list, a record and the answer of a block or an attempt hand on.
+    // The walk `written`, `completing` and `naming` share: an expression
+    // standing where this is read, through what may be null and the names
+    // around it, at the depths a list, a record and the answer of a block, an
+    // attempt or a loop hand on, each at its place where one is asked for.
     // `replacing` is asked first at each depth, with the type read there, and
     // answers what stands in place of the expression, or nil to walk on.
     private func reaching(
         _ expression: Expression,
+        at place: Place?,
         in table: LoweredTypeTable,
-        replacing: (LoweredType, Expression) -> Expression?
+        replacing: (LoweredType, Expression, Place?) -> Expression?
     ) -> Expression {
-        switch self {
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.reaching(expression, in: table, replacing: replacing)
+        func answering(_ block: Block, at place: Place?) -> Block {
+            Block(
+                body: block.body,
+                result: block.result.map { result in reaching(result, at: place?.child(.result), in: table, replacing: replacing) }
+            )
+        }
 
-        // A declared record is asked as itself before what it stands for, so
-        // what writes a literal there knows the name it is written into.
-        case let .named(row):
-            if table.recordRows[row] != nil, let standing = replacing(self, expression) {
-                return standing
-            }
+        // What a block, an attempt or a loop answers stands where this is
+        // read, so it is walked with this type as it stands, a name around
+        // it included.
+        switch expression {
+        case let .block(block):
+            return .block(answering(block, at: place?.child(.held)))
 
-            return table.loweredTypes[row].reaching(expression, in: table, replacing: replacing)
+        case let .attempt(block, rescue):
+            return .attempt(answering(block, at: place?.child(.held)), rescue: answering(rescue, at: place?.child(.rescue)))
+
+        case let .loop(condition, body):
+            return .loop(while: condition, body: answering(body, at: place?.child(.held)))
 
         default:
             break
         }
 
-        if let standing = replacing(self, expression) {
-            return standing
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.reaching(expression, at: place, in: table, replacing: replacing)
+
+        // A declared record is asked as itself before what it stands for, so
+        // what writes a literal there knows the name it is written into.
+        case let .named(row):
+            if table.recordRows[row] != nil, let standing = replacing(self, expression, place) {
+                return standing
+            }
+
+            return table.loweredTypes[row].reaching(expression, at: place, in: table, replacing: replacing)
+
+        default:
+            break
         }
 
-        func answering(_ block: Block) -> Block {
-            Block(body: block.body, result: block.result.map { result in reaching(result, in: table, replacing: replacing) })
+        if let standing = replacing(self, expression, place) {
+            return standing
         }
 
         switch expression {
         case let .array(items):
             guard let element = element(in: table) else { return expression }
 
-            return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
+            return .array(items.enumerated().map { position, item in
+                element.reaching(item, at: place?.child(.element(position)), in: table, replacing: replacing)
+            })
 
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
-                    (name, dotted(name, in: table).map { place in place.reaching(field, in: table, replacing: replacing) } ?? field)
+                    (name, dotted(name, in: table).map { dotted in
+                        dotted.reaching(field, at: place?.child(.field(name)), in: table, replacing: replacing)
+                    } ?? field)
                 })
             )
-
-        case let .block(block):
-            return .block(answering(block))
-
-        case let .attempt(block, rescue):
-            return .attempt(answering(block), rescue: answering(rescue))
 
         default:
             return expression
