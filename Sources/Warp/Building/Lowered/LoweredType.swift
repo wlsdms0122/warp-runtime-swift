@@ -256,18 +256,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether this is of no type that answers a contract: null and a
-    // procedure are instances of none, so no value of a contract stands here.
-    var holdsNoValueOfAContract: Bool {
-        switch self {
-        case .null, .procedure:
-            return true
-
-        default:
-            return false
-        }
-    }
-
     // Whether this type proves nothing about the value it holds.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
@@ -564,7 +552,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // The constness and isolation the build derived are facts of the one
     // value judged, so they come along only where the name holding it is
     // `fixed` and keeps that value; a box a write may fill again takes the
-    // signature.
+    // signature. An empty list or map shows no element, so what it holds is
+    // what the expression was judged as, a cast's type among them.
     func refined(by judged: LoweredType, fixed: Bool, in table: LoweredTypeTable) -> LoweredType {
         var written = judged.resolved(in: table)
 
@@ -573,6 +562,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, written) {
+        case (.never, _):
+            return judged
+
         case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
             guard fixed else {
                 return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
@@ -639,10 +631,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return number == .double ? .double : LoweredType.int.joined(number)
         }
 
-        // Two procedures join to a procedure rather than to `Any`, keeping the
-        // constness both of them have. Collapsing here would let one body that
-        // runs, in a list of them, pass a slot that asked for none, because
-        // `Any` is accepted everywhere.
+        // Two procedures join to a procedure rather than to `Any`, so what
+        // joins them still stands where a procedure type is read, keeping the
+        // constness both of them have: one body that runs, in a list of them,
+        // does not pass a slot that asked for none.
         if
             case let .procedure(mine, myAnswer, wanted, wantedIsolation) = self,
             case let .procedure(_, _, offered, offeredIsolation) = other
@@ -792,8 +784,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a value of `other` may stand where this is declared. Exact on
     // records, a declared one by its name and a nameless one by its fields,
     // and one-directional: `Any` on the left accepts anything
-    // because nothing was declared, and `Any` on the right is accepted by
-    // anything because nothing is known.
+    // because nothing was declared, and a value read as `Any` on the right
+    // stands only where `Any` is declared, until a cast says what it is.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
         accepts(other, in: table, assumingPairs: [], rigid: false)
     }
@@ -848,19 +840,15 @@ indirect enum LoweredType: Sendable, Equatable {
         // A type parameter is one type the declaration naming it does not
         // know, so a slot of it takes only that same parameter. A call fills
         // the parameters of what it calls before it asks this. In the other
-        // direction a parameter stands for some type, and a value of it is
-        // settled where it arrives, unless no call fills it: then only a slot
-        // taking it by its structure does, which the branches below answer.
+        // direction a value of one stands only where a slot takes it by its
+        // structure, which the branches below answer.
         case let (.parameter(mine, _), .parameter(theirs, _)):
             return mine == theirs
-
-        case (_, .parameter) where !rigid:
-            return true
 
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
             return accepts(inner, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        case (.parameter, .any) where !rigid, (.parameter, .projection) where !rigid, (.parameter, .undeclared):
+        case (.parameter, .undeclared):
             return true
 
         // A slot's own wrapping comes off before what stands for it is taken
@@ -972,8 +960,10 @@ indirect enum LoweredType: Sendable, Equatable {
             guard wantedConstness != .const || offeredConstness == .const else { return false }
             guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
 
-            // Nothing was said on one side or the other, so nothing is refused.
-            guard let required, let given else { return true }
+            // A slot that says nothing of its parameters takes any, and a
+            // value that says nothing stands only where nothing is said.
+            guard let required else { return true }
+            guard let given else { return false }
 
             // What stands here takes exactly the positions the slot hands: an
             // application gives every position, so a value of another count
@@ -1386,11 +1376,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.composition(bounds), _):
             holding.append(Substitution.Held(reading: given, bounds: bounds, orNull: false))
 
-        // A reading that leaves, or an empty list's element, holds no value,
-        // so it fills nothing.
-        case (.parameter, .never):
-            return
-
         case let (.parameter(name, _), _):
             substitution.read(name, as: given, in: table)
 
@@ -1561,8 +1546,9 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // This type with every parameter replaced by what it was read as. A
     // parameter nothing filled reads `Any`, which is what a declaration says
-    // when it says nothing, and one read off literal whole numbers alone is
-    // filled with the Int they are.
+    // when it says nothing, one read only by what holds no value reads
+    // `Never`, and one read off literal whole numbers alone is filled with
+    // the Int they are.
     func filling(_ filled: [Name: LoweredType]) -> LoweredType {
         switch self {
         case let .parameter(name, _):
@@ -2285,11 +2271,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // A declared record is nominal. A record arriving under this name, or
         // an alias of it, is held to the declared fields and keeps it; a
         // nameless one of exactly those fields takes the name, which only a
-        // literal, a value from outside or a cast can be, the cast written or
-        // left unwritten where a value read as `Any` or as a contract crosses
-        // in, since the build refuses any other; one arriving under another
-        // name is refused, whatever its type. A declared name that is not a
-        // record type settles as the type it stands for.
+        // value from outside or a cast can be, since the build names a record
+        // written where a declared one is read and refuses any other; one
+        // arriving under another name is refused, whatever its type. A
+        // declared name that is not a record type settles as the type it
+        // stands for.
         case let .named(row):
             return try settlingNamed(value, row: row, at: path(), in: table)
 
@@ -2355,8 +2341,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A closure carries what the build derived about its text, its constness
         // and its isolation, and a slot that asks for either reads the
-        // carried fact. A closure that reached here through `Any` or through
-        // an undeclared field is judged here for the first time.
+        // carried fact. A closure that reached here through a cast or from
+        // outside is judged here for the first time.
         case let .procedure(required, returns, constness, isolation):
             return try settlingProcedure(
                 value,

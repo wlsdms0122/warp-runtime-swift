@@ -82,13 +82,15 @@ struct Substitution: Sendable {
         joining join: Join = .holdingBoth,
         in table: LoweredTypeTable
     ) {
-        guard let already = readings[parameter] else {
+        // A reading that leaves, or an empty list's element, holds no value,
+        // so it fills the parameter only where nothing else does.
+        guard let already = readings[parameter], already != .never else {
             readings[parameter] = given
 
             return
         }
 
-        guard already != given else { return }
+        guard already != given, given != .never else { return }
 
         // What else a parameter read two ways is read as is kept apart, so
         // that it is still held to the bounds.

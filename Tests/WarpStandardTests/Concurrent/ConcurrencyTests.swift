@@ -328,6 +328,7 @@ struct ConcurrencyTests {
                         .array([
                             .closure(
                                 Procedure(
+                                    signature: Signature(parameters: [], returns: .int),
                                     body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             )
@@ -389,8 +390,8 @@ struct ConcurrencyTests {
         }
     }
 
-    @Test("map refuses material that is not a collection")
-    func mapRefusesUnfitMaterial() async throws {
+    @Test("map refuses material read as `Any`")
+    func mapRefusesMaterialReadAsAny() async throws {
         // Given. The material arrives as `Any`, which a slot of a type takes
         // only through a cast, so the build refuses it
         let sut = Statement(binding: .constant("walked"), expression: .call(

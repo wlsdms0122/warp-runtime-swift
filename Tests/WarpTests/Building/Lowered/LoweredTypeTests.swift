@@ -351,7 +351,7 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(nil))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
                     body: [],
                     result: .apply(.reference([.key("held")]), arguments: [])
                 )
@@ -385,7 +385,7 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(nil))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
                     body: [],
                     result: .apply(.reference([.key("held")]), arguments: [])
                 )

@@ -305,7 +305,7 @@ struct ClosureTests {
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
-            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(nil))]),
+            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string)))]),
             body: [
                 Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
                 Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))

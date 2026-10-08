@@ -35,6 +35,10 @@ struct JudgementTable: Sendable {
     // last walk read.
     private(set) var asItIs: [Place: Bool] = [:]
 
+    // The name a record built at a place takes: one written where a declared
+    // record is read is built as that record.
+    private(set) var names: [Place: Name] = [:]
+
     // MARK: - Initializer
     init() {
     }
@@ -65,18 +69,33 @@ struct JudgementTable: Sendable {
         writes[place] = settling
     }
 
-    // A reading of a type parameter here may hold what is not a value of
-    // it.
     // Whether the run has nothing to judge where the statement at this
     // place binds or writes.
     func landsAsItIs(at place: Place) -> Bool {
         asItIs[place] == true
     }
 
+    // The name the record built at this place takes, or nil where it is
+    // built under none.
+    func name(ofRecordAt place: Place) -> Name? {
+        names[place]
+    }
+
+    // Whether what the statement at this place binds or writes needs no
+    // judging there. A statement walked again holds what its last walk read.
     mutating func record(asItIs: Bool, at place: Place) {
         self.asItIs[place] = asItIs
     }
 
+    // The names records built at these places take.
+    mutating func record(names: [Place: Name]) {
+        guard !names.isEmpty else { return }
+
+        self.names.merge(names) { _, theirs in theirs }
+    }
+
+    // A reading of a type parameter here may hold what is not a value of
+    // it.
     mutating func loosen() {
         loosened = true
     }
@@ -88,6 +107,7 @@ struct JudgementTable: Sendable {
 
         writes.merge(other.writes) { _, theirs in theirs }
         asItIs.merge(other.asItIs) { _, theirs in theirs }
+        names.merge(other.names) { _, theirs in theirs }
 
         loosened = loosened || other.loosened
     }

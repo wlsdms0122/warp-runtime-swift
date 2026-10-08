@@ -60,8 +60,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // A value that can be called: the types it is applied with, in position
     // order, and what it answers. Nil is a declaration that has not been
-    // written ("some procedure") the way `Any` is for a value, and it is
-    // accepted by anything for the same reason.
+    // written ("some procedure") the way `Any` is for a value: a slot of it
+    // takes any procedure, and a value of it stands where a procedure type
+    // is read once a cast says what it is.
     //
     // Constness and isolation are requirements rather than claims. A declaration
     // never states its own (the builder derives both from what a body does) so
@@ -942,8 +943,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether a value of `other` may stand where this is declared. Exact on
     // records, a declared one by its name and a nameless one by its fields,
     // and one-directional: `Any` on the left accepts anything because nothing
-    // was declared, and `Any` on the right is accepted by anything because
-    // nothing is known. An undeclared answer cannot be proven wrong.
+    // was declared, and a value read as `Any` on the right stands only where
+    // `Any` is declared, until a cast says what it is.
     //
     // This is the half of checking the builder can do. What a body computes is
     // not readable from the text, but what a *call* answers is: it is the

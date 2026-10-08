@@ -39,15 +39,14 @@ indirect enum Operation: Sendable {
     // callee declares a wider one: a type parameter the call filled, the
     // `returns` a value's slot wrote, a contract's answer. Refused at the run
     // the way a value arriving at a parameter is. An answer of the type the
-    // call reads is handed on as it came, which is what lets a tie answer
-    // the side that arrived; one the callee read as `Any` or as a contract
-    // crosses into that type here, as a cast does. Nothing after it stands
-    // on this type's shape: a field read stands on the call inside, and a
-    // binding or a parameter that declares a type judges the value where it
-    // lands. Each variable it handed back in place is judged once the call
-    // is over, whether it answered or failed, and each argument a call of a
-    // value hands on is judged against the slot holding the value before
-    // the value takes it. The build makes one only around a call.
+    // call reads is handed on as it came, which is what lets a tie answer the
+    // side that arrived. Nothing after it stands on this type's shape: a field
+    // read stands on the call inside, and a binding or a parameter that
+    // declares a type judges the value where it lands. Each variable it handed
+    // back in place is judged once the call is over, whether it answered or
+    // failed, and each argument a call of a value hands on is judged against
+    // the slot holding the value before the value takes it. The build makes
+    // one only around a call.
     case checked(Operation, CallJudgement)
 
     case block(LoweredBody)

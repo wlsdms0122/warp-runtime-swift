@@ -46,33 +46,88 @@ extension LoweredType {
     // The same for an expression written into a place of this type: the
     // literals in it, at the depths a list, a record and the answer of a
     // block or an attempt hand on. A record literal written where a declared
-    // record is read takes the record's name here: one written whole is the
-    // named value, and one built from parts is the cast to the record, which
-    // stands, since the build held each part to its field.
+    // record is read is the named value; one built from parts takes the name
+    // where it is built (`naming`).
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
         reaching(expression, in: table) { place, standing in
-            if let nominal = table.record(of: place) {
-                let label = table.labels[nominal]
-                let declared = table.loweredTypes[nominal]
+            if let nominal = table.record(of: place), case let .literal(.record(record)) = standing, record.name == nil {
+                guard case let .record(fields) = table.loweredTypes[nominal].written(.record(record), in: table) else { return nil }
 
-                switch standing {
-                case let .literal(.record(record)) where record.name == nil:
-                    guard case let .record(fields) = declared.written(.record(record), in: table) else { return nil }
-
-                    return .literal(.record(fields.named(label)))
-
-                case .record:
-                    return .cast(declared.written(standing, in: table), as: .named(label), optional: false)
-
-                default:
-                    return nil
-                }
+                return .literal(.record(fields.named(table.labels[nominal])))
             }
 
             guard case let .literal(value) = standing else { return nil }
 
             return .literal(place.written(value, in: table))
         }
+    }
+
+    // The records an expression written into a place of this type builds
+    // where a declared record is read, by the place each is built at, with
+    // the name it takes there: the build held each part to its field, so
+    // the record is the declared one and the run builds it under the name,
+    // with nothing to cast. The depths are the ones `reaching` walks, and
+    // what builds nothing there is not walked into, so its place is never
+    // spelled.
+    func naming(_ expression: Expression, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
+        switch expression {
+        case .record, .array, .block, .attempt:
+            break
+
+        default:
+            return [:]
+        }
+
+        let place = place()
+
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.naming(expression, at: place, in: table)
+
+        case let .named(row):
+            var names = table.loweredTypes[row].naming(expression, at: place, in: table)
+
+            if case .record = expression, let nominal = table.record(of: self) {
+                names[place] = table.labels[nominal]
+            }
+
+            return names
+
+        default:
+            break
+        }
+
+        switch expression {
+        case let .array(items):
+            guard let element = element(in: table) else { return [:] }
+
+            return items.enumerated().reduce(into: [:]) { names, item in
+                names.merge(element.naming(item.element, at: place.child(.element(item.offset)), in: table)) { _, inner in inner }
+            }
+
+        case let .record(fields):
+            return fields.reduce(into: [:]) { names, field in
+                guard let dotted = dotted(field.key, in: table) else { return }
+
+                names.merge(dotted.naming(field.value, at: place.child(.field(field.key)), in: table)) { _, inner in inner }
+            }
+
+        case let .block(block):
+            return naming(block, at: place.child(.held), in: table)
+
+        case let .attempt(block, rescue):
+            return naming(block, at: place.child(.held), in: table)
+                .merging(naming(rescue, at: place.child(.rescue), in: table)) { _, rescued in rescued }
+
+        default:
+            return [:]
+        }
+    }
+
+    // The same for a block standing at a place, whose answer stands where
+    // this is read.
+    func naming(_ block: Block, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
+        block.result.map { result in naming(result, at: place().child(.result), in: table) } ?? [:]
     }
 
     // What a reading is once what it reads is written where this is
@@ -149,7 +204,6 @@ extension LoweredType {
         Block(body: block.body, result: block.result.map { result in completing(result, in: table) })
     }
 
-    // MARK: - Private
     // The walk `written` and `completing` share: an expression standing where
     // this is read, through what may be null and the names around it, at the
     // depths a list, a record and the answer of a block or an attempt hand on.

@@ -860,9 +860,7 @@ struct Evaluator: Sendable {
         guard let against = judging.against else { return answered }
 
         // Judged against what the call reads. An answer of the type it is
-        // read as comes out as it went in; one the callee read as `Any`
-        // crosses into that type here, as a cast from `Any` would, so a
-        // nameless record of a declared record's fields takes the name.
+        // read as comes out as it went in, and one outside it is refused.
         return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 

@@ -189,7 +189,7 @@ struct FailingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "piece", type: .procedure(nil))]
+                        parameters: [Parameter(name: "piece", type: .procedure(ProcedureType(returns: .int)))]
                     ),
                     body: [
                         Statement(

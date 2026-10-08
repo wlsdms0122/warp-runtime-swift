@@ -10,9 +10,8 @@ import Foundation
 // An argument a call of a value hands on, judged against what the slot
 // holding the value reads at its position before the value's own
 // declaration takes it. The declaration may read less than the slot does,
-// so what the build held the argument to is held at the run here: a value
-// read as `Any` or as a contract crosses into the slot's type, and a record
-// literal written there takes the name it reads.
+// so what the slot reads that the build did not prove of the argument, a
+// range above all, is judged at the run here.
 struct HandedOn: Sendable {
     // MARK: - Property
     let position: Int

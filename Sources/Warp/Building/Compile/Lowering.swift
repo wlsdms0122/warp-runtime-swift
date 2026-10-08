@@ -472,9 +472,9 @@ struct Lowering {
         answers: [Name: LoweredType]
     ) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies and the answers read off them.
-        // Read through the walks that rewrite them, so which cases hold a type
-        // is answered in one place; what those walks rebuild is dropped.
+        // rows' bodies and the answers read off them. Read through the walks
+        // that rewrite them, so which cases hold a type is answered in one
+        // place; what those walks rebuild is dropped.
         var types: Set<Int> = []
 
         func stand(_ type: LoweredType) -> LoweredType {
@@ -733,7 +733,7 @@ struct Lowering {
 
         return .record(
             RecordOperation(
-                layout: Layout(name: nil, ordered: ordered.map(\.key)),
+                layout: Layout(name: context.judgements.name(ofRecordAt: place), ordered: ordered.map(\.key)),
                 fields: try ordered.map { name, field in
                     try lower(field, naming: nil, in: scope, on: context, at: place.child(.field(name)))
                 }

@@ -440,6 +440,7 @@ struct Compiler {
                 let (value, written) = try await settled(
                     expression,
                     as: name,
+                    into: nil,
                     at: place,
                     beside: known,
                     of: origin,
@@ -486,10 +487,9 @@ struct Compiler {
 
             // A start written as a literal, or as a closure literal that
             // writes no answer, is read as what the variable declares.
-            let start = variable.declared.map { declared in
-                let declaredType = declared.lowered(in: context.loweredTypes)
-
-                return declaredType.written(
+            let declaredType = variable.declared?.lowered(in: context.loweredTypes)
+            let start = declaredType.map { declaredType in
+                declaredType.written(
                     declaredType.completing(variable.start, in: context.loweredTypes),
                     in: context.loweredTypes
                 )
@@ -499,6 +499,7 @@ struct Compiler {
                 let (settled, written) = try await self.settled(
                     start,
                     as: name,
+                    into: declaredType,
                     at: place,
                     beside: known,
                     of: origin,
@@ -518,7 +519,7 @@ struct Compiler {
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds. It declares its type",
+                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type",
                             at: place
                         )
                     }
@@ -563,10 +564,13 @@ struct Compiler {
     // by the one rule, and carries its own place. A closure it holds runs
     // later, so settling proves nothing about the sends inside it, and they
     // pass the gate every gathered call does. What it is written from is read
-    // rather than run, so it passes the gate an operand does.
+    // rather than run, so it passes the gate an operand does. A record it
+    // builds where what it is written into reads a declared record is built
+    // as that record.
     private func settled(
         _ expression: Expression,
         as name: Name,
+        into declared: LoweredType?,
         at place: Place,
         beside known: [Name: (value: Value, type: LoweredType)],
         of origin: Int,
@@ -575,7 +579,7 @@ struct Compiler {
         leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
-        let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
+        let (judged, calls, sites, written) = try await TypeChecker().resolvedSites(
             in: expression,
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
@@ -586,6 +590,12 @@ struct Compiler {
 
         try TypeChecker().checked(calls, in: context, writing: fulfillment)
         try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
+
+        var judgements = sites
+
+        if let declared {
+            judgements.record(names: declared.naming(judged, at: place, in: context.loweredTypes))
+        }
 
         do {
             let value = try await Folding(

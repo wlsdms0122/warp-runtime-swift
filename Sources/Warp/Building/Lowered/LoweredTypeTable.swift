@@ -316,15 +316,10 @@ final class LoweredTypeTable: Sendable {
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of, so one bounded by the contract
         // answers and one bounded by nothing that answers is refused: a slot
-        // says what a call may fill it with. A composition bounded by the
-        // contract answers too; one bounded by other contracts alone stands
-        // for a type nothing here lists, so nothing is provable and it passes
-        // to be judged where the value arrives, unless `rigid`.
-        case let .parameter(_, bounds):
+        // says what a call may fill it with. A composition is read as the
+        // contracts it names, so it answers those alone.
+        case let .parameter(_, bounds), let .composition(bounds):
             return .settled(bounds.contains(name))
-
-        case let .composition(bounds):
-            return .settled(bounds.contains(name) || !rigid)
 
         // A reading of a type a value is an instance of answers as that type
         // does: by what the documents claim about it, so the type comes back

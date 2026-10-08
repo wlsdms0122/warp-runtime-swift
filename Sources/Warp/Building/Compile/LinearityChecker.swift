@@ -124,10 +124,17 @@ struct LinearityChecker {
                 }
 
                 switch statement.binding {
-                case let .constant(name, _)?, let .variable(name, _)?:
+                // A name declaring the type takes the obligation whatever
+                // wrote the value, since the slot naming it carries it.
+                case let .constant(name, declared)?, let .variable(name, declared)?:
                     held = try moving(statement.expression, held: held, guarded: guarded)
 
-                    guard carriesObligation(statement.expression, held: held) else { continue }
+                    guard
+                        declared?.handedOnce(in: context.types) == true
+                            || carriesObligation(statement.expression, held: held)
+                    else {
+                        continue
+                    }
 
                     held.live.insert(name)
                     held.moved.remove(name)
