@@ -167,6 +167,30 @@ struct TextTests {
         }
     }
 
+    @Test("an encoding the procedures do not have, arriving at the run, is refused in the same words")
+    func anUnknownEncodingRefusesAtTheRun() async throws {
+        // Given. The name is what a variable holds, so only the run meets it
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
+                    result: .call(Call(
+                        selector: "Standard.Text.encoded",
+                        arguments: [.literal(.string("hi")), .reference([.key("named")])]
+                    ))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await run(sut)
+        } throws: { error in
+            "\(error)".contains("Standard.Text.encoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+        }
+    }
+
     @Test("a list holding what is no byte, written as a constant, refuses at the build by the element")
     func aListHoldingNoByteRefusesAtTheBuild() async throws {
         // Given

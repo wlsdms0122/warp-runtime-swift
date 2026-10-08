@@ -402,7 +402,6 @@ struct TypeChecker {
     // carries.
     private func held(
         _ written: LiteralShape,
-        valued constant: Value?,
         to returns: TypeExpression?,
         at place: Place,
         in table: LoweredTypeTable,
@@ -418,21 +417,6 @@ struct TypeChecker {
                     + " declaration promises \(returns)",
                 at: place
             )
-        }
-
-        // A constant answer is a value as well as a type, so it is held to
-        // what the promise admits, the way a constant argument is held to its
-        // slot, read as the promise reads it where it is a literal.
-        if let constant {
-            do {
-                try promised.admitting(promised.written(constant, in: table), at: "answer", in: table)
-            } catch {
-                throw BuildError(
-                    "answers \(written.rendered(in: table)), and its"
-                        + " declaration promises \(returns): \(error)",
-                    at: place
-                )
-            }
         }
 
         // A composition the declaration promises holds the answer to its
@@ -1350,12 +1334,11 @@ struct TypeChecker {
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(LiteralShape(one.literalShape, reading: one.reading), valued: one.value, to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(LiteralShape(one.literalShape, reading: one.reading), to: returns, at: one.place, in: table, fulfillment: fulfillment)
         }
 
         try held(
             answer,
-            valued: result?.constantValue,
             to: returns,
             at: place.part(result != nil ? .result : .returns),
             in: table,
@@ -1600,7 +1583,7 @@ struct TypeChecker {
 
                 var answering = flowed
                 answering.answered = flowed.answered + [
-                    (carried?.reading ?? .null, carried?.literalShape, carried?.rewritten.constantValue, place)
+                    (carried?.reading ?? .null, carried?.literalShape, place)
                 ]
 
                 return answering

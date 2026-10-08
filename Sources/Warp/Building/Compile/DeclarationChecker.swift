@@ -155,8 +155,8 @@ struct DeclarationChecker {
     }
 
     // Everything a signature is held to where it is declared: every type it
-    // mentions resolves, and every bound it names is declared and single. The facts every consumer of the
-    // signature reads instead of re-deriving.
+    // mentions resolves, and every bound it names is declared and single. The
+    // facts every consumer of the signature reads instead of re-deriving.
     private func judge(
         _ signature: Signature,
         at place: Place,
