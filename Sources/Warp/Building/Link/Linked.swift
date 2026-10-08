@@ -257,13 +257,14 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, as: "entry '\(label)'", in: table)
     }
 
-    // What a procedure the host answers hands back, a value from outside
-    // fitted to what it declares at the door it comes through, the way an
-    // entry's arguments are.
-    func fitted(answered value: Value) -> Value {
-        guard let returns, returns.reachesRecord else { return value }
+    // What a procedure the host answers hands back, at the door it comes
+    // through: a value from outside, fitted to what the procedure declares
+    // the way an entry's arguments are, and judged against it the way a
+    // body's answer is.
+    func settling(answered value: Value) throws -> Value {
+        guard let returns else { return value }
 
-        return returns.fitted(value, in: table)
+        return try returns.settling(returns.reachesRecord ? returns.fitted(value, in: table) : value, at: "returns", in: table)
     }
 
     // The returned value, checked against what was declared.
