@@ -255,18 +255,6 @@ struct ClaimChecker {
 
         let claimed = languageType ?? .named(type)
 
-        // A value written `linear` is followed by the name that holds it, and
-        // a contract standing where a type is written holds a value under no
-        // name of its own.
-        guard !claimed.handedOnce(in: table) else {
-            throw BuildError(
-                "'\(type)' is handed on once and answers no contract. A value written"
-                    + " `linear` is followed by the name that holds it, and a contract"
-                    + " standing where a type is written holds a value under no name",
-                at: claim.place
-            )
-        }
-
         var answering: [Name: Name] = [:]
 
         for (procedure, wanted) in asked.held.sorted(by: { $0.key < $1.key }) {

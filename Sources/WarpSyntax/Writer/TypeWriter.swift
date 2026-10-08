@@ -157,18 +157,12 @@ struct TypeWriter {
                 "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
 
-        // A record, a procedure and a type handed on once are all written as a
-        // mapping, and the one key is what tells them apart.
+        // A record and a procedure are both written as a mapping, and the one
+        // key is what tells them apart.
         case let .record(fields):
             return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
 
-        // Written under its own key, which is where a record can carry it: the
-        // type a declared type is handed on once is usually written inline,
-        // and there is no front of a record to write a keyword on.
-        case let .linear(inner):
-            return .dictionary([TypeReader.linearKey: try value(of: inner)])
-
-        // All four marks are written the same way, so the writing is said once
+        // Both marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries
         // is what the writing needs and a pattern cannot hand it over.
         case let .variable(inner):
@@ -176,12 +170,6 @@ struct TypeWriter {
 
         case let .inout(inner):
             return try value(of: inner, under: .inout)
-
-        case let .consuming(inner):
-            return try value(of: inner, under: .consuming)
-
-        case let .borrowing(inner):
-            return try value(of: inner, under: .borrowing)
 
         case let .procedure(type, constness, isolation):
             guard let type else { return .string(TypeReader.procedureSpelling(constness, isolation, as: .name)) }
@@ -223,8 +211,6 @@ struct TypeWriter {
         case let .nullable(inner): return .nullable(canonical(inner))
         case let .variable(inner): return .variable(canonical(inner))
         case let .inout(inner): return .inout(canonical(inner))
-        case let .consuming(inner): return .consuming(canonical(inner))
-        case let .borrowing(inner): return .borrowing(canonical(inner))
         default: return type
         }
     }
@@ -305,15 +291,6 @@ struct TypeWriter {
 
         case let .inout(inner):
             return .inout(stripped(inner))
-
-        case let .linear(inner):
-            return .linear(stripped(inner))
-
-        case let .consuming(inner):
-            return .consuming(stripped(inner))
-
-        case let .borrowing(inner):
-            return .borrowing(stripped(inner))
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return type

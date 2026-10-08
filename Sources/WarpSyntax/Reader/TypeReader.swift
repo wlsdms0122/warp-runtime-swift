@@ -101,15 +101,12 @@ public struct TypeReader: Decodable {
     // MARK: - Property
     public let type: TypeExpression
 
-    // The one key a type handed on once is written under.
-    public static let linearKey: Name = "linear"
-
     // The one key a record type is written under.
     public static let recordKey: Name = "record"
 
     // What a type that is neither a spelling nor a form is refused with.
     private static let unread = "a type is a name like `String`, `Array<String>` or"
-        + " `Task`, or a mapping under one of `record`, `procedure`, `linear`, `array`"
+        + " `Task`, or a mapping under one of `record`, `procedure`, `array`"
         + " and `dictionary`. A record type is written { record: { id: String } }"
 
     // MARK: - Initializer
@@ -482,10 +479,6 @@ public struct TypeReader: Decodable {
             let written = TypeExpression.procedure(form.type, constness, isolation)
 
             return mark?.marking(written) ?? written
-
-        // A declared type handed on once.
-        case let .one(.linear, key):
-            return .linear(try keyed.decode(TypeReader.self, forKey: key).type)
 
         // An array or a dictionary of something with no spelling of its own:
         // an array of procedures has no name, so it is written here.

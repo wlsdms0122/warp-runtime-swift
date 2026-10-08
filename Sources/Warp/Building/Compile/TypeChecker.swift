@@ -1758,15 +1758,6 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
-            if optional, type.handedOnce(in: context.types) {
-                try refuse(
-                    "reads a value as '\(type.rendered)', which is handed on exactly"
-                        + " once, and may answer nothing. \(LinearityChecker.followedByAName)",
-                    at: place,
-                    when: ask
-                )
-            }
-
             // A cast reads a value and is no place a literal is written into,
             // so a whole literal in what it reads is the Int it is, at every
             // depth.
@@ -2450,20 +2441,6 @@ struct TypeChecker {
             let filled = substitution(over: slots, readings: sent, in: context.loweredTypes).readings
 
             let taking = slots.map { slot in slot.type.filling(filled) }
-
-            // What fills a type parameter is the call's, so a body taking a
-            // value handed on once there has no name to carry the obligation
-            // on.
-            for (parameter, reading) in filled.sorted(by: { $0.key < $1.key })
-            where reading.spelled(in: context.loweredTypes)?.handedOnce(in: context.types) == true {
-                try refuse(
-                    "sending '\(call.selector)' fills '\(parameter)' with \(reading.rendered(in: context.loweredTypes)),"
-                        + " which is handed on exactly once. \(LinearityChecker.followedByAName), and what fills a"
-                        + " type parameter is the call's",
-                    at: place,
-                    when: ask
-                )
-            }
 
             try handedInPlace(
                 call.arguments,

@@ -82,30 +82,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // a variable, and what arrives is the inner type.
     case `inout`(TypeExpression)
 
-    // A value that is handed on exactly once. Written on a declared type, so
-    // the obligation rides with the name wherever it is mentioned rather than
-    // being something a slot could take off.
-    //
-    // Unlike `var` and `inout` this says nothing about the slot: what it marks
-    // is the value, and what it costs is that every body holding one has to
-    // give it away on every way through. It is gone by the time anything is
-    // lowered, because the whole of it is proven at the build.
-    case linear(TypeExpression)
-
-    // A parameter that takes the obligation a `linear` value carries. The
-    // caller's name is empty afterwards, and this slot is answerable for
-    // handing the value on in its turn. Only a parameter's type is one.
-    case consuming(TypeExpression)
-
-    // A parameter that reads a `linear` value and leaves the obligation where
-    // it was. Nothing is handed over, so the caller still holds the value and
-    // still has to hand it on. Only a parameter's type is one.
-    //
-    // No lifetime rides with this. The language has no references, so what a
-    // slot took is a value of its own and cannot outlive what it was read
-    // from.
-    case borrowing(TypeExpression)
-
     // The declared type, or null. The one union the language has, and it is
     // null-only on purpose. `?.` answers this; a general union would put back
     // the "is it this or that" question the whole type system exists to
@@ -582,15 +558,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .inout(inner):
             return "inout \(inner.rendered)"
 
-        case let .linear(inner):
-            return "linear \(inner.rendered)"
-
-        case let .consuming(inner):
-            return "consuming \(inner.rendered)"
-
-        case let .borrowing(inner):
-            return "borrowing \(inner.rendered)"
-
         case let .procedure(type, constness, isolation):
             let spelling = [
                 constness == .const ? "const" : nil,
@@ -698,8 +665,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .procedure(type, _, _):
             type?.mentions ?? []
 
-        case let .variable(inner), let .inout(inner), let .linear(inner), let .nullable(inner),
-            let .consuming(inner), let .borrowing(inner):
+        case let .variable(inner), let .inout(inner), let .nullable(inner):
             inner.mentions
 
         case let .named(name):
@@ -726,7 +692,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .projection, .composition, .selfType:
             return []
 
-        case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
+        case let .array(element), let .dictionary(element), let .nullable(element):
             return element.parameterOccurrences
 
         case let .record(fields):
@@ -735,7 +701,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .procedure(type, _, _):
             return type?.parameterOccurrences ?? []
 
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+        case let .variable(inner), let .inout(inner):
             return inner.parameterOccurrences
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
@@ -753,7 +719,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .parameter, .projection:
             return true
 
-        case let .array(element), let .dictionary(element), let .nullable(element), let .linear(element):
+        case let .array(element), let .dictionary(element), let .nullable(element):
             return element.isGeneric
 
         case let .record(fields):
@@ -762,7 +728,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .procedure(type, _, _):
             return type?.isGeneric ?? false
 
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
+        case let .variable(inner), let .inout(inner):
             return inner.isGeneric
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .selfType:
@@ -771,19 +737,18 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // The type a slot's mark stands in front of, where it has one, and the type
-    // itself otherwise. What arrives through `inout`, `consuming` or
-    // `borrowing` is the inner type, and every question about what fits asks
-    // that.
+    // itself otherwise. What arrives through `inout` is the inner type, and
+    // every question about what fits asks that.
     //
     // No `default`: a mark nobody thought about must be a compile error here
     // rather than an answer of "no mark".
     public var slotUnwrapped: TypeExpression {
         switch self {
-        case let .inout(inner), let .consuming(inner), let .borrowing(inner):
+        case let .inout(inner):
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .variable, .linear,
+            .ranged, .array, .dictionary, .record, .procedure, .variable,
             .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
@@ -806,8 +771,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .inout, .linear,
-            .consuming, .borrowing, .nullable, .named, .parameter, .projection, .composition, .selfType:
+            .ranged, .array, .dictionary, .record, .procedure, .inout,
+            .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
     }
@@ -855,9 +820,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .projection, .composition, .selfType:
             return self
 
-        case let .linear(inner):
-            return .linear(inner.bounded(by: bounds))
-
         case let .array(element):
             return .array(element.bounded(by: bounds))
 
@@ -878,12 +840,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case let .inout(inner):
             return .inout(inner.bounded(by: bounds))
-
-        case let .consuming(inner):
-            return .consuming(inner.bounded(by: bounds))
-
-        case let .borrowing(inner):
-            return .borrowing(inner.bounded(by: bounds))
 
         case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
             return self
@@ -917,15 +873,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .inout(inner):
             return .inout(inner.replacingSelf(with: type))
 
-        case let .linear(inner):
-            return .linear(inner.replacingSelf(with: type))
-
-        case let .consuming(inner):
-            return .consuming(inner.replacingSelf(with: type))
-
-        case let .borrowing(inner):
-            return .borrowing(inner.replacingSelf(with: type))
-
         case let .nullable(inner):
             return .nullable(inner.replacingSelf(with: type))
 
@@ -958,53 +905,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
-    // Whether values of this type are handed on once, through the names it may
-    // hide behind. The walk follows names and nothing else, and a name it is
-    // already walking through is one that comes back on itself, which stands
-    // for no type and so for no value handed on.
-    func handedOnce(in table: TypeTable) -> Bool {
-        handedOnce(in: table, assuming: [])
-    }
-
     // MARK: - Private
-    // The same question, carrying the names already being walked through.
-    // No `default`: a type nobody thought about must be a compile error here
-    // rather than an answer of no.
-    private func handedOnce(in table: TypeTable, assuming: Set<Name>) -> Bool {
-        switch self {
-        case .linear:
-            return true
-
-        case let .named(name):
-            guard !assuming.contains(name), let declared = table.types[name] else { return false }
-
-            return declared.handedOnce(in: table, assuming: assuming.union([name]))
-
-        // A parameter or a composition stands for whatever type the call or
-        // the value put there, which the build never wrote down, and a
-        // contract says what procedures a type answers and not how its
-        // values are handed on.
-        case .parameter, .composition:
-            return false
-
-        case let .variable(inner), let .inout(inner), let .consuming(inner), let .borrowing(inner):
-            return inner.handedOnce(in: table, assuming: assuming)
-
-        // A nullable of one is refused where it is written, because "hand it on
-        // if it is there" is not something this language says. So nothing is
-        // one behind a `?`.
-        case .nullable:
-            return false
-
-        // None of these is one, and none of them carries one: a value handed on
-        // once is followed by the name that holds it, and a name does not go
-        // into a type.
-        case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .projection, .selfType:
-            return false
-        }
-    }
-
     // A name already being walked through stands as itself. A type may name
     // itself (`Tree` holding `Array<Tree>` is a declared type) so a walk that
     // expanded every name at every depth would chase one forever. The link

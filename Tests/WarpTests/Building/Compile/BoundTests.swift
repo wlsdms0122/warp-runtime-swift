@@ -503,33 +503,6 @@ struct BoundTests {
         }
     }
 
-    @Test("a type handed on once answers no contract")
-    func aLinearTypeAnswersNoContract() async throws {
-        // Given. A contract standing where a type is written holds a value
-        // under no name, and nothing follows a value handed on once but the
-        // name that holds it
-        let sut = try Module(
-            types: ["App.Handle": .linear(.record(["name": .string]))],
-            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
-            claims: ["App.Handle": ["App.Describable"]],
-            procedures: [
-                "App.Handle.describe": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .borrowing(.named("App.Handle")))], returns: .string),
-                    body: [],
-                    result: .literal(.string("a handle"))
-                ),
-                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("is handed on once and answers no contract")
-        }
-    }
-
     @Test("a contract's procedure holds one name to one set of bounds")
     func aContractProcedureHoldsOneNameToOneSet() async throws {
         // Given. The contract's procedure bounds `T` by `A` in one slot and

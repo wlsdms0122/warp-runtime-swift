@@ -71,11 +71,6 @@ extension TypeExpression {
         case let .nullable(inner):
             return .nullable(inner.lowered(in: table))
 
-        // No mark survives lowering: what one says is proven at the build, and
-        // there is nothing left for a run to keep.
-        case let .linear(inner), let .consuming(inner), let .borrowing(inner):
-            return inner.lowered(in: table)
-
         // Types and contracts are two tables and no name is in both, so a
         // mention is looked for in each. A contract standing as a type is a
         // value of whatever answers it.

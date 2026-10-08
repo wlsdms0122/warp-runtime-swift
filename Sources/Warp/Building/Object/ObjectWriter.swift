@@ -285,15 +285,6 @@ struct ObjectWriter {
         case let .inout(held):
             return tagged(Tag.`inout`, try type(held))
 
-        case let .linear(held):
-            return tagged(Tag.linear, try type(held))
-
-        case let .consuming(held):
-            return tagged(Tag.consuming, try type(held))
-
-        case let .borrowing(held):
-            return tagged(Tag.borrowing, try type(held))
-
         case let .nullable(held):
             return tagged(Tag.nullable, try type(held))
 

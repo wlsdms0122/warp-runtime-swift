@@ -62,7 +62,6 @@ struct DeclarationChecker {
                 in: declaration.held,
                 at: declaration.place,
                 parameterized: false,
-                declaring: true,
                 resolve: table
             )
         }
@@ -141,7 +140,6 @@ struct DeclarationChecker {
 
         for (place, inner) in closures(in: subexpressions) {
             try judge(inner.signature, at: place, in: table)
-            try judge(carried: inner.signature.type, at: place, in: table)
         }
 
         for (place, named) in castTypes(in: subexpressions) {
@@ -174,7 +172,6 @@ struct DeclarationChecker {
                 parameterized: true,
                 resolve: table
             )
-            try saysWhatItDoes(with: parameter.declared, at: here, in: table)
             try judge(parameter, at: here, in: table)
         }
 
@@ -288,24 +285,8 @@ struct DeclarationChecker {
         in type: TypeExpression,
         at place: Place,
         parameterized: Bool,
-        declaring: Bool = false,
-        nested: Bool = false,
         resolve table: TypeTable
     ) throws {
-        // A value handed on once is followed by the name that holds it, so
-        // it stands where a name can hold it and nowhere else. Inside another
-        // type there is no name to follow, and what the type does with what
-        // it carries is not something the build can read.
-        guard !nested || !type.handedOnce(in: table) else {
-            throw BuildError(
-                "carries '\(type.rendered)' inside another type, and a value written"
-                    + " `linear` is followed by the name that holds it."
-                    + " Nothing follows one inside a list, a record or"
-                    + " another declaration",
-                at: place
-            )
-        }
-
         switch type {
         case .any, .never, .null, .bool, .int, .double, .string:
             return
@@ -373,14 +354,11 @@ struct DeclarationChecker {
         case let .procedure(type, _, _):
             guard let type else { return }
 
-            try judge(carried: type, at: place, in: table)
-
             for (position, parameter) in type.parameters.enumerated() {
                 try mentioned(
                     in: parameter.slotUnwrapped,
                     at: place.index(position),
                     parameterized: parameterized,
-                    nested: nested,
                     resolve: table
                 )
             }
@@ -427,7 +405,7 @@ struct DeclarationChecker {
             }
 
         case let .array(element), let .dictionary(element):
-            try mentioned(in: element, at: place, parameterized: parameterized, nested: true, resolve: table)
+            try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
 
         // The reader refuses a `?` that says nothing new, but the reader sees
         // spellings, and a name may hide one of the refused types behind it.
@@ -455,17 +433,6 @@ struct DeclarationChecker {
                 break
             }
 
-            // What a value handed on once needs is a name holding it on every way
-            // through, and a `?` says there is a way through where nothing is
-            // there. So the mark and the doubt do not stand together.
-            guard !inner.handedOnce(in: table) else {
-                throw BuildError(
-                    "writes `?` on \(inner.rendered), which is handed on exactly"
-                        + " once. \(LinearityChecker.followedByAName)",
-                    at: place
-                )
-            }
-
             try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
 
         // A field written `var` is a fact about a declared type: a path may
@@ -483,7 +450,6 @@ struct DeclarationChecker {
                     in: held,
                     at: place.part(.fields).key(name.spelling),
                     parameterized: parameterized,
-                    nested: true,
                     resolve: table
                 )
             }
@@ -501,89 +467,7 @@ struct DeclarationChecker {
                     + " is written through. `var` is written on a field in `types`",
                 at: place
             )
-
-        // Both say what a slot does with the obligation a `linear` value
-        // carries, so both stand where a slot is written and nowhere else. A
-        // parameter's own type is stripped of them before it reaches here.
-        case .consuming, .borrowing:
-            throw BuildError(
-                "writes `\(type.rendered)`, and only a parameter says what it does"
-                    + " with a value handed on once. `consuming` and `borrowing`"
-                    + " are written on a parameter's type",
-                at: place
-            )
-
-        // Only a declared type is handed on once. The obligation rides with
-        // the name, so a slot mentioning the name has it and a slot writing
-        // the procedure would be claiming it for a type nothing declared it of.
-        case let .linear(inner):
-            guard declaring else {
-                throw BuildError(
-                    "writes `\(type.rendered)`, and only a declared type is"
-                        + " handed on once. `linear` is written on a type in `types`,"
-                        + " and a slot naming that type carries it",
-                    at: place
-                )
-            }
-
-            try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
         }
-    }
-
-    // A slot taking a value handed on once says which way it takes it, and one
-    // taking anything else says neither. Silence read as taking the obligation
-    // is what kept a procedure from reading one without taking it, and a mark
-    // where nothing is handed on once is a claim about nothing, refused the way
-    // a `?` that says nothing new is.
-    private func saysWhatItDoes(
-        with declared: TypeExpression,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        switch declared {
-        // The mark names the type, because that is what the build follows the
-        // value by. What fills a type parameter or a composition is the call's,
-        // so a body taking one there has no name to carry the obligation on
-        // and the proof would end at this slot.
-        case .consuming, .borrowing:
-            guard !declared.slotUnwrapped.handedOnce(in: table) else { return }
-
-            throw BuildError(
-                "takes '\(declared.rendered)', and a slot says what it does with a"
-                    + " value handed on once by naming the type that is one. No"
-                    + " value of the type written here is",
-                at: place
-            )
-
-        default:
-            guard declared.slotUnwrapped.handedOnce(in: table) else { return }
-
-            throw BuildError(
-                "takes '\(declared.rendered)', which is handed on once, and says"
-                    + " nothing about what it does with it. A parameter taking one"
-                    + " writes `consuming` where the obligation moves to it, and"
-                    + " `borrowing` where the obligation stays with the caller",
-                at: place
-            )
-        }
-    }
-
-    // A body carried as a value, held to what it may answer. What a procedure
-    // answers is followed by the name that holds it, and no walk enters a body
-    // carried as a value: a closure runs where the text that wrote it cannot
-    // see, so what it hands back would arrive with nothing to say it is owed.
-    //
-    // A declaration is not held to this. Its body is text a walk reads, and
-    // what it answers lands on the name its caller binds.
-    private func judge(carried type: ProcedureType, at place: Place, in table: TypeTable) throws {
-        guard let returns = type.returns, returns.handedOnce(in: table) else { return }
-
-        throw BuildError(
-            "writes a procedure answering \(returns.rendered), which is handed on"
-                + " exactly once. \(LinearityChecker.followedByAName), and a body carried as a"
-                + " value runs where no name is watching",
-            at: place
-        )
     }
 
     // Every type a cast names in here, however deep, each with where it was

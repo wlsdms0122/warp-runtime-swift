@@ -343,9 +343,6 @@ struct ObjectReader {
 
         case .variable: read = .variable(try expression(cursor.next()))
         case .`inout`: read = .inout(try expression(cursor.next()))
-        case .linear: read = .linear(try expression(cursor.next()))
-        case .consuming: read = .consuming(try expression(cursor.next()))
-        case .borrowing: read = .borrowing(try expression(cursor.next()))
         case .nullable: read = .nullable(try expression(cursor.next()))
         case .named: read = .named(try name(cursor.next()))
         case .parameter:

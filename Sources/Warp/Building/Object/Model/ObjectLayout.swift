@@ -74,9 +74,6 @@ enum ObjectLayout {
         case procedure
         case variable
         case `inout`
-        case linear
-        case consuming
-        case borrowing
         case nullable
         case named
         case parameter

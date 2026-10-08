@@ -19,9 +19,7 @@ struct ModifierNotationTests {
         ("inout Int", TypeExpression.inout(.int)),
         ("inout Int?", .inout(.nullable(.int))),
         ("var Array<Int>", .variable(.array(.int))),
-        ("inout Procedure", .inout(.procedure(nil))),
-        ("consuming Handle", .consuming(.named("Handle"))),
-        ("borrowing Handle", .borrowing(.named("Handle")))
+        ("inout Procedure", .inout(.procedure(nil)))
     ])
     func everyMarkStandsInFrontOfTheWholeType(written: String, expected: TypeExpression) throws {
         // When / Then
@@ -151,7 +149,7 @@ struct ModifierNotationTests {
 
     @Test(
         "a record's only field may be named for a key the reading takes another way",
-        arguments: ["procedure", "var procedure", "const isolated Procedure", "linear", "array", "record"]
+        arguments: ["procedure", "var procedure", "const isolated Procedure", "array", "record"]
     )
     func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) throws {
         // Given. A record type is written under `record`, so its field names
@@ -230,8 +228,7 @@ struct ModifierNotationTests {
     }
 
     @Test("a keyword written twice is refused", arguments: [
-        "inout inout Int", "var var Int", "const const Procedure", "isolated isolated Procedure",
-        "consuming consuming Handle", "consuming borrowing Handle", "borrowing inout Handle"
+        "inout inout Int", "var var Int", "const const Procedure", "isolated isolated Procedure"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
         // When / Then

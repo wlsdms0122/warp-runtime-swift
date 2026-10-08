@@ -166,17 +166,6 @@ struct Compiler {
 
             try TypeChecker().checked(answer.calls, in: context(), writing: fulfillment)
 
-            // Read off the body the build is about to lower, so what is proven
-            // is what runs. The environment is the one the body was judged in.
-            if let rewritten = answer.procedure.block {
-                try LinearityChecker().consumed(
-                    rewritten,
-                    at: symbol.place,
-                    holding: declaration.signature,
-                    in: context()
-                )
-            }
-
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
@@ -525,12 +514,9 @@ struct Compiler {
                         )
                     }
 
-                    try self.refuseHandedOnce(holding, at: place, in: context)
                     started[name] = (settled, holding)
                     return
                 }
-
-                try self.refuseHandedOnce(holding, at: place, in: context)
 
                 // What the start reads is held to what the variable declares,
                 // the way a name's value is: a nameless record takes a
@@ -555,18 +541,6 @@ struct Compiler {
         }
 
         return started
-    }
-
-    // A module variable is a box every run starts holding, and nothing hands
-    // its value on, so it holds no value handed on exactly once.
-    private func refuseHandedOnce(_ holding: LoweredType, at place: Place, in context: TypingContext) throws {
-        guard let spelled = holding.spelled(in: context.loweredTypes), spelled.handedOnce(in: context.types) else { return }
-
-        throw BuildError(
-            "holds \(holding.rendered(in: context.loweredTypes)), which is handed on exactly once."
-                + " Every run starts a module variable holding it, and nothing hands it on",
-            at: place
-        )
     }
 
     // What a constant or a variable's start settles to, beside the shape it

@@ -35,8 +35,8 @@ import Foundation
 // Two stages. Compiling (`Compiler`, one document at a time) settles
 // everything a document says against the interfaces it reaches: its
 // declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
-// facts nobody declared (`Derivation`), its bodies (`TypeChecker`,
-// `LinearityChecker`) and lowering (`Lowering`). It runs the procedures a
+// facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
+// lowering (`Lowering`). It runs the procedures a
 // constant calls, which is what folding is. Linking takes what that
 // answered, judges what only the whole list can answer, and runs nothing.
 public struct Builder: Sendable {
