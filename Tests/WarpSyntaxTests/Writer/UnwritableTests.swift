@@ -144,31 +144,6 @@ struct UnwritableTests {
         }
     }
 
-    @Test("a range bounded by a fraction with no spelling has no document")
-    func aRangeWithAnUnspellableBoundIsRefused() throws {
-        // When / Then. The bounds are the whole of what a range is written as,
-        // so a bound with no spelling leaves nothing to write. The language
-        // admits an infinity on purpose (it orders like any other bound) and
-        // what a message shows it in reads back as an error rather than as the
-        // range.
-        #expect(
-            try sut.value(of: TypeExpression.ranged(.whole(from: 0, to: .through(255))))
-                == .string("Int(0...255)")
-        )
-        #expect(
-            try sut.value(of: TypeExpression.ranged(.fraction(from: 0)))
-                == .string("Double(0.0...)")
-        )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.ranged(.fraction(from: 0, to: .through(.infinity))))
-        }
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.ranged(.fraction(to: .through(.nan))))
-        }
-    }
-
     @Test("a path holding a name no path spells has no document")
     func aPathWithAnUnspellableNameIsRefused() throws {
         // Given. A name holding a dot or a bracket is one segment to the

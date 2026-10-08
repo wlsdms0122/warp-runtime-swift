@@ -142,10 +142,10 @@ struct TextTests {
         }
     }
 
-    @Test("an encoding the procedures do not name refuses at the build")
+    @Test("an encoding the procedures do not name refuses at the run")
     func anUnknownEncodingRefuses() async throws {
-        // Given. The enum names the encodings, and a constant is judged at the
-        // build
+        // Given. The procedure knows the encodings it has, and says them where
+        // it refuses another
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -161,9 +161,9 @@ struct TextTests {
 
         // When / Then
         await #expect {
-            try await Builder().build([sut] + Module.standard)
+            try await run(sut)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'utf16' not in enum")
+            "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has: utf8")
         }
     }
 

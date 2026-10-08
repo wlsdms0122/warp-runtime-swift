@@ -329,7 +329,7 @@ struct ValueDecoder: Decoder {
     }
 
     func unkeyedContainer() throws -> UnkeyedDecodingContainer {
-        // Through the one projection that owns the `bytes = Array<Standard.Byte>`
+        // Through the one projection that owns the `bytes = Array<Int>`
         // equation, so a compact spelling is walked where a long one is. The
         // same equation the writer puts them out through. Asking for `Data` is
         // still answered by `decode` below, which holds bytes to their own

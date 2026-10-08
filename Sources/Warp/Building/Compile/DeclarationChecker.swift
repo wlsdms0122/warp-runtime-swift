@@ -172,7 +172,6 @@ struct DeclarationChecker {
                 parameterized: true,
                 resolve: table
             )
-            try judge(parameter, at: here, in: table)
         }
 
         // Two parameters under one name would be one name the body reads
@@ -230,48 +229,6 @@ struct DeclarationChecker {
         }
     }
 
-    // Whether a parameter's own declaration can be satisfied at all. Facts it
-    // states about itself, judged wherever a parameter is written: an `enum`
-    // none of whose candidates the declared type admits is a parameter no call
-    // could ever fit.
-    private func judge(
-        _ parameter: Parameter,
-        at place: Place,
-        in table: TypeTable
-    ) throws {
-        // The declaration as the boundary reads it, so what the build calls
-        // dead is exactly what the boundary would never match.
-        let type = parameter.declared.lowered(in: table.loweredTypes)
-
-        if let allowed = parameter.candidates {
-            // Candidate by candidate: a spelling the declared type cannot spell
-            // is a member no call could ever match, and a dead member is the
-            // declaration's own defect whether live ones stand beside it or
-            // not. One pass reads both facts. A list that is empty or entirely
-            // dead refuses by the plainer name, a dead member among live ones
-            // is named.
-            let dead = allowed.filter { candidate in
-                !type.spells(candidate, in: table.loweredTypes)
-            }
-
-            if dead.count == allowed.count {
-                throw BuildError(
-                    "enum admits nothing, so no call could ever fit",
-                    at: place
-                )
-            }
-
-            if let first = dead.first {
-                throw BuildError(
-                    "enum lists '\(first)', which"
-                        + " \(parameter.declared.rendered) does not admit."
-                        + " No call could ever match it",
-                    at: place
-                )
-            }
-        }
-    }
-
     // A named type may name itself, so this checks that a name resolves rather
     // than walking into what it resolves to.
     //
@@ -304,29 +261,6 @@ struct DeclarationChecker {
                     + " only that body can read",
                 at: place
             )
-
-        // The bounds are the declaration's own claim, so an order the numbers
-        // refuse is refused where it was written. A range below its own floor
-        // is a slot no call could ever fit, the way an empty `enum` is.
-        case let .ranged(refinement):
-            if refinement.saysNothing {
-                throw BuildError(
-                    "writes `\(type.rendered)` with neither bound."
-                        + " A range that says nothing is spelled"
-                        + " `\(refinement.kind.rendered)`",
-                    at: place
-                )
-            }
-
-            if refinement.admitsNothing {
-                throw BuildError(
-                    "writes `\(type.rendered)`, which admits nothing."
-                        + " No \(refinement.kind.rendered) is inside it",
-                    at: place
-                )
-            }
-
-            return
 
         // A contract's procedures read `Self` as the type answering the
         // contract before they are judged, so one standing here stands

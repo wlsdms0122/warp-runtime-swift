@@ -27,7 +27,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // it.
     case wholeLiteral
 
-    case ranged(TypeExpression.Refinement)
     case array(LoweredType)
     case dictionary(LoweredType)
 
@@ -97,7 +96,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .inout, .nullable,
+            .array, .dictionary, .record, .procedure, .inout, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
             return self
         }
@@ -134,7 +133,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return (parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (returns?.namesParameter ?? false)
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection, .undeclared:
             return false
         }
     }
@@ -166,7 +165,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 found.merge(part.boundedParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection, .undeclared:
             return [:]
         }
     }
@@ -179,7 +178,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner.slotUnwrapped
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .nullable,
+            .array, .dictionary, .record, .procedure, .nullable,
             .named, .parameter, .composition, .projection, .undeclared:
             return self
         }
@@ -202,13 +201,10 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The spelling with its conditions dropped: a range is its kind, and a
-    // literal whole number is an Int.
+    // The spelling with what only a reading says dropped: a literal whole
+    // number is an Int.
     var unrefined: LoweredType {
         switch self {
-        case let .ranged(refinement):
-            return refinement.lowered
-
         case .wholeLiteral:
             return .int
 
@@ -291,7 +287,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .record(record):
             return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.asHeld)))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .procedure, .variable, .inout,
+        case .any, .never, .null, .bool, .int, .double, .string, .procedure, .variable, .inout,
             .named, .parameter, .composition, .projection, .undeclared:
             return self
         }
@@ -353,7 +349,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .parameter, .composition, .projection,
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection,
             .undeclared:
             return false
         }
@@ -651,8 +647,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
         guard self != other else { return self }
 
-        // Unequal spellings may still be one type: the equations (a range is an
-        // int with a condition, bytes are `Array<Standard.Byte>`) are read through their
+        // Unequal spellings may still be one type: the equations (a whole
+        // literal is an int, bytes are `Array<Int>`) are read through their
         // normal forms before the join gives up, and two arrays join by their
         // elements so the equation holds inside one.
         let mine = unrefined
@@ -693,8 +689,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The type a value read as this is an instance of, under the name a
     // claim writes and `Value.nominal` answers once the value arrives: a
-    // declared record by its name, a range as its kind, bytes as the list
-    // they are, and a record with no name as the map it is. Nil where the
+    // declared record by its name, bytes as the list they are, and a record with no name as the map it is. Nil where the
     // reading names no such type: null, a procedure, and every reading that
     // stands for a type only a value decides.
     func nominal(in table: LoweredTypeTable) -> Name? {
@@ -710,9 +705,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .string:
             return TypeSpelling.string
-
-        case let .ranged(refinement):
-            return refinement.lowered.nominal(in: table)
 
         case .array:
             return TypeSpelling.array
@@ -773,8 +765,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
-    // satisfy two types at once, and whether a candidate spelling could ever
-    // be a value of a type. The build asks them of readings; the run asks the
+    // satisfy two types at once. The build asks them of readings; the run asks the
     // first of a closure value a cast reads as a procedure type. A name the
     // table does not answer passes every judge but the second, which reads it
     // as only itself: nothing is knowable about it here, and the value judge
@@ -977,21 +968,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return (wanted ?? .any).accepts(offered ?? .any, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        // Two ranges are the one meeting where both sides are the text's
-        // fact: the kinds under them decide whether one takes the other, and
-        // bounds that cannot overlap are provably apart.
-        case let (.ranged(mine), .ranged(theirs)):
-            return mine.lowered.accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, rigid: rigid)
-                && mine.overlaps(theirs)
-
-        // A range against anything else is its kind against that: the bounds
-        // speak where a value is settled.
-        case let (.ranged(mine), _):
-            return mine.lowered.accepts(other, in: table, assumingPairs: assumingPairs, rigid: rigid)
-
-        case let (_, .ranged(theirs)):
-            return accepts(theirs.lowered, in: table, assumingPairs: assumingPairs, rigid: rigid)
-
         // A whole number written as a literal is an Int, or the fraction it
         // names where the place declares a Double.
         case (.int, .wholeLiteral), (.double, .wholeLiteral):
@@ -1147,8 +1123,8 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same type through every name that stands for no record, at the
-    // outermost only: a declared range or kind is what it stands for, and a
-    // name for a record stays that record's.
+    // outermost only: a declared kind is what it stands for, and a name for a
+    // record stays that record's.
     func throughAliases(in table: LoweredTypeTable) -> LoweredType {
         guard case let .named(row) = self, table.recordRows[row] == nil else { return self }
 
@@ -1175,48 +1151,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // left to the run.
     func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
         couldBothHold(other, in: table, assumingQuestions: [])
-    }
-
-    // Whether an `enum` candidate could ever be a spelling of a value of this
-    // type. Candidates are written as the scalar spellings arguments are
-    // compared under, so a type with no scalar spelling spells none of
-    // them, and a number is read by the spelling the boundary reads: `1e0`
-    // is a fraction no fraction spells, so no call could ever match it.
-    func spells(_ candidate: String, in table: LoweredTypeTable) -> Bool {
-        switch self {
-        case .any, .projection, .string, .undeclared:
-            return true
-
-        case .int, .wholeLiteral, .double:
-            return numeral(candidate, in: table) != nil
-
-        // A candidate has to be a value the range itself would admit.
-        case let .ranged(refinement):
-            guard let value = refinement.lowered.numeral(candidate, in: table) else { return false }
-            guard case .settled = refinement.settling(value) else { return false }
-
-            return true
-
-        case .bool:
-            return candidate == "true" || candidate == "false"
-
-        // A type parameter is filled by the call, and the types answering a
-        // contract are open, so nothing about the candidates is knowable
-        // here.
-        case .parameter, .composition:
-            return true
-
-        case let .named(row):
-            return table.loweredTypes[row].spells(candidate, in: table)
-
-        // A candidate spells a value, and null is not one an `enum` lists, so
-        // a nullable slot's candidates are the declared half's.
-        case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.spells(candidate, in: table)
-
-        case .null, .never, .array, .dictionary, .record, .procedure:
-            return false
-        }
     }
 
     // Whether two types are one type exactly, names resolved. A name that
@@ -1332,8 +1266,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // takes the other, walked in step through lists, dictionaries, what may
     // be null and record fields, a record read as a dictionary by each of
     // its fields. Which was read first says nothing. At each position a
-    // range meeting its kind or another range gives the kind; a reading of
-    // `Any` makes its position `Any`; a name that stands for no record meets
+    // reading of `Any` makes its position `Any`; a name that stands for no record meets
     // the other reading as what it stands for.
     // Elsewhere it is the one that takes the other. Rigidly, because a
     // parameter read in a body is that body's own and nothing fills it. Nil
@@ -1673,7 +1606,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .ranged, .parameter, .composition, .projection, .undeclared:
+            .parameter, .composition, .projection, .undeclared:
             return self
         }
     }
@@ -1789,39 +1722,6 @@ indirect enum LoweredType: Sendable, Equatable {
         holdsEveryByte(in: table, namedAsking: [])
     }
 
-    // A candidate of an `enum` read as the number its canonical spelling names
-    // for this slot: a fraction slot reads only fraction spellings, so the
-    // boundary and the build agree on which members exist. Nil where the
-    // spelling names no number the slot takes.
-    func numeral(_ candidate: String, in table: LoweredTypeTable) -> Value? {
-        switch self {
-        case .int:
-            return Int(spelling: candidate).map(Value.int)
-
-        // A range is a condition on a number, so the spelling it reads is the
-        // spelling of the kind under it.
-        case let .ranged(refinement):
-            return refinement.lowered.numeral(candidate, in: table)
-
-        case .double:
-            return Double(spelling: candidate).map(Value.double)
-
-        case let .named(row):
-            return table.loweredTypes[row].numeral(candidate, in: table)
-
-        case let .nullable(inner):
-            return inner.numeral(candidate, in: table)
-
-        // A parameter a contract bounds, and the slots that declare no numeric
-        // type at all: the slot does not name one kind, so a numeral is
-        // whichever kind's one spelling the text is.
-        default:
-            if let whole = Int(spelling: candidate) { return .int(whole) }
-
-            return Double(spelling: candidate).map(Value.double)
-        }
-    }
-
     // How the type reads in a message: the spelling the author wrote, with
     // a row's label standing where the author wrote the name.
     func rendered(in table: LoweredTypeTable) -> String {
@@ -1852,9 +1752,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .string:
             return TypeSpelling.string.spelling
-
-        case let .ranged(refinement):
-            return refinement.rendered
 
         case let .parameter(label, bounds):
             return bounds.isEmpty ? "some \(label)" : "some \(label): \(Self.rendered(bounds))"
@@ -1916,9 +1813,6 @@ indirect enum LoweredType: Sendable, Equatable {
             (.wholeLiteral, .wholeLiteral), (.double, .double), (.string, .string):
             return true
 
-        case let (.ranged(mine), .ranged(theirs)):
-            return mine == theirs
-
         case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)),
             let (.variable(mine), .variable(theirs)), let (.inout(mine), .inout(theirs)),
             let (.nullable(mine), .nullable(theirs)):
@@ -1971,9 +1865,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { contract in table.settles(contract: contract, arrived: TypeSpelling.int) != false }
 
-        case let .ranged(refinement):
-            return refinement.holdsEveryByte
-
         case let .named(row):
             guard !namedAsking.contains(row) else { return false }
 
@@ -2003,11 +1894,6 @@ indirect enum LoweredType: Sendable, Equatable {
         let looser = takesGiven ? self : given
 
         switch (mine, theirs) {
-        // The looser of the two is a range: its kind holds both, whichever
-        // kind the other is a range of.
-        case let (.ranged(range), _) where takesGiven, let (_, .ranged(range)) where !takesGiven:
-            return range.lowered
-
         case let (.array(element), .array(other)):
             return .array(element.merged(with: other, in: table))
 
@@ -2170,15 +2056,8 @@ indirect enum LoweredType: Sendable, Equatable {
         // Null is a value both hold, so one exists whatever else they say.
         if declaresNull(in: table), other.declaresNull(in: table) { return true }
 
-        // Two ranges are asked of the judge that decides them, the way
-        // `accepts` asks it: what is provably apart is refused here.
-        if case let .ranged(mine) = self, case let .ranged(theirs) = other {
-            return mine.lowered.couldBothHold(theirs.lowered, in: table, assumingQuestions: assumingQuestions)
-                && mine.overlaps(theirs)
-        }
-
-        // Refinements and compact spellings are dropped first: whether a
-        // value could be both is a question about kinds.
+        // Literals are read as their kind first: whether a value could be
+        // both is a question about kinds.
         switch (unrefined, other.unrefined) {
         case let (.nullable(inner), theirs):
             return inner.couldBothHold(theirs, in: table, assumingQuestions: assumingQuestions)
@@ -2242,7 +2121,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.isEmpty
 
-        case .null, .bool, .int, .wholeLiteral, .double, .string, .ranged, .array, .dictionary, .record:
+        case .null, .bool, .int, .wholeLiteral, .double, .string, .array, .dictionary, .record:
             return false
         }
     }
@@ -2366,21 +2245,6 @@ indirect enum LoweredType: Sendable, Equatable {
                 at: path(),
                 in: table
             )
-
-        // The bounds speak where the value does: a number inside them settles
-        // as the kind's own value, and one outside is refused by the range
-        // the declaration wrote.
-        case let .ranged(refinement):
-            switch refinement.settling(value) {
-            case let .settled(settled):
-                return settled
-
-            case .otherKind:
-                throw mismatch(value, at: path(), in: table)
-
-            case let .outside(number):
-                throw ArgumentError("\(path()): \(number) is outside \(rendered(in: table))")
-            }
 
         // The scalars, each by its own kind: an int slot refuses every
         // fraction, `2.0` included, and a double slot every whole number.

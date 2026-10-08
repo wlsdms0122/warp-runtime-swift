@@ -197,10 +197,6 @@ public struct Writer: Sendable {
             written[ParameterReader.CodingKeys.type.name] = try value(of: type)
         }
 
-        if let candidates = parameter.candidates {
-            written[ParameterReader.CodingKeys.candidates.name] = .array(candidates.map(Value.string))
-        }
-
         if let description = parameter.description {
             written[ParameterReader.CodingKeys.description.name] = .string(description)
         }

@@ -146,7 +146,6 @@ public struct Signature: Sendable, Equatable {
                 Parameter(
                     name: parameter.name,
                     type: parameter.type?.bounded(by: bounds),
-                    candidates: parameter.candidates,
                     description: parameter.description
                 )
             },
@@ -168,7 +167,6 @@ public struct Signature: Sendable, Equatable {
                 Parameter(
                     name: parameter.name,
                     type: parameter.type?.replacingSelf(with: type),
-                    candidates: parameter.candidates,
                     description: parameter.description
                 )
             },

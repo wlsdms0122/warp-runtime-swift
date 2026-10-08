@@ -204,7 +204,7 @@ struct LeaveTests {
                     "let": "tried",
                     "value": ["attempt": [
                         "body": [
-                            ["let": "checked", "value": ["as": ["of": 0, "type": "Int(0...255)"]]],
+                            ["let": "checked", "value": ["as": ["of": Value.null, "type": "Int?"]]],
                             ["value": ["return": "left from inside"]]
                         ],
                         "rescue": ["result": "the rescue ran"]
@@ -377,7 +377,7 @@ struct LeaveTests {
                                 "let": "tried",
                                 "value": ["attempt": [
                                     "body": [
-                                        ["let": "checked", "value": ["as": ["of": 0, "type": "Int(0...255)"]]],
+                                        ["let": "checked", "value": ["as": ["of": Value.null, "type": "Int?"]]],
                                         [
                                             "set": "seen",
                                             "value": ["call": [

@@ -131,7 +131,7 @@ struct WriterTests {
             "entry": [
                 "description": "every construct, once",
                 "parameters": [
-                    ["name": "kind", "type": "String", "enum": ["a", "b"]],
+                    ["name": "kind", "type": "String"],
                     ["name": "names", "type": "Array<String>"],
                     ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
@@ -243,7 +243,7 @@ struct WriterTests {
                 "entry": [
                     "parameters": [
                         ["name": "counted", "type": "Int", "description": "how many"],
-                        ["name": "kind", "type": "String", "enum": ["a", "b"]],
+                        ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],
                     "returns": "Dictionary<Any>",

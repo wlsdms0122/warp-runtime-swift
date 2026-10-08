@@ -256,56 +256,6 @@ public struct TypeReader: Decodable {
             return .parameter(name: try named(bare))
         }
 
-        // A range is spelled into the name: `Int(0...255)`,
-        // `Double(0.0..<1.0)`. Either bound optional but not both, and `..<`
-        // leaving the far bound outside. Only a number takes one: a range is a
-        // condition on a number, and no other kind is one. Which kind is
-        // written out, because a bound is a value of the kind it bounds and the
-        // two read their spellings differently.
-        for kind in [TypeSpelling.int.spelling, TypeSpelling.double.spelling] where text.hasPrefix("\(kind)(") && text.hasSuffix(")") {
-            let inner = String(text.dropFirst("\(kind)(".count).dropLast())
-
-            // `..<` first: `...` is inside neither spelling of the other, but
-            // `..<` holds two of the three dots `...` is looked for by.
-            let open = inner.range(of: "..<")
-            let dots = open ?? inner.range(of: "...")
-
-            guard let dots else {
-                throw TypeFormError(
-                    "type '\(text)' writes a range without `...` or `..<`. A"
-                        + " range is spelled `\(kind)(0...255)`, either bound"
-                        + " optional"
-                )
-            }
-
-            let written = (lower: inner[..<dots.lowerBound], upper: inner[dots.upperBound...])
-
-            guard !written.upper.isEmpty || open == nil else {
-                throw TypeFormError(
-                    "type '\(text)' writes `..<` with nothing after it. `..<`"
-                        + " says the far bound is outside the range, and there"
-                        + " is no far bound"
-                )
-            }
-
-            guard !written.lower.isEmpty || !written.upper.isEmpty else {
-                throw TypeFormError(
-                    "type '\(text)' writes a range with neither bound. A range"
-                        + " that says nothing is spelled `\(kind)`"
-                )
-            }
-
-            return kind == TypeSpelling.int.spelling
-                ? .ranged(.whole(
-                    from: try whole(written.lower, of: text),
-                    to: edge(try whole(written.upper, of: text), excluding: open != nil)
-                ))
-                : .ranged(.fraction(
-                    from: try fraction(written.lower, of: text),
-                    to: edge(try fraction(written.upper, of: text), excluding: open != nil)
-                ))
-        }
-
         guard let open = text.firstIndex(of: "<") else {
             guard !text.contains(">") else {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
@@ -442,8 +392,7 @@ public struct TypeReader: Decodable {
 
         for index in text.indices {
             switch text[index] {
-            // `..<` is a range's far edge, and opens nothing.
-            case "<" where !text[..<index].hasSuffix(".."): depth += 1
+            case "<": depth += 1
             case ">": depth -= 1
             case "&" where depth == 0:
                 parts.append(text[start ..< index])
@@ -512,57 +461,6 @@ public struct TypeReader: Decodable {
         // Each field read where it stands, so a refusal inside one keeps its
         // own place and its own sentence.
         return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
-    }
-
-    // One value, one spelling (a padded or signed-zero bound would be a second
-    // spelling of the same range) and the two whole-number refusals are
-    // different facts, told apart by the one reading the grammar lives in.
-    private static func whole(_ written: Substring, of text: String) throws -> Int? {
-        guard !written.isEmpty else { return nil }
-
-        switch IntSpelling(String(written)) {
-        case let .int(number):
-            return number
-
-        case .notOneSpelling:
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " which is not a whole number's one spelling"
-            )
-
-        case .overflow:
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " a whole number past what an Int holds"
-            )
-        }
-    }
-
-    // A fraction bound reads a fraction's one spelling (the same door the
-    // boundary and the writer read) so `1` bounds a whole range and `1.0` a
-    // fraction one, and neither spells the other's.
-    private static func fraction(_ written: Substring, of text: String) throws -> Double? {
-        guard !written.isEmpty else { return nil }
-
-        guard let number = Double(spelling: String(written)) else {
-            throw TypeFormError(
-                "type '\(text)' bounds a range with '\(written)',"
-                    + " which is not a fraction's one spelling"
-            )
-        }
-
-        return number
-    }
-
-    // Which dots were written, said once: `..<` leaves the bound outside and
-    // `...` holds it, and a range with no far bound has no edge to say it of.
-    private static func edge<Bound: Sendable & Equatable & Comparable>(
-        _ bound: Bound?,
-        excluding: Bool
-    ) -> TypeExpression.Refinement.Edge<Bound>? {
-        guard let bound else { return nil }
-
-        return excluding ? .upTo(bound) : .through(bound)
     }
 
     // The rest of the text where it begins with this, and nothing where it does

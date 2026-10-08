@@ -259,9 +259,6 @@ struct ObjectWriter {
         case .string:
             return tagged(Tag.string)
 
-        case let .ranged(refinement):
-            return tagged(Tag.ranged, ranged(refinement))
-
         case let .array(element):
             return tagged(Tag.array, try type(element))
 
@@ -305,41 +302,6 @@ struct ObjectWriter {
         }
     }
 
-    private func ranged(_ refinement: TypeExpression.Refinement) -> Value {
-        typealias Tag = ObjectLayout.RefinementTag
-
-        switch refinement {
-        case let .whole(from, to):
-            return tagged(
-                Tag.whole,
-                ObjectWriter.maybe(from) { floor in .int(floor) },
-                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .int(bound) } }
-            )
-
-        case let .fraction(from, to):
-            return tagged(
-                Tag.fraction,
-                ObjectWriter.maybe(from) { floor in .double(floor) },
-                ObjectWriter.maybe(to) { ceiling in edge(ceiling) { bound in .double(bound) } }
-            )
-        }
-    }
-
-    private func edge<Bound>(
-        _ edge: TypeExpression.Refinement.Edge<Bound>,
-        _ write: (Bound) -> Value
-    ) -> Value {
-        typealias Tag = ObjectLayout.EdgeTag
-
-        switch edge {
-        case let .through(bound):
-            return tagged(Tag.through, write(bound))
-
-        case let .upTo(bound):
-            return tagged(Tag.upTo, write(bound))
-        }
-    }
-
     private func path(_ path: Path) -> Value {
         .array(path.segments.map(segment))
     }
@@ -379,7 +341,6 @@ struct ObjectWriter {
         .array([
             name(parameter.name),
             try ObjectWriter.maybe(parameter.type, type),
-            ObjectWriter.maybe(parameter.candidates) { written in .array(written.map(Value.string)) },
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -560,9 +521,6 @@ struct ObjectWriter {
 
         case .string:
             return tagged(Tag.string)
-
-        case let .ranged(refinement):
-            return tagged(Tag.ranged, ranged(refinement))
 
         case let .array(element):
             return tagged(Tag.array, lowered(element))
@@ -750,8 +708,7 @@ struct ObjectWriter {
                 Tag.checked,
                 try self.operation(read),
                 ObjectWriter.maybe(judging.against, lowered),
-                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) }),
-                .array(judging.handedOn.map { on in .array([.int(on.position), lowered(on.against)]) })
+                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
 
         case let .block(body):

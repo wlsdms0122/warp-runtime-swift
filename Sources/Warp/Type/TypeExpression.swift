@@ -38,14 +38,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case double
     case string
 
-    // A number the slot admits only inside the range. `Int(0...255)`,
-    // `Double(0.0..<1.0)`. The range is the slot's condition, not a new kind:
-    // the value is a whole number or a fraction, and the bounds are judged
-    // where a value is settled, the way `enum` is. At the build for a constant,
-    // at the boundary for what only the run can see. A module gives one a name
-    // the way it names any type: `Standard.Byte = Int(0...255)`.
-    case ranged(Refinement)
-
     // A list of one type. The element is always written, so `Array<Any>` says
     // out loud that anything is accepted. A declaration that accepts anything
     // reads differently from one that has not been written yet.
@@ -152,310 +144,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // that never meet.
     case projection(of: Name, path: Path)
 
-    // The condition a refinement writes on a number.
-    //
-    // Not a kind of its own. The value is a whole number or a fraction, and
-    // this is the slot saying which part of that kind it takes. Judged where
-    // any other admission is, at the build for a constant and at the boundary
-    // for what only a run can see. A module names one the way it names any type
-    // (`Standard.Byte = Int(0...255)`), so the kinds never grow.
-    //
-    // The two halves are apart because a bound is a value of the kind it
-    // bounds. A whole range compares whole numbers exactly and a fraction
-    // range compares fractions; one written with the other's bounds would say
-    // nothing about any value, and there is no way to write it.
-    public enum Refinement: Sendable, Equatable {
-        case whole(from: Int? = nil, to: Edge<Int>? = nil)
-        case fraction(from: Double? = nil, to: Edge<Double>? = nil)
-
-        // The far edge of a range, and whether the bound itself is inside it.
-        //
-        // Only the far edge carries this. `a...b` and `a..<b` are the two
-        // intervals programs are actually written against. A position below a
-        // length is the second, and for a fraction it is the one nothing can
-        // spell by moving a bound. The near edge is always inside, which is the
-        // convention every half-open interval is already read by.
-        public enum Edge<Bound: Sendable & Equatable & Comparable>: Sendable, Equatable {
-            case through(Bound)
-            case upTo(Bound)
-        }
-
-        // What this admits, or why not. The two refusals are different facts (a
-        // text where a number was wanted missed the kind, and a number outside the
-        // bounds missed the condition) so the boundary can say which.
-        public enum Settlement: Sendable, Equatable {
-            case settled(Value)
-            case outside(String)
-            case otherKind
-        }
-
-        // MARK: - Property
-        // What a value has to be before the bounds have anything to say. A range
-        // is a condition on a number, and this is which number.
-        public var kind: TypeExpression {
-            switch self {
-            case .whole:
-                return .int
-
-            case .fraction:
-                return .double
-            }
-        }
-
-        // The same kind as the run reads it.
-        internal var lowered: LoweredType {
-            switch self {
-            case .whole:
-                return .int
-
-            case .fraction:
-                return .double
-            }
-        }
-
-        // Whether the range says anything at all. A slot with neither bound is the
-        // kind itself, written the long way.
-        public var saysNothing: Bool {
-            switch self {
-            case .whole(nil, nil), .fraction(nil, nil):
-                return true
-
-            default:
-                return false
-            }
-        }
-
-        // Whether a document can carry the bounds. Only a fraction's can fail: a
-        // whole number's spelling is its digits, and an infinity or a nan is a
-        // bound a host's hand put here. The language admits an infinity on purpose,
-        // because it orders like any other bound, and no document writes one. Asked
-        // by the writer, which may only write what reads back.
-        public var spellable: Bool {
-            guard case let .fraction(from, to) = self else { return true }
-
-            return (from.map { bound in bound.spelling != nil } ?? true)
-                && (to.map { edge in Self.bound(edge).spelling != nil } ?? true)
-        }
-
-        // Whether no value is inside. A slot no call could ever fill, which is the
-        // declaration refusing itself.
-        //
-        // A bound that is not a number is one of these and is not caught by
-        // comparing: nothing compares to a nan, so a range bounded by one admits
-        // nothing while every ordering question about it answers no. A document
-        // cannot spell one (a fraction's one spelling is a number) and a
-        // declaration assembled in the host can, so it is named here rather than
-        // left to the two orderings to imply.
-        //
-        // An infinity is not one of them. It compares like any other bound, and
-        // `Double(0.0...)` written out the long way is a range half the fractions
-        // are inside. Asking for finiteness here would refuse it.
-        public var admitsNothing: Bool {
-            switch self {
-            case let .whole(from, to):
-                return Self.empty(from: from, to: to, floor: Int.min)
-
-            case let .fraction(from, to):
-                guard ordersAtAll else { return true }
-
-                return Self.empty(from: from, to: to, floor: -.infinity)
-            }
-        }
-
-        // Whether every byte is inside and arrives as itself. The question the
-        // compact spelling asks of an element declaration. A fraction range never
-        // is: it takes no whole number, and so no byte.
-        public var holdsEveryByte: Bool {
-            guard case let .whole(from, to) = self else { return false }
-
-            return Self.holds(0, from: from, to: to) && Self.holds(255, from: from, to: to)
-        }
-
-        // Whether ordering this range's bounds answers anything. Said once because
-        // two questions lean on it (whether anything is inside, and whether two
-        // ranges share a value) and a nan answers no to every comparison, so a
-        // question that forgot to ask this would quietly say the opposite of what
-        // the other one says.
-        public var ordersAtAll: Bool {
-            switch self {
-            // Whole numbers always order.
-            case .whole:
-                return true
-
-            case let .fraction(from, to):
-                return Self.comparable(from) && Self.comparable(to.map(Self.bound))
-            }
-        }
-
-        // How the range reads in a document, and in a message: one value, one
-        // spelling, because this is written back out and compared as the type's
-        // identity.
-        public var rendered: String {
-            // A range with neither bound is the kind itself, so it reads as the
-            // kind: one type has one spelling here, and `Double(...)` would be a
-            // second one for what `saysNothing` already calls the same thing.
-            guard !saysNothing else { return kind.rendered }
-
-            switch self {
-            case let .whole(from, to):
-                let floor = from.map(String.init) ?? ""
-
-                return "\(kind.rendered)(\(floor)\(Self.spelled(to, String.init)))"
-
-            case let .fraction(from, to):
-                let floor = Self.fraction(from)
-
-                return "\(kind.rendered)(\(floor)\(Self.spelled(to, Self.fraction)))"
-            }
-        }
-
-        // MARK: - Initializer
-        // MARK: - Public
-        public func settling(_ value: Value) -> Settlement {
-            switch self {
-            case let .whole(from, to):
-                guard case let .int(number) = value else { return .otherKind }
-
-                return Self.holds(number, from: from, to: to)
-                    ? .settled(value)
-                    : .outside(String(number))
-
-            case let .fraction(from, to):
-                guard case let .double(number) = value else { return .otherKind }
-
-                guard Self.holds(number, from: from, to: to) else {
-                    return .outside(number.shown)
-                }
-
-                return .settled(.double(number))
-            }
-        }
-
-        // Whether some value is inside both. A whole range and a fraction range
-        // hold none in common, since no value is both a whole number and a
-        // fraction, and two of one kind are compared in that kind.
-        //
-        // Only what is provably apart is refused, which is the bias every judgment
-        // before a run takes.
-        public func overlaps(_ other: Self) -> Bool {
-            guard ordersAtAll, other.ordersAtAll else { return false }
-
-            switch (self, other) {
-            case let (.whole(myFloor, myCeiling), .whole(theirFloor, theirCeiling)):
-                return Self.meeting((myFloor, myCeiling), (theirFloor, theirCeiling), floor: Int.min)
-
-            case let (.fraction(myFloor, myCeiling), .fraction(theirFloor, theirCeiling)):
-                return Self.meeting((myFloor, myCeiling), (theirFloor, theirCeiling), floor: -.infinity)
-
-            case (.whole, .fraction), (.fraction, .whole):
-                return false
-            }
-        }
-
-        // MARK: - Private
-        // Whether two intervals of one kind have anything between them. Said once,
-        // for the pair compared as whole numbers and the pair compared as fractions
-        // alike.
-        private static func meeting<Bound>(
-            _ mine: (lower: Bound?, upper: Edge<Bound>?),
-            _ theirs: (lower: Bound?, upper: Edge<Bound>?),
-            floor: Bound
-        ) -> Bool {
-            if let upper = mine.upper,
-                empty(from: theirs.lower, to: upper, floor: floor) { return false }
-            if let upper = theirs.upper,
-                empty(from: mine.lower, to: upper, floor: floor) { return false }
-
-            return true
-        }
-
-        // Whether ordering this bound answers anything. Not whether it is finite:
-        // an infinity orders, a nan does not.
-        private static func comparable(_ bound: Double?) -> Bool {
-            bound.map { bound in !bound.isNaN } ?? true
-        }
-
-        private static func bound(_ edge: Edge<Double>) -> Double {
-            switch edge {
-            case let .through(bound), let .upTo(bound):
-                return bound
-            }
-        }
-
-        private static func holds<Bound>(
-            _ number: Bound,
-            from: Bound?,
-            to: Edge<Bound>?
-        ) -> Bool {
-            if let from, number < from { return false }
-
-            switch to {
-            case let .through(bound):
-                return number <= bound
-
-            case let .upTo(bound):
-                return number < bound
-
-            case nil:
-                return true
-            }
-        }
-
-        // Whether nothing is between the bounds. A range with no floor stands on
-        // the kind's own, because that is what the floor means: `holds` reads a
-        // missing floor as open downward and answers against every value the kind
-        // has, so a question about emptiness that read it as "cannot say" would
-        // answer differently about the same range. `Int(..<-9223372036854775808)`
-        // is a slot no call could fill, and it is spellable.
-        private static func empty<Bound>(
-            from: Bound?,
-            to: Edge<Bound>?,
-            floor: Bound
-        ) -> Bool {
-            let from = from ?? floor
-
-            switch to {
-            case let .through(bound):
-                return bound < from
-
-            // The bound itself is outside, so a floor standing on it leaves
-            // nothing between them.
-            case let .upTo(bound):
-                return bound <= from
-
-            case nil:
-                return false
-            }
-        }
-
-        // A fraction as a range writes it. A bound no document spells is shown in
-        // this vocabulary's own terms rather than elided. Two ranges are one type when
-        // they hold the same numbers, and dropping an unspellable bound would read
-        // a bounded range and an unbounded one alike. What comes out then is for a
-        // message; `spellable` is what the writer asks.
-        private static func fraction(_ bound: Double?) -> String {
-            guard let bound else { return "" }
-
-            return bound.shown
-        }
-
-        private static func spelled<Bound>(
-            _ to: Edge<Bound>?,
-            _ spelling: (Bound) -> String
-        ) -> String {
-            switch to {
-            case let .through(bound):
-                return "...\(spelling(bound))"
-
-            case let .upTo(bound):
-                return "..<\(spelling(bound))"
-
-            case nil:
-                return "..."
-            }
-        }
-    }
-
     // MARK: - Property
     // The types the language names, by the spelling a document writes each
     // under. A spelling here is never a declaration's: what a document
@@ -491,14 +179,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement))
     ]
 
-    // What one element of bytes is. The range `Standard` names `Standard.Byte`. Owned here
-    // because the `bytes = Array<Standard.Byte>` equation reads it without a table, so it
-    // cannot live behind the name.
-    public static let byteElement = TypeExpression.ranged(.whole(from: 0, to: .through(255)))
-
-    // Bytes are an array of that element. What a procedure the host answers
-    // declares, without a link to name the range through.
-    public static let bytes = TypeExpression.array(.byteElement)
+    // Bytes are a list of whole numbers in a compact spelling, so the type of
+    // one is the type of that list. What a procedure the host answers
+    // declares where it takes or answers bytes.
+    public static let bytes = TypeExpression.array(.int)
 
     // How the type reads in a message. A declaration an author wrote should come
     // back to them in the spelling they wrote it in.
@@ -524,11 +208,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .string:
             return TypeSpelling.string.spelling
-
-        case let .ranged(refinement):
-            // The exact spelling: what is rendered here is written into
-            // documents and compared as the type's identity, not a message.
-            return refinement.rendered
 
         // The diagnostic voice, not the notation. `rendered` tells an author
         // what a type *is*, and the procedure case below already writes a type
@@ -598,16 +277,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    var unrefined: TypeExpression {
-        switch self {
-        case let .ranged(refinement):
-            return refinement.kind
-
-        default:
-            return self
-        }
-    }
-
     // The refusal a cast earns for naming a type there is nothing to read. Nil
     // where the type names one. Said here, once, because a cast's claim is
     // judged in two places: the declaration scan that sees every cast in every
@@ -648,7 +317,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // one reached is rooted at that same undeclared type.
     var mentions: Set<Name> {
         switch self {
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged:
+        case .any, .never, .null, .bool, .int, .double, .string:
             []
 
         case let .array(element):
@@ -704,7 +373,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner):
             return inner.parameterOccurrences
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .named:
             return []
         }
     }
@@ -731,7 +400,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner):
             return inner.isGeneric
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .composition, .selfType:
+        case .any, .never, .null, .bool, .int, .double, .string, .named, .composition, .selfType:
             return false
         }
     }
@@ -748,7 +417,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .variable,
+            .array, .dictionary, .record, .procedure, .variable,
             .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
@@ -771,7 +440,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .ranged, .array, .dictionary, .record, .procedure, .inout,
+            .array, .dictionary, .record, .procedure, .inout,
             .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
@@ -841,7 +510,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .inout(inner):
             return .inout(inner.bounded(by: bounds))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .named:
             return self
         }
     }
@@ -876,7 +545,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .nullable(inner):
             return .nullable(inner.replacingSelf(with: type))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named, .parameter, .composition,
+        case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
             .projection:
             return self
         }

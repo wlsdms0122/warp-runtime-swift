@@ -52,28 +52,10 @@ struct BytesTests {
             try TypeExpression.array(.any).settling(.bytes([104, 105]), at: "value")
                 == .bytes([104, 105])
         )
-        #expect(
-            try TypeExpression.array(.ranged(.whole(to: .through(255))))
-                .settling(.bytes([104, 105]), at: "value") == .bytes([104, 105])
-        )
 
         // A byte is a whole number, so a list of fractions takes none.
         #expect(throws: (any Error).self) {
             try TypeExpression.array(.double).settling(.bytes([1]), at: "value")
-        }
-
-        // A range narrower than `byte` has something to ask of each one, and
-        // the refusal names which byte and by how much.
-        #expect(
-            try TypeExpression.array(.ranged(.whole(from: 0, to: .through(200))))
-                .settling(.bytes([1, 2]), at: "value") == .array([.int(1), .int(2)])
-        )
-
-        #expect {
-            try TypeExpression.array(.ranged(.whole(from: 0, to: .through(200))))
-                .settling(.bytes([1, 255]), at: "value")
-        } throws: { error in
-            "\(error)".contains("value[1]") && "\(error)".contains("outside Int(0...200)")
         }
     }
 
@@ -88,7 +70,6 @@ struct BytesTests {
         // claims say of `Int`, which is what every byte is.
         let types = TypeTable(
             types: [
-                "Small": .ranged(.whole(from: 0, to: .through(200))),
                 "Whole": .int
             ],
             contracts: ["Ordered": [:], "Textual": [:]],
@@ -99,22 +80,12 @@ struct BytesTests {
 
         let typeExpressions: [TypeExpression] = [
             .any, .int, .double, .string, .bool, .null, .never,
-            .ranged(.whole(from: 0, to: .through(255))),
-            .ranged(.whole()),
-            .ranged(.whole(from: 0, to: .through(254))),
-            .ranged(.whole(from: 1, to: .through(255))),
-            .ranged(.whole(from: 0, to: .upTo(256))),
-            .ranged(.whole(from: 0, to: .upTo(255))),
-            .ranged(.fraction(from: 0, to: .through(255))),
-            .ranged(.fraction()),
             .nullable(.int),
-            .nullable(.ranged(.whole(from: 0, to: .through(254)))),
             .parameter(name: "Element"),
             .parameter(name: "Element", bounds: ["Ordered"]),
             .parameter(name: "Element", bounds: ["Textual"]),
             .parameter(name: "Element", bounds: ["Nobody"]),
             .named("Whole"),
-            .named("Small"),
             .named("Nobody"),
             .array(.int),
             .dictionary(.int),
@@ -147,18 +118,6 @@ struct BytesTests {
         #expect(Value.array([.int(104), .int(300)]).bytes == nil)
         #expect(Value.array([.double(1)]).bytes == nil)
         #expect(Value.string("hi").bytes == nil)
-    }
-
-    @Test("the equation is read at the build, by the elements")
-    func acceptanceReadsTheElements() {
-        // When / Then
-        #expect(TypeExpression.array(.int).accepts(.array(.byteElement)))
-        #expect(TypeExpression.array(.any).accepts(.array(.byteElement)))
-        #expect(!TypeExpression.array(.double).accepts(.array(.byteElement)))
-        #expect(TypeExpression.array(.byteElement).accepts(.array(.int)))
-        #expect(!TypeExpression.array(.string).accepts(.array(.byteElement)))
-        #expect(!TypeExpression.array(.byteElement).accepts(.array(.string)))
-        #expect(!TypeExpression.array(.byteElement).accepts(.array(.double)))
     }
 
     @Test("an index reads one byte out as the Int it is")

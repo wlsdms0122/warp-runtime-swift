@@ -81,7 +81,6 @@ enum ObjectCoverageFixture {
     static let parameter = Parameter(
         name: "p",
         type: .double,
-        candidates: ["one", "two"],
         description: "what it takes"
     )
 
@@ -94,8 +93,6 @@ enum ObjectCoverageFixture {
         "Int": .int,
         "Double": .double,
         "String": .string,
-        "whole": .ranged(.whole(from: -2, to: .through(9))),
-        "fraction": .ranged(.fraction(from: 0.5, to: .upTo(1.5))),
         "array": .array(.int),
         "dictionary": .dictionary(.string),
         "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
@@ -131,7 +128,6 @@ enum ObjectCoverageFixture {
         ("Int", .int),
         ("Double", .double),
         ("String", .string),
-        ("ranged", .ranged(.whole(from: 1, to: .upTo(4)))),
         ("array", .array(.string)),
         ("dictionary", .dictionary(.bool)),
         ("procedure", .procedure(
@@ -218,8 +214,7 @@ enum ObjectCoverageFixture {
                     ),
                     CallJudgement(
                         against: .int,
-                        handedBack: [HandedBack(position: 1, against: .string)],
-                        handedOn: [HandedOn(position: 0, against: .double)]
+                        handedBack: [HandedBack(position: 1, against: .string)]
                     )!
                 ),
                 label: "checked"

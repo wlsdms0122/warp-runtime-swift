@@ -67,7 +67,6 @@ enum ObjectLayout {
         case int
         case double
         case string
-        case ranged
         case array
         case dictionary
         case record
@@ -80,16 +79,6 @@ enum ObjectLayout {
         case composition
         case projection
         case selfType
-    }
-
-    enum RefinementTag: Int {
-        case whole
-        case fraction
-    }
-
-    enum EdgeTag: Int {
-        case through
-        case upTo
     }
 
     enum SegmentTag: Int {
@@ -188,7 +177,6 @@ enum ObjectLayout {
         case int
         case double
         case string
-        case ranged
         case array
         case dictionary
         case record

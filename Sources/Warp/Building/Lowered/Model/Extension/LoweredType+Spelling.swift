@@ -36,9 +36,6 @@ extension LoweredType {
         case .string:
             return .string
 
-        case let .ranged(refinement):
-            return .ranged(refinement)
-
         case let .array(element):
             return element.spelled(in: table).map(TypeExpression.array)
 

@@ -29,8 +29,6 @@ struct CastAgreementTests {
             // A name standing for another declared record, so an alias meets
             // the record it names in every pair.
             "Someone": .named("Person"),
-            "Byte": .ranged(.whole(from: 0, to: .through(255))),
-            "Ratio": .ranged(.fraction(from: 0, to: .upTo(1))),
             "Maybe": .nullable(.int),
             "Whole": .int,
             // A type that names itself, so the walk's own guard is exercised
@@ -51,14 +49,7 @@ struct CastAgreementTests {
 
     private let typeExpressions: [TypeExpression] = [
         .any, .never, .null, .bool, .int, .double, .string,
-        .ranged(.whole(from: 0, to: .through(255))),
-        .ranged(.whole(from: 300)),
-        .ranged(.whole(to: .through(-1))),
-        .ranged(.whole(from: 0, to: .upTo(256))),
-        .ranged(.fraction(from: 0, to: .through(1))),
-        .ranged(.fraction(from: 0, to: .upTo(1))),
-        .ranged(.fraction(from: 300)),
-        .array(.int), .array(.any), .array(.byteElement), .array(.double),
+        .array(.int), .array(.any), .array(.double),
         // Elements with nothing in common, because an empty list is of every
         // element type there is and the pair is not impossible for it.
         .array(.string),
@@ -67,7 +58,7 @@ struct CastAgreementTests {
         .record(["age": .int]),
         .record([:]),
         .nullable(.int), .nullable(.string), .nullable(.array(.int)),
-        .named("Person"), .named("Byte"), .named("Ratio"), .named("Maybe"), .named("Whole"),
+        .named("Person"), .named("Maybe"), .named("Whole"),
         .named("Tree"),
         .named("Nothing declares this"),
         .parameter(name: "T"),
@@ -171,34 +162,6 @@ struct CastAgreementTests {
         for structure in structures {
             #expect(couldBothHold(named, structure), "reading \(structure.rendered) as Person")
             #expect(!couldBothHold(structure, named), "reading Person as \(structure.rendered)")
-        }
-    }
-
-    @Test("two ranges with nothing between them are called impossible")
-    func rangesThatCannotMeetAreRefused() {
-        // Given. The other direction of the contract, which the sweep above
-        // cannot reach: it only checks pairs some value satisfies, and a pair
-        // no value satisfies is exactly what this walk is for. The bounds are
-        // the whole of what tells these apart, so a walk that drops them
-        // answers about `Int` beside `Int` and lets the cast through.
-        let pairs: [(TypeExpression, TypeExpression)] = [
-            (.ranged(.whole(from: 0, to: .through(5))), .ranged(.whole(from: 10, to: .through(15)))),
-            (.ranged(.whole(from: 0, to: .upTo(10))), .ranged(.whole(from: 10))),
-            (.ranged(.fraction(from: 0, to: .upTo(1))), .ranged(.fraction(from: 2))),
-            // Through the names, because a declared range is the same range.
-            (.named("Byte"), .ranged(.whole(from: 300)))
-        ]
-
-        // When / Then
-        for (mine, theirs) in pairs {
-            #expect(
-                !couldBothHold(mine, theirs),
-                "\(mine.rendered) and \(theirs.rendered) share no value"
-            )
-            #expect(
-                !couldBothHold(theirs, mine),
-                "\(theirs.rendered) and \(mine.rendered) share no value"
-            )
         }
     }
 

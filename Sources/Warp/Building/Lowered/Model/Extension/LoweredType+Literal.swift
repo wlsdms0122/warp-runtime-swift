@@ -16,7 +16,7 @@ extension LoweredType {
     // judge's to say.
     func written(_ value: Value, in table: LoweredTypeTable) -> Value {
         switch (self, value) {
-        case let (.double, .int(whole)), let (.ranged(.fraction), .int(whole)):
+        case let (.double, .int(whole)):
             return .double(Double(whole))
 
         case let (.named(row), _):
@@ -103,7 +103,7 @@ extension LoweredType {
     // it was.
     func written(_ reading: LoweredType, in table: LoweredTypeTable) -> LoweredType {
         switch (self, reading) {
-        case (.double, .wholeLiteral), (.ranged(.fraction), .wholeLiteral):
+        case (.double, .wholeLiteral):
             return .double
 
         case let (.named(row), _):

@@ -140,9 +140,8 @@ struct ContractTests {
 
     @Test("an argument sent through a contract passes the gates an argument sent to a declaration does")
     func aContractCallHoldsItsArgumentsAsADeclaredCallDoes() async throws {
-        // Given. `App.Sized.size` takes a whole number up to 10, and
-        // `App.Bumping.bump` takes a variable in place
-        let small = TypeExpression.ranged(.whole(from: 0, to: .through(10)))
+        // Given. `App.Sized.size` takes a whole number, and `App.Bumping.bump`
+        // takes a variable in place
         func sending(_ contract: Name, _ procedure: Name, _ parameter: TypeExpression, _ argument: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Bank.Account": .record(["balance": .int])],
@@ -176,14 +175,14 @@ struct ContractTests {
 
         // When
         let outside = await #expect(throws: BuildError.self) {
-            try await Builder().build([try sending("App.Sized", "size", small, .literal(.int(99)))] + Module.standard)
+            try await Builder().build([try sending("App.Sized", "size", .int, .literal(.string("ninety-nine")))] + Module.standard)
         }
         let inPlace = await #expect(throws: BuildError.self) {
             try await Builder().build([try sending("App.Bumping", "bump", .inout(.int), .literal(.int(3)))] + Module.standard)
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(outside?.message == "sending 'App.Sized.size': input 'n': 99 is outside Int(0...10)")
+        #expect(outside?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
         #expect(outside?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")

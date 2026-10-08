@@ -41,7 +41,7 @@ enum SlotMark: String, CaseIterable, Sendable {
         case .inout:
             return .inout
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged,
+        case .any, .never, .null, .bool, .int, .double, .string,
             .array, .dictionary, .record, .procedure, .nullable, .named, .parameter,
             .projection, .composition, .selfType:
             return nil

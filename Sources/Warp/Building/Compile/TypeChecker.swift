@@ -2239,29 +2239,13 @@ struct TypeChecker {
             // The arguments are handed by position the way a call's are, and
             // held to what the slot's type takes by the judgement a call to a
             // declaration is held by. What is written into a slot as a
-            // literal is read as the slot reads it.
-            //
-            // The run hands each to the parameter the value's own declaration
-            // wrote, which may read less than the slot does, so what the slot
-            // reads that the build did not prove of the argument, a range
-            // above all, is judged against the slot there first. A record
-            // built there is built as the record the slot reads.
+            // literal is read as the slot reads it, and a record built there
+            // is built as the record the slot reads.
             for (position, (argument, slot)) in zip(rewritten, parameters).enumerated() {
                 judgements.record(names: slot.naming(argument, at: place.child(.argument(position)), in: context.loweredTypes))
             }
 
             rewritten = zip(rewritten, parameters).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
-
-            let handedOn: [HandedOn] = zip(parameters, sent).enumerated().compactMap { position, pair in
-                let (slot, reading) = pair
-                let read = slot.written(reading, in: context.loweredTypes).asHeld
-
-                guard !handed.contains(position), !slot.takesAsItIs(read, in: context.loweredTypes) else {
-                    return nil
-                }
-
-                return HandedOn(position: position, against: slot)
-            }
 
             try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
@@ -2303,8 +2287,7 @@ struct TypeChecker {
                     inPlace: handed,
                     judging: CallJudgement(
                         against: judgedAgainst(answers, answeredBy: nil),
-                        handedBack: handedBack(at: handed, of: callee),
-                        handedOn: handedOn
+                        handedBack: handedBack(at: handed, of: callee)
                     )
                 ),
                 at: place

@@ -7,9 +7,8 @@
 
 import Foundation
 
-// One parameter of a declaration: the name its body reads it by, what it
-// takes, and what the boundary asks beyond the type. The name is the
-// declaration's; a procedure type carries none.
+// One parameter of a declaration: the name its body reads it by and what it
+// takes. The name is the declaration's; a procedure type carries none.
 public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     public let name: Name
@@ -19,7 +18,6 @@ public struct Parameter: Sendable, Equatable {
     // and keeping them apart is what lets the ones written on purpose be told
     // from the ones nobody got around to.
     public let type: TypeExpression?
-    public let candidates: [String]?
     public let description: String?
 
     // What this reads as where a type is needed regardless. An undeclared
@@ -30,12 +28,10 @@ public struct Parameter: Sendable, Equatable {
     public init(
         name: Name,
         type: TypeExpression? = nil,
-        candidates: [String]? = nil,
         description: String? = nil
     ) {
         self.name = name
         self.type = type
-        self.candidates = candidates
         self.description = description
     }
 

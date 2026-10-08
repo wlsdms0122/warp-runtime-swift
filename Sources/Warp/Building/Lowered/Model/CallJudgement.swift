@@ -8,33 +8,28 @@
 import Foundation
 
 // What a call is judged on where it stands: its answer against what the
-// call reads it as, where the callee declares a wider one, each variable it
-// handed back in place against what the caller holds it as, and, for a call
-// of a value, each argument it hands on against what the slot holding the
-// value reads there. At least one of them is there; a call with none is
+// call reads it as, where the callee declares a wider one, and each variable
+// it handed back in place against what the caller holds it as. At least one
+// of them is there; a call with none is
 // judged on nothing and stands bare.
 struct CallJudgement: Sendable {
     // MARK: - Property
     let against: LoweredType?
     let handedBack: [HandedBack]
-    let handedOn: [HandedOn]
 
     // Whether what it is judged against names a type parameter: inside a
-    // generic body, a judgement the run cannot hold to what filled it. What
-    // an argument is judged against before it is handed on proves nothing
-    // about what comes back, so it takes no part.
+    // generic body, a judgement the run cannot hold to what filled it.
     var namesParameter: Bool {
         against?.namesParameter == true || handedBack.contains { back in back.against.namesParameter }
     }
 
     // MARK: - Initializer
     // Nil where there is nothing to judge.
-    init?(against: LoweredType?, handedBack: [HandedBack], handedOn: [HandedOn] = []) {
-        guard against != nil || !handedBack.isEmpty || !handedOn.isEmpty else { return nil }
+    init?(against: LoweredType?, handedBack: [HandedBack]) {
+        guard against != nil || !handedBack.isEmpty else { return nil }
 
         self.against = against
         self.handedBack = handedBack
-        self.handedOn = handedOn
     }
 
     // MARK: - Public
@@ -42,16 +37,14 @@ struct CallJudgement: Sendable {
     func rewritten(type: (LoweredType) throws -> LoweredType) rethrows -> CallJudgement {
         CallJudgement(
             rewriting: try against.map(type),
-            handedBack: try handedBack.map { back in HandedBack(position: back.position, against: try type(back.against)) },
-            handedOn: try handedOn.map { on in HandedOn(position: on.position, against: try type(on.against)) }
+            handedBack: try handedBack.map { back in HandedBack(position: back.position, against: try type(back.against)) }
         )
     }
 
     // MARK: - Private
     // Rewriting the types keeps what there is to judge, so it is never empty.
-    private init(rewriting against: LoweredType?, handedBack: [HandedBack], handedOn: [HandedOn]) {
+    private init(rewriting against: LoweredType?, handedBack: [HandedBack]) {
         self.against = against
         self.handedBack = handedBack
-        self.handedOn = handedOn
     }
 }

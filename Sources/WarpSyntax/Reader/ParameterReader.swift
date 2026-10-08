@@ -15,7 +15,6 @@ public struct ParameterReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case name
         case type
-        case candidates = "enum"
         case description
     }
 
@@ -56,7 +55,6 @@ public struct ParameterReader: Decodable {
             self.parameter = Parameter(
                 name: name,
                 type: rest.type,
-                candidates: rest.candidates,
                 description: rest.description
             )
 
@@ -74,7 +72,6 @@ public struct ParameterReader: Decodable {
         self.parameter = Parameter(
             name: try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps),
             type: try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type,
-            candidates: try container.decodeIfPresent([String].self, forKey: .candidates),
             description: try container.decodeIfPresent(String.self, forKey: .description)
         )
     }

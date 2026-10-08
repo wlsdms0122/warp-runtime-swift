@@ -68,9 +68,7 @@ struct Substitution: Sendable {
     // two a disagreement, which is the same question the build asks elsewhere
     // and answers correctly. Rigidly, because a parameter read here is the
     // calling body's own and nothing fills it: a whole number and a parameter
-    // bounded to numbers are held by the parameter. A range meets anything by
-    // its kind, so a range and the plain kind under it take each other both
-    // ways, and so do two ranges that overlap. What holds both is
+    // bounded to numbers are held by the parameter. What holds both is
     // `holdingBoth`, and a parameter read as `Any` anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is

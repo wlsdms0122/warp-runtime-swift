@@ -216,7 +216,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The elements a value is indexed by, and nil for what has none. This is
-    // where the `bytes = Array<Standard.Byte>` equation lives on the value side: an
+    // where the `bytes = Array<Int>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
     // are, lazily, so a compact spelling is not unpacked to read one element,
     // and a procedure taking either through `Any` reads this one projection

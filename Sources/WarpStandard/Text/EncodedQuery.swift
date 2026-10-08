@@ -23,11 +23,7 @@ struct EncodedQuery: Query {
                 return Parameter(name: "text", type: .string)
 
             case .encoding:
-                return Parameter(
-                    name: "encoding",
-                    type: .string,
-                    candidates: CharacterEncoding.names
-                )
+                return Parameter(name: "encoding", type: .string)
             }
         }
 
@@ -48,7 +44,9 @@ struct EncodedQuery: Query {
             case let .string(name) = question[.encoding],
             let encoding = CharacterEncoding(rawValue: name)
         else {
-            throw ExecutionError("Standard.Text.encoded asks the name of an encoding it has")
+            throw ExecutionError(
+                "Standard.Text.encoded asks the name of an encoding it has: \(CharacterEncoding.names.joined(separator: ", "))"
+            )
         }
 
         return .bytes(encoding.bytes(of: text))

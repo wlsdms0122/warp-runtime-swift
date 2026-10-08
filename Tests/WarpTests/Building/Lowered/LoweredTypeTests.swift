@@ -21,7 +21,7 @@ struct LoweredTypeTests {
             "Bank.Account": .record(["balance": .int, "owner": .named("Bank.Owner")]),
             "Bank.Owner": .record(["name": .string]),
             "Bank.Acct": .named("Bank.Account"),
-            "App.Byte": .ranged(.whole(from: 0, to: .through(255))),
+            "App.Whole": .int,
             "App.Maybe": .nullable(.int)
         ],
         contracts: ["App.Ordered": [:]],
@@ -71,32 +71,6 @@ struct LoweredTypeTests {
 
             #expect(lowered.spelled(in: table)?.lowered(in: table) == lowered, "\(type.rendered)")
         }
-    }
-
-    @Test("a type parameter read as ranges or as a range and its kind is the kind, whichever is read first")
-    func aParameterReadAsRangesIsTheirKind() {
-        // Given. Ranges meet by their kind, so two that overlap, or a range
-        // and the plain kind under it, take each other both ways
-        let table = types.loweredTypes
-        let parameter = TypeExpression.parameter(name: "T").lowered(in: table)
-        let narrow = TypeExpression.ranged(.whole(from: 0, to: .through(10))).lowered(in: table)
-        let wide = TypeExpression.ranged(.whole(from: 5, to: .through(100))).lowered(in: table)
-
-        func read(_ readings: [LoweredType]) -> LoweredType? {
-            var substitution = Substitution()
-
-            for reading in readings {
-                parameter.binding(against: reading, into: &substitution, in: table)
-            }
-
-            return substitution.readings["T"]
-        }
-
-        // When / Then
-        #expect(read([narrow, wide]) == .int)
-        #expect(read([wide, narrow]) == .int)
-        #expect(read([narrow, .int]) == .int)
-        #expect(read([.int, narrow]) == .int)
     }
 
     @Test("a parameter one field reads two ways is reported by the two that disagreed")
@@ -162,13 +136,14 @@ struct LoweredTypeTests {
         // When
         let alias = try #require(table.row(named: "Bank.Acct"))
         let account = try #require(table.row(named: "Bank.Account"))
-        let byte = try #require(table.row(named: "App.Byte"))
+        let whole = try #require(table.row(named: "App.Whole"))
 
-        // Then. The alias names the account's record, and a range names none
+        // Then. The alias names the account's record, and a name for a kind
+        // names none
         #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(alias))
         #expect(table.recordRows[alias] == account)
         #expect(table.recordRows[account] == account)
-        #expect(table.recordRows[byte] == nil)
+        #expect(table.recordRows[whole] == nil)
     }
 
     @Test("a projection lowers to itself, and every judgment answers it as Any")

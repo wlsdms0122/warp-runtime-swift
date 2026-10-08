@@ -9,8 +9,8 @@ import Foundation
 import Warp
 
 public extension Module {
-    // The contracts and the byte type the other bundles mention, declared
-    // once where every bundle can name them, and the types the language names
+    // The contracts the other bundles mention, declared once where every
+    // bundle can name them, and the types the language names
     // answering them: what a number, an ordering and a count are for `Int`,
     // `Double`, `String`, `Array` and `Dictionary`. A document calling a
     // contract's procedure stands behind this one, so what answers stands
@@ -19,12 +19,6 @@ public extension Module {
         Module(
             unchecked: Draft(
                 description: "The shared ground: what counts as a number, what orders, and what has a count.",
-                types: [
-                    // One element of bytes. A whole number a range refines, not a kind
-                    // of its own. Declared here so `bytes` and `Array<Standard.Byte>` can say
-                    // they are the same thing in one vocabulary.
-                    "Standard.Byte": .byteElement
-                ],
                 contracts: [
                     // What arithmetic is asked of: two of one kind, answered in
                     // that kind, and a quotient that is a fraction whatever the

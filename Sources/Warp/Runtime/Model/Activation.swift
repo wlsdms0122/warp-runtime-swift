@@ -229,7 +229,7 @@ struct Activation: Sendable {
     }
 
     // One reading for both index spellings. What is indexed is whatever has
-    // elements: the projection owns the `Array<Standard.Byte>` equation, lazily, so
+    // elements: the projection owns the `Array<Int>` equation, lazily, so
     // one element read does not unpack a compact spelling. Past the end is a
     // defect, not absence: the array is there and says how long it is.
     private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {

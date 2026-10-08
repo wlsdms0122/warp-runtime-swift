@@ -521,7 +521,6 @@ struct Evaluator: Sendable {
         _ callee: Operation,
         arguments: [Argument],
         judging handedBack: [HandedBack] = [],
-        handedOn: [HandedOn] = [],
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -559,16 +558,6 @@ struct Evaluator: Sendable {
                     handed.contains { held in held.position == position } ? nil : try activation.value(at: address)
                 )
             }
-        }
-
-        // Once every argument is read, the way a call to a declaration reads
-        // them before its boundary, each the slot holding the value reads as
-        // other than it reads itself is held to that slot, since the value's
-        // own declaration may read less.
-        for on in handedOn where linked.slots.indices.contains(on.position) {
-            guard let value = given[on.position] else { continue }
-
-            given[on.position] = try on.against.checking(value, at: "input '\(linked.slots[on.position].name)'", in: loweredTypes)
         }
 
         guard !handedBack.isEmpty else {
@@ -829,7 +818,7 @@ struct Evaluator: Sendable {
         let handedBack = judging.handedBack
         let answered: Value
 
-        if handedBack.isEmpty, judging.handedOn.isEmpty {
+        if handedBack.isEmpty {
             answered = try await evaluate(read, in: &activation, at: trace)
         } else {
             switch read {
@@ -846,7 +835,6 @@ struct Evaluator: Sendable {
                     callee,
                     arguments: arguments,
                     judging: handedBack,
-                    handedOn: judging.handedOn,
                     in: &activation,
                     at: trace
                 )

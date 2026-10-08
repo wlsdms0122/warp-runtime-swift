@@ -330,7 +330,6 @@ struct ObjectReader {
         case .int: read = .int
         case .double: read = .double
         case .string: read = .string
-        case .ranged: read = .ranged(try ranged(cursor.next()))
         case .array: read = .array(try expression(cursor.next()))
         case .dictionary: read = .dictionary(try expression(cursor.next()))
         case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
@@ -378,60 +377,12 @@ struct ObjectReader {
         return read
     }
 
-    private func ranged(_ value: Value) throws -> TypeExpression.Refinement {
-        var cursor = try FieldCursor(value, of: "range")
-        let read: TypeExpression.Refinement
-
-        switch ObjectLayout.RefinementTag(rawValue: try cursor.field().integer()) {
-        case .whole:
-            read = .whole(
-                from: try cursor.field().maybe(integer),
-                to: try cursor.field().maybe { written in try edge(written, integer) }
-            )
-
-        case .fraction:
-            read = .fraction(
-                from: try cursor.field().maybe(fraction),
-                to: try cursor.field().maybe { written in try edge(written, fraction) }
-            )
-
-        case nil:
-            throw ObjectRefused("'range' is over neither whole numbers nor fractions")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func edge<Bound>(
-        _ value: Value,
-        _ read: (Value) throws -> Bound
-    ) throws -> TypeExpression.Refinement.Edge<Bound> {
-        var cursor = try FieldCursor(value, of: "edge")
-        let held: TypeExpression.Refinement.Edge<Bound>
-
-        switch ObjectLayout.EdgeTag(rawValue: try cursor.field().integer()) {
-        case .through: held = .through(try read(cursor.next()))
-        case .upTo: held = .upTo(try read(cursor.next()))
-        case nil: throw ObjectRefused("'edge' says neither that its bound is inside nor that it is out")
-        }
-
-        try cursor.end()
-
-        return held
-    }
-
     private func counted(_ value: Value) throws -> Int {
         try Field(value, of: "a count").count()
     }
 
     private func integer(_ value: Value) throws -> Int {
         try Field(value, of: "a number").integer()
-    }
-
-    private func fraction(_ value: Value) throws -> Double {
-        try Field(value, of: "a fraction").double()
     }
 
     private func text(_ value: Value) throws -> String {
@@ -507,7 +458,6 @@ struct ObjectReader {
         let read = Parameter(
             name: try name(cursor.next()),
             type: try cursor.field().maybe(expression),
-            candidates: try cursor.field().maybe { written in try Field(written, of: "candidates").list(text) },
             description: try cursor.field().maybe(text)
         )
 
@@ -701,7 +651,6 @@ struct ObjectReader {
         case .int: read = .int
         case .double: read = .double
         case .string: read = .string
-        case .ranged: read = .ranged(try ranged(cursor.next()))
         case .array: read = .array(try lowered(cursor.next()))
         case .dictionary: read = .dictionary(try lowered(cursor.next()))
         case .record: read = .record(try loweredRecord(cursor.next()))
@@ -984,31 +933,7 @@ struct ObjectReader {
                 throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
             }
 
-            // What a call of a value hands on is judged at the positions it
-            // hands a value, each once, in order; no other call hands one on.
-            let handedOn = try Field(cursor.next(), of: "handed on").list { written in
-                var on = try FieldCursor(written, of: "handed on")
-                let taken = HandedOn(position: try on.field().count(), against: try lowered(on.next()))
-
-                try on.end()
-
-                return taken
-            }
-            let onPositions = handedOn.map(\.position)
-            var values = 0..<0
-
-            if case let .apply(_, arguments) = judged {
-                values = arguments.indices
-            }
-
-            guard
-                zip(onPositions, onPositions.dropFirst()).allSatisfy({ $0 < $1 }),
-                onPositions.allSatisfy({ position in values.contains(position) && !inPlace.contains(position) })
-            else {
-                throw ObjectRefused("a call hands on a value at a position it hands no value")
-            }
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack, handedOn: handedOn) else {
+            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
                 throw ObjectRefused("a judgement where a call stands judges nothing")
             }
 

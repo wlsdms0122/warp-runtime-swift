@@ -1302,7 +1302,7 @@ struct InferenceTests {
             constants: [
                 "counted": .cast(
                     .literal(.int(7)),
-                    as: .ranged(.whole(from: 0, to: .through(10))),
+                    as: .nullable(.int),
                     optional: true
                 )
             ],

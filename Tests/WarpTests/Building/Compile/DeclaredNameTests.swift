@@ -150,34 +150,6 @@ struct DeclaredNameTests {
         #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
     }
 
-    @Test("a name declaring a range is refused a value outside it")
-    func aDeclaredRangeRefusesWhatIsOutsideIt() async throws {
-        // Given
-        let sut = try Module(
-            types: ["App.Byte": .ranged(.whole(from: 0, to: .through(255)))],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("held", declared: .named("App.Byte")),
-                            expression: .literal(.int(300))
-                        )
-                    ],
-                    result: reference("held")
-                )
-            ]
-        )
-        let image = try await Builder().build([sut] + Module.standard)
-
-        // When / Then
-        await #expect {
-            try await Executor().run(image)
-        } throws: { error in
-            "\(error)".contains("300 is outside")
-        }
-    }
-
     @Test("a construct that binds the name says what it holds, and the author does not")
     func aConstructBoundNameTakesNoDeclaration() throws {
         // Given. A loop binds the round under the statement's name

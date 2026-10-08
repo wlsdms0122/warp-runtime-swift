@@ -14,7 +14,7 @@ import Foundation
 func mayFail(_ name: Name = "checked") -> Statement {
     Statement(
         binding: .constant(name),
-        expression: .cast(.literal(.int(0)), as: .ranged(.whole(from: 0, to: .through(255))), optional: false)
+        expression: .cast(.literal(.null), as: .nullable(.int), optional: false)
     )
 }
 

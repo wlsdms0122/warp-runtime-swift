@@ -114,19 +114,6 @@ struct SignatureTests {
         }
     }
 
-    @Test("a value outside enum is rejected")
-    func valueOutsideOneOfRejected() {
-        // Given
-        let sut = Signature(parameters: [
-            Parameter(name: "mode", type: .string, candidates: ["fast", "slow"])
-        ])
-
-        // When / Then
-        #expect(throws: ArgumentError.self) {
-            try settled(sut, given: ["mode": .string("medium")])
-        }
-    }
-
     @Test("no inputs declaration is still a closed contract, and strays are rejected")
     func strayInputRejectedOnEmptySignature() async throws {
         // Given. Absent `inputs:` is an empty signature, not an absent contract

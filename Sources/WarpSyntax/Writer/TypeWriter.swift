@@ -48,7 +48,6 @@ struct TypeWriter {
                 Parameter(
                     name: parameter.name,
                     type: parameter.type.map(stripped),
-                    candidates: parameter.candidates,
                     description: parameter.description
                 )
             },
@@ -87,22 +86,6 @@ struct TypeWriter {
         case .double: return .string(TypeSpelling.double.spelling)
         case .string: return .string(TypeSpelling.string.spelling)
         case .selfType: return .string(TypeSpelling.selfType.spelling)
-
-        // The range rides in the name's spelling (`Int(0...255)`) the way the
-        // reader takes it in. A bound with no spelling has nothing to ride in:
-        // the language admits an infinity, because it orders like any other
-        // bound, and a document that carried the words a message shows it in
-        // would read back as an error. Said rather than written as something
-        // else, the way an unwritable type is.
-        case let .ranged(refinement):
-            guard refinement.spellable else {
-                throw WritingError(
-                    "'\(type.rendered)' is bounded by a fraction no document spells,"
-                        + " and a range is written as its bounds"
-                )
-            }
-
-            return .string(type.rendered)
 
         case let .named(name):
             return .string(name.spelling)
@@ -292,7 +275,7 @@ struct TypeWriter {
         case let .inout(inner):
             return .inout(stripped(inner))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .ranged, .named:
+        case .any, .never, .null, .bool, .int, .double, .string, .named:
             return type
         }
     }
