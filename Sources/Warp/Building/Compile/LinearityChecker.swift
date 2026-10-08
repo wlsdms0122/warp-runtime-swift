@@ -170,13 +170,14 @@ struct LinearityChecker {
         // refused here, and nil where one is allowed. A name the block
         // introduces is read nowhere after it, so one still holding its value
         // where the block ends has dropped it. `reading` reads the result where
-        // it is read otherwise than as an answer: as an element or a field, or
-        // as a loop's result, read once after the last round that finished.
+        // it is read otherwise than as an answer, handed the names the block
+        // introduced: as an element or a field, or as a loop's result, read
+        // once after the last round that finished.
         func through(
             _ block: Block,
             held: Held,
             guarded: String?,
-            reading: ((Expression, Held) throws -> Held)? = nil
+            reading: ((Expression, Held, [Held.Local]) throws -> Held)? = nil
         ) throws -> Held {
             let scope = held.scope
             var held = held
@@ -238,7 +239,7 @@ struct LinearityChecker {
             }
 
             if let result = block.result {
-                held = try reading.map { reading in try reading(result, held) }
+                held = try reading.map { reading in try reading(result, held, introduced) }
                     ?? answered(result, held: held, guarded: guarded)
             } else {
                 held.carriesObligation = false
@@ -287,9 +288,9 @@ struct LinearityChecker {
                 guard let head = path.head else { return held }
 
                 // A name that handed its value on holds nothing, so there is
-                // no part of it left to read either.
+                // no part of it left to read either, as a path or as an index.
                 guard path.segments.count == 1 else {
-                    guard held.holding(head) != .gone else { throw refusal(readAfterHanding: head) }
+                    try readable(path, held: held)
 
                     return held
                 }
@@ -501,8 +502,15 @@ struct LinearityChecker {
                 // The condition is read once a round and once more, and the
                 // result once, after the last round that finished.
                 let asked = try moving(condition, held: round, guarded: "inside a loop")
-                var rounds = try through(body, held: asked, guarded: "inside a loop") { result, held in
-                    try self.answered(result, held: held, guarded: guarded)
+                // What the result reads is what the last round that finished
+                // left, so a value a round made and still holds there is one
+                // every round before it dropped.
+                var rounds = try through(body, held: asked, guarded: "inside a loop") { result, held, introduced in
+                    if let stranded = introduced.first(where: held.live.contains) {
+                        throw self.refusal(stranded: stranded.name)
+                    }
+
+                    return try self.answered(result, held: held, guarded: guarded)
                 }
 
                 // A round may not run at all, so a loop is a way through
@@ -591,6 +599,8 @@ struct LinearityChecker {
         // the list or record the box holds.
         private func written(_ expression: Expression, into path: Path, held: Held, guarded: String?) throws -> Held {
             guard let head = path.head, path.segments.count == 1 else {
+                try readable(path, held: held)
+
                 return try carrying(expression, held: held, guarded: guarded)
             }
 
@@ -609,6 +619,17 @@ struct LinearityChecker {
             written.take(head)
 
             return written
+        }
+
+        // Whether every name a path below its head reads, the head and each
+        // index, still holds its value. A write below the head reads the head
+        // as well, since it writes into the value the head holds.
+        private func readable(_ path: Path, held: Held) throws {
+            for read in path.expandingIndexReferences {
+                guard let head = read.head, held.holding(head) == .gone else { continue }
+
+                throw refusal(readAfterHanding: head)
+            }
         }
 
         // What a body or a leave answers. A borrowed name answered hands on
@@ -631,7 +652,7 @@ struct LinearityChecker {
             }
 
             if case let .block(block) = expression {
-                return try through(block, held: held, guarded: guarded) { result, held in
+                return try through(block, held: held, guarded: guarded) { result, held, _ in
                     try self.carrying(result, held: held, guarded: guarded)
                 }
             }
@@ -842,7 +863,7 @@ struct LinearityChecker {
 
         private func refusal(readAfterHanding name: Name) -> BuildError {
             refusal(
-                "reads a part of '\(name)' after handing it on. A value written `linear`"
+                "reaches into '\(name)' after handing it on. A value written `linear`"
                     + " is gone from the name that held it once it is given away"
             )
         }
@@ -976,6 +997,17 @@ struct LinearityChecker {
                     + " `returns`. What a declaration answers is read off its body"
                     + " where nobody wrote it, and the mark is not something a"
                     + " reading keeps",
+                at: place.child(.result)
+            )
+        }
+
+        // A caller binds the answer as what `returns` declares, so one that
+        // declares a type not written `linear` hands the obligation to nobody.
+        if let returns = signature.returns, walk.handsOut, !returns.handedOnce(in: context.types) {
+            throw BuildError(
+                "answers a value handed on exactly once and declares it answers"
+                    + " \(returns.rendered). A caller holds what it answers as the"
+                    + " declared type, so the obligation would be held by nobody",
                 at: place.child(.result)
             )
         }
