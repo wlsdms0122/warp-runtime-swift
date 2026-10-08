@@ -183,11 +183,16 @@ struct TextTests {
             ]
         )
 
-        // When / Then
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then. The build had nothing to judge, and the run refuses in the
+        // words the build would have used
         await #expect {
-            try await run(sut)
+            try await Executor().run(image)
         } throws: { error in
-            "\(error)".contains("Standard.Text.encoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+            !(error is BuildError)
+                && "\(error)".contains("Standard.Text.encoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
         }
     }
 

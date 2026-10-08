@@ -3550,12 +3550,11 @@ struct TypeChecker {
     // judgement a call to a declaration and a call of a value share. The
     // count; every composition a position mentions, held to its bounds, with
     // what leans on a claim this table cannot settle written down for the
-    // link; a constant, settled through the gate the run would hold it to,
-    // since a kind that fits may still hold a value the slot refuses; and
-    // what each position takes. What an argument holds is read from the body
-    // it was written in, so a name bound to a call carries that call's
-    // declared answer. A declaration's slots name each position and list what
-    // a constant there may be; a value's type writes the positions alone.
+    // link; a constant, settled through the gate the run would hold it to;
+    // and what each position takes. What an argument holds is read from the
+    // body it was written in, so a name bound to a call carries that call's
+    // declared answer. A declaration's slots name each position; a value's
+    // type writes the positions alone.
     private func check(
         _ arguments: [Expression],
         reading readings: [LoweredType],
