@@ -324,8 +324,10 @@ public struct Validator: Sendable {
                     throw ValidationError(Expression.declarationOnABoundName, at: here)
                 }
 
+                // What a name says it holds is the statement's, beside the
+                // construct it writes.
                 if let declared = binding.declared {
-                    try written(declared, in: .value, at: here)
+                    try written(declared, in: .value, at: place.statement(statement.name?.spelling, at: position))
                 }
 
                 switch binding {
