@@ -14,9 +14,6 @@ import Foundation
 // and says what the procedure may fail with; a call through the contract then
 // reads as the contract says, and a claim backed by a declaration that does
 // less, or fails with more, does not hold.
-//
-// No bounds: the bound a type parameter carries is the declaring signature's
-// own.
 public struct ContractProcedure: Sendable, Equatable {
     // MARK: - Property
     public let signature: Signature

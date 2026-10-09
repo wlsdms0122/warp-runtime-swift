@@ -171,17 +171,8 @@ public struct Writer: Sendable {
             written[ProcedureReader.CodingKeys.access.name] = .string(procedure.access.rawValue)
         }
 
-        // Stripped here, at the declaration, because this is the one place a
-        // bound has a `bounds` to move to. Everything below the declaration
-        // (slots, nested procedure types) writes types as they arrive and
-        // refuses a bound it meets, so a bound can neither be written twice nor
-        // quietly dropped.
-        written.merge(try fields(of: TypeWriter(readBy: readBy).stripped(procedure.signature))) { one, _ in one }
+        written.merge(try fields(of: procedure.signature)) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
-
-        if let bounds = try TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
-            written[ProcedureReader.CodingKeys.bounds.name] = bounds
-        }
 
         return .dictionary(written)
     }
@@ -333,6 +324,10 @@ public struct Writer: Sendable {
 
         if let returns = signature.returns {
             written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
+        }
+
+        if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
+            written[ProcedureReader.CodingKeys.bounds.name] = bounds
         }
 
         return written

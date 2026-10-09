@@ -189,7 +189,7 @@ struct TypeChecker {
         folding: Folding?,
         writing fulfillment: Fulfillment
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, proof: HandBackProof) {
-        let promised = returns?.lowered(in: context.loweredTypes)
+        let promised = returns?.lowered(in: context.loweredTypes, bounds: context.bounds)
 
         // A closure literal the body answers, at any depth, is completed by
         // the type the declaration answers.
@@ -205,6 +205,7 @@ struct TypeChecker {
             written: LiteralShape(inner.literalShape, reading: inner.reading),
             answered: inner.flow.answered,
             to: returns,
+            bounds: context.bounds,
             result: inner.block.result,
             at: place,
             in: context.loweredTypes,
@@ -324,7 +325,7 @@ struct TypeChecker {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: context().bounding(only.symbol.procedure.signature.parameterBounding.table)
+                with: context().bounding(only.symbol.procedure.signature.bounds)
             )
 
             // A reading naming a type parameter is handed on as it is. What a
@@ -403,18 +404,19 @@ struct TypeChecker {
     private func held(
         _ written: LiteralShape,
         to returns: TypeExpression?,
+        bounds: [Name: Set<Name>],
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment
     ) throws {
         guard let returns else { return }
 
-        let promised = returns.lowered(in: table)
+        let promised = returns.lowered(in: table, bounds: bounds)
 
         guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
                 "answers \(written.rendered(in: table)), and its"
-                    + " declaration promises \(returns)",
+                    + " declaration promises \(promised.rendered(in: table))",
                 at: place
             )
         }
@@ -702,22 +704,18 @@ struct TypeChecker {
 
     // The one bounds judgment a call is held to, over the whole signature.
     // Answers the refusal, or nil where every bounded parameter's readings
-    // answer each of its bounds.
-    //
-    // That one parameter takes one bound, and that a named bound is declared,
-    // are the declaration's own facts, held where it is declared, before
-    // anything gathers readings for this. Judging against every name in a
-    // mention set costs nothing when the set holds its one.
+    // answer each of its bounds. That a named bound is declared is the
+    // declaration's own fact, held where it is declared.
     private func boundsRefusal(
-        mentions: [Name: [Name]],
+        bounds: [Name: Set<Name>],
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
-        for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
+        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             for reading in substitution.everyReading(of: parameter) {
-                for name in names {
+                for name in names.sorted() {
                     // One nothing declares was refused where the
                     // declaration was judged.
                     guard loweredTypes.declaresContract(name) else { continue }
@@ -766,14 +764,8 @@ struct TypeChecker {
             return .refusal(named.joined(separator: ", "))
         }
 
-        let bounding = declared.parameterBounding
-
-        if let refusal = bounding.refusal {
-            return .refusal(refusal)
-        }
-
         if let refusal = boundsRefusal(
-            mentions: bounding.table,
+            bounds: declared.bounds,
             substitution: substitution,
             in: loweredTypes,
             fulfillment: fulfillment,
@@ -1335,18 +1327,27 @@ struct TypeChecker {
         written answer: LiteralShape,
         answered: [Flow.Answer],
         to returns: TypeExpression?,
+        bounds: [Name: Set<Name>],
         result: Expression?,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(LiteralShape(one.literalShape, reading: one.reading), to: returns, at: one.place, in: table, fulfillment: fulfillment)
+            try held(
+                LiteralShape(one.literalShape, reading: one.reading),
+                to: returns,
+                bounds: bounds,
+                at: one.place,
+                in: table,
+                fulfillment: fulfillment
+            )
         }
 
         try held(
             answer,
             to: returns,
+            bounds: bounds,
             at: place.part(result != nil ? .result : .returns),
             in: table,
             fulfillment: fulfillment
@@ -1933,15 +1934,16 @@ struct TypeChecker {
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
             // A closure literal the body answers, at any depth, is completed
-            // by the type the closure answers.
-            let promised = procedure.signature.returns?.lowered(in: context.loweredTypes)
+            // by the type the closure answers. Its body reads the names of
+            // the procedure around it, so a closure it writes does too.
+            let promised = procedure.signature.returns?.lowered(in: context.loweredTypes, bounds: procedure.signature.bounds)
             let inner = try await inspected(
                 block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
                 at: place.child(.closure),
                 in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
                 },
-                with: context.bounding(procedure.signature.parameterBounding.table),
+                with: context,
                 ask: ask.answering(promised)
             )
 
@@ -1957,6 +1959,7 @@ struct TypeChecker {
 
                 procedure = procedure.with(
                     signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
+                        .bounded(by: context.bounds)
                 )
             }
 
@@ -2009,6 +2012,7 @@ struct TypeChecker {
                     written: LiteralShape(inner.literalShape, reading: inner.reading),
                     answered: inner.flow.answered,
                     to: procedure.signature.returns,
+                    bounds: procedure.signature.bounds,
                     result: inner.block.result,
                     at: place.child(.closure),
                     in: context.loweredTypes,
@@ -2093,7 +2097,7 @@ struct TypeChecker {
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
-                .lowered(in: context.loweredTypes),
+                .lowered(in: context.loweredTypes, bounds: procedure.signature.bounds),
                 flow: flow
             )
 
@@ -2398,7 +2402,7 @@ struct TypeChecker {
                 // A closure literal written here, at any depth, is completed
                 // by the type it is written into.
                 let argument = signature.parameters.indices.contains(position)
-                    ? signature.parameters[position].declared.lowered(in: context.loweredTypes)
+                    ? signature.parameters[position].declared.lowered(in: context.loweredTypes, bounds: signature.bounds)
                         .completing(written, in: context.loweredTypes)
                     : written
                 let inner = try await inspected(

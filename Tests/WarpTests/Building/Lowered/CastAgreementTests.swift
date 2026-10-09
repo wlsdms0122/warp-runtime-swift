@@ -47,6 +47,9 @@ struct CastAgreementTests {
         of: Linkage()
     )
 
+    // What the signature these types stand in holds its type parameters to.
+    private let bounds: [Name: Set<Name>] = ["N": ["Comparable"]]
+
     private let typeExpressions: [TypeExpression] = [
         .any, .never, .null, .bool, .int, .double, .string,
         .array(.int), .array(.any), .array(.double),
@@ -62,7 +65,7 @@ struct CastAgreementTests {
         .named("Tree"),
         .named("Nothing declares this"),
         .parameter(name: "T"),
-        .parameter(name: "N", bounds: ["Comparable"]),
+        .parameter(name: "N"),
         .composition(["Comparable"]),
         .projection(of: "T", path: [.key("inner")]),
         .procedure(nil)
@@ -133,8 +136,8 @@ struct CastAgreementTests {
         let table = types.loweredTypes
 
         func nominalBesideNameless(_ one: TypeExpression, _ other: TypeExpression) -> Bool {
-            let one = one.lowered(in: table)
-            let other = other.lowered(in: table)
+            let one = one.lowered(in: table, bounds: bounds)
+            let other = other.lowered(in: table, bounds: bounds)
 
             return (table.record(of: one) != nil && other.isNamelessStructure(in: table))
                 || (table.record(of: other) != nil && one.isNamelessStructure(in: table))
@@ -193,13 +196,13 @@ struct CastAgreementTests {
     // Asked of the lowered types, which is where the judgment lives. What a
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
-        mine.lowered(in: types.loweredTypes)
-            .couldBothHold(reading: theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
+        mine.lowered(in: types.loweredTypes, bounds: bounds)
+            .couldBothHold(reading: theirs.lowered(in: types.loweredTypes, bounds: bounds), in: types.loweredTypes)
     }
 
     // What a cast to the type answers, the judge a run asks of a value it
     // reads as one: named the way the type names it, every field kept.
     private func settled(_ value: Value, as type: TypeExpression) -> Value? {
-        try? type.lowered(in: types.loweredTypes).reading(value, optional: false, in: types.loweredTypes)
+        try? type.lowered(in: types.loweredTypes, bounds: bounds).reading(value, optional: false, in: types.loweredTypes)
     }
 }

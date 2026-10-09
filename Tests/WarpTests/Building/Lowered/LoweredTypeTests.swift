@@ -39,7 +39,7 @@ struct LoweredTypeTests {
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
-            .parameter(name: "T", bounds: ["App.Ordered"]),
+            .parameter(name: "T"),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
             .dictionary(.named("App.Maybe"))
         ]
@@ -58,7 +58,7 @@ struct LoweredTypeTests {
         let written: [TypeExpression] = Array(types.types.values) + [
             .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
-            .parameter(name: "T", bounds: ["App.Ordered"]),
+            .parameter(name: "T"),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
             .procedure(nil),
             .record(["a": .variable(.int), "b": .dictionary(.named("App.Maybe"))]),
@@ -118,7 +118,7 @@ struct LoweredTypeTests {
         // Given. Int, Double and String answer `App.Ordered`
         let table = types.loweredTypes
         let ordered = TypeExpression.composition(["App.Ordered"]).lowered(in: table)
-        let bounded = TypeExpression.parameter(name: "T", bounds: ["App.Ordered"]).lowered(in: table)
+        let bounded = TypeExpression.parameter(name: "T").lowered(in: table, bounds: ["T": ["App.Ordered"]])
         let unbounded = TypeExpression.parameter(name: "T").lowered(in: table)
 
         // When / Then. A parameter bounded by it answers it, and one bounded

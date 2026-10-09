@@ -190,9 +190,10 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))
+                            Parameter(name: "value", type: .parameter(name: "T"))
                         ],
-                        returns: .parameter(name: "T", bounds: ["Standard.Comparable"])
+                        returns: .parameter(name: "T"),
+                        bounds: ["T": ["Standard.Comparable"]]
                     ),
                     body: [],
                     result: reference("value")
@@ -282,9 +283,10 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Numeric"]))
+                            Parameter(name: "value", type: .parameter(name: "T"))
                         ],
-                        returns: .parameter(name: "T", bounds: ["Numeric"])
+                        returns: .parameter(name: "T"),
+                        bounds: ["T": ["Numeric"]]
                     ),
                     body: [],
                     result: reference("value")

@@ -467,28 +467,30 @@ struct WriterTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name two occurrences bound differently has no document to write")
-    func differingOccurrencesAreNotWritten() throws {
-        // Given
-        let sut = try Module(
-            contracts: ["A": [Name: Signature](), "B": [Name: Signature]()],
-            procedures: [
-                "keep": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
+    @Test("a draft's contract procedure holding a bound is written with it, and the reading refuses it")
+    func aBoundedContractProcedureIsWrittenAsItIs() throws {
+        // Given. A draft is held to no rule, so the bound reaches the writer
+        let draft = Draft(
+            contracts: [
+                "App.Kept": [
+                    "keep": ContractProcedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                            bounds: ["T": ["App.Kept"]]
+                        )
+                    )
+                ]
+            ],
+            procedures: [:]
         )
 
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: sut)
+        // When
+        let written = try Writer().value(of: draft)
+
+        // Then. The bound is written rather than dropped, under a key a
+        // contract's procedure does not take
+        #expect(throws: ReadingError.self) {
+            try Loader().load(written, identity: nil)
         }
     }
 
@@ -818,51 +820,16 @@ struct WriterTests {
         }
     }
 
-    @Test("a bound outside any signature has no document")
-    func aBoundOutsideASignatureHasNoDocument() throws {
-        // Given. A module's declared type is a procedure type whose slot
-        // carries a bound. No procedure declares this signature, so there is no
-        // `bounds` surface for the claim to land on. Writing the name bare
-        // would be a document that reads back meaning something else.
+    @Test("a bound is written once, in the declaring signature's bounds")
+    func aBoundIsWrittenInTheDeclaringSignature() throws {
+        // Given. A slot names the parameter, and the signature holds the bound
         let bounded = Signature(
             parameters: [
-                Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"]))
+                Parameter(name: "item", type: .parameter(name: "T"))
             ],
-            returns: .bool
+            returns: .bool,
+            bounds: ["T": ["Scalar"]]
         )
-        let draft = Draft(
-            types: ["Predicate": .procedure(bounded.type, .unstated)],
-            procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
-            ]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try sut.value(of: draft)
-        }
-
-        // A parameter written on its own refuses too. Every surface below the
-        // declaring procedure answers the same way, whichever entry the caller
-        // came through
-        #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"])))
-        }
-
-        // A bounded variable declared as a type directly refuses the same way
-        let variable = Draft(
-            types: ["Loose": .parameter(name: "T", bounds: ["Scalar"])],
-            procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
-            ]
-        )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: variable)
-        }
-
-        // And the same claim carried by a procedure's own slot is written.
-        // Once, as the declaring signature's `bounds`
         let declaring = try Module(
             procedures: [
                 entryName: Procedure(
@@ -874,8 +841,10 @@ struct WriterTests {
             ]
         )
 
+        // When
         let written = try sut.value(of: declaring)
 
+        // Then
         guard
             case let .dictionary(document) = written,
             case let .dictionary(procedures) = document["procedures"],

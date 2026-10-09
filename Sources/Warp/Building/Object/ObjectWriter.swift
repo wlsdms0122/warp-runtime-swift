@@ -288,8 +288,8 @@ struct ObjectWriter {
         case let .named(spelling):
             return tagged(Tag.named, name(spelling))
 
-        case let .parameter(spelling, bounds):
-            return tagged(Tag.parameter, name(spelling), .array(bounds.sorted().map(name)))
+        case let .parameter(spelling):
+            return tagged(Tag.parameter, name(spelling))
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
@@ -333,7 +333,8 @@ struct ObjectWriter {
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try signature.parameters.map(parameter)),
-            try ObjectWriter.maybe(signature.returns, type)
+            try ObjectWriter.maybe(signature.returns, type),
+            keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) }
         ])
     }
 
@@ -450,6 +451,7 @@ struct ObjectWriter {
         case .otherwise: return tagged(Tag.otherwise)
         case .rescue: return tagged(Tag.rescue)
         case .fields: return tagged(Tag.fields)
+        case .bounds: return tagged(Tag.bounds)
         }
     }
 

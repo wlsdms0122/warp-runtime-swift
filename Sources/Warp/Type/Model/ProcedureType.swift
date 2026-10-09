@@ -40,15 +40,11 @@ public struct ProcedureType: Sendable, Equatable {
             || (returns?.isGeneric ?? false)
     }
 
-    // Every type parameter mentioned in this type, occurrence by occurrence.
-    public var parameterOccurrences: [ParameterOccurrence] {
-        parameters.flatMap { parameter in parameter.parameterOccurrences }
-            + (returns?.parameterOccurrences ?? [])
-    }
-
-    // What this type holds its type parameters to, read off every occurrence.
-    public var parameterBounding: ParameterBounding {
-        ParameterBounding(parameterOccurrences)
+    // Every type parameter named in its parameters or answer.
+    var parameterNames: Set<Name> {
+        parameters.reduce(into: returns?.parameterNames ?? []) { named, parameter in
+            named.formUnion(parameter.parameterNames)
+        }
     }
 
     // MARK: - Initializer
@@ -63,15 +59,6 @@ public struct ProcedureType: Sendable, Equatable {
         ProcedureType(
             parameters: parameters.map { parameter in parameter.replacingSelf(with: type) },
             returns: returns?.replacingSelf(with: type)
-        )
-    }
-
-    // This type with each occurrence carrying the bound declared for its
-    // name. The one `bounds` at the declaration speaks for a nested type.
-    public func bounded(by bounds: [Name: [Name]]) -> ProcedureType {
-        ProcedureType(
-            parameters: parameters.map { parameter in parameter.bounded(by: bounds) },
-            returns: returns?.bounded(by: bounds)
         )
     }
 

@@ -75,33 +75,35 @@ struct BytesTests {
             of: Linkage()
         )
 
-        let typeExpressions: [TypeExpression] = [
+        let unbounded: [TypeExpression] = [
             .any, .int, .double, .string, .bool, .null, .never,
             .nullable(.int),
             .parameter(name: "Element"),
-            .parameter(name: "Element", bounds: ["Ordered"]),
-            .parameter(name: "Element", bounds: ["Textual"]),
-            .parameter(name: "Element", bounds: ["Nobody"]),
             .named("Whole"),
             .named("Nobody"),
             .array(.int),
             .dictionary(.int),
             .record([:])
         ]
+        let bounded: [(TypeExpression, [Name: Set<Name>])] = [
+            (.parameter(name: "Element"), ["Element": ["Ordered"]]),
+            (.parameter(name: "Element"), ["Element": ["Textual"]]),
+            (.parameter(name: "Element"), ["Element": ["Nobody"]])
+        ]
+        let table = types.loweredTypes
 
         // When / Then
-        for type in typeExpressions {
+        for (type, bounds) in unbounded.map({ type in (type, [:]) }) + bounded {
+            let lowered = type.lowered(in: table, bounds: bounds)
             let untouched = (0...255).allSatisfy { byte in
                 let value = Value.int(byte)
 
-                return (try? type.settling(value, at: "value", in: types)) == value
+                return (try? lowered.settling(outside: value, at: "value", in: table)) == value
             }
 
-            let table = types.loweredTypes
-
             #expect(
-                type.lowered(in: table).holdsEveryByte(in: table) == untouched,
-                "\(type.rendered) is held to say \(untouched)"
+                lowered.holdsEveryByte(in: table) == untouched,
+                "\(lowered.rendered(in: table)) is held to say \(untouched)"
             )
         }
     }

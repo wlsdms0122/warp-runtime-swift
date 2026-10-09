@@ -53,6 +53,7 @@ public extension Place {
 
         case .parameters: [.key(ProcedureReader.CodingKeys.parameters.stringValue)]
         case .returns: [.key(ProcedureReader.CodingKeys.returns.stringValue)]
+        case .bounds: [.key(ProcedureReader.CodingKeys.bounds.stringValue)]
         case .body: [.key(BlockReader.CodingKeys.body.stringValue)]
         case .result: [.key(BlockReader.CodingKeys.result.stringValue)]
 

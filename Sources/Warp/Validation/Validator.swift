@@ -112,11 +112,20 @@ public struct Validator: Sendable {
 
         for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
             for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
-                try validate(
-                    asked.signature,
-                    in: .contract,
-                    at: Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
-                )
+                let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+
+                // A bound is declared by the procedure whose call fills the
+                // name, and a contract's procedure is answered by declarations
+                // that each declare their own.
+                guard asked.signature.bounds.isEmpty else {
+                    throw ValidationError(
+                        "a contract's procedure writes no bounds. A bound is declared in the `bounds`"
+                            + " of a procedure's own signature",
+                        at: place.part(.bounds)
+                    )
+                }
+
+                try validate(asked.signature, in: .contract, at: place)
             }
         }
 
@@ -487,7 +496,7 @@ public struct Validator: Sendable {
 
             // Its `some T` is the `T` of the procedure it is written in, and
             // the signature that declares a type parameter owns its bound.
-            guard procedure.signature.parameterOccurrences.allSatisfy({ occurrence in occurrence.bounds.isEmpty }) else {
+            guard procedure.signature.bounds.isEmpty else {
                 throw ValidationError(
                     "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
                         + " held to the bounds that procedure declares",
@@ -785,9 +794,21 @@ public struct Validator: Sendable {
 
     // What a signature is held to wherever it is written: one name to each
     // parameter, since two under one name would be one name a body reads two
-    // ways, and each parameter's type, in front of which `inout` may stand,
-    // and the answer's.
+    // ways, each parameter's type, in front of which `inout` may stand, and
+    // the answer's, and a bound only on a name some slot writes as `some T`,
+    // since one on a name nobody wrote binds nothing.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
+        let named = signature.parameterNames
+        let unwritten = signature.bounds.keys.filter { name in !named.contains(name) }.sorted()
+
+        if let first = unwritten.first {
+            throw ValidationError(
+                "bounds name \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
+                    + " `some \(first.spelling)`. A bound rides on a parameter some slot mentions",
+                at: place.part(.bounds)
+            )
+        }
+
         for (position, parameter) in signature.parameters.enumerated() {
             let here = place.part(.parameters).index(position)
 

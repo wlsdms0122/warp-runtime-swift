@@ -100,7 +100,7 @@ enum ObjectCoverageFixture {
         "inout": .inout(.string),
         "nullable": .nullable(.int),
         "named": .named("a.one"),
-        "parameter": .parameter(name: "T", bounds: ["a.four"]),
+        "parameter": .parameter(name: "T"),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",
@@ -168,7 +168,7 @@ enum ObjectCoverageFixture {
 
     static let everyPart: [Place.Part] = [
         .procedures, .constants, .variables, .types, .contracts, .satisfies,
-        .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
+        .imports, .parameters, .returns, .bounds, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
 
@@ -290,11 +290,12 @@ enum ObjectCoverageFixture {
     )
 
     // A row a closure literal was lifted into, whose frame holds what the
-    // body that stood it up takes into it.
+    // body that stood it up takes into it, and whose answer is a type
+    // parameter the procedure around it holds to two contracts.
     static func lifted(label: Name) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(returns: .int),
+            signature: Signature(returns: .parameter(name: "T"), bounds: ["T": ["a.five", "a.four"]]),
             access: .internal,
             constness: .unstated,
             isolation: .unstated,
