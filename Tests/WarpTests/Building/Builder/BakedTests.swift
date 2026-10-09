@@ -428,7 +428,7 @@ struct BakedTests {
         let arriving = try Module(
             imports: ["Standard.Numeric.plus"],
             constants: [
-                "App.two": .call(
+                "two": .call(
                     Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(1)), .literal(.int(1))])
                 )
             ],
@@ -436,7 +436,7 @@ struct BakedTests {
                 "App.main": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: reference("App.two")
+                    result: reference("two")
                 )
             ]
         )

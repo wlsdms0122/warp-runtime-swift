@@ -74,9 +74,27 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         return true
     }
 
+    // Whether a path reads this back as one key, which is what a name in the
+    // value namespace is: a path is written with `.`, `[`, `]` and `?`, and
+    // white space at a key's ends is not part of it, so a name holding one of
+    // those is never the key a path reaches. A dot is a step here and a
+    // character of a type's name, which is why the two namespaces have two
+    // grammars.
+    public var isPathKey: Bool {
+        guard let first = spelling.unicodeScalars.first, let last = spelling.unicodeScalars.last else {
+            return false
+        }
+
+        return !spelling.contains { character in Name.pathPunctuation.contains(character) }
+            && !CharacterSet.whitespaces.contains(first)
+            && !CharacterSet.whitespaces.contains(last)
+    }
+
     public var description: String { spelling }
 
     private static let dot = UInt8(ascii: ".")
+
+    private static let pathPunctuation: Set<Character> = [".", "[", "]", "?"]
 
     // MARK: - Initializer
     public init(_ spelling: String) throws {

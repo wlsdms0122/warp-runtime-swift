@@ -203,21 +203,21 @@ struct InPlaceTests {
 
     @Test("a document writes only the variables it declares")
     func aDocumentWritesOnlyItsOwnVariables() {
-        // Given. One write of `App.total`
-        let write = Statement(binding: .assignment([.key("App.total")]), expression: .literal(.int(1)))
+        // Given. One write of `total`
+        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
 
         // When / Then. Taken at the load of the document declaring
-        // `App.total`, and refused at the load of one that does not
+        // `total`, and refused at the load of one that does not
         #expect(throws: Never.self) {
             try Module(
-                variables: ["App.total": .literal(.int(0))],
+                variables: ["total": .literal(.int(0))],
                 procedures: ["App.poke": Procedure(body: [write])]
             )
         }
         #expect {
             try Module(procedures: ["Other.poke": Procedure(body: [write])])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("assigns 'App.total', which is not visible here")
+            error is ValidationError && "\(error)".contains("assigns 'total', which is not visible here")
         }
     }
 

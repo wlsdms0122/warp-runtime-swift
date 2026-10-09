@@ -9,8 +9,9 @@ import Foundation
 
 // Checks a module against itself, before anything is resolved: what its text
 // answers alone. Every name a procedure reads is one it can see, every name in
-// the types namespace is one a document may declare, and every word a type
-// writes stands where it may.
+// the types namespace is one a document may declare, every name in the value
+// namespace is one a path reads, and every word a type writes stands where it
+// may.
 //
 // The walk is structural: a call's arguments are expressions whose insides
 // this reads, so validation never consults the procedure table.
@@ -35,6 +36,8 @@ public struct Validator: Sendable {
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
+            try readable(name, at: .constant(name.spelling, in: .of(module)))
+
             try validate(
                 expression,
                 naming: nil,
@@ -49,6 +52,8 @@ public struct Validator: Sendable {
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
         for (name, variable) in module.variables.sorted(by: { one, other in one.key < other.key }) {
+            try readable(name, at: .variable(name.spelling, in: .of(module)))
+
             guard !constants.contains(name) else {
                 throw ValidationError(
                     "'\(name)' is declared as a constant and as a variable, and"
@@ -873,6 +878,18 @@ public struct Validator: Sendable {
         }
     }
 
+    // A name in the value namespace is read by a path, so one no path reads
+    // back as its key is a declaration nothing can reach.
+    private func readable(_ name: Name, at place: Place) throws {
+        guard !name.isPathKey else { return }
+
+        throw ValidationError(
+            "'\(name)' is no name a path reads. A path is written with `.`, `[`, `]` and `?`,"
+                + " so a name holding one, or white space at either end, is never the one it reaches",
+            at: place
+        )
+    }
+
     // A name a body introduces: a parameter, a statement's name, or the one a
     // construct hands its body. Every such name passes here, so the module's
     // bound names and the parameters around it are checked at whatever depth
@@ -886,6 +903,8 @@ public struct Validator: Sendable {
         in scope: Scope,
         at place: Place
     ) throws {
+        try readable(name, at: place)
+
         if scope.bound.contains(name) {
             throw ValidationError(
                 "'\(name)' collides with a name the module bound, which it would"

@@ -126,12 +126,12 @@ struct SeparateCompilationTests {
         // variable, so it answers by the run's state rather than on its own,
         // and the two above reach it only through each other.
         let bottom = try Module(
-            variables: ["Low.count": .literal(.int(0))],
+            variables: ["lowCount": .literal(.int(0))],
             procedures: [
                 "Low.read": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("Low.count")])
+                    result: .reference([.key("lowCount")])
                 )
             ]
         )

@@ -43,7 +43,7 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build(asking)
         } throws: { error in
-            "\(error)".contains("constants.App.counted:")
+            "\(error)".contains("constants.counted:")
                 && "\(error)".contains("no document in this link says 'Null' answers it")
         }
     }
@@ -103,19 +103,19 @@ struct FoldedContractTests {
             types: ["Bank.Plain": .record(["note": .string]), "Zed.Plain": .record(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        // `App.aaa` settles first and `App.zzz` last, and the pair the list
-        // reports first is `Bank.Plain`, which `App.zzz` handed.
+        // `aaa` settles first and `zzz` last, and the pair the list
+        // reports first is `Bank.Plain`, which `zzz` handed.
         let program = try Module(
             constants: [
-                "App.aaa": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveEarly"))])),
-                "App.zzz": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveLate"))]))
+                "aaa": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveEarly"))])),
+                "zzz": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveLate"))]))
             ],
             procedures: [
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("App.zzz")])
+                    result: .reference([.key("zzz")])
                 )
             ]
         )
@@ -124,7 +124,7 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("constants.App.zzz:")
+            "\(error)".contains("constants.zzz:")
                 && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
         }
     }
@@ -158,7 +158,7 @@ struct FoldedContractTests {
             #expect {
                 try Builder().link(link, supplying: Supplying(Module.standard))
             } throws: { error in
-                "\(error)".contains("constants.App.counted:")
+                "\(error)".contains("constants.counted:")
                     && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
             }
         }
@@ -187,7 +187,7 @@ struct FoldedContractTests {
         )
         let program = try Module(
             constants: [
-                "App.counted": .call(
+                "counted": .call(
                     Call(selector: "App.count", arguments: [.call(Call(selector: "App.give"))])
                 )
             ],
@@ -196,7 +196,7 @@ struct FoldedContractTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("App.counted")])
+                    result: .reference([.key("counted")])
                 )
             ]
         )

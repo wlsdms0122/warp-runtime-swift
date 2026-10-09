@@ -384,6 +384,35 @@ struct ValidationTests {
         }
     }
 
+    @Test("a name no path reads back is refused where it is declared, read or not")
+    func aNameNoPathReadsIsRefused() throws {
+        // Given. A path reads `a.b` as the field `b` of `a`, so a statement,
+        // a parameter or a module's constant spelled that way is never reached
+        let statement = Procedure(body: [Statement(binding: .constant("a.b"), expression: .literal(.int(1)))])
+        let parameter = Procedure(
+            signature: Signature(parameters: [Parameter(name: "a[0]", type: .int)]),
+            body: []
+        )
+
+        // When / Then
+        for procedure in [statement, parameter] {
+            #expect {
+                try Validator().validate(procedure)
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("is no name a path reads")
+            }
+        }
+
+        #expect {
+            try Module(
+                constants: ["App.k": .literal(.int(1))],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("constants.App.k: 'App.k' is no name a path reads")
+        }
+    }
+
     @Test("a reference must start with a name")
     func referenceMustHaveAHead() {
         // Given
