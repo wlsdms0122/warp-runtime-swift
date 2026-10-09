@@ -341,7 +341,7 @@ struct ObjectReader {
                 throw ObjectRefused("'composition' joins nothing")
             }
 
-            read = .composition(names)
+            read = .composition(Set(names))
 
         case .projection:
             read = .projection(

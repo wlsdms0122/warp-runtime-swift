@@ -49,16 +49,6 @@ enum SlotMark: String, CaseIterable, Sendable {
         }
     }
 
-    // Why a mark may not stand in front of this type, and nothing where it
-    // may. One statement, so the reading and the writing refuse the same thing
-    // in the same words and a place that asks later asks the same question.
-    static func refusal(marking inner: TypeExpression, under mark: SlotMark) -> String? {
-        guard let inside = marked(inner) else { return nil }
-
-        return "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
-            + " A slot says one thing about what it takes"
-    }
-
     // The mark a spelling begins with, and the spelling under it. The other
     // half of `marked(_:)`: one asks a type that has been made, this asks text
     // that has not been read yet, and a mark stands in front of a whole

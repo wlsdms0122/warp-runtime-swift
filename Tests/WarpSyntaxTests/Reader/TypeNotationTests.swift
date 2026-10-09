@@ -64,8 +64,13 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Task?") == .nullable(.named("Task")))
 
         // And. `?` wraps the whole spelling, so inside the brackets it is the
-        // element that is nullable.
+        // element that is nullable, and in front of it a modifier or an `&`
+        // is still the whole type's.
         #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
+        #expect(try TypeReader.parse("const Procedure?") == .nullable(.procedure(nil, .const)))
+        #expect(try TypeReader.parse("isolated Procedure?") == .nullable(.procedure(nil, .unstated, .isolated)))
+        #expect(try TypeReader.parse("App.B & App.A?") == .nullable(.composition(["App.A", "App.B"])))
+        #expect(try TypeReader.parse("inout Int?") == .inout(.nullable(.int)))
     }
 
     @Test("names joined with & read as the set of them, and write back in name order")
@@ -74,9 +79,19 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
         #expect(try TypeReader.parse("Array<App.A & App.B>") == .array(.composition(["App.A", "App.B"])))
         #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.B?") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & Array<Int>") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.A") }
+
+        // And. A document writes the set one way: each name once, in name
+        // order
+        for (written, imports) in [("App.B & App.A", ["App.A", "App.B"]), ("App.A & App.A", ["App.A"])] as [(String, Value)] {
+            #expect(throws: ReadingError.self) {
+                try Loader().load([
+                    "warp": 1,
+                    "imports": imports,
+                    "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
+                ])
+            }
+        }
     }
 
     @Test("a signature bounds its type parameters once, in bounds")

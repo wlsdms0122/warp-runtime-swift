@@ -224,15 +224,7 @@ struct DeclarationChecker {
         // contract's, since a type is one thing and not a bound on some
         // other.
         case let .composition(names):
-            guard !names.isEmpty, Set(names).count == names.count, names == names.sorted() else {
-                throw BuildError(
-                    "joins \(names.isEmpty ? "nothing" : Set(names).count == names.count ? "names out of order" : "one name twice")"
-                        + " with `&`, and a composition names what a value answers, each once and in name order",
-                    at: place
-                )
-            }
-
-            for name in names where table.contracts[name] == nil {
+            for name in names.sorted() where table.contracts[name] == nil {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of contracts,"
                         + " which no module in this link declares '\(name)' as",

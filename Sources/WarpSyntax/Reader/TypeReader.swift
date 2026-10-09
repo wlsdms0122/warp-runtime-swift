@@ -138,20 +138,18 @@ public struct TypeReader: Decodable {
             throw TypeFormError("a type name must not be empty")
         }
 
-        // A trailing `?` reads first because it wraps the whole spelling:
-        // `Array<Int>?` is a nullable array, and what may be inside the
-        // brackets never carries one. `?` speaks about a slot, and only the
-        // whole spelling is one. `inout` and `var` stand in front of the whole
-        // type, including a trailing `?`, so they are read before anything else
-        // is.
+        // `inout` and `var` stand in front of the whole type, including a
+        // trailing `?`, so they are read before anything else is.
         if let (mark, bare) = SlotMark.leading(of: text) {
-            let inner = try parse(bare, qualifying: qualifying)
+            return mark.marking(try parse(bare, qualifying: qualifying))
+        }
 
-            if let refusal = SlotMark.refusal(marking: inner, under: mark) {
-                throw TypeFormError(refusal)
-            }
-
-            return mark.marking(inner)
+        // A trailing `?` reads next because it wraps the whole spelling under
+        // the mark: `Array<Int>?` is a nullable array, `const Procedure?` a
+        // nullable procedure and `A & B?` a nullable composition, and what may
+        // be inside the brackets never carries one.
+        if text.hasSuffix("?") {
+            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
         }
 
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
@@ -166,33 +164,25 @@ public struct TypeReader: Decodable {
             return .procedure(signature, constness, isolation)
         }
 
-        // `A & B`: the names a value answers, and nothing else. Read before
-        // `?` and the rest so that every part is held to being a name; a `?`
-        // on a part is a part that is not one, and a composition is not a
-        // slot to mark.
+        // `A & B`: the names a value answers, and nothing else, so every part
+        // is held to being a name.
         if let parts = joined(text) {
-            let names = try parts.map { part -> Name in
-                let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
+            return .composition(
+                Set(
+                    try parts.map { part -> Name in
+                        let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
 
-                guard case let .named(name) = parsed else {
-                    throw TypeFormError(
-                        "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                            + " and `&` joins the names of contracts, each a bare name"
-                    )
-                }
+                        guard case let .named(name) = parsed else {
+                            throw TypeFormError(
+                                "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
+                                    + " and `&` joins the names of contracts, each a bare name"
+                            )
+                        }
 
-                return name
-            }
-
-            guard Set(names).count == names.count else {
-                throw TypeFormError("type '\(text)' names one bound twice")
-            }
-
-            return .composition(names.sorted())
-        }
-
-        if text.hasSuffix("?") {
-            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
+                        return name
+                    }
+                )
+            )
         }
 
         // A type parameter rather than a name: `some T` is worked out from the

@@ -69,8 +69,7 @@ struct UnwritableTests {
     @Test(
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
-            TypeExpression.nullable(.composition(["App.A", "App.B"])),
-            .nullable(.variable(.int)),
+            TypeExpression.nullable(.variable(.int)),
             .composition(["Foo", "Int"]),
             .composition(["Foo", "Array<Int>"]),
             .named("Array<Int>"),
@@ -86,18 +85,14 @@ struct UnwritableTests {
 
     @Test("a procedure whose parameter type has no spelling has no document, though it builds")
     func aBuiltParameterTypeWithNoSpellingIsRefused() async throws {
-        // Given. Two contracts that each ask one procedure, and a slot taking
-        // either or null
+        // Given. A slot taking a record of one field or null: a record has no
+        // name for a `?` to trail
         let module = try Module(
-            contracts: [
-                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
-                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
-            ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "either", type: .nullable(.composition(["App.A", "App.B"])))]
+                        parameters: [Parameter(name: "either", type: .nullable(.record(["a": .int])))]
                     ),
                     body: [],
                     result: .literal(.null)

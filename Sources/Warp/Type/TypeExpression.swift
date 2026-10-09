@@ -97,10 +97,11 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case parameter(name: Name)
 
     // A value of whatever type answers every contract here, written
-    // `A & B`, with no name of its own to tie one mention to another. One
-    // name in this position is written as the name and read as this where
-    // the name is a contract's.
-    case composition([Name])
+    // `A & B`, with no name of its own to tie one mention to another. A set,
+    // as a bound is: what it says is which contracts, so no order and no
+    // repeat is written. One name in this position is written as the name and
+    // read as this where the name is a contract's.
+    case composition(Set<Name>)
 
     // The type that answers a contract, written `Self` in that contract's
     // procedures and nowhere else. A claim reads it as the type the claim is
@@ -206,7 +207,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return "some \(name)"
 
         case let .composition(names):
-            return names.map(\.spelling).joined(separator: " & ")
+            return names.sorted().map(\.spelling).joined(separator: " & ")
 
         case .selfType:
             return TypeSpelling.selfType.spelling
@@ -313,7 +314,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             [name]
 
         case let .composition(names):
-            Set(names)
+            names
 
         case .parameter, .selfType, .projection:
             []

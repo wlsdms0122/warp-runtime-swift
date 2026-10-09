@@ -1930,7 +1930,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .parameter(name: label)
 
         case let .composition(names):
-            return .composition(names)
+            return .composition(Set(names))
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
