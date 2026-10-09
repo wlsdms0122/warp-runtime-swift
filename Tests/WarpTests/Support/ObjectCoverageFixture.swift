@@ -143,10 +143,7 @@ enum ObjectCoverageFixture {
         ("parameterContract", .parameter(label: "U", bounds: ["a.five"])),
         ("parameterNone", .parameter(label: "V", bounds: [])),
         ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("composition", .composition(["a.five", "a.four"])),
-        ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
-        ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
-        ("undeclaredCycle", .undeclared(label: "Y", because: .namesItself))
+        ("composition", .composition(["a.five", "a.four"]))
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and
@@ -277,7 +274,8 @@ enum ObjectCoverageFixture {
     static let callOperation = CallOperation(
         procedure: 0,
         arguments: [.literal(.int(12)), .literal(.int(13)), nil],
-        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))]
+        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))],
+        judged: [1]
     )
 
     static let dispatchOperation = DispatchOperation(

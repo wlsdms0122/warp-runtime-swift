@@ -689,7 +689,6 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
-        case .undeclared: read = .undeclared(label: try cursor.field().text(), because: try undeclared(cursor.next()))
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
 
@@ -698,21 +697,6 @@ struct ObjectReader {
         return read
     }
 
-    private func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
-        var cursor = try FieldCursor(value, of: "undeclared")
-        let read: LoweredType.Undeclared
-
-        switch ObjectLayout.UndeclaredTag(rawValue: try cursor.field().integer()) {
-        case .noTypeNamed: read = .noTypeNamed(try name(cursor.next()))
-        case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
-        case .namesItself: read = .namesItself
-        case nil: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
 
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")
@@ -909,15 +893,7 @@ struct ObjectReader {
             )
 
         case .checked:
-            let judged = try operation(cursor.next())
-
-            // What is judged where it stands is a call, of any of the three
-            // kinds, and what it hands back stands at the positions it hands
-            // a variable in place, each once, in order.
-            guard let inPlace = judged.handingInPlace else {
-                throw ObjectRefused("a judgement where a call stands wraps what is no call")
-            }
-
+            let judged = try checkedCall(cursor.next())
             let against = try cursor.field().maybe(lowered)
             let handedBack = try Field(cursor.next(), of: "handed back").list { written in
                 var back = try FieldCursor(written, of: "handed back")
@@ -929,8 +905,8 @@ struct ObjectReader {
             }
             let positions = handedBack.map(\.position)
 
-            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }), positions.allSatisfy(inPlace.contains) else {
-                throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
+            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }) else {
+                throw ObjectRefused("what a call hands back in place stands out of position order")
             }
 
             guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
@@ -1007,6 +983,30 @@ struct ObjectReader {
         return read
     }
 
+    // What a judgement where a call stands judges: a call, of any of the
+    // three kinds.
+    private func checkedCall(_ value: Value) throws -> CheckedCall {
+        var cursor = try FieldCursor(value, of: "call")
+        let read: CheckedCall
+
+        switch ObjectLayout.OperationTag(rawValue: try cursor.field().integer()) {
+        case .call: read = .call(try callOperation(cursor.next()))
+        case .dispatch: read = .dispatch(try dispatchOperation(cursor.next()))
+        case .apply:
+            read = .apply(
+                try operation(cursor.next()),
+                arguments: try Field(cursor.next(), of: "arguments").list(argument)
+            )
+
+        default:
+            throw ObjectRefused("'call' is made in a way this reads none of")
+        }
+
+        try cursor.end()
+
+        return read
+    }
+
     private func callOperation(_ value: Value) throws -> CallOperation {
         var cursor = try FieldCursor(value, of: "call")
         let read = try CallOperation(
@@ -1024,7 +1024,8 @@ struct ObjectReader {
                 try held.end()
 
                 return taken
-            }
+            },
+            judged: try Field(cursor.next(), of: "judged").list { written in try Field(written, of: "judged").count() }
         )
 
         try cursor.end()

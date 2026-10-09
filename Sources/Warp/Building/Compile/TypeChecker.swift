@@ -601,11 +601,14 @@ struct TypeChecker {
 
     // What a call's answer is judged against where the call stands: what the
     // call reads it as, unless the callee already declares exactly that,
-    // or the call reads `Any` or nothing. `answeredBy` is what the callee
-    // declares, nil where the callee is not known here.
+    // or the call reads `Any`. A reading of `Never` is judged like any
+    // other: a callee answering a type parameter the call filled from what
+    // holds no value, an empty list, may still answer one where it proves
+    // nothing. `answeredBy` is what the callee declares, nil where the callee
+    // is not known here.
     private func judgedAgainst(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
         switch reading {
-        case .any, .never:
+        case .any:
             return nil
 
         // Equal as types only where the callee's answer names no type
@@ -1952,9 +1955,9 @@ struct TypeChecker {
                     joined.joined(answered)
                 }
 
-                if let answer = answered.spelled(in: context.loweredTypes) {
-                    procedure = procedure.with(signature: Signature(parameters: procedure.signature.parameters, returns: answer))
-                }
+                procedure = procedure.with(
+                    signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
+                )
             }
 
             // A box the closure takes is one it reads and writes when it is
@@ -2451,6 +2454,21 @@ struct TypeChecker {
                 selector: call.selector,
                 arguments: zip(arguments, taking).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
             )
+
+            // What the build proves a value of the slot's type as it stands,
+            // the run need not judge again where the call hands it over. A
+            // call through a contract is judged at the row the run picks.
+            if context.contractProcedures[call.selector] == nil {
+                for (position, slot) in slots.enumerated() where !slot.type.isInout {
+                    let read = taking[position].written(sent[position], in: context.loweredTypes).asHeld
+
+                    judgements.record(
+                        asItIs: slot.type.takesAsItIs(read, in: context.loweredTypes),
+                        at: place.child(.argument(position))
+                    )
+                }
+            }
+
             let reading = answered(
                 by: signature,
                 over: context.slots(of: call.selector),
@@ -3561,11 +3579,10 @@ struct TypeChecker {
     // judgement a call to a declaration and a call of a value share. The
     // count; every composition a position mentions, held to its bounds, with
     // what leans on a claim this table cannot settle written down for the
-    // link; a constant, settled through the gate the run would hold it to;
-    // and what each position takes. What an argument holds is read from the
-    // body it was written in, so a name bound to a call carries that call's
-    // declared answer. A declaration's slots name each position; a value's
-    // type writes the positions alone.
+    // link; and what each position takes. What an argument holds is read
+    // from the body it was written in, so a name bound to a call carries that
+    // call's declared answer. A declaration's slots name each position; a
+    // value's type writes the positions alone.
     private func check(
         _ arguments: [Expression],
         reading readings: [LoweredType],
@@ -3579,7 +3596,7 @@ struct TypeChecker {
     ) throws {
         try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
 
-        for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
+        for (position, (type, reading)) in zip(types, readings).enumerated() {
             let at = place.child(.argument(position))
             let given = LiteralShape(shapes[position], reading: reading)
             let slot = slots?[position]
@@ -3597,20 +3614,6 @@ struct TypeChecker {
                 at: place
             ) {
                 throw BuildError("\(subject): \(refusal)", at: at)
-            }
-
-            // A constant is checked as the slot holds it, a record built there
-            // under the name the slot reads.
-            if let constant = argument.constantValue.map({ constant in type.written(constant, in: loweredTypes) }) {
-                do {
-                    if let slot {
-                        _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
-                    } else {
-                        _ = try type.slotUnwrapped.settling(constant, at: named, in: loweredTypes)
-                    }
-                } catch {
-                    throw BuildError("\(subject): \(error)", at: at)
-                }
             }
 
             guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {

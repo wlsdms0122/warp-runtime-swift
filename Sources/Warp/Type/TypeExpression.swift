@@ -457,18 +457,15 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // MARK: - Public
     // What this type accepts, settled to the declared representation, or a
     // refusal saying which part disagreed. `at` is the path into the value so
-    // the message names the field rather than the whole argument. A value a
-    // host holds comes from outside, so a nameless record where a declared
-    // record is read takes the name first, as a cast does; a field the type
-    // does not declare is not left out.
-    public func settling(
+    // the message names the field rather than the whole argument. A value
+    // handed here comes from outside, so it is fitted at this door the way
+    // it is at every other.
+    func settling(
         _ value: Value,
         at path: @autoclosure () -> String,
         in types: TypeTable = .empty
     ) throws -> Value {
-        let type = lowered(in: types.loweredTypes)
-
-        return try type.settling(type.named(value, in: types.loweredTypes), at: path(), in: types.loweredTypes)
+        try lowered(in: types.loweredTypes).settling(outside: value, at: path(), in: types.loweredTypes)
     }
 
     // The same type with every name it holds walked through to what that name

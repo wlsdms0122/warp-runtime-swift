@@ -37,14 +37,5 @@ public struct Parameter: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // A host's door onto the boundary a run keeps: this parameter lowered
-    // into the slot the run reads, and the value settled by it.
-    public func checking(
-        _ value: Value,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(in: types.loweredTypes).checking(value, at: "input '\(name)'", in: types.loweredTypes)
-    }
-
     // MARK: - Private
 }

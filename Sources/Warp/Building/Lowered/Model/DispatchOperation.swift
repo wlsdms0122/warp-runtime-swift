@@ -55,5 +55,21 @@ struct DispatchOperation: Sendable {
     }
 
     // MARK: - Public
+    // The same call with its first and its arguments rewritten. The calls
+    // beside it are the link's to lay out, so they are handed over as they
+    // stand for the relocation to answer.
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> DispatchOperation {
+        DispatchOperation(
+            contract: contract,
+            procedure: procedure,
+            first: try first.rewritten(operation: operation, type: type),
+            arguments: try arguments.map { argument in try argument.rewritten(operation: operation, type: type) },
+            calls: calls
+        )
+    }
+
     // MARK: - Private
 }

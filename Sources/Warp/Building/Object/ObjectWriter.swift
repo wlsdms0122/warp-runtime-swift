@@ -560,19 +560,6 @@ struct ObjectWriter {
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
-
-        case let .undeclared(label, because):
-            return tagged(Tag.undeclared, .string(label), undeclared(because))
-        }
-    }
-
-    private func undeclared(_ because: LoweredType.Undeclared) -> Value {
-        typealias Tag = ObjectLayout.UndeclaredTag
-
-        switch because {
-        case let .noTypeNamed(name): return tagged(Tag.noTypeNamed, self.name(name))
-        case let .noBoundNamed(name): return tagged(Tag.noBoundNamed, self.name(name))
-        case .namesItself: return tagged(Tag.namesItself)
         }
     }
 
@@ -703,10 +690,10 @@ struct ObjectWriter {
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
 
-        case let .checked(read, judging):
+        case let .checked(checked, judging):
             return tagged(
                 Tag.checked,
-                try self.operation(read),
+                try self.operation(checked.operation),
                 ObjectWriter.maybe(judging.against, lowered),
                 .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
             )
@@ -769,7 +756,8 @@ struct ObjectWriter {
             }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
-            })
+            }),
+            .array(call.judged.map { position in .int(position) })
         ])
     }
 

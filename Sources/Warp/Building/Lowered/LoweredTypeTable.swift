@@ -182,7 +182,8 @@ final class LoweredTypeTable: Sendable {
     // numbers it was lowered with. Either way a row is a row of one table and
     // nothing a link concludes reads one to decide what to say. A name that
     // names itself through a chain of names stands for no type and lowers to
-    // the type every judgment refuses, so a chain of names is always finite.
+    // `Never`, so a chain of names is always finite; `cycling` keeps which
+    // ones did, for the build to refuse.
     static func lowering(
         _ types: [Name: TypeExpression],
         satisfying: [Name: Set<Name>] = [:],
@@ -242,7 +243,7 @@ final class LoweredTypeTable: Sendable {
         let cycling = loweredTypes.indices.filter { row in comesBack(from: row) }
 
         for row in cycling {
-            loweredTypes[row] = .undeclared(label: labels[row].spelling, because: .namesItself)
+            loweredTypes[row] = .never
         }
 
         // The record a row names: the last row on the way to a record type,
@@ -307,7 +308,7 @@ final class LoweredTypeTable: Sendable {
         guard let reading = read(given, orNull: orNull) else { return .settled(true) }
 
         switch reading {
-        case .any, .projection, .undeclared, .never:
+        case .any, .projection, .never:
             return .settled(true)
 
         // A name that stands for no record answers as what it stands for,

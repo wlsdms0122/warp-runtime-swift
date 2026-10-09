@@ -163,7 +163,7 @@ struct CallTests {
         await #expect {
             try await run(sut, vocabulary: Module.standard + [.shouting])
         } throws: { error in
-            error is BuildError && "\(error)".contains("sending 'App.shout': input 'text': expected String, got Int")
+            error is BuildError && "\(error)".contains("sending 'App.shout' with text, which holds Int where String is declared")
         }
     }
 

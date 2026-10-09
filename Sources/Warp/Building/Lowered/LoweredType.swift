@@ -68,22 +68,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // way it answers `Any`; it stands apart for the walk's own naming.
     case projection(of: Name, path: Path)
 
-    // A name the table does not answer, and why. Nothing can be said about
-    // it, so every judgment over readings lets it pass, and the value judge
-    // refuses it with the reason. A table a host built by hand answers instead
-    // of failing to lower, and only the judgments that reach the name are
-    // touched by it. The build refuses such a name as it lowers the table, so a
-    // run never meets one.
-    case undeclared(label: String, because: Undeclared)
-
-    // Why a name is not answered: nothing declares it as a type, nothing
-    // declares it as a contract, or it names itself.
-    enum Undeclared: Sendable, Equatable {
-        case noTypeNamed(Name)
-        case noBoundNamed(Name)
-        case namesItself
-    }
-
     // MARK: - Property
     // What a field a declaration wrote `var` holds. The mark is a fact about
     // the field, and what is read out of it is the type inside.
@@ -97,7 +81,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .record, .procedure, .inout, .nullable,
-            .named, .parameter, .composition, .projection, .undeclared:
+            .named, .parameter, .composition, .projection:
             return self
         }
     }
@@ -133,7 +117,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return (parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (returns?.namesParameter ?? false)
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
             return false
         }
     }
@@ -165,7 +149,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 found.merge(part.boundedParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection, .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
             return [:]
         }
     }
@@ -179,7 +163,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .record, .procedure, .nullable,
-            .named, .parameter, .composition, .projection, .undeclared:
+            .named, .parameter, .composition, .projection:
             return self
         }
     }
@@ -288,7 +272,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.asHeld)))
 
         case .any, .never, .null, .bool, .int, .double, .string, .procedure, .variable, .inout,
-            .named, .parameter, .composition, .projection, .undeclared:
+            .named, .parameter, .composition, .projection:
             return self
         }
     }
@@ -349,8 +333,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection,
-            .undeclared:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection:
             return false
         }
     }
@@ -721,7 +704,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .variable(inner), let .inout(inner):
             return inner.nominal(in: table)
 
-        case .any, .never, .nullable, .parameter, .composition, .projection, .undeclared:
+        case .any, .never, .nullable, .parameter, .composition, .projection:
             return nil
         }
     }
@@ -838,9 +821,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
             return accepts(inner, in: table, assumingPairs: assumingPairs, rigid: rigid)
 
-        case (.parameter, .undeclared):
-            return true
-
         // A slot's own wrapping comes off before what stands for it is taken
         // apart, since a name or a composition there is what a contract
         // reads. `var` is a fact about a slot; a nullable slot takes what
@@ -852,6 +832,15 @@ indirect enum LoweredType: Sendable, Equatable {
         // A nullable slot takes null, whatever it declares besides.
         case (.nullable, .null):
             return true
+
+        // A name that stands for no record is read as what it stands for
+        // before a composition asks it, so an alias of `Any` is the `Any` it
+        // is.
+        case let (.composition, .named(row)) where table.recordRows[row] == nil,
+            let (.nullable(.composition), .named(row)) where table.recordRows[row] == nil:
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            return accepts(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], rigid: rigid)
 
         // A value read as `Any` or along a path a call decides is of a type
         // the build does not know, and one read as a composition of a type
@@ -889,9 +878,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case (.never, _):
             return false
-
-        case (.undeclared, _), (_, .undeclared):
-            return true
 
         // A declared record is nominal: a nameless record or a map is no
         // value of it, and a value of it is neither. A place changes no value,
@@ -992,13 +978,18 @@ indirect enum LoweredType: Sendable, Equatable {
     // of `Any`, a contract or a type parameter this is not, is never one;
     // the run says what arrived.
     func takesAsItIs(_ reading: LoweredType, in table: LoweredTypeTable) -> Bool {
-        if self == .any || reading == .never || identical(to: reading, in: table) {
+        if passesEverything || reading == .never || identical(to: reading, in: table) {
             return true
         }
 
         switch (self, reading) {
-        case (_, .any), (_, .composition), (_, .parameter), (_, .projection), (_, .undeclared):
+        case (_, .any), (_, .composition), (_, .parameter), (_, .projection):
             return false
+
+        // A type parameter a call fills from a reading of a type the build
+        // knows was held to its bounds there, the way the link holds a claim.
+        case (.parameter, _):
+            return reading.nominal(in: table) != nil
 
         case (.nullable, .null):
             return true
@@ -1173,7 +1164,7 @@ indirect enum LoweredType: Sendable, Equatable {
         let walked = assumingPairs + [(self, other)]
 
         switch (self, other) {
-        case (.undeclared, _), (_, .undeclared), (.parameter, _), (_, .parameter):
+        case (.parameter, _), (_, .parameter):
             return self == other
 
         // A record under a name is that name, so two names are two types
@@ -1613,7 +1604,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .parameter, .composition, .projection, .undeclared:
+            .parameter, .composition, .projection:
             return self
         }
     }
@@ -1669,8 +1660,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether null is one of this type's values rather than an absence: the
     // fact `T?` exists to declare, and the boundary reads it. `Any` is not
-    // this: an undeclared type accepts a null that arrives, but it does not
-    // spell null as a value.
+    // this: a type that declares nothing accepts a null that arrives, but it
+    // does not spell null as a value.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
         switch self {
         case .null, .nullable:
@@ -1763,9 +1754,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .named(row):
             return table.labels[row].spelling
 
-        case let .undeclared(label, _):
-            return label
-
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"
         }
@@ -1809,9 +1797,6 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.projection(myRoot, myPath), .projection(theirRoot, theirPath)):
             return myRoot == theirRoot && myPath == theirPath
 
-        case let (.undeclared(mine, _), .undeclared(theirs, _)):
-            return mine == theirs
-
         default:
             return false
         }
@@ -1844,7 +1829,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // rest. Named rather than left to a default, so that a kind added to
         // the type language has to be answered for here too.
         case .never, .null, .bool, .double, .string,
-             .array, .dictionary, .record, .procedure, .undeclared:
+             .array, .dictionary, .record, .procedure:
             return false
         }
     }
@@ -2020,9 +2005,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         if provesNothing || other.provesNothing { return true }
 
-        if case .undeclared = self { return true }
-        if case .undeclared = other { return true }
-
         // Null is a value both hold, so one exists whatever else they say.
         if declaresNull(in: table), other.declaresNull(in: table) { return true }
 
@@ -2077,7 +2059,7 @@ indirect enum LoweredType: Sendable, Equatable {
         switch self {
         // A type parameter or a contract stands for whichever type fills or
         // answers it, `Procedure` among them.
-        case .procedure, .any, .never, .parameter, .composition, .projection, .undeclared:
+        case .procedure, .any, .never, .parameter, .composition, .projection:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -2114,18 +2096,6 @@ indirect enum LoweredType: Sendable, Equatable {
         // refusal: there is no type to compare it against.
         case .never:
             throw ArgumentError("\(path()): declares Never, and nothing is ever that")
-
-        case let .undeclared(label, because):
-            switch because {
-            case let .noTypeNamed(name):
-                throw UndeclaredTypeError("\(path()): declares type '\(name)', which nothing declares")
-
-            case let .noBoundNamed(name):
-                throw UndeclaredTypeError("\(path()): declares '\(name)', which nothing declares as a contract")
-
-            case .namesItself:
-                throw UndeclaredTypeError("\(path()): declares type '\(label)', which names itself")
-            }
 
         // A declared record is nominal. A record arriving under this name, or
         // an alias of it, is held to the declared fields and keeps it; a

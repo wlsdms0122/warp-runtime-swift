@@ -188,13 +188,6 @@ enum ObjectLayout {
         case parameter
         case composition
         case projection
-        case undeclared
-    }
-
-    enum UndeclaredTag: Int {
-        case noTypeNamed
-        case noBoundNamed
-        case namesItself
     }
 
     enum ImplementationTag: Int {

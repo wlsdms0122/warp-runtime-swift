@@ -36,16 +36,28 @@ public struct TypeTable: Sendable {
 
     // A table declaring nothing, for a judgment asked with no declarations
     // behind it.
-    public static let empty = TypeTable()
+    public static let empty = TypeTable(types: [:], of: Linkage())
 
     // MARK: - Initializer
     // A table a caller assembled: declarations and not a link, so no row
-    // made by one is at home in it.
+    // made by one is at home in it. They are held to what a document
+    // declaring them is held to, by the same judges, so a name nothing
+    // declares and a name that only names names are refused here, in the
+    // words a build refuses them in.
     public init(
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
-    ) {
-        self.init(types: types, contracts: contracts, of: Linkage())
+    ) throws {
+        let declaring = try Module(types: types, contracts: contracts, procedures: [:])
+        let table = try DeclarationChecker().types(
+            of: try TypeNamespace([declaring]),
+            standing: [declaring],
+            numbered: Linkage()
+        )
+
+        try DeclarationChecker().judge([declaring], in: table)
+
+        self = table
     }
 
     // The same declarations as one link's, which owns the identity its rows

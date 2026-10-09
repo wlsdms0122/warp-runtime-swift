@@ -10,7 +10,9 @@ import Foundation
 // A call as the run makes it. Arguments stand at the callee's slots, nil
 // where a hold stands instead or where a dispatch hands what it read. A parameter
 // handed in place takes the caller's hold: the slot holding it and the path
-// below it.
+// below it. The run judges an argument at its slot only where the build did
+// not prove it a value of the slot's type as it stands, and every argument of
+// a call it picks through a contract, which the build judged against `Self`.
 struct CallOperation: Sendable {
     struct Handed: Sendable {
         // MARK: - Property
@@ -27,14 +29,20 @@ struct CallOperation: Sendable {
     let arguments: [Operation?]
     let handed: [Handed]
 
+    // The positions whose argument the run judges at the row's slot, in
+    // position order.
+    let judged: [Int]
+
     // MARK: - Initializer
     // The same, where the parts were read apart. What is handed in place
     // stands at one of the positions this call fills, and a run writes it
-    // there without asking how many there are.
+    // there without asking how many there are. What is judged stands in
+    // position order, each once.
     init(
         procedure: Int,
         arguments: [Operation?],
-        judging handed: [Handed]
+        judging handed: [Handed],
+        judged: [Int]
     ) throws {
         guard handed.allSatisfy({ one in one.position < arguments.count }) else {
             throw ObjectRefused(
@@ -43,13 +51,18 @@ struct CallOperation: Sendable {
             )
         }
 
-        self.init(procedure: procedure, arguments: arguments, handed: handed)
+        guard zip(judged, judged.dropFirst()).allSatisfy({ $0 < $1 }) else {
+            throw ObjectRefused("what a call judges stands out of position order")
+        }
+
+        self.init(procedure: procedure, arguments: arguments, handed: handed, judged: judged)
     }
 
-    init(procedure: Int, arguments: [Operation?], handed: [Handed]) {
+    init(procedure: Int, arguments: [Operation?], handed: [Handed], judged: [Int]) {
         self.procedure = procedure
         self.arguments = arguments
         self.handed = handed
+        self.judged = judged
     }
 
     // An argument list placed against the callee that takes it: every argument
@@ -63,12 +76,14 @@ struct CallOperation: Sendable {
     // contract is placed against every type answering it and the run picks
     // one by the value, so a literal one of those types refuses is left as
     // written, `picked`, for the run to refuse where that type is the one it
-    // picks.
+    // picks. `asItIs` names the positions the build proved need no judging;
+    // a call the run picks has none.
     init(
         handing written: [Argument?],
         to callee: Linked,
         row: Int,
         picked: Bool = false,
+        asItIs: (Int) -> Bool = { _ in false },
         in loweredTypes: LoweredTypeTable,
         at place: Place
     ) throws {
@@ -81,6 +96,7 @@ struct CallOperation: Sendable {
 
         var placed: [Operation?] = []
         var handed: [Handed] = []
+        var judged: [Int] = []
 
         placed.reserveCapacity(callee.slots.count)
 
@@ -101,6 +117,10 @@ struct CallOperation: Sendable {
                 continue
             }
 
+            if !asItIs(position) {
+                judged.append(position)
+            }
+
             // A literal argument is a value the build knows, so the image
             // holds it as the slot takes it rather than as it was written.
             placed.append(try given.map { argument in
@@ -116,9 +136,24 @@ struct CallOperation: Sendable {
             })
         }
 
-        self.init(procedure: row, arguments: placed, handed: handed)
+        self.init(procedure: row, arguments: placed, handed: handed, judged: judged)
     }
 
     // MARK: - Public
+    // The same call with every argument it writes rewritten.
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> CallOperation {
+        CallOperation(
+            procedure: procedure,
+            arguments: try arguments.map { argument in
+                try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
+            },
+            handed: handed,
+            judged: judged
+        )
+    }
+
     // MARK: - Private
 }

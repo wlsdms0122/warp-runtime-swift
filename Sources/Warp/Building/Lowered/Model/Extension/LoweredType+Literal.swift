@@ -152,14 +152,11 @@ extension LoweredType {
         reaching(expression, at: nil, in: table) { place, standing, _ in
             guard case let .closure(written) = standing else { return nil }
 
-            guard
-                written.signature.returns == nil,
-                case let .procedure(_, returns?, _, _) = place,
-                let answer = returns.spelled(in: table),
-                !answer.isGeneric
-            else {
-                return standing
-            }
+            guard written.signature.returns == nil, case let .procedure(_, returns?, _, _) = place else { return standing }
+
+            let answer = returns.spelled(in: table)
+
+            guard !answer.isGeneric else { return standing }
 
             return .closure(written.with(signature: Signature(parameters: written.signature.parameters, returns: answer)))
         }
