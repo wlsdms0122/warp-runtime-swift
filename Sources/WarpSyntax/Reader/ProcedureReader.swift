@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public struct ProcedureReader: Decodable {
+struct ProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case description
         case access
@@ -20,10 +20,10 @@ public struct ProcedureReader: Decodable {
     }
 
     // MARK: - Property
-    public let procedure: Procedure
+    let procedure: Procedure
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,

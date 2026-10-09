@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public enum TemplateSegment: Sendable, Equatable {
+enum TemplateSegment: Sendable, Equatable {
     case text(String)
     case ref(path: Path)
 }

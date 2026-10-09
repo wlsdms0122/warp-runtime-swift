@@ -168,7 +168,10 @@ public struct ExpressionReader: Decodable {
             spelling.claims(Set(record.names), in: decoder.notation)
         else { return nil }
 
-        return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
+        return try spelling.expression(
+            from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder),
+            in: decoder.notation
+        )
     }
 
     // `{ record: { … } }`: the fields, each an expression.

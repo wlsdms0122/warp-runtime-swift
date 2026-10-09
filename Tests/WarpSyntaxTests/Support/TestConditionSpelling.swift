@@ -45,7 +45,7 @@ struct TestConditionSpelling: ExpressionSpelling {
         names.contains(Self.subjectKey)
     }
 
-    func expression(from decoder: Decoder) throws -> Warp.Expression {
+    func expression(from decoder: Decoder, in notation: Notation) throws -> Warp.Expression {
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = container.allKeys
             .map(\.stringValue)

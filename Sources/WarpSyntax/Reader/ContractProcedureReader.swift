@@ -12,7 +12,7 @@ import Warp
 // and what it asks beyond that, `const` and `isolated`, each a bool. Its
 // signature is read the way a declaration's is, `bounds` included, and held
 // at the load to what a contract's procedure may say.
-public struct ContractProcedureReader: Decodable {
+struct ContractProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns
@@ -23,10 +23,10 @@ public struct ContractProcedureReader: Decodable {
     }
 
     // MARK: - Property
-    public let procedure: ContractProcedure
+    let procedure: ContractProcedure
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,

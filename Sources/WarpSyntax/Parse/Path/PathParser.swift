@@ -11,14 +11,14 @@ import Warp
 // A document's path: what `{ ref: }` reads and `set` writes. A name, then
 // `.name` for a field, `[3]` for a literal index and `[i]` for an index read
 // from a name. `?.` and `?[` read an absence as null.
-public struct PathParser: Sendable {
+struct PathParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
-    public func parse(_ text: String) throws -> Path {
+    func parse(_ text: String) throws -> Path {
         var segments: [PathSegment] = []
         var buffer = ""
         var depth = 0

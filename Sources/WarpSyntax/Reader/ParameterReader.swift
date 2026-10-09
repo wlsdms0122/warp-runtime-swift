@@ -11,7 +11,7 @@ import Warp
 // A parameter, written as a record under the name its body reads it by. A
 // notation may offer the pair form, `count: Int`; a document has the one
 // spelling.
-public struct ParameterReader: Decodable {
+struct ParameterReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case name
         case type
@@ -19,10 +19,10 @@ public struct ParameterReader: Decodable {
     }
 
     // MARK: - Property
-    public let parameter: Parameter
+    let parameter: Parameter
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let notation = decoder.notation
 
         // The pair form: one key that is the name, holding the type or the

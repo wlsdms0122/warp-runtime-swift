@@ -13,15 +13,15 @@ import Warp
 // document writes a record under `record`, so a record never meets this
 // form there; a notation that reads a bare mapping as a record writes one of
 // exactly those two fields under `record` too.
-public struct VariableReader: Decodable {
+struct VariableReader: Decodable {
     // MARK: - Property
-    public let variable: ModuleVariable
+    let variable: ModuleVariable
 
     static let typeKey = StatementReader.typeKey
     static let valueKey = StatementReader.valueKey
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         guard
             let container = try? decoder.container(keyedBy: AnyCodingKey.self),
             Set(container.allKeys.map(\.stringValue)) == [Self.typeKey.spelling, Self.valueKey.spelling]

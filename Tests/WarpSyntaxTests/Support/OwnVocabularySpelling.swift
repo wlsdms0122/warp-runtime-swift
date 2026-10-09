@@ -22,7 +22,7 @@ struct OwnVocabularySpelling: ExpressionSpelling {
         names.contains("holds")
     }
 
-    func expression(from decoder: Decoder) throws -> Warp.Expression {
+    func expression(from decoder: Decoder, in notation: Notation) throws -> Warp.Expression {
         .call(
             Call(
                 selector: "Example.holds",

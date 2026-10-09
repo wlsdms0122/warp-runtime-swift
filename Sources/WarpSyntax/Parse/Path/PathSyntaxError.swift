@@ -8,12 +8,12 @@
 import Foundation
 import Warp
 
-public struct PathSyntaxError: WarpError {
+struct PathSyntaxError: WarpError {
     // MARK: - Property
-    public let message: String
+    let message: String
 
     // MARK: - Initializer
-    public init(_ message: String) {
+    init(_ message: String) {
         self.message = message
     }
 

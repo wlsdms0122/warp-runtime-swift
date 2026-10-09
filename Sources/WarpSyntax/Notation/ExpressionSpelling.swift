@@ -44,9 +44,9 @@ public protocol ExpressionSpelling: Sendable {
     // reach anything. A slot spends them on the notation's behalf.
     var vocabulary: Set<Name> { get }
 
-    // The expression a record spells. Reached only for a record this notation
-    // claims that is not a tag's, and free to refuse. A key this notation
-    // names but does not offer is refused here, and so is one written in a
-    // form it does not have.
-    func expression(from decoder: Decoder) throws -> Warp.Expression
+    // The expression a record spells, read in the notation that claimed it.
+    // Reached only for a record this notation claims that is not a tag's, and
+    // free to refuse. A key this notation names but does not offer is refused
+    // here, and so is one written in a form it does not have.
+    func expression(from decoder: Decoder, in notation: Notation) throws -> Warp.Expression
 }
