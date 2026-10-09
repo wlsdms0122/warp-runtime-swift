@@ -930,8 +930,6 @@ struct Evaluator: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> [Value?] {
-        try callee.refuseCount(call.arguments.count)
-
         var given: [Value?] = []
         given.reserveCapacity(call.arguments.count)
 

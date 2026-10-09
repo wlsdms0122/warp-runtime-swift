@@ -319,13 +319,8 @@ final class Relocating {
         let procedure = try row(call.procedure, in: context)
 
         // What a call hands over fills the slots the row it reaches declares.
-        // The row is this link's answer and is known here, so the question is
-        // asked once rather than at every call the run makes of it.
-        //
-        // What is left after a document has judged its own calls: a call
-        // reaching a row some other document holds. Which row that is, is this
-        // link's answer, so this is the one that can ask, and it says which
-        // call it is about the way the refusals beside it do.
+        // The row is this link's answer and is known here, so every call is
+        // counted once, here, rather than at every call the run makes of it.
         guard call.arguments.count == table[procedure].slots.count else {
             throw BuildError(
                 "a call stands \(call.arguments.count) argument(s) where the"
