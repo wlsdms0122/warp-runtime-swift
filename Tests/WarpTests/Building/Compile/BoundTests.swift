@@ -98,7 +98,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'lhs' holds Any where some Self: Standard.Comparable is declared")
+            error is BuildError && "\(error)".contains("'Self' is read as Any, which does not answer every procedure 'Standard.Comparable' asks")
         }
     }
 
@@ -682,7 +682,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'lhs' holds Any where some T: Standard.Comparable is declared")
+            error is BuildError && "\(error)".contains("'T' is read as Any, which does not answer every procedure 'Standard.Comparable' asks")
         }
     }
 
