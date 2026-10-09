@@ -600,11 +600,14 @@ struct TypeChecker {
 
     // What a call's answer is judged against where the call stands: what the
     // call reads it as, unless the callee already declares exactly that,
-    // or the call reads `Any` or nothing. `answeredBy` is what the callee
-    // declares, nil where the callee is not known here.
+    // or the call reads `Any`. A reading of `Never` is judged like any
+    // other: a callee answering a type parameter the call filled from what
+    // holds no value, an empty list, may still answer one where it proves
+    // nothing. `answeredBy` is what the callee declares, nil where the callee
+    // is not known here.
     private func judgedAgainst(_ reading: LoweredType, answeredBy callee: LoweredType?) -> LoweredType? {
         switch reading {
-        case .any, .never:
+        case .any:
             return nil
 
         // Equal as types only where the callee's answer names no type
