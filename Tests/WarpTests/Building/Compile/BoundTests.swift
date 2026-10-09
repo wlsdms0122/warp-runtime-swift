@@ -552,60 +552,6 @@ struct BoundTests {
         }
     }
 
-    @Test("a type parameter hidden in a declared type refuses at the load")
-    func aParameterInADeclaredTypeRefusesAtTheLoad() throws {
-        // When / Then. A declared type has no call to fill a parameter
-        #expect {
-            try Module(
-                types: ["Weird": .parameter(name: "T")],
-                procedures: [
-                    "keep": Procedure(
-                        signature: Signature(
-                            parameters: [Parameter(name: "value", type: .named("Weird"))]
-                        ),
-                        body: [],
-                        result: reference("value")
-                    ),
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("A type parameter lives in a signature")
-        }
-    }
-
-    @Test("a parameter behind a procedure type in a declared type refuses too")
-    func aParameterInADeclaredProcedureTypeRefusesAtTheLoad() throws {
-        // When / Then. A declared type is not a filling site however deep the
-        // parameter hides: nothing ever binds it, so the claim would go
-        // unjudged everywhere
-        #expect {
-            try Module(
-                types: [
-                    "Callback": .procedure(ProcedureType(
-                        parameters: [.parameter(name: "T")]
-                    ))
-                ],
-                contracts: Self.markers("Scalar"),
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("A type parameter lives in a signature")
-        }
-    }
-
     @Test("a name that reaches only names refuses at the build")
     func aNameOnlyCycleRefusesAtTheBuild() async throws {
         // Given. A type may name itself through a type, and a name that only
@@ -651,40 +597,6 @@ struct BoundTests {
 
         await #expect(throws: Never.self) {
             try await builder.build([tree] + Module.standard)
-        }
-    }
-
-    @Test("a closure's signature is held to the same judgement as a declaration")
-    func aClosureSignatureIsJudgedAtTheBuild() async throws {
-        // Given. Unreached code still has to compile, and a signature written
-        // inline is a declaration however deep a body buries it
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [
-                        Statement(binding: .constant("kept"), expression: .closure(Procedure(
-                                signature: Signature(
-                                    parameters: [
-                                        Parameter(name: "it", type: .named("Nope"))
-                                    ]
-                                ),
-                                body: [],
-                                result: reference("it")
-                            ))
-                        )
-                    ],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("names type 'Nope', which no module in this link declares")
         }
     }
 

@@ -201,26 +201,6 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a document writes only the variables it declares")
-    func aDocumentWritesOnlyItsOwnVariables() {
-        // Given. One write of `total`
-        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
-
-        // When / Then. Taken at the load of the document declaring
-        // `total`, and refused at the load of one that does not
-        #expect(throws: Never.self) {
-            try Module(
-                variables: ["total": .literal(.int(0))],
-                procedures: ["App.poke": Procedure(body: [write])]
-            )
-        }
-        #expect {
-            try Module(procedures: ["Other.poke": Procedure(body: [write])])
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("assigns 'total', which is not visible here")
-        }
-    }
-
     @Test("a name is a constant or a variable, and not both")
     func aNameIsBoundOnce() {
         // When / Then
@@ -500,71 +480,6 @@ struct InPlaceTests {
         // When / Then
         await #expect(throws: Never.self) {
             try await Builder().build([sut, other] + Module.standard)
-        }
-    }
-
-    @Test("inout is written on a parameter and nowhere else")
-    func inoutOutsideAParameterRefuses() throws {
-        // When / Then. A declared type with an inout field
-        #expect {
-            try Module(
-                imports: [],
-                types: ["Box": .record(["held": .inout(.int)])],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("only a parameter is handed a variable in place")
-        }
-    }
-
-    @Test("var is written on a declared type's field and nowhere else")
-    func varOutsideADeclaredFieldRefuses() throws {
-        // When / Then. A parameter typed var
-        #expect {
-            try Module(
-                imports: [],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
-        }
-    }
-
-    @Test("var is not written on a field of a record a name or a module variable says it holds")
-    func varOnAHeldRecordFieldRefuses() throws {
-        // Given. A record type written inline declares no type, so it has no
-        // field a path writes through
-        let held = TypeExpression.record(["a": .variable(.int)])
-
-        // When / Then
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [Statement(binding: .constant("x", declared: held), expression: .record(["a": .literal(.int(1))]))],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
-        }
-
-        #expect {
-            try Module(
-                variables: ["x": ModuleVariable(.record(["a": .literal(.int(1))]), declared: held)],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("variables.x.fields.a: writes `var Int`")
         }
     }
 

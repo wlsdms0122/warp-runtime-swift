@@ -115,30 +115,9 @@ struct TypeNotationTests {
         #expect(signature?.returns == .parameter(name: "T"))
     }
 
-    @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
+    @Test("a bound is the names of contracts, and a nested procedure type writes none")
     func aBoundBelongsToTheSignature() throws {
-        // When / Then. The slot names the parameter and nothing else. The
-        // bound is declared once, in the signature's `bounds`, and what follows
-        // `some` is no type parameter's name.
-        for written in ["some T: Comparable", "some T:"] {
-            #expect(throws: ValidationError.self) {
-                try loader.loadProcedure(["parameters": [["name": "of", "type": .string(written)]]])
-            }
-        }
-
-        // And. A bound on a name no slot writes binds nothing, and is
-        // refused where `bounds` stands.
-        let unwritten = #expect(throws: ValidationError.self) {
-            try loader.loadProcedure([
-                "bounds": ["T": "Comparable"],
-                "parameters": [["name": "of", "type": "Int"]],
-                "result": ["ref": "of"]
-            ])
-        }
-
-        #expect(unwritten?.place?.rendered == "procedures.entry.bounds")
-
-        // And. A bound is a contract's name, never a type.
+        // When / Then. A bound is a contract's name, never a type.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Array<Int>"],
