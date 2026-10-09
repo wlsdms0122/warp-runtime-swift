@@ -1289,10 +1289,12 @@ indirect enum LoweredType: Sendable, Equatable {
     // site is one place, and what it hands over is already known there.
     //
     // A parameter reached twice is read once more, and the substitution says
-    // how the two readings become one.
+    // how the two readings become one. What a procedure arriving takes at its
+    // parameters is read into `taking` instead.
     func binding(
         against given: LoweredType,
         into substitution: inout Substitution,
+        taking: inout Substitution,
         holding: inout [Substitution.Held],
         in table: LoweredTypeTable,
         assuming: [Int] = []
@@ -1301,7 +1303,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // What arrived wears its slot's marks, which say nothing about its
         // value, so they come off before anything is bound or held.
         case let (_, .variable(theirs)), let (_, .inout(theirs)):
-            binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         // A composition has no name to be read under: what arrived is held
         // to its bounds where it arrived, wherever in the slot that was.
@@ -1316,7 +1318,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A nullable slot reads what cannot be null by its declared half, and
         // what can below.
         case let (.variable(mine), _), let (.inout(mine), _):
-            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         // A composition or null holds what arrived as it stands, the table
         // answering whether it is null or held to the bounds.
@@ -1324,7 +1326,7 @@ indirect enum LoweredType: Sendable, Equatable {
             holding.append(Substitution.Held(reading: given, bounds: slot, orNull: true))
 
         case let (.nullable(mine), _) where !given.declaresNull(in: table):
-            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         // A name on either side is walked through to the type it declares,
         // once, since a type may name itself. Behind a parameter, so that a
@@ -1333,6 +1335,7 @@ indirect enum LoweredType: Sendable, Equatable {
             table.loweredTypes[row].binding(
                 against: given,
                 into: &substitution,
+                taking: &taking,
                 holding: &holding,
                 in: table,
                 assuming: assuming + [row]
@@ -1342,6 +1345,7 @@ indirect enum LoweredType: Sendable, Equatable {
             binding(
                 against: table.loweredTypes[row],
                 into: &substitution,
+                taking: &taking,
                 holding: &holding,
                 in: table,
                 assuming: assuming + [row]
@@ -1354,16 +1358,16 @@ indirect enum LoweredType: Sendable, Equatable {
             return
 
         case let (.nullable(mine), .nullable(theirs)):
-            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         case let (.nullable(mine), _):
-            mine.binding(against: given, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: given, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         case let (.array(mine), .array(theirs)):
-            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         case let (.dictionary(mine), .dictionary(theirs)):
-            mine.binding(against: theirs, into: &substitution, holding: &holding, in: table, assuming: assuming)
+            mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
         // A record read as a dictionary fills a parameter with each of its
         // fields, as a list literal fills one with each of its elements: what
@@ -1375,7 +1379,7 @@ indirect enum LoweredType: Sendable, Equatable {
             // One with no field holds no entry, the way an empty map holds
             // none.
             guard !theirs.fields.isEmpty else {
-                mine.binding(against: .never, into: &substitution, holding: &holding, in: table, assuming: assuming)
+                mine.binding(against: .never, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
 
                 return
             }
@@ -1385,7 +1389,7 @@ indirect enum LoweredType: Sendable, Equatable {
             for field in theirs.fields {
                 var fieldReadings = Substitution()
 
-                mine.binding(against: field, into: &fieldReadings, holding: &holding, in: table, assuming: assuming)
+                mine.binding(against: field, into: &fieldReadings, taking: &taking, holding: &holding, in: table, assuming: assuming)
                 fields.read(fieldReadings, joining: .partByPart, in: table)
             }
 
@@ -1395,17 +1399,26 @@ indirect enum LoweredType: Sendable, Equatable {
             for (name, field) in mine.named {
                 guard let opposite = theirs[name] else { continue }
 
-                field.binding(against: opposite, into: &substitution, holding: &holding, in: table, assuming: assuming)
+                field.binding(against: opposite, into: &substitution, taking: &taking, holding: &holding, in: table, assuming: assuming)
             }
 
+        // What a procedure handed here takes is what it accepts, not a value
+        // the call hands, so it is read into `taking`: it fills a parameter
+        // only where nothing handed does, and the procedure is then judged
+        // against what filled it.
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
+            var takenInside = Substitution()
+
             for (parameter, against) in zip(mine, theirs) {
-                parameter.binding(against: against, into: &substitution, holding: &holding, in: table, assuming: assuming)
+                parameter.binding(against: against, into: &taking, taking: &takenInside, holding: &holding, in: table, assuming: assuming)
             }
+
+            taking.read(takenBy: takenInside)
 
             (myAnswer ?? .any).binding(
                 against: theirAnswer ?? .any,
                 into: &substitution,
+                taking: &taking,
                 holding: &holding,
                 in: table,
                 assuming: assuming
@@ -1421,13 +1434,6 @@ indirect enum LoweredType: Sendable, Equatable {
         default:
             return
         }
-    }
-
-    // The same walk read for the type parameters alone.
-    func binding(against given: LoweredType, into substitution: inout Substitution, in table: LoweredTypeTable) {
-        var unheld: [Substitution.Held] = []
-
-        binding(against: given, into: &substitution, holding: &unheld, in: table)
     }
 
     // This type read by its bounded parameters alone: each as the
@@ -2389,16 +2395,8 @@ indirect enum LoweredType: Sendable, Equatable {
         // filled by that body's call, which the run does not know; it is read
         // as what the slot asks there, held to its bounds.
         let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
-        var asking = Substitution()
-
-        slot.binding(against: given, into: &asking, in: table)
-
-        let asked = slot.filling(asking.readings)
-        var taken = Substitution()
-
-        if given.namesParameter {
-            given.binding(against: asked, into: &taken, in: table)
-        }
+        let asked = slot.filling(Substitution(filling: [slot], against: [given], in: table).readings)
+        let taken = given.namesParameter ? Substitution(filling: [given], against: [asked], in: table) : Substitution()
 
         let bounded = given.boundedParameters.allSatisfy { label, bounds in
             taken.everyReading(of: label).allSatisfy { filled in

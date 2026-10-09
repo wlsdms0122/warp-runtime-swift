@@ -468,9 +468,10 @@ struct TypeChecker {
         at place: Place
     ) -> String? {
         var unread = Substitution()
+        var untaken = Substitution()
         var holding: [Substitution.Held] = []
 
-        declared.binding(against: given, into: &unread, holding: &holding, in: table)
+        declared.binding(against: given, into: &unread, taking: &untaken, holding: &holding, in: table)
 
         for held in holding {
             for contract in held.bounds {
@@ -877,13 +878,7 @@ struct TypeChecker {
         readings sent: [LoweredType],
         in loweredTypes: LoweredTypeTable
     ) -> Substitution {
-        var substitution = Substitution()
-
-        for (slot, reading) in zip(slots, sent) {
-            slot.type.binding(against: reading, into: &substitution, in: loweredTypes)
-        }
-
-        return substitution
+        Substitution(filling: slots.map(\.type), against: sent, in: loweredTypes)
     }
 
     // Walking a path through types the way the resolver walks it through

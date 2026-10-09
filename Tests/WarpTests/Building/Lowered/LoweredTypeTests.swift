@@ -83,10 +83,9 @@ struct LoweredTypeTests {
             "x": .record(["a": .int, "b": .string]),
             "y": .record(["a": .bool, "b": .bool])
         ]).lowered(in: table)
-        var substitution = Substitution()
 
         // When
-        slot.binding(against: handed, into: &substitution, in: table)
+        let substitution = Substitution(filling: [slot], against: [handed], in: table)
 
         // Then
         #expect(substitution.readings["T"] == .int)
