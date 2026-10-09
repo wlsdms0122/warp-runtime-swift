@@ -853,6 +853,15 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.nullable, .null):
             return true
 
+        // A name that stands for no record is read as what it stands for
+        // before a composition asks it, so an alias of `Any` is the `Any` it
+        // is.
+        case let (.composition, .named(row)) where table.recordRows[row] == nil,
+            let (.nullable(.composition), .named(row)) where table.recordRows[row] == nil:
+            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
+
+            return accepts(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], rigid: rigid)
+
         // A value read as `Any` or along a path a call decides is of a type
         // the build does not know, and one read as a composition of a type
         // that answers its contracts and nothing more the build knows of, so
