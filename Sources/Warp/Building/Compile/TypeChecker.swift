@@ -1848,7 +1848,7 @@ struct TypeChecker {
             var fields: [Name: LoweredType] = [:]
             var shapes: [Name: LiteralShape] = [:]
 
-            for (name, field) in record.sorted { $0.key < $1.key } {
+            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
                 let inner = try await inspected(
                     field,
                     naming: nil,

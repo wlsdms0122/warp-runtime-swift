@@ -471,7 +471,7 @@ struct Compiler {
 
         var started: [Name: (value: Value, type: LoweredType)] = [:]
 
-        for (name, variable) in module.variables.sorted { $0.key < $1.key } {
+        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
             let place = Place.variable(name.spelling, in: .of(module))
 
             // A start written as a literal, or as a closure literal that
