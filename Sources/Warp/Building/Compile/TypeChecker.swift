@@ -778,7 +778,7 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        if let refusal = contractValueRefusal(over: slots, substitution: substitution, in: loweredTypes) {
+        if let refusal = severalTypesRefusal(over: slots, substitution: substitution, in: loweredTypes) {
             return .refusal(refusal)
         }
 
@@ -829,7 +829,7 @@ struct TypeChecker {
     // inside a list or a record, are not known to be one type. Standing
     // alone at one position, the value is the one thing the parameter stands
     // for, and the call reads the parameter the way it read the value.
-    private func contractValueRefusal(
+    private func severalTypesRefusal(
         over slots: [Slot],
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable
