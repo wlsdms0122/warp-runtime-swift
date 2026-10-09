@@ -24,7 +24,7 @@ struct CaseLayoutTests {
     func everyCaseIsWritersLayout() throws {
         var adrift: [String] = []
 
-        for file in try Self.files() {
+        for file in try Case.files() {
             let written = try String(contentsOf: file, encoding: .utf8)
             let laid = try TextEncoding().text(from: try TextEncoding().value(from: written)) + "\n"
 
@@ -39,20 +39,4 @@ struct CaseLayoutTests {
 
     // MARK: - Public
     // MARK: - Private
-    private static func files() throws -> [URL] {
-        let directory = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // Case
-            .deletingLastPathComponent()   // WarpConformanceTests
-            .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
-            .deletingLastPathComponent()   // the repository
-            .appendingPathComponent("spec")
-            .appendingPathComponent("conformance")
-
-        return try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
-            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
-    }
 }
