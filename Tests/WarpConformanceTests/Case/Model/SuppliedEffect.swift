@@ -7,8 +7,6 @@
 
 import Foundation
 import Warp
-import WarpSyntax
-import WarpStandard
 
 // A procedure a case asked for that runs, through the door that reaches
 // outside the run. What it answers is the case's, as `SuppliedQuery`'s is.

@@ -1688,10 +1688,10 @@ struct InferenceTests {
 
     @Test("what the body may have written is not overwritten by the rescue's write")
     func aBodyWriteJoinsTheRescueWrite() async throws {
-        // Given. The body wrote a string or got nowhere, the rescue wrote an
-        // int or never ran: the name holds any of null, the string and the int.
-        // That is `Any` (where readings disagree the slot holds neither), which
-        // the string slot below takes only through a cast. A rescue that
+        // Given. The body wrote a String or got nowhere, the rescue wrote an
+        // Int or never ran: the name holds any of null, the String and the
+        // Int. That is `Any` (where readings disagree the slot holds neither),
+        // which the String slot below takes only through a cast. A rescue that
         // overwrote the body's write would read `Int` instead.
         let sut = try Module(
             procedures: [

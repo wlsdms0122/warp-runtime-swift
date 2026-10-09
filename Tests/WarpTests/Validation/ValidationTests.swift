@@ -698,8 +698,8 @@ struct ValidationTests {
         }
     }
 
-    @Test("a claim about a type no value is an instance of is refused where the document is read")
-    func aClaimAboutNoValuesTypeIsRefused() throws {
+    @Test("a claim keyed by a word the language writes itself is refused where the module is made")
+    func aClaimKeyedByALanguageWordIsRefused() throws {
         // When / Then. `Any` is a word the language writes itself, so a claim
         // keyed by it names no type a document writes.
         #expect {
@@ -908,15 +908,13 @@ struct ValidationTests {
     }
 
     @Test("a procedure is not data, so it cannot stand as a literal")
-    func aProcedureLiteralIsRefused() throws {
+    func aProcedureLiteralIsRefused() async throws {
         // Given. The one value type a program cannot carry. A closure is made
         // by running the expression that writes one, so a literal holding one
         // is a program no text spells and nothing reads back. Only a caller
         // assembling types in Swift can build it, and this is where that
         // stops.
-        let carried = Value.procedure(
-            Closure.assembled()
-        )
+        let carried = try await procedureValue()
 
         // When / Then
         #expect {

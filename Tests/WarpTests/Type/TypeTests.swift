@@ -194,8 +194,8 @@ struct TypeTests {
         }
     }
 
-    @Test("an undeclared answer is read off the body, and held to the same rule")
-    func undeclaredAnswerIsReadOffTheBody() async throws {
+    @Test("an answer no declaration writes is read off the body, and held to the same rule")
+    func anUnwrittenAnswerIsReadOffTheBody() async throws {
         // Given. `counts` declares nothing, and its body answers a whole
         // number. The declaration stays as the author left it; what the build
         // reads a call as is what the body hands back, so the same disagreement

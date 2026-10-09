@@ -221,7 +221,7 @@ struct DeclaredNameTests {
     }
 
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
-    func anUndeclaredClosureDoesNotFitTheSlot() async throws {
+    func aClosureUnderANameSayingNothingDoesNotFitTheSlot() async throws {
         // Given. The same program with the declaration left off. The build works
         // out `const isolated Procedure` for the literal, and the slot asks for
         // `Procedure`

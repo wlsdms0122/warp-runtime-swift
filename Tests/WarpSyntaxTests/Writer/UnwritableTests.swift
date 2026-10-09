@@ -83,7 +83,7 @@ struct UnwritableTests {
         }
     }
 
-    @Test("one name composing is written as the name, and names in any order are written in name order")
+    @Test("one name composing is written as the name, and a composition's names are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then
         #expect(try sut.value(of: TypeExpression.composition(["App.A"])) == .string("App.A"))

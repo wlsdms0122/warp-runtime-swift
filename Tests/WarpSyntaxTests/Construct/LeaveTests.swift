@@ -193,10 +193,8 @@ struct LeaveTests {
 
     @Test("a rescue does not catch a body that left on purpose")
     func leavingIsNotFailing() async throws {
-        // Given. This is the whole reason the language needed these. The old
-        // way out was to fail deliberately, which a rescue then caught, so a
-        // successful early exit had to travel as a failure and could not be
-        // told apart from one.
+        // Given. Leaving is no failure, so a rescue around it has nothing to
+        // catch, and the early exit answers what it carries.
         let sut = try loader.loadProcedure([
             "returns": "String",
             "body": [

@@ -723,7 +723,7 @@ struct WriterTests {
         // Then
         guard
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let message = body.first?["value"]?["conditional"]?["when"]?["call"]
+            let call = body.first?["value"]?["conditional"]?["when"]?["call"]
         else {
             Issue.record("a conditional is written with a condition under `when`")
 
@@ -731,9 +731,9 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the call it always was.
-        #expect(message["procedure"] == .string("Standard.Logic.equal"))
-        #expect(message["of"] == nil)
-        #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
+        #expect(call["procedure"] == .string("Standard.Logic.equal"))
+        #expect(call["of"] == nil)
+        #expect(call["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
     @Test("a record whose field is named like a tag is written under `record` and read back as a record")

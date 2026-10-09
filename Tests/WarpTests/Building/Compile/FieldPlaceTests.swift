@@ -182,7 +182,7 @@ struct FieldPlaceTests {
     }
 
     @Test("a write to a box that said nothing stands as it was handed")
-    func anUndeclaredBoxTakesWhatItWasHanded() async throws {
+    func aBoxSayingNothingTakesWhatItWasHanded() async throws {
         // Given. Nothing was declared, so there is nothing for a write to
         // settle to and nothing the build laid out
         let sut = Procedure(
