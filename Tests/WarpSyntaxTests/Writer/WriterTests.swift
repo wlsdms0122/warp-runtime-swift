@@ -467,26 +467,30 @@ struct WriterTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a contract's procedure holding a bound has no document to write")
-    func aBoundedContractProcedureIsNotWritten() throws {
-        // Given. A contract's procedure writes no `bounds`, so a bound its
-        // signature holds has nowhere to stand
-        let sut = try Module(
+    @Test("a draft's contract procedure holding a bound is written with it, and the reading refuses it")
+    func aBoundedContractProcedureIsWrittenAsItIs() throws {
+        // Given. A draft is held to no rule, so the bound reaches the writer
+        let draft = Draft(
             contracts: [
-                "A": [Name: Signature](),
                 "App.Kept": [
-                    "keep": Signature(
-                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
-                        bounds: ["T": ["A"]]
+                    "keep": ContractProcedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                            bounds: ["T": ["App.Kept"]]
+                        )
                     )
                 ]
             ],
             procedures: [:]
         )
 
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: sut)
+        // When
+        let written = try Writer().value(of: draft)
+
+        // Then. The bound is written rather than dropped, under a key a
+        // contract's procedure does not take
+        #expect(throws: ReadingError.self) {
+            try Loader().load(written, identity: nil)
         }
     }
 

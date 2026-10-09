@@ -666,6 +666,30 @@ struct ValidationTests {
         }
     }
 
+    @Test("a contract's procedure made in Swift writes no bounds")
+    func aContractProcedureWritesNoBounds() throws {
+        // When / Then. No document can write one; a module made in Swift is
+        // held to the same rule at the load
+        #expect {
+            try Module(
+                contracts: [
+                    "App.Kept": [
+                        "keep": ContractProcedure(
+                            signature: Signature(
+                                parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                                bounds: ["T": ["App.Kept"]]
+                            )
+                        )
+                    ]
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.keep.bounds: ")
+                && "\(error)".contains("a contract's procedure writes no bounds")
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
         // Given. The one value type a program cannot carry. A closure is made

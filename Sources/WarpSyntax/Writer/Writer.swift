@@ -84,16 +84,6 @@ public struct Writer: Sendable {
                 try draft.contracts.mapValues { procedures in
                     .dictionary(
                         try procedures.mapValues { asked in
-                            // A contract's procedure has no `bounds` to write
-                            // a bound under.
-                            if let (name, named) = asked.signature.bounds.min(by: { one, other in one.key < other.key }) {
-                                throw WritingError(
-                                    "'some \(name)' is bounded by"
-                                        + " '\(named.sorted().map(\.spelling).joined(separator: " & "))',"
-                                        + " and a contract's procedure writes no `bounds`"
-                                )
-                            }
-
                             var written = try fields(of: asked.signature)
 
                             if asked.constness == .const {
@@ -183,10 +173,6 @@ public struct Writer: Sendable {
 
         written.merge(try fields(of: procedure.signature)) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
-
-        if let bounds = TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
-            written[ProcedureReader.CodingKeys.bounds.name] = bounds
-        }
 
         return .dictionary(written)
     }
@@ -338,6 +324,10 @@ public struct Writer: Sendable {
 
         if let returns = signature.returns {
             written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
+        }
+
+        if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
+            written[ProcedureReader.CodingKeys.bounds.name] = bounds
         }
 
         return written

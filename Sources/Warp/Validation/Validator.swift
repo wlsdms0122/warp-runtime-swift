@@ -112,11 +112,20 @@ public struct Validator: Sendable {
 
         for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
             for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
-                try validate(
-                    asked.signature,
-                    in: .contract,
-                    at: Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
-                )
+                let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+
+                // A bound is declared by the procedure whose call fills the
+                // name, and a contract's procedure is answered by declarations
+                // that each declare their own.
+                guard asked.signature.bounds.isEmpty else {
+                    throw ValidationError(
+                        "a contract's procedure writes no bounds. A bound is declared in the `bounds`"
+                            + " of a procedure's own signature",
+                        at: place.part(.bounds)
+                    )
+                }
+
+                try validate(asked.signature, in: .contract, at: place)
             }
         }
 

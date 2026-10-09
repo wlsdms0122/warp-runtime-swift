@@ -16,7 +16,7 @@ enum ObjectCoverageFixture {
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: bounded, constness: .const, isolation: .unstated, failing: .these(["a.nineteen", "a.twenty"]))]],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: .these(["a.nineteen", "a.twenty"]))]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
@@ -82,13 +82,6 @@ enum ObjectCoverageFixture {
         name: "p",
         type: .double,
         description: "what it takes"
-    )
-
-    // A signature holding a type parameter to two contracts.
-    static let bounded = Signature(
-        parameters: [Parameter(name: "r", type: .selfType), parameter, Parameter(name: "q", type: .parameter(name: "T"))],
-        returns: .bool,
-        bounds: ["T": ["a.five", "a.four"]]
     )
 
     // Every case of `TypeExpression`, each holding something no other holds.
@@ -297,11 +290,12 @@ enum ObjectCoverageFixture {
     )
 
     // A row a closure literal was lifted into, whose frame holds what the
-    // body that stood it up takes into it.
+    // body that stood it up takes into it, and whose answer is a type
+    // parameter the procedure around it holds to two contracts.
     static func lifted(label: Name) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(returns: .int),
+            signature: Signature(returns: .parameter(name: "T"), bounds: ["T": ["a.five", "a.four"]]),
             access: .internal,
             constness: .unstated,
             isolation: .unstated,
