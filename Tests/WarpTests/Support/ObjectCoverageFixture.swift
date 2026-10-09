@@ -175,7 +175,7 @@ enum ObjectCoverageFixture {
 
     static let everyPart: [Place.Part] = [
         .procedures, .constants, .variables, .types, .contracts, .satisfies,
-        .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
+        .imports, .parameters, .returns, .bounds, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
 

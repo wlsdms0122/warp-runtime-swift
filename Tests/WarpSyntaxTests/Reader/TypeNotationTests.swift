@@ -123,14 +123,17 @@ struct TypeNotationTests {
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
 
-        // And. A bound on a name no slot writes binds nothing.
-        #expect(throws: ReadingError.self) {
+        // And. A bound on a name no slot writes binds nothing, and is
+        // refused where `bounds` stands.
+        let unwritten = #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Comparable"],
                 "parameters": [["name": "of", "type": "Int"]],
                 "result": ["ref": "of"]
             ])
         }
+
+        #expect(unwritten?.place?.rendered == "procedures.entry.bounds")
 
         // And. A bound is a contract's name, never a type.
         #expect(throws: ReadingError.self) {

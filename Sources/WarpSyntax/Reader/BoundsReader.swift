@@ -24,10 +24,7 @@ struct BoundsReader {
 
     // MARK: - Public
     // The signature holding each type parameter to the contracts its bound
-    // names, and the check that every bound names a parameter some slot
-    // mentions. A bound on a name nobody wrote binds nothing, which is a
-    // claim the author should hear about where they wrote it. `steps` are
-    // where `bounds` stands.
+    // names. `steps` are where `bounds` stands.
     func apply(
         _ bounds: [Name: String]?,
         qualifying: (Name) -> Name = { name in name },
@@ -66,22 +63,6 @@ struct BoundsReader {
                     at: here
                 )
             }
-        }
-
-        let mentioned = signature.parameterNames
-
-        let unwritten = named.keys
-            .filter { name in !mentioned.contains(name) }
-            .sorted()
-
-        guard unwritten.isEmpty else {
-            throw ReadingError(
-                "bounds name"
-                    + " \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
-                    + " `some \(unwritten.first?.spelling ?? "")`. A bound rides on a"
-                    + " parameter some slot mentions",
-                at: steps
-            )
         }
 
         return Signature(parameters: signature.parameters, returns: signature.returns, bounds: named)

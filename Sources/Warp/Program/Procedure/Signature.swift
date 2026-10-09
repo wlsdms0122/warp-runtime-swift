@@ -60,7 +60,7 @@ public struct Signature: Sendable, Equatable {
     // parameters are named too: they are this signature's own slots, so
     // `Array<some Element>` beside a procedure taking the same `some Element`
     // is one parameter filled by one call.
-    public var parameterNames: Set<Name> { type.parameterNames }
+    var parameterNames: Set<Name> { type.parameterNames }
 
     // Every declared name this signature reaches, through what it takes, what
     // it answers and the contracts its bounds name.

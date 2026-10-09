@@ -573,6 +573,7 @@ struct ObjectReader {
         case .otherwise: read = .otherwise
         case .rescue: read = .rescue
         case .fields: read = .fields
+        case .bounds: read = .bounds
         case nil: throw ObjectRefused("'part' names a part this reads none of")
         }
 

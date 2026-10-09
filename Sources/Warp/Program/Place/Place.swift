@@ -88,6 +88,7 @@ public struct Place: Sendable, Hashable {
 
         case parameters
         case returns
+        case bounds
         case body
         case result
 
@@ -128,6 +129,7 @@ public struct Place: Sendable, Hashable {
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"
+            case .bounds: "bounds"
             case .body: "body"
             case .result: "result"
             case .subject: "subject"

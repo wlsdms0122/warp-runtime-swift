@@ -451,6 +451,7 @@ struct ObjectWriter {
         case .otherwise: return tagged(Tag.otherwise)
         case .rescue: return tagged(Tag.rescue)
         case .fields: return tagged(Tag.fields)
+        case .bounds: return tagged(Tag.bounds)
         }
     }
 

@@ -648,6 +648,24 @@ struct ValidationTests {
         }
     }
 
+    @Test("a bound on a name no slot writes refuses, however the signature was made")
+    func aBoundOnAnUnwrittenNameRefuses() throws {
+        // Given. A signature made in Swift, bounding `T` where every slot
+        // writes `Int`
+        let procedure = Procedure(
+            signature: Signature(parameters: [Parameter(name: "of", type: .int)], bounds: ["T": ["Standard.Comparable"]]),
+            body: [],
+            result: .literal(.int(1))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(procedure)
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("bounds name T, and no slot writes `some T`")
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
         // Given. The one value type a program cannot carry. A closure is made
