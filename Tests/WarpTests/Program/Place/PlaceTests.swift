@@ -394,11 +394,17 @@ struct PlaceTests {
 
     @Test("a contract is placed the same way")
     func aContractIsPlacedByItsDeclaredKey() async throws {
-        // Given. The other space. A contract's procedure that takes something
-        // other than `Self` first is refused from the declaration alone, which
-        // is the walk that has only the declared keys to go on.
+        // Given. The other space. A contract's procedure naming a type nobody
+        // declared is refused from the declaration alone, which is the walk
+        // that has only the declared keys to go on.
         let sut = try Module(
-            contracts: ["Wallet.Spendable": ["spend": Signature(parameters: [Parameter(name: "of", type: .int)])]],
+            contracts: [
+                "Wallet.Spendable": [
+                    "spend": Signature(
+                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "coin", type: .named("Missing"))]
+                    )
+                ]
+            ],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )
@@ -409,7 +415,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters")
+        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters[1]")
     }
 
     @Test("a statement's construct is the language's name, and says so")

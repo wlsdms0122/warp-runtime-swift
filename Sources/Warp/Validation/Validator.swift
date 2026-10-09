@@ -97,6 +97,19 @@ public struct Validator: Sendable {
                     )
                 }
 
+                // Each is answered about the value it takes first, so that
+                // value is written `Self`, the type that answers the contract.
+                // A value and not a place: a call through the contract picks
+                // the declaration by the value standing there.
+                guard asked.signature.parameters.first?.type == .selfType else {
+                    throw ValidationError(
+                        "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
+                            + " A contract's procedure takes `Self` first: the value it is"
+                            + " answered about, of the type that answers it",
+                        at: place.part(.parameters)
+                    )
+                }
+
                 try validate(asked.signature, in: .contract, at: place)
             }
         }

@@ -87,21 +87,10 @@ struct DeclarationChecker {
 
             // A contract's procedures are declarations the way the module's
             // own are, and what a call is judged against is what was judged.
-            // Each is answered about the value it takes first, so that value
-            // is written `Self`, the type that answers the contract, which a
-            // call reads as one type parameter the contract bounds.
+            // `Self` is read as one type parameter the contract bounds.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                     let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
-
-                    guard asked.signature.parameters.first?.type == .selfType else {
-                        throw BuildError(
-                            "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
-                                + " A contract's procedure takes `Self` first: the value it is"
-                                + " answered about, of the type that answers it",
-                            at: place.part(.parameters)
-                        )
-                    }
 
                     try judge(asked.signature.read(of: contract), at: place, in: table)
                 }

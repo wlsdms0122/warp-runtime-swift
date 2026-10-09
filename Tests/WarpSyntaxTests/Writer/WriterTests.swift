@@ -487,11 +487,13 @@ struct WriterTests {
         // When
         let written = try Writer().value(of: draft)
 
-        // Then. The bound is written rather than dropped, under a key a
-        // contract's procedure does not take
-        #expect(throws: ReadingError.self) {
+        // Then. The bound is written rather than dropped, and the load
+        // refuses it where it stands
+        let refused = #expect(throws: ValidationError.self) {
             try Loader().load(written, identity: nil)
         }
+
+        #expect(refused?.place?.rendered == "contracts.App.Kept.keep.bounds")
     }
 
     @Test("a contract's procedure that says nothing of its failures has no document to write")
