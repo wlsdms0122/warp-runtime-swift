@@ -183,11 +183,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.procedure: .procedure(nil)
     ]
 
-    // Bytes are a list of whole numbers in a compact spelling, so the type of
-    // one is the type of that list. What a procedure the host answers
-    // declares where it takes or answers bytes.
-    public static let bytes = TypeExpression.array(.int)
-
     // How the type reads in a message. A declaration an author wrote should come
     // back to them in the spelling they wrote it in.
     public var rendered: String {

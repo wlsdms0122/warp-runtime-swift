@@ -22,7 +22,7 @@ public extension Module {
                 ),
                 "Standard.Text.encoded": Procedure(
                     description: "The text written out as bytes in a named encoding.",
-                    signature: Signature(of: EncodedQuery.self, returns: .bytes),
+                    signature: Signature(of: EncodedQuery.self, returns: .array(.int)),
                     implementation: .query(EncodedQuery())
                 ),
                 "Standard.Text.text": Procedure(

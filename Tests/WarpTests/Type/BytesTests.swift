@@ -125,7 +125,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .bytes)]
+                        parameters: [Parameter(name: "data", type: .array(.int))]
                     ),
                     body: [],
                     result: .reference([.key("data"), .index(1)])
@@ -184,7 +184,7 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .bytes)]
+                        parameters: [Parameter(name: "data", type: .array(.int))]
                     ),
                     body: [
                         Statement(binding: .variable("sum"), expression: .literal(.int(0))),

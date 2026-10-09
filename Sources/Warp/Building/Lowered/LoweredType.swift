@@ -365,7 +365,7 @@ indirect enum LoweredType: Sendable, Equatable {
             self = .string
 
         case .bytes:
-            self = TypeExpression.bytes.lowered(in: table)
+            self = .array(.int)
 
         // A procedure that already exists as a value says nothing about itself
         // that a walk can read.
