@@ -584,7 +584,7 @@ struct InPlaceTests {
             types: ["App.Hook": taking],
             procedures: [
                 "App.calling": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped])]),
+                    signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped] ?? .any)]),
                     implementation: .effect(InPlaceCallingEffect())
                 )
             ]

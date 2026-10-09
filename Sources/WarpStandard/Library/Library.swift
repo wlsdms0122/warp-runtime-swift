@@ -1516,11 +1516,9 @@ enum Library {
                   parameters [
                     {
                       name "lhs"
-                      type "Any"
                     }
                     {
                       name "rhs"
-                      type "Any"
                     }
                   ]
                   result {

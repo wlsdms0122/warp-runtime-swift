@@ -18,9 +18,8 @@ struct ParameterFieldsReader: Decodable {
     }
 
     // MARK: - Property
-    // Omitting `type:` declares nothing, which is not the same as declaring
-    // `Any`. Both take whatever arrives; only one of them says so.
-    let type: TypeExpression?
+    // Omitting `type:` says `Any`, the one way a document says it.
+    let type: TypeExpression
     let description: String?
 
     // MARK: - Initializer
@@ -39,7 +38,7 @@ struct ParameterFieldsReader: Decodable {
     init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type
+        self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type ?? .any
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
     }
 

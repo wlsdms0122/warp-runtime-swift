@@ -455,7 +455,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "parameter")
         let read = Parameter(
             name: try name(cursor.next()),
-            type: try cursor.field().maybe(expression),
+            type: try cursor.field().maybe(expression) ?? .any,
             description: try cursor.field().maybe(text)
         )
 

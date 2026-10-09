@@ -37,6 +37,23 @@ struct OneSpellingTests {
         }
     }
 
+    @Test("a parameter writing Any is refused, since writing no type says it")
+    func aParameterWritingAnyIsRefused() {
+        // Given
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": [["name": "x", "type": "Any"]], "result": 1]]
+        ]
+
+        // When / Then
+        #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            "\(error)".contains("parameters[0].type") && "\(error)".contains("The one way writes nothing")
+        }
+    }
+
     @Test("a list written out of its order is refused, naming what the one spelling writes there")
     func aListOutOfOrderIsRefused() {
         // Given

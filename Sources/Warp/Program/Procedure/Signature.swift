@@ -156,7 +156,7 @@ public struct Signature: Sendable, Equatable {
             parameters: parameters.map { parameter in
                 Parameter(
                     name: parameter.name,
-                    type: parameter.type?.replacingSelf(with: type),
+                    type: parameter.type.replacingSelf(with: type),
                     description: parameter.description
                 )
             },

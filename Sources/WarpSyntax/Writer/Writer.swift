@@ -172,8 +172,8 @@ public struct Writer: Sendable {
     public func value(of parameter: Parameter) throws -> Value {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
-        if let type = parameter.type {
-            written[ParameterReader.CodingKeys.type.name] = try value(of: type)
+        if parameter.type != .any {
+            written[ParameterReader.CodingKeys.type.name] = try value(of: parameter.type)
         }
 
         if let description = parameter.description {

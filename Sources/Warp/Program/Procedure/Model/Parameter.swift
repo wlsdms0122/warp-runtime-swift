@@ -14,21 +14,16 @@ public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     public let name: Name
 
-    // What this takes, or nil where nothing was declared. `Any` is a claim that
-    // any type is welcome; nil is the absence of a claim. Neither is checked,
-    // and keeping them apart is what lets the ones written on purpose be told
-    // from the ones nobody got around to.
-    public let type: TypeExpression?
+    // What this takes. A document writing no type for it says `Any`.
+    public let type: TypeExpression
     public let description: String?
 
-    // What this reads as where a type is needed regardless. A parameter
-    // declaring no type accepts what it is handed, which is what `Any` says.
-    public var declared: TypeExpression { type ?? .any }
+    public var declared: TypeExpression { type }
 
     // MARK: - Initializer
     public init(
         name: Name,
-        type: TypeExpression? = nil,
+        type: TypeExpression = .any,
         description: String? = nil
     ) {
         self.name = name
