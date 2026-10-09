@@ -9,9 +9,10 @@ import Foundation
 
 extension TypeExpression {
     // This type as the run reads it, with every name resolved to its row. A
-    // name nothing declares lowers to the type every judgment refuses, so
-    // lowering is total and a table a host built by hand still answers for
-    // every other name in it.
+    // name nothing declares, a bound naming no contract and `Self` outside a
+    // contract stand for no type, so no value is one and each lowers to
+    // `Never`. A build refuses every such mention before it reads a lowering,
+    // and a table a host builds is held to the same judge.
     func lowered(in table: LoweredTypeTable) -> LoweredType {
         switch self {
         case .any:
@@ -76,9 +77,7 @@ extension TypeExpression {
                 return .named(row)
             }
 
-            guard table.declaresContract(name) else {
-                return .undeclared(label: name.spelling, because: .noTypeNamed(name))
-            }
+            guard table.declaresContract(name) else { return .never }
 
             return .composition([name])
 
@@ -96,7 +95,7 @@ extension TypeExpression {
         // what is left is `Self` written where no contract stands, which is
         // refused where it was written.
         case .selfType:
-            return .undeclared(label: TypeSpelling.selfType.spelling, because: .noTypeNamed(TypeSpelling.selfType))
+            return .never
         }
     }
 
@@ -107,9 +106,7 @@ extension TypeExpression {
         in table: LoweredTypeTable,
         as bounded: ([Name]) -> LoweredType
     ) -> LoweredType {
-        if let name = names.first(where: { name in !table.declaresContract(name) }) {
-            return .undeclared(label: rendered, because: .noBoundNamed(name))
-        }
+        guard names.allSatisfy(table.declaresContract) else { return .never }
 
         return bounded(names.sorted())
     }

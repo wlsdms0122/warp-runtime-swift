@@ -108,7 +108,7 @@ struct Binding: Equatable, Sendable {
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .record, .procedure, .variable, .nullable,
-            .named, .parameter, .composition, .projection, .undeclared:
+            .named, .parameter, .composition, .projection:
             self.init(.fixed(declared: declared), declared)
         }
     }

@@ -11,9 +11,8 @@ extension LoweredType {
     // This type as a declaration writes it: lowering run backwards. A
     // declared name goes back to its label, so what it stands for, a mark
     // lowering dropped included, is read again where the spelling is
-    // lowered. A whole literal is read as the Int a name holds it as. Nil
-    // for a name the table does not answer, which no declaration spells.
-    func spelled(in table: LoweredTypeTable) -> TypeExpression? {
+    // lowered. A whole literal is read as the Int a name holds it as.
+    func spelled(in table: LoweredTypeTable) -> TypeExpression {
         switch self {
         case .any:
             return .any
@@ -37,51 +36,34 @@ extension LoweredType {
             return .string
 
         case let .array(element):
-            return element.spelled(in: table).map(TypeExpression.array)
+            return .array(element.spelled(in: table))
 
         case let .dictionary(entry):
-            return entry.spelled(in: table).map(TypeExpression.dictionary)
+            return .dictionary(entry.spelled(in: table))
 
         case let .record(record):
-            var fields: [Name: TypeExpression] = [:]
-
-            for (name, field) in record.named {
-                guard let spelled = field.spelled(in: table) else { return nil }
-
-                fields[name] = spelled
-            }
-
-            return .record(fields)
+            return .record(Dictionary(uniqueKeysWithValues: record.named.map { name, field in (name, field.spelled(in: table)) }))
 
         case let .procedure(parameters, returns, constness, isolation):
             guard let parameters else { return .procedure(nil, constness, isolation) }
 
-            var taken: [TypeExpression] = []
-
-            for parameter in parameters {
-                guard let spelled = parameter.spelled(in: table) else { return nil }
-
-                taken.append(spelled)
-            }
-
-            var answer: TypeExpression?
-
-            if let returns {
-                guard let spelled = returns.spelled(in: table) else { return nil }
-
-                answer = spelled
-            }
-
-            return .procedure(ProcedureType(parameters: taken, returns: answer), constness, isolation)
+            return .procedure(
+                ProcedureType(
+                    parameters: parameters.map { parameter in parameter.spelled(in: table) },
+                    returns: returns?.spelled(in: table)
+                ),
+                constness,
+                isolation
+            )
 
         case let .variable(inner):
-            return inner.spelled(in: table).map(TypeExpression.variable)
+            return .variable(inner.spelled(in: table))
 
         case let .inout(inner):
-            return inner.spelled(in: table).map(TypeExpression.inout)
+            return .inout(inner.spelled(in: table))
 
         case let .nullable(inner):
-            return inner.spelled(in: table).map(TypeExpression.nullable)
+            return .nullable(inner.spelled(in: table))
 
         case let .named(row):
             return .named(table.labels[row])
@@ -94,9 +76,6 @@ extension LoweredType {
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
-
-        case .undeclared:
-            return nil
         }
     }
 }

@@ -119,7 +119,7 @@ struct TraversableTests {
         )
         let place = Place.procedure("entry", in: .assembled)
         let context = TypingContext(
-            types: TypeTable(),
+            types: try TypeTable(),
             linked: [],
             rows: [:],
             own: [:],

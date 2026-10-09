@@ -689,7 +689,6 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
-        case .undeclared: read = .undeclared(label: try cursor.field().text(), because: try undeclared(cursor.next()))
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
 
@@ -698,21 +697,6 @@ struct ObjectReader {
         return read
     }
 
-    private func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
-        var cursor = try FieldCursor(value, of: "undeclared")
-        let read: LoweredType.Undeclared
-
-        switch ObjectLayout.UndeclaredTag(rawValue: try cursor.field().integer()) {
-        case .noTypeNamed: read = .noTypeNamed(try name(cursor.next()))
-        case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
-        case .namesItself: read = .namesItself
-        case nil: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
 
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")

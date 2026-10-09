@@ -560,19 +560,6 @@ struct ObjectWriter {
 
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), self.path(path))
-
-        case let .undeclared(label, because):
-            return tagged(Tag.undeclared, .string(label), undeclared(because))
-        }
-    }
-
-    private func undeclared(_ because: LoweredType.Undeclared) -> Value {
-        typealias Tag = ObjectLayout.UndeclaredTag
-
-        switch because {
-        case let .noTypeNamed(name): return tagged(Tag.noTypeNamed, self.name(name))
-        case let .noBoundNamed(name): return tagged(Tag.noBoundNamed, self.name(name))
-        case .namesItself: return tagged(Tag.namesItself)
         }
     }
 

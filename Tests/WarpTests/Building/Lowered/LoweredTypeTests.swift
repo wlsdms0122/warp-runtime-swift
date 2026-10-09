@@ -69,7 +69,7 @@ struct LoweredTypeTests {
         for type in written {
             let lowered = type.lowered(in: table)
 
-            #expect(lowered.spelled(in: table)?.lowered(in: table) == lowered, "\(type.rendered)")
+            #expect(lowered.spelled(in: table).lowered(in: table) == lowered, "\(type.rendered)")
         }
     }
 
@@ -259,58 +259,7 @@ struct LoweredTypeTests {
             return
         }
 
-        #expect(soft.parameters.first?.declaresNull(in: TypeTable(types: module.types)) == true)
-    }
-
-    @Test("one undeclared name passes every reading and is refused where a value meets it")
-    func anUndeclaredNameTouchesOnlyItsOwnJudgments() {
-        // Given. A table with one bad row beside a good one
-        let table = TypeTable(types: ["App.Bad": .named("App.Missing"), "App.Good": .nullable(.int)])
-
-        // When / Then
-        #expect(TypeExpression.named("App.Good").declaresNull(in: table))
-        #expect(TypeExpression.named("App.Good").accepts(.int, in: table))
-        #expect(TypeExpression.named("App.Bad").accepts(.int, in: table))
-        #expect(TypeExpression.int.accepts(.named("App.Bad"), in: table))
-        #expect(TypeExpression.named("App.Bad").lowered(in: table.loweredTypes)
-            .couldBothHold(reading: .int, in: table.loweredTypes))
-        #expect(!TypeExpression.named("App.Bad").declaresNull(in: table))
-        #expect {
-            try TypeExpression.named("App.Bad").settling(.int(1), at: "input", in: table)
-        } throws: { error in
-            "\(error)".contains("input: declares type 'App.Missing', which nothing declares")
-        }
-    }
-
-    @Test("a name that reaches itself under a wrapper is a cycle, and the value judge says so")
-    func aCycleUnderAWrapperIsRefusedNotChased() {
-        // Given. A table built by hand, which the build's refusals never saw
-        let table = TypeTable(
-            types: [
-                "App.M": .nullable(.named("App.M")),
-                "App.A": .variable(.named("App.B")),
-                "App.B": .inout(.named("App.A")),
-                "App.T": .nullable(.named("App.Leaf")),
-                "App.Leaf": .int
-            ]
-        )
-
-        // When / Then. Each cycle is refused where a value meets it, and a
-        // chain that ends is walked to its end
-        #expect {
-            try TypeExpression.named("App.M").settling(.int(1), at: "input", in: table)
-        } throws: { error in
-            "\(error)".contains("input: declares type 'App.M', which names itself")
-        }
-        #expect {
-            try TypeExpression.named("App.A").settling(.int(1), at: "input", in: table)
-        } throws: { error in
-            "\(error)".contains("input: declares type 'App.A', which names itself")
-        }
-        #expect(throws: Never.self) {
-            try TypeExpression.named("App.T").settling(.int(1), at: "input", in: table)
-        }
-        #expect(TypeExpression.named("App.T").declaresNull(in: table))
+        #expect(soft.parameters.first?.declaresNull(in: try TypeTable(types: module.types)) == true)
     }
 
     @Test("a procedure another link made is refused by a run, not read by its rows")

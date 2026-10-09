@@ -1953,9 +1953,9 @@ struct TypeChecker {
                     joined.joined(answered)
                 }
 
-                if let answer = answered.spelled(in: context.loweredTypes) {
-                    procedure = procedure.with(signature: Signature(parameters: procedure.signature.parameters, returns: answer))
-                }
+                procedure = procedure.with(
+                    signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
+                )
             }
 
             // A box the closure takes is one it reads and writes when it is

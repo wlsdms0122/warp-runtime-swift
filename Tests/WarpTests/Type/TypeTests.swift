@@ -71,7 +71,7 @@ struct TypeTests {
     @Test("an alias of a declared record names the record on either side")
     func anAliasNamesTheRecordItStandsFor() throws {
         // Given
-        let types = TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
+        let types = try TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
         let sut = TypeExpression.named("Someone")
 
         // When
@@ -88,7 +88,7 @@ struct TypeTests {
     @Test("a named type resolves through the table it was declared in")
     func namedTypeResolves() throws {
         // Given
-        let types = TypeTable(types: ["Task": .record(["id": .string])])
+        let types = try TypeTable(types: ["Task": .record(["id": .string])])
         let sut = TypeExpression.array(.named("Task"))
 
         // When
@@ -110,7 +110,7 @@ struct TypeTests {
     func namedTypeMayRecur() throws {
         // Given. Kept rather than expanded at the build, which is what makes a
         // self-naming type a type and not a regress
-        let types = TypeTable(
+        let types = try TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
         )
         let sut = TypeExpression.named("Tree")
@@ -297,7 +297,7 @@ struct TypeTests {
     func anAssembledClosureClaimsNothing() throws {
         // Given. Assembled against the table it is judged against, so what is
         // being asked is the claim and not which link made the row
-        let types = TypeTable()
+        let types = try TypeTable()
         let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
 
         // When / Then
@@ -315,7 +315,7 @@ struct TypeTests {
     func aRecursiveTypeAcceptsItself() async throws {
         // Given. A type that names itself walks back into the comparison it is
         // inside; meeting the pair again is agreement, not a regress
-        let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
+        let types = try TypeTable(types: ["Node": .record(["next": .named("Node")])])
 
         // When / Then
         #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
