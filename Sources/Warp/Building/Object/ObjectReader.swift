@@ -197,18 +197,6 @@ struct ObjectReader {
                 .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
             }
 
-        case .dictionary:
-            let entries = try cursor.field().led { entry -> (name: Name, value: Value) in
-                var cursor = try FieldCursor(entry, of: "entry")
-                let read = (name: try name(cursor.next()), value: try self.value(cursor.next()))
-
-                try cursor.end()
-
-                return read
-            }
-
-            read = .dictionary(Value.Dictionary(ordered: entries))
-
         case .closure:
             let writer = Closure.Writer(
                 document: try writing(cursor.next()),
