@@ -26,12 +26,10 @@ struct TypeTableTests {
 
     @Test("a table whose names only name names refuses as a document declaring them does")
     func aCycleOfNamesRefuses() {
-        // When / Then. Through `?`, `var` and `inout` as well, and a chain
-        // that ends stands
+        // When / Then. Through `?` as well, and a chain that ends stands
         for types: [Name: TypeExpression] in [
             ["App.A": .named("App.B"), "App.B": .named("App.A"), "App.C": .int],
-            ["App.M": .nullable(.named("App.M"))],
-            ["App.A": .variable(.named("App.B")), "App.B": .inout(.named("App.A"))]
+            ["App.M": .nullable(.named("App.M"))]
         ] {
             #expect {
                 try TypeTable(types: types)

@@ -57,7 +57,7 @@ struct ConditionTests {
         private func declared(_ value: Value) -> TypeExpression {
             let table = TypeTable.empty.loweredTypes
 
-            return LoweredType(of: value, in: table).spelled(in: table) ?? .any
+            return LoweredType(of: value, in: table).spelled(in: table)
         }
     }
 
