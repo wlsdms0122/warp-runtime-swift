@@ -883,8 +883,6 @@ struct TypeChecker {
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
-        if let refusal = path.markedHead { return .refused(refusal) }
-
         guard let head = path.head, let bound = environment[head] else {
             return asWritten(path, in: environment, with: context, at: place)
         }
@@ -3022,12 +3020,9 @@ struct TypeChecker {
                         }
                     }
 
+                // The load holds a write's head to a variable.
                 default:
-                    try refuse(
-                        "writes '\(id)', which is not a variable here",
-                        at: here,
-                        when: ask
-                    )
+                    break
                 }
 
             // A nameless statement writes no name for a later reading to

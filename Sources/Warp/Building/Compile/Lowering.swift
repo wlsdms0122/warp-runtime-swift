@@ -1055,12 +1055,6 @@ struct Lowering {
         on slots: SlotAllocator,
         at place: Place
     ) throws -> Address {
-        // A mark on the head expects a name to be missing, which is not
-        // absence but a reading gone wrong.
-        if let refusal = path.markedHead {
-            throw BuildError(refusal, at: place)
-        }
-
         guard let head = path.head else {
             throw BuildError.unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }

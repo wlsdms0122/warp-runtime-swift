@@ -400,6 +400,31 @@ struct ValidationTests {
         }
     }
 
+    @Test("a mark on the head is refused where the module is made")
+    func aMarkedHeadIsRefused() throws {
+        // Given / When / Then. The head is a name a scope holds, so there is
+        // nothing before it that could have been absent. A front end that
+        // builds segments directly is told so where the module is made
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(
+                            parameters: [
+                                Parameter(name: "items", type: .array(.string))
+                            ]
+                        ),
+                        body: [],
+                        result: .reference([.key("items", optional: true), .index(0)])
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("marks the head optional")
+        }
+    }
+
     @Test("a reference must start with a name")
     func referenceMustHaveAHead() {
         // Given
@@ -420,6 +445,17 @@ struct ValidationTests {
         // When / Then
         #expect(!validates(sut, visible: ["items"]))
         #expect(validates(sut, visible: ["items", "cursor"]))
+
+        // And in a write's path, where the index is read the same way, a
+        // mark on its head included
+        let items = Statement(binding: .variable("items"), expression: .array([.literal(.int(1))]))
+        let write: (Path) -> Body = { path in
+            [items, Statement(binding: .assignment(path), expression: .literal(.int(2)))]
+        }
+
+        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor")])])))
+        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor", optional: true)])]), visible: ["cursor"]))
+        #expect(validates(body: write([.key("items"), .indexRef([.key("cursor")])]), visible: ["cursor"]))
     }
 
     @Test("a reference inside a call's operand is checked like any other")

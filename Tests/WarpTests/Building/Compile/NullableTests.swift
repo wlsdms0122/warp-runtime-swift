@@ -438,45 +438,6 @@ struct NullableTests {
         }
     }
 
-    @Test("a mark on the head is refused wherever a path is judged")
-    func aMarkedHeadIsRefused() async throws {
-        // Given. The head is a name a scope holds, so there is nothing before
-        // it that could have been absent. A front end that builds segments
-        // directly is told so where the module is made
-        // When / Then
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "items", type: .array(.string))
-                            ]
-                        ),
-                        body: [],
-                        result: .reference([.key("items", optional: true), .index(0)])
-                    )
-                ]
-            )
-        } throws: { error in
-            "\(error)".contains("marks the head optional")
-        }
-
-        // And the run says the same rather than reading past it. The layers
-        // share one sentence, so neither answers what the other refuses
-        let marked: Path = [.key("items", optional: true), .index(0)]
-        let folding = try await builder.build(
-            [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-        ).folding(["items": .array([.string("one")])])
-
-        await #expect {
-            try await folding.read(marked, at: .given("test"))
-        } throws: { error in
-            "\(error)".contains(marked.markedHead ?? "")
-        }
-    }
-
     @Test("an optional index reference reads its name at the exit that indexes")
     func anOptionalIndexReferenceOverANullable() async throws {
         // Given. `items?[i]`: the index is a name the run settles, and the null

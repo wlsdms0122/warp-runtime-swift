@@ -397,12 +397,15 @@ public struct Validator: Sendable {
                     declared.insert(name)
 
                 // A write names a path, and the head of the path is the
-                // variable it writes. The rest of the path is judged at the
-                // build, where the variable's type is known.
+                // variable it writes. An index the path reads by a name is a
+                // path read like any other. The rest of the path is judged at
+                // the build, where the variable's type is known.
                 case let .assignment(path):
                     if let refusal = path.markedHead {
                         throw ValidationError(refusal, at: here)
                     }
+
+                    try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: here)
 
                     guard let head = path.head else {
                         throw ValidationError(

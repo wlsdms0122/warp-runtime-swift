@@ -33,8 +33,8 @@ public struct Path: Sendable, Equatable {
         return rendered
     }
 
-    // What a mark on the head claims, said once for every layer that judges a
-    // path. Nil where the head is written plain. The head is a name a scope
+    // What a mark on the head claims, which the load refuses. Nil where the
+    // head is written plain. The head is a name a scope
     // holds, not a field that may be absent: there is nothing before it to read
     // past, so the mark has nothing to mean.
     public var markedHead: String? {

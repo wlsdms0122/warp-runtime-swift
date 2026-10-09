@@ -179,16 +179,7 @@ public struct PathParser: Sendable {
             throw PathSyntaxError("empty reference path")
         }
 
-        // What a mark on the head would claim is the path's own fact, said by
-        // the path, whichever spelling wrote it, and wherever a layer judges
-        // the same path later.
-        let path = Path(segments)
-
-        if let refusal = path.markedHead {
-            throw PathSyntaxError(refusal)
-        }
-
-        return path
+        return Path(segments)
     }
 
     // MARK: - Private
