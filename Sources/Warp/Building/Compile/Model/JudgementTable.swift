@@ -10,8 +10,8 @@ import Foundation
 // What the type check judged at each place that lowering reads back, by the
 // place it stands at. The type check writes it beside the calls it gathers,
 // reads it over a body for the hand-back proof, and lowering reads it where it
-// lowers what stands there. A place stands for
-// one expression, so it holds one judgement.
+// lowers what stands there. A place stands for one expression, so it holds one
+// judgement.
 struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]

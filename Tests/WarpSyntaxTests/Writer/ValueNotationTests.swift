@@ -130,11 +130,9 @@ struct ValueNotationTests {
     }
 
     @Test("a procedure has no spelling, so writing one refuses")
-    func writingAProcedureRefuses() throws {
+    func writingAProcedureRefuses() async throws {
         // Given
-        let sut = Value.procedure(
-            Closure.assembled()
-        )
+        let sut = try await procedureValue()
 
         // When / Then
         #expect(throws: EncodingError.self) {

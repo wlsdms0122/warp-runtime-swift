@@ -68,18 +68,15 @@ public struct ProcedureReader: Decodable {
             // contract. `parameters:`, `returns:` and `bounds:` are one
             // signature. What a call may pass, what comes back, and which
             // contracts each type parameter answers.
-            signature: try BoundsReader().apply(
-                try bounds?.read([Name: String].self),
-                qualifying: { [notation = decoder.notation] name in notation.qualified(name, as: .type) },
-                to: Signature(
-                    parameters: try container
-                        .decodeIfPresent(SignatureReader.self, forKey: .parameters)?
-                        .signature.parameters ?? [],
-                    returns: try container
-                        .decodeIfPresent(TypeReader.self, forKey: .returns)?
-                        .type
-                ),
-                at: bounds?.steps ?? decoder.steps
+            signature: Signature(
+                parameters: try container.decodeIfPresent([ParameterReader].self, forKey: .parameters)?
+                    .map(\.parameter) ?? [],
+                returns: try container.decodeIfPresent(TypeReader.self, forKey: .returns)?.type,
+                bounds: try BoundsReader().bounds(
+                    try bounds?.read([Name: String].self),
+                    qualifying: { [notation = decoder.notation] name in notation.qualified(name, as: .type) },
+                    at: bounds?.steps ?? decoder.steps
+                )
             ),
             // A procedure that only returns a value has nothing to do first, so
             // `body:` is what a procedure writes when it has statements rather

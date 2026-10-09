@@ -28,12 +28,10 @@ struct UnwritableTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a procedure held as a value is not data")
-    func aProcedureValueIsNotData() throws {
+    func aProcedureValueIsNotData() async throws {
         // Given. A closure has already taken a scope with it, and a document
         // carries neither code nor the scope it closed over
-        let held = Value.procedure(
-            Closure.assembled()
-        )
+        let held = try await procedureValue()
 
         // When / Then. A program carrying one never reaches a writing: making a
         // module is checking one, and this is one of the things it is not
@@ -71,12 +69,9 @@ struct UnwritableTests {
     @Test(
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
-            TypeExpression.nullable(.composition(["App.A", "App.B"])),
-            .nullable(.variable(.int)),
+            TypeExpression.nullable(.variable(.int)),
             .composition(["Foo", "Int"]),
             .composition(["Foo", "Array<Int>"]),
-            .parameter(name: "a.b"),
-            .parameter(name: "a<b>"),
             .named("Array<Int>"),
             .array(.named("Int"))
         ]
@@ -90,18 +85,14 @@ struct UnwritableTests {
 
     @Test("a procedure whose parameter type has no spelling has no document, though it builds")
     func aBuiltParameterTypeWithNoSpellingIsRefused() async throws {
-        // Given. Two contracts that each ask one procedure, and a slot taking
-        // either or null
+        // Given. A slot taking a record of one field or null: a record has no
+        // name for a `?` to trail
         let module = try Module(
-            contracts: [
-                "App.A": ["a": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
-                "App.B": ["b": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
-            ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "either", type: .nullable(.composition(["App.A", "App.B"])))]
+                        parameters: [Parameter(name: "either", type: .nullable(.record(["a": .int])))]
                     ),
                     body: [],
                     result: .literal(.null)

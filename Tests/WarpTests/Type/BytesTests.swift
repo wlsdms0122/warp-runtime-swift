@@ -145,15 +145,11 @@ struct BytesTests {
         }
     }
 
-    @Test("a procedure wanting elements no byte can be refuses at the boundary, by the element")
-    func aProcedureWantingOtherElementsRefusesAtTheBoundary() async throws {
-        // Given. `joined` declares `Array<String>`, which leaves no byte as it
-        // is, so the compact spelling does not cross: it is read out and
-        // settled element by element. The argument is read `Any` here so the
-        // build lets it through and the run is the one that answers.
-        //
-        // This is why a procedure whose elements no byte can be still asks for the
-        // `.array` case: a bytes value never reaches it.
+    @Test("the entry door refuses bytes where elements no byte can be are declared, by the element")
+    func theEntryRefusesBytesByTheElement() async throws {
+        // Given. The entry takes `Array<String>`, which leaves no byte as it
+        // is, so the bytes handed in are judged element by element at the
+        // door the arguments come through
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -173,7 +169,7 @@ struct BytesTests {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
             "\(error)".contains("input 'data'[0]: expected String, got Int")
-                && !"\(error)".contains("expected array")
+                && !"\(error)".contains("expected an Array")
         }
     }
 
@@ -213,8 +209,8 @@ struct BytesTests {
         #expect(try await run(sut, arguments: ["data": .bytes([104, 105])]) == .int(209))
     }
 
-    @Test("a mixed literal joins by the equation, not to any")
-    func aMixedLiteralJoinsByTheEquation() async throws {
+    @Test("a mixed literal joins as the list of whole numbers both spellings are, not to any")
+    func aMixedLiteralJoinsAsOneList() async throws {
         // Given. The elements spell one type two ways, so the list's element
         // type is that type and the call is judged, not waved through as any
         let sut = try Module(
@@ -261,16 +257,10 @@ struct BytesTests {
         // a document writes bytes `x"6869"`.
         #expect(Rendering(.bytes([104, 105])).text() == "x\"6869\"")
 
-        // The document writer is one recursive function and writes the same
-        // spelling however deep it sits, so this does too. The quotes are the
+        // The same spelling however deep it sits. The quotes are the
         // position's, exactly as they are for a string.
         #expect(Rendering(.array([.bytes([104, 105])])).text() == "[\"x\\\"6869\\\"\"]")
         #expect(Rendering(.array([.string("hi")])).text() == "[\"hi\"]")
-
-        // What the Codable projection writes is the array the equation says
-        // bytes are. A different answer for a different question, held by
-        // `bytesAreWrittenAsTheArrayTheyAre` over in the document tests. That
-        // one is read back; this one is read by a person.
     }
 
     @Test("what JSON cannot say shows as unencodable, never as almost-JSON")
@@ -293,8 +283,9 @@ struct BytesTests {
 
     @Test("a bytes literal fills an array slot at the build, and crosses it whole")
     func aBytesConstantFillsAnArraySlot() async throws {
-        // Given. The equation is read at the build, and the boundary has nothing
-        // to settle: the slot asked for an array and bytes are one
+        // Given. Bytes are a list of whole numbers at the build, and the
+        // boundary has nothing to settle: the slot asked for an array and
+        // bytes are one
         let sut = try Module(
             procedures: [
                 "keep": Procedure(

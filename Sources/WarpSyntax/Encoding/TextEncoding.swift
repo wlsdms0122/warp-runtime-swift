@@ -378,10 +378,12 @@ public struct TextEncoding {
         var value: UInt32 = 0
 
         for _ in 0..<4 {
-            guard let character = reading.first,
-                  character.isASCII,
-                  !("A"..."F").contains(character),
-                  let digit = UInt32(String(character), radix: 16) else {
+            guard
+                let character = reading.first,
+                character.isASCII,
+                !("A"..."F").contains(character),
+                let digit = UInt32(String(character), radix: 16)
+            else {
                 throw refused("the escape is not four lowercase hexadecimal digits", at: reading.startIndex)
             }
 
@@ -407,7 +409,7 @@ public struct TextEncoding {
             var settled: Value?
 
             // A record waits for a key where everything else waits for a value,
-            // and a closing brace is only honest in that position
+            // and a closing brace is only honest in that position.
             if case let .record(held, .none, name) = opened.last {
                 switch token {
                 case .recordClose:
@@ -472,10 +474,12 @@ public struct TextEncoding {
                 case let .bytes(bytes):
                     settled = .bytes(bytes)
 
-                // A bare token in front of a record is the record's name: the
-                // declared type the value settled to.
+                // A bare token in front of a record is the record's name, the
+                // declared type the value settled to, where it is written as a
+                // type's name. Any other bare token is a scalar, the record
+                // after it the next value.
                 case let .bare(bare):
-                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), name.isDeclarable {
+                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), NameGrammar.type.holds(name) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: name))
@@ -488,7 +492,7 @@ public struct TextEncoding {
             }
 
             // Closing is a token here, not a count, so a settled value climbs
-            // one step at most: into whatever holds it, or out
+            // one step at most: into whatever holds it, or out.
             if let value = settled {
                 guard let open = opened.popLast() else { return value }
 

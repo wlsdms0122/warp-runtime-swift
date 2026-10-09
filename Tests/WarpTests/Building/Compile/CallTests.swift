@@ -100,7 +100,7 @@ struct CallTests {
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Collection.keys' is declared more than once in this link")
+            error is BuildError && "\(error)".contains("'Standard.Collection.keys' is declared by")
         }
     }
 
@@ -339,7 +339,7 @@ struct CallTests {
     @Test("an argument named rather than written is judged by what the name holds")
     func referenceArgumentIsJudged() async throws {
         // Given. The type is wrong, and both sides said so in their own text:
-        // `text` was declared a string and `base` is declared an int
+        // `text` was declared a `String` and `base` is declared an `Int`
         let sut = try Module(
             procedures: [
                 "callee": Procedure(

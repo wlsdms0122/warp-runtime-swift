@@ -190,7 +190,7 @@ public struct Builder: Sendable {
 
         try refuseRepeated(modules.map(Place.Document.of), held: laid.identities)
 
-        try refuseDoubled(modules, after: compiled.count)
+        try refuseDoubled(modules, against: laid)
 
         let namespace = try TypeNamespace(compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
@@ -234,12 +234,8 @@ public struct Builder: Sendable {
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
-        // their rows, and what they wrote themselves. A name two of them
-        // declare is refused here.
-        //
-        // Refused rather than taken as the host's statement, which the order
-        // is: a doubled spelling is not a question of which document to read
-        // first, it is a table with no answer for that name.
+        // their rows, and what they wrote themselves. No spelling is in it
+        // twice, which was refused before the order was worked out.
         var signatures = laid.signatures
 
         // The declarations of each document laid down, under the row it will
@@ -264,15 +260,6 @@ public struct Builder: Sendable {
             // neither held to a spelling another document took nor in the
             // space another document resolves in.
             for symbol in symbols where symbol.supplies {
-                if let first = signatures[symbol.declared] {
-                    throw BuildError(
-                        "'\(symbol.declared)' is declared by \(first.spelled) and by"
-                            + " \(symbol.spelled). Two declarations of a name have no way"
-                            + " to be told apart",
-                        at: symbol.place
-                    )
-                }
-
                 signatures[symbol.declared] = Placed(
                     Declared(signature: symbol.procedure.signature, access: symbol.procedure.access),
                     at: symbol.place,
@@ -549,12 +536,15 @@ public struct Builder: Sendable {
         }
     }
 
-    // No spelling another document may name declared by two of these. Refused
-    // before the order is worked out: the order reads a name as whichever
-    // document declared it, and where two declare one name that reading can
-    // put a document in its own reach and call the pair a cycle.
-    private func refuseDoubled(_ modules: [Module], after held: Int) throws {
-        var claimed: [Name: Placed<Procedure>] = [:]
+    // No spelling another document may name declared twice: by two of these,
+    // or by one of these and one laid before them. Refused before the order
+    // is worked out: the order reads a name as whichever document declared
+    // it, and where two declare one name that reading can put a document in
+    // its own reach and call the pair a cycle. A doubled spelling is not a
+    // question of which document to read first, it is a table with no answer
+    // for that name.
+    private func refuseDoubled(_ modules: [Module], against laid: Laid) throws {
+        var claimed = laid.signatures.mapValues(\.spelled)
 
         for (position, module) in modules.enumerated() {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
@@ -562,19 +552,18 @@ public struct Builder: Sendable {
                 let declaration = Placed(
                     procedure,
                     at: .procedure(name.spelling, in: .of(module)),
-                    of: held + position
+                    of: laid.compiled.count + position
                 )
 
                 if let first = claimed[name] {
                     throw BuildError(
-                        "'\(name)' is declared more than once in this link, by"
-                            + " \(first.spelled) and \(declaration.spelled). Two declarations"
-                            + " of a name have no way to be told apart",
+                        "'\(name)' is declared by \(first) and by \(declaration.spelled)."
+                            + " Two declarations of a name have no way to be told apart",
                         at: declaration.place
                     )
                 }
 
-                claimed[name] = declaration
+                claimed[name] = declaration.spelled
             }
         }
     }

@@ -34,7 +34,7 @@ struct CallOperation: Sendable {
     let judged: [Int]
 
     // MARK: - Initializer
-    // The same, where the parts were read apart. What is handed in place
+    // A call whose parts were read apart, from an object. What is handed in place
     // stands at one of the positions this call fills, and a run writes it
     // there without asking how many there are. What is judged stands in
     // position order, each once.

@@ -14,8 +14,7 @@ import WarpSyntax
 // `conformance/` show what changed rather than who indented it.
 //
 // A case is authored however its author likes, since the text reader takes any
-// layout, and is run through the writer before it lands. That is a habit until
-// something asks, so this asks.
+// layout, and is run through the writer before it lands, which this asks.
 @Suite("The cases are laid out by the writer")
 struct CaseLayoutTests {
     // MARK: - Property

@@ -56,7 +56,7 @@ struct NotationTests {
     @Test("a canonical notation still writes every condition the language has")
     func canonicalConditionsAreWholeConditions() async throws {
         // Given. This is what makes the spellings a layer rather than a part of
-        // the language. Nothing is lost by giving them up; the message a
+        // the language. Nothing is lost by giving them up; the call a
         // spelling would have stood for is written out instead.
         let module = try sut.loadDocument([
             "imports": ["Standard.Logic.equal"],
@@ -283,7 +283,7 @@ struct NotationTests {
     func readingCarriesNoNotation() throws {
         // Given. The spelling these tests read with, left unlowered in a
         // document. `load` takes a document, and a document has no spellings,
-        // so the mapping is not the message some table would have made of it:
+        // so the mapping is not the call some table would have made of it:
         // standing bare it is refused, and under `record` it is a record.
         func document(asking asked: Value) -> Value {
             [

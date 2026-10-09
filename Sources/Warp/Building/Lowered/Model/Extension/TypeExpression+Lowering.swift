@@ -101,8 +101,8 @@ extension TypeExpression {
         }
     }
 
-    // What a list of names stands for: the contracts, in the one order a set
-    // of bounds is written in, or the first name that is no contract.
+    // What a set of names stands for: the contracts, in the one order a set
+    // of bounds is written in, or `Never` where a name is no contract.
     private func lowered(
         bounds names: some Collection<Name>,
         in table: LoweredTypeTable,

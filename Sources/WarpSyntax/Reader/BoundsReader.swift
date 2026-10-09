@@ -23,22 +23,19 @@ struct BoundsReader {
     }
 
     // MARK: - Public
-    // The signature holding each type parameter to the contracts its bound
-    // names. `steps` are where `bounds` stands.
-    func apply(
-        _ bounds: [Name: String]?,
+    // The contracts each type parameter's bound names. `steps` are where
+    // `bounds` stands.
+    func bounds(
+        _ written: [Name: String]?,
         qualifying: (Name) -> Name = { name in name },
-        to signature: Signature,
         at steps: [Place.Step]
-    ) throws -> Signature {
-        guard let bounds, !bounds.isEmpty else { return signature }
-
+    ) throws -> [Name: Set<Name>] {
         // A bound is the names of contracts, one or several joined with `&`,
         // and never a type. Read by the one reading every type spelling gets,
         // so what `&` means here is what it means in a slot.
         var named: [Name: Set<Name>] = [:]
 
-        for (parameter, bound) in bounds.sorted(by: { one, other in one.key < other.key }) {
+        for (parameter, bound) in (written ?? [:]).sorted(by: { one, other in one.key < other.key }) {
             let here = steps + [.key(parameter.spelling)]
             let parsed: TypeExpression
 
@@ -53,7 +50,7 @@ struct BoundsReader {
                 named[parameter] = [name]
 
             case let .composition(joined):
-                named[parameter] = Set(joined)
+                named[parameter] = joined
 
             default:
                 throw ReadingError(
@@ -65,7 +62,7 @@ struct BoundsReader {
             }
         }
 
-        return Signature(parameters: signature.parameters, returns: signature.returns, bounds: named)
+        return named
     }
 
     // MARK: - Private

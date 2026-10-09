@@ -293,6 +293,99 @@ indirect enum LoweredType: Sendable, Equatable {
         .array([]), .dictionary([:]), .bytes([])
     ]
 
+    // Whether a value of any type passes this as it is: nothing declared,
+    // a type parameter no bound holds, or a path a call decides. Settling
+    // against one says nothing, so what holds it need not be walked.
+    var passesEverything: Bool {
+        switch self {
+        case .any, .projection, .parameter(_, bounds: []):
+            return true
+
+        default:
+            return false
+        }
+    }
+
+    // Whether a list or a map here, at whatever depth, holds no element a
+    // value could be: what an empty literal reads as, which says nothing of
+    // what a box of it will hold.
+    var holdsNoElement: Bool {
+        switch self {
+        case .array(.never), .dictionary(.never):
+            return true
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner):
+            return inner.holdsNoElement
+
+        case let .record(record):
+            return record.fields.contains { field in field.holdsNoElement }
+
+        default:
+            return false
+        }
+    }
+
+    // This type read by its bounded parameters alone: each as the
+    // composition of its bounds, and every other position as `Any`. What is
+    // handed where it stands at a call has to fit this, and what the call
+    // filled the parameters with judges the rest.
+    var boundedAlone: LoweredType {
+        switch self {
+        case let .parameter(_, bounds) where !bounds.isEmpty:
+            return .composition(bounds.sorted())
+
+        case let .array(element):
+            let bounded = element.boundedAlone
+
+            return bounded == .any ? .any : .array(bounded)
+
+        case let .dictionary(entry):
+            let bounded = entry.boundedAlone
+
+            return bounded == .any ? .any : .dictionary(bounded)
+
+        case let .record(record):
+            let fields = record.fields.map(\.boundedAlone)
+
+            guard fields.contains(where: { field in field != .any }) else { return .any }
+
+            return .record(LoweredRecord(layout: record.layout, fields: fields))
+
+        case let .nullable(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .nullable(bounded)
+
+        case let .variable(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .variable(bounded)
+
+        case let .inout(inner):
+            let bounded = inner.boundedAlone
+
+            return bounded == .any ? .any : .inout(bounded)
+
+        // A procedure's answer stands where it is held, and is held there. Its
+        // parameters are what it is handed and take `Never`, which every
+        // parameter takes, so they ask nothing.
+        case let .procedure(parameters, returns, _, _):
+            let answer = (returns ?? .any).boundedAlone
+
+            guard answer != .any else { return .any }
+
+            return .procedure(
+                parameters: parameters?.map { parameter in parameter.isInout ? .inout(.never) : .never },
+                returns: answer,
+                constness: .unstated,
+                isolation: .unstated
+            )
+
+        default:
+            return .any
+        }
+    }
+
     // MARK: - Initializer
     // What a settled value reads as.
     init(of value: Value, in table: LoweredTypeTable) {
@@ -758,10 +851,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
     // satisfy two types at once. The build asks them of readings; the run
-    // asks the first of a closure value a cast reads as a procedure type. A
-    // name the table does not answer passes every judge but the second, which
-    // reads it as only itself: nothing is knowable about it here, and the
-    // value judge refuses it where a value arrives.
+    // asks the first of a closure value a cast reads as a procedure type.
     //
     // Whether a value of `other` may stand where this is declared. Exact on
     // records, a declared one by its name and a nameless one by its fields,
@@ -1034,38 +1124,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether a value of any type passes this as it is: nothing declared,
-    // a type parameter no bound holds, or a path a call decides. Settling
-    // against one says nothing, so what holds it need not be walked.
-    var passesEverything: Bool {
-        switch self {
-        case .any, .projection, .parameter(_, bounds: []):
-            return true
-
-        default:
-            return false
-        }
-    }
-
-    // Whether a list or a map here, at whatever depth, holds no element a
-    // value could be: what an empty literal reads as, which says nothing of
-    // what a box of it will hold.
-    var holdsNoElement: Bool {
-        switch self {
-        case .array(.never), .dictionary(.never):
-            return true
-
-        case let .array(inner), let .dictionary(inner), let .nullable(inner):
-            return inner.holdsNoElement
-
-        case let .record(record):
-            return record.fields.contains { field in field.holdsNoElement }
-
-        default:
-            return false
-        }
-    }
-
     // Whether a write into a box handed in place, of this type, holds. The
     // caller reads its box as what filled each type parameter here, and a
     // write settles against this type and never against what filled one, so
@@ -1154,7 +1212,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // stands for a declared record is that record, and any other name is what
     // it names. Nothing stands for anything else: `Any` is no wildcard here,
     // since standing for anything is what `accepts` reads, and a type
-    // parameter is itself, and so is a name the table does not answer.
+    // parameter is itself.
     func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
         matches(other, in: table, assumingPairs: [])
     }
@@ -1345,67 +1403,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return
-        }
-    }
-
-    // This type read by its bounded parameters alone: each as the
-    // composition of its bounds, and every other position as `Any`. What is
-    // handed where it stands at a call has to fit this, and what the call
-    // filled the parameters with judges the rest.
-    var boundedAlone: LoweredType {
-        switch self {
-        case let .parameter(_, bounds) where !bounds.isEmpty:
-            return .composition(bounds.sorted())
-
-        case let .array(element):
-            let bounded = element.boundedAlone
-
-            return bounded == .any ? .any : .array(bounded)
-
-        case let .dictionary(entry):
-            let bounded = entry.boundedAlone
-
-            return bounded == .any ? .any : .dictionary(bounded)
-
-        case let .record(record):
-            let fields = record.fields.map(\.boundedAlone)
-
-            guard fields.contains(where: { field in field != .any }) else { return .any }
-
-            return .record(LoweredRecord(layout: record.layout, fields: fields))
-
-        case let .nullable(inner):
-            let bounded = inner.boundedAlone
-
-            return bounded == .any ? .any : .nullable(bounded)
-
-        case let .variable(inner):
-            let bounded = inner.boundedAlone
-
-            return bounded == .any ? .any : .variable(bounded)
-
-        case let .inout(inner):
-            let bounded = inner.boundedAlone
-
-            return bounded == .any ? .any : .inout(bounded)
-
-        // A procedure's answer stands where it is held, and is held there. Its
-        // parameters are what it is handed and take `Never`, which every
-        // parameter takes, so they ask nothing.
-        case let .procedure(parameters, returns, _, _):
-            let answer = (returns ?? .any).boundedAlone
-
-            guard answer != .any else { return .any }
-
-            return .procedure(
-                parameters: parameters?.map { parameter in parameter.isInout ? .inout(.never) : .never },
-                returns: answer,
-                constness: .unstated,
-                isolation: .unstated
-            )
-
-        default:
-            return .any
         }
     }
 
@@ -1640,9 +1637,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case .any:
             return TypeSpelling.any.spelling
 
-        // Spelled as what it is: the type reached by that path. No document
-        // writes this, so the spelling answers to the message alone, and an
-        // author reading a refusal about `item.a` sees where it came from.
+        // Spelled as `TypeExpression` spells it, for the message alone.
         case let .projection(of, path):
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
@@ -1933,7 +1928,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .parameter(name: label)
 
         case let .composition(names):
-            return .composition(names)
+            return .composition(Set(names))
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
@@ -2387,11 +2382,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return try inner.settling(value, at: path(), in: table)
 
         case let .array(element):
-            // Bytes are an array of bytes in a compact spelling, so they arrive
-            // here as the array they are. Where the declaration leaves every
-            // byte as it is, the compact spelling crosses whole: the slot
-            // asked for an array and one is what it has, and unpacking it would
-            // spend an element per byte to answer nothing.
+            // Bytes are a list of whole numbers in a compact spelling, so they
+            // arrive here as the list they are. Where the declaration leaves
+            // every byte as it is, the compact spelling crosses whole: the slot
+            // asked for a list and one is what it has.
             if case .bytes = value, element.holdsEveryByte(in: table) {
                 return value
             }

@@ -27,6 +27,16 @@ struct PathParserTests {
         #expect(parsed == [.key("items"), .index(0), .key("name"), .indexRef([.key("i")])])
     }
 
+    @Test("a whole number between brackets is a position, whatever its size")
+    func aBracketedWholeNumberIsNoName() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. One no `Int` holds is refused, never read as a name
+        #expect(try sut.parse("d[5]") == [.key("d"), .index(5)])
+        #expect(throws: PathSyntaxError.self) { try sut.parse("d[99999999999999999999]") }
+    }
+
     @Test("an optional dot parses and renders as itself")
     func optionalDotRoundTrips() throws {
         // Given

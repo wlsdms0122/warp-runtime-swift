@@ -67,6 +67,12 @@ public func run(
     )
 }
 
+// A procedure held as a value, made the way a host gets one: a run whose
+// entry answers a closure.
+public func procedureValue() async throws -> Value {
+    try await run(Procedure(body: [], result: .closure(Procedure(body: [], result: .literal(.null)))))
+}
+
 // What a body answers with, for the many tests that care about one value rather
 // than a result map.
 public func answer(

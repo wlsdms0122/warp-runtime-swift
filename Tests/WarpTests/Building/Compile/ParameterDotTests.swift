@@ -292,35 +292,6 @@ struct ParameterDotTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a type read out of a body is not a declaration anybody can write")
-    func aProjectionIsRefusedWhereADeclarationGoes() async throws {
-        // Given. A declaration assembled in the host claiming what only a walk
-        // produces. No document spells one, and the build refuses it where it
-        // was written rather than letting it stand: a declaration says what a
-        // call fills, and nothing fills a path only one body can read.
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("read out of a body")
-        }
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

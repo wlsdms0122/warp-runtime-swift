@@ -341,7 +341,7 @@ struct ObjectReader {
                 throw ObjectRefused("'composition' joins nothing")
             }
 
-            read = .composition(names)
+            read = .composition(Set(names))
 
         case .projection:
             read = .projection(
@@ -690,7 +690,6 @@ struct ObjectReader {
 
         return read
     }
-
 
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")

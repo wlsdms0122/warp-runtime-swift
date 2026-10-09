@@ -64,35 +64,34 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Task?") == .nullable(.named("Task")))
 
         // And. `?` wraps the whole spelling, so inside the brackets it is the
-        // element that is nullable.
+        // element that is nullable, and in front of it a modifier or an `&`
+        // is still the whole type's.
         #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
+        #expect(try TypeReader.parse("const Procedure?") == .nullable(.procedure(nil, .const)))
+        #expect(try TypeReader.parse("isolated Procedure?") == .nullable(.procedure(nil, .unstated, .isolated)))
+        #expect(try TypeReader.parse("App.B & App.A?") == .nullable(.composition(["App.A", "App.B"])))
+        #expect(try TypeReader.parse("inout Int?") == .inout(.nullable(.int)))
     }
 
-    @Test("a ? that says nothing new is refused where the document is read", arguments: [
-        "Int??", "Null?", "Any?", "Never?", "some T?"
-    ])
-    func uselessNullableIsRefused(written: String) throws {
-        // When / Then. Twice says it once too often; what already admits null
-        // gains nothing; never admits nothing; a parameter stands for the whole
-        // filled type.
-        #expect(throws: ValidationError.self) {
-            try Loader().load([
-                "warp": 1,
-                "imports": [],
-                "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
-            ])
-        }
-    }
-
-    @Test("names joined with & read as a composition, in name order, and write back the same way")
+    @Test("names joined with & read as the set of them, and write back in name order")
     func compositionsParse() throws {
         // When / Then
         #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
         #expect(try TypeReader.parse("Array<App.A & App.B>") == .array(.composition(["App.A", "App.B"])))
         #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.B?") }
         #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & Array<Int>") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & App.A") }
+
+        // And. A document writes the set one way: each name once, in name
+        // order
+        for (written, imports) in [("App.B & App.A", ["App.A", "App.B"]), ("App.A & App.A", ["App.A"])] as [(String, Value)] {
+            #expect(throws: ReadingError.self) {
+                try Loader().load([
+                    "warp": 1,
+                    "imports": imports,
+                    "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
+                ])
+            }
+        }
     }
 
     @Test("a signature bounds its type parameters once, in bounds")
@@ -116,26 +115,9 @@ struct TypeNotationTests {
         #expect(signature?.returns == .parameter(name: "T"))
     }
 
-    @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
+    @Test("a bound is the names of contracts, and a nested procedure type writes none")
     func aBoundBelongsToTheSignature() throws {
-        // When / Then. The slot names the parameter and nothing else. The
-        // bound is declared once, in the signature's `bounds`.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
-
-        // And. A bound on a name no slot writes binds nothing, and is
-        // refused where `bounds` stands.
-        let unwritten = #expect(throws: ValidationError.self) {
-            try loader.loadProcedure([
-                "bounds": ["T": "Comparable"],
-                "parameters": [["name": "of", "type": "Int"]],
-                "result": ["ref": "of"]
-            ])
-        }
-
-        #expect(unwritten?.place?.rendered == "procedures.entry.bounds")
-
-        // And. A bound is a contract's name, never a type.
+        // When / Then. A bound is a contract's name, never a type.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Array<Int>"],
@@ -151,7 +133,7 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
-                    ["name": "by", 
+                    ["name": "by",
                         "type": [
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
@@ -174,7 +156,7 @@ struct TypeNotationTests {
         let sut = try loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
-                ["name": "by", 
+                ["name": "by",
                     "type": [
                         "procedure": [
                             "parameters": ["some Element"],

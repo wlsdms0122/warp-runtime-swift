@@ -8,7 +8,6 @@
 import Foundation
 import Testing
 @testable import Warp
-import WarpTestSupport
 
 @Suite("Two values are equal by what they hold")
 struct ValueEqualityTests {

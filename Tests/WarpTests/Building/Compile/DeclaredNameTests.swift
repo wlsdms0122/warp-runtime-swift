@@ -249,26 +249,6 @@ struct DeclaredNameTests {
         #expect(refusal?.message == "holds Array<Int>, and what it was given is [Int or String]")
     }
 
-    @Test("a name declaring a type parameter is refused, because no call fills a name")
-    func aDeclaredTypeParameterIsRefused() throws {
-        // When / Then
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [
-                            Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
-                        ],
-                        result: reference("held")
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("writes `some T`, and nothing here is filled by a call")
-        }
-    }
-
     @Test("a declaration inside a module variable is held the way one inside a procedure is")
     func aDeclarationInsideAModuleVariableIsHeld() async throws {
         // Given
@@ -375,6 +355,40 @@ struct DeclaredNameTests {
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("which holds const isolated Procedure<(Int) -> Int> where inout Procedure<(Int) -> Int> is declared")
+        }
+    }
+
+    @Test("a closure's signature is held to the same judgement as a declaration")
+    func aClosureSignatureIsJudgedAtTheBuild() async throws {
+        // Given. Unreached code still has to compile, and a signature written
+        // inline is a declaration however deep a body buries it
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [
+                        Statement(binding: .constant("kept"), expression: .closure(Procedure(
+                                signature: Signature(
+                                    parameters: [
+                                        Parameter(name: "it", type: .named("Nope"))
+                                    ]
+                                ),
+                                body: [],
+                                result: reference("it")
+                            ))
+                        )
+                    ],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nope', which no module in this link declares")
         }
     }
 

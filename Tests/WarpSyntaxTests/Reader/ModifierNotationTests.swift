@@ -28,10 +28,8 @@ struct ModifierNotationTests {
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
     func everyMarkRoundTrips(mark: SlotMark) throws {
-        // Given. The reading, the writing and the document's vocabulary all
-        // come off one list, so a mark added to it is asked these questions
-        // without anyone remembering to ask. Both forms a marked type takes:
-        // a name, and a procedure under its one key
+        // Given. Both forms a marked type takes: a name, and a procedure
+        // under its one key
         let named = mark.marking(.named("Handle"))
         let form = mark.marking(.procedure(ProcedureType(returns: .int)))
 
@@ -75,29 +73,48 @@ struct ModifierNotationTests {
     }
 
     @Test(
-        "a mark is not written inside a mark either",
+        "a mark inside a mark is written as it is where a name carries it, and has no procedure form",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
-    func aMarkIsNotWrittenInsideAMark(mark: SlotMark, inside: SlotMark) throws {
-        // When / Then. What the reading refuses the writing refuses too, in
-        // both the forms a marked type is written in
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: mark.marking(inside.marking(.named("Handle"))))
-        }
+    func aMarkInsideAMarkIsWrittenAsItIs(mark: SlotMark, inside: SlotMark) throws {
+        // Given
+        let named = mark.marking(inside.marking(.named("Handle")))
 
+        // When / Then. A name takes both in front of it, and reads back as it
+        // was written
+        #expect(try Writer().value(of: named) == .string("\(mark.rawValue) \(inside.rawValue) Handle"))
+        #expect(try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle") == named)
+
+        // And a procedure's key carries one
         #expect(throws: WritingError.self) {
-            try Writer().value(of: mark.marking(inside.marking(.procedure(nil))))
+            try Writer().value(of: mark.marking(inside.marking(.procedure(ProcedureType(returns: .int)))))
         }
     }
 
     @Test(
-        "a mark inside a mark is refused, whichever two they are",
+        "a mark inside a mark is refused where the document is read, whichever two they are",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
     func aMarkInsideAMarkIsRefused(mark: SlotMark, inside: SlotMark) throws {
-        // When / Then
-        #expect(throws: TypeFormError.self) {
-            try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
+        // When / Then. Each mark stands where it may alone, and no slot takes
+        // two
+        #expect(throws: ValidationError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["result": 1]],
+                "types": ["Box": ["record": ["f": .string("\(mark.rawValue) \(inside.rawValue) Int")]]]
+            ])
+        }
+
+        #expect(throws: ValidationError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": [
+                    "entry": ["parameters": [["name": "f", "type": .string("\(mark.rawValue) \(inside.rawValue) Int")]]]
+                ]
+            ])
         }
     }
 
@@ -242,8 +259,8 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
-    @Test("a keyword written twice is refused", arguments: [
-        "inout inout Int", "var var Int", "const const Procedure", "isolated isolated Procedure"
+    @Test("a modifier written twice is refused", arguments: [
+        "const const Procedure", "isolated isolated Procedure"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
         // When / Then

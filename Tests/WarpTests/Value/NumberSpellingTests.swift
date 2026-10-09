@@ -1,5 +1,5 @@
 //
-//  IntSpellingTests.swift
+//  NumberSpellingTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/24/26.
@@ -12,7 +12,7 @@ import Testing
 // The spellings of a number: every judge that meets a spelled number reads
 // through these, so the edges are pinned here once.
 @Suite("Number spellings")
-struct IntSpellingTests {
+struct NumberSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test

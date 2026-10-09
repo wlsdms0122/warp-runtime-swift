@@ -94,10 +94,10 @@ public struct ConstructRegistry: Sendable {
         return registry
     }
 
-    // Giving up a key. A notation that wants `conditional` to mean something of
-    // own has to be able to stop meaning ours by it, and respelling a built-in
-    // is this followed by `registering(_:as:)`. The reason a rename is a change
-    // to a table here rather than a change to the language.
+    // Giving up a key. A notation that wants `conditional` to mean something
+    // of its own has to be able to stop meaning ours by it, so respelling a
+    // built-in is this followed by `registering(_:as:)`: a rename is a change to
+    // a table here, and not to the language.
     public func removing(_ key: Name) -> ConstructRegistry {
         var registry = self
 

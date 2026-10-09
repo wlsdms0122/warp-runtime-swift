@@ -7,8 +7,11 @@
 
 import Foundation
 
-// What the compile refuses about a declaration on its own: a type mention that
-// resolves to nothing, and a parameter no call could fit.
+// What the compile refuses about declarations once their names resolve: a
+// name reaching only names, a mention no module in the link declares, a bound
+// or a composition naming what is no contract, a `?` behind a name where it
+// says nothing, a cast naming nothing to read, and a parameter a procedure the
+// host answers could never call.
 struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
@@ -87,21 +90,10 @@ struct DeclarationChecker {
 
             // A contract's procedures are declarations the way the module's
             // own are, and what a call is judged against is what was judged.
-            // Each is answered about the value it takes first, so that value
-            // is written `Self`, the type that answers the contract, which a
-            // call reads as one type parameter the contract bounds.
+            // `Self` is read as one type parameter the contract bounds.
             for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
                 for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                     let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
-
-                    guard asked.signature.parameters.first?.type == .selfType else {
-                        throw BuildError(
-                            "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
-                                + " A contract's procedure takes `Self` first: the value it is"
-                                + " answered about, of the type that answers it",
-                            at: place.part(.parameters)
-                        )
-                    }
 
                     try judge(asked.signature.read(of: contract), at: place, in: table)
                 }
@@ -208,22 +200,8 @@ struct DeclarationChecker {
         resolve table: TypeTable
     ) throws {
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter:
+        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
             return
-
-        // The build's own note to itself, written where a declaration goes. A
-        // declaration is a promise, and this is a type worked out from a body.
-        // Nobody promised it, and no document could have spelled it. It is
-        // refused here rather than left to the reader, because a reader is one
-        // way a declaration is built and a host assembling one is another.
-        case let .projection(of, path):
-            throw BuildError(
-                "writes `\(type.rendered)`, which is a type the build"
-                    + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
-                    + " only that body can read",
-                at: place
-            )
 
         case let .procedure(type, _, _):
             guard let type else { return }
@@ -238,15 +216,7 @@ struct DeclarationChecker {
         // contract's, since a type is one thing and not a bound on some
         // other.
         case let .composition(names):
-            guard !names.isEmpty, Set(names).count == names.count, names == names.sorted() else {
-                throw BuildError(
-                    "joins \(names.isEmpty ? "nothing" : Set(names).count == names.count ? "names out of order" : "one name twice")"
-                        + " with `&`, and a composition names what a value answers, each once and in name order",
-                    at: place
-                )
-            }
-
-            for name in names where table.contracts[name] == nil {
+            for name in names.sorted() where table.contracts[name] == nil {
                 throw BuildError(
                     "joins '\(name)' with `&`, and `&` joins the names of contracts,"
                         + " which no module in this link declares '\(name)' as",
@@ -336,7 +306,7 @@ struct DeclarationChecker {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a contract",
-                    at: place
+                    at: place.part(.bounds).key(parameter.spelling)
                 )
             }
         }

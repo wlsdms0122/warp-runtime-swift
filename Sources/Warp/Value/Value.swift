@@ -318,7 +318,9 @@ public indirect enum Value: Sendable, Equatable {
     // What a reading of fields under names makes. A name is a layout's, so a
     // reading that carries one makes a record; without one the names stay the
     // value's own data. Either way one name holds one field, and a name
-    // written twice is refused.
+    // written twice is refused. The name is a declared type's, so it holds a
+    // type's grammar: this is the one door a record comes through with a name
+    // from outside.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
@@ -328,6 +330,10 @@ public indirect enum Value: Sendable, Equatable {
         let held = try Value.Dictionary(Array(fields))
 
         guard let name else { return .dictionary(held) }
+
+        guard NameGrammar.type.holds(name) else {
+            throw ValueRefused(NameGrammar.type.refusal(of: name))
+        }
 
         return .record(Record(layout: Layout(name: name, ordered: held.names), values: held.values))
     }

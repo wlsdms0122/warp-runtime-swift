@@ -97,10 +97,11 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case parameter(name: Name)
 
     // A value of whatever type answers every contract here, written
-    // `A & B`, with no name of its own to tie one mention to another. One
-    // name in this position is written as the name and read as this where
-    // the name is a contract's.
-    case composition([Name])
+    // `A & B`, with no name of its own to tie one mention to another. A set,
+    // as a bound is: what it says is which contracts, so no order and no
+    // repeat is written. One name in this position is written as the name and
+    // read as this where the name is a contract's.
+    case composition(Set<Name>)
 
     // The type that answers a contract, written `Self` in that contract's
     // procedures and nowhere else. A claim reads it as the type the claim is
@@ -177,7 +178,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.procedure: .procedure(nil)
     ]
 
-    // How the type reads in a message. A declaration an author wrote should come
+    // How the type reads in a message: a declaration an author wrote comes
     // back to them in the spelling they wrote it in.
     public var rendered: String {
         switch self {
@@ -206,14 +207,14 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return "some \(name)"
 
         case let .composition(names):
-            return names.map(\.spelling).joined(separator: " & ")
+            return names.sorted().map(\.spelling).joined(separator: " & ")
 
         case .selfType:
             return TypeSpelling.selfType.spelling
 
-        // Spelled as what it is. The type reached by that path. No document
-        // writes this, so the spelling answers to the message alone: an author
-        // reading a refusal about `item.a` should see where it came from.
+        // Spelled as what it is, the type reached by that path. No document
+        // writes this, so the spelling answers to the message alone: a refusal
+        // about `item.a` names where it came from.
         case let .projection(of, path):
             return "some \(Path([.key(of)] + path.segments).rendered)"
 
@@ -286,7 +287,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     //
     // A parameter's own name is not one of them. It stands for a type the
     // call decides rather than one a module declared, and what a walk through
-    // one reached is rooted at that same undeclared type.
+    // one reached is rooted at that same type.
     var mentions: Set<Name> {
         switch self {
         case .any, .never, .null, .bool, .int, .double, .string:
@@ -313,7 +314,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             [name]
 
         case let .composition(names):
-            Set(names)
+            names
 
         case .parameter, .selfType, .projection:
             []
@@ -489,8 +490,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether null is one of this type's values. The fact `T?` exists to
     // declare.
     //
-    // `Any` is not this. An undeclared type accepts a null that arrives, but
-    // it does not *spell* null as a value.
+    // `Any` is not this. A slot declaring nothing accepts a null that arrives,
+    // but it does not *spell* null as a value.
     public func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }

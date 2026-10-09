@@ -8,8 +8,8 @@
 import Foundation
 
 extension Parameter {
-    // This parameter as the run reads it. An undeclared type lowers to
-    // `Any`: the boundary tells "nothing written" from "`Any` written" in no
+    // This parameter as the run reads it. A parameter declaring no type
+    // lowers to `Any`: the boundary tells "nothing written" from "`Any` written" in no
     // way, so the slot does not either. `bounds` are what the signature
     // holds its type parameters to.
     func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>]) -> Slot {

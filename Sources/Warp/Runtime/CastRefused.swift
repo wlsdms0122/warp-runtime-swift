@@ -27,8 +27,9 @@ public struct CastRefused: RecoverableFailure {
     // The type the cast named, spelled the way the author wrote it.
     public let expected: String
 
-    // The kind the value arrived as. The other half of the fact: what was
-    // asked for is knowable from the text, and what came is not.
+    // The type the value arrived as an instance of. The other half of the
+    // fact: what was asked for is knowable from the text, and what came is
+    // not.
     public let actual: String
 
     public let trace: Trace?

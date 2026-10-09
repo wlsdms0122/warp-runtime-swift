@@ -326,7 +326,10 @@ struct TextEncodingTests {
     }
 
     @Test("what a document cannot carry is refused on the way out")
-    func theUnwritableIsRefusedWhenWriting() {
+    func theUnwritableIsRefusedWhenWriting() async throws {
+        // Given
+        let procedure = try await procedureValue()
+
         // When / Then
         for value in [Value.double(.infinity), .double(.nan)] {
             #expect(throws: (any Error).self) {
@@ -335,9 +338,7 @@ struct TextEncodingTests {
         }
 
         #expect(throws: (any Error).self) {
-            try TextEncoding().data(
-                from: .procedure(Closure.assembled())
-            )
+            try TextEncoding().data(from: procedure)
         }
     }
 

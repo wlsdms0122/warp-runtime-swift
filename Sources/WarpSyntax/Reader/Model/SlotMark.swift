@@ -30,10 +30,7 @@ enum SlotMark: String, CaseIterable, Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.
-    //
-    // No `default`: a type nobody thought about has to be a compile error here
-    // rather than an answer of "unmarked", which is the answer every reading of
-    // a marked slot would then get.
+    // Every case is named, so a new one is a compile error here.
     static func marked(_ type: TypeExpression) -> SlotMark? {
         switch type {
         case .variable:
@@ -47,16 +44,6 @@ enum SlotMark: String, CaseIterable, Sendable {
             .projection, .composition, .selfType:
             return nil
         }
-    }
-
-    // Why a mark may not stand in front of this type, and nothing where it
-    // may. One statement, so the reading and the writing refuse the same thing
-    // in the same words and a place that asks later asks the same question.
-    static func refusal(marking inner: TypeExpression, under mark: SlotMark) -> String? {
-        guard let inside = marked(inner) else { return nil }
-
-        return "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
-            + " A slot says one thing about what it takes"
     }
 
     // The mark a spelling begins with, and the spelling under it. The other

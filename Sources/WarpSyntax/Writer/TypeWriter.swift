@@ -141,16 +141,15 @@ struct TypeWriter {
         }
     }
 
-    // The type the reading gives back for this one's spelling. Names that
-    // compose are spelled in name order, and one name composing is spelled as
-    // the name, which the build reads back as the composition where the name
-    // is a contract's.
+    // The type the reading gives back for this one's spelling. One name
+    // composing is spelled as the name, which the build reads back as the
+    // composition where the name is a contract's.
     private func canonical(_ type: TypeExpression) -> TypeExpression {
         switch type {
         case let .composition(names):
-            guard names.count == 1 else { return .composition(names.sorted()) }
+            guard names.count == 1, let name = names.first else { return type }
 
-            return .named(names[0])
+            return .named(name)
 
         case let .array(element): return .array(canonical(element))
         case let .dictionary(element): return .dictionary(canonical(element))
@@ -175,20 +174,21 @@ struct TypeWriter {
     // its one key. An inline record has no front to write a mark on, and a
     // declaration's field is the one place a procedure type goes anyway.
     private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
-        // The same thing the reading refuses, refused where the writing is: a
-        // slot says one thing about what it takes. Both marks would land in one
-        // key, and a key the reading cannot take apart comes back as a record
-        // whose field is named after them.
-        if let refusal = SlotMark.refusal(marking: inner, under: mark) {
-            throw WritingError(refusal)
-        }
-
         switch try form(of: inner) {
         case let .string(written):
             return .string(mark.marking(written))
 
         case let .dictionary(form) where form.count == 1
             && TypeReader.readsAsAProcedure(form.entries[0].name):
+            // A key carries one mark, and a key carrying two reads back as a
+            // record whose field is named after them.
+            if let inside = SlotMark.marked(inner) {
+                throw WritingError(
+                    "`\(inside.rawValue)` is written inside `\(mark.rawValue)`, and a procedure's key"
+                        + " carries one mark"
+                )
+            }
+
             return .dictionary([
                 try Name(mark.marking(form.entries[0].name.spelling)): form.entries[0].value
             ])
@@ -201,7 +201,6 @@ struct TypeWriter {
             )
         }
     }
-
 
     // One fact (only a type with a spelling of its own composes) said with the
     // place the author wrote, so the refusal points at their text.

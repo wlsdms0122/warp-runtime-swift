@@ -54,20 +54,7 @@ public struct ModuleReader: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let notation = decoder.notation
 
-        // Read standing on the procedures rather than on the module holding
-        // them, because what is refused just below is about the procedures. A
-        // reading is addressed where it is, so being where the answer is is
-        // the whole of what puts an author on the right line.
-        let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([Name: ProcedureReader].self)
-
-        guard !procedures.isEmpty else {
-            throw ReadingError(
-                "a module that declares nothing can never be"
-                    + " linked into anything. Write at least one procedure",
-                at: written.steps
-            )
-        }
+        let procedures = try container.superDecoder(forKey: .procedures).read([Name: ProcedureReader].self)
 
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),

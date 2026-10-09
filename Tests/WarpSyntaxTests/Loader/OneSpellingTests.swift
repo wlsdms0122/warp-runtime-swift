@@ -63,7 +63,7 @@ struct OneSpellingTests {
         }
     }
 
-    @Test("a named record under the record tag is refused, since it is written as itself")
+    @Test("a named record under the record tag is the literal it writes, refused for its name")
     func aNamedRecordUnderTheTagIsRefused() throws {
         // Given
         let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
@@ -77,7 +77,7 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            "\(error)".contains("no name")
+            error is ValidationError && "\(error)".contains("a literal writes a record's name")
         }
     }
 

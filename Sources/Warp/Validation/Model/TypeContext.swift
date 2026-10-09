@@ -15,8 +15,12 @@ enum TypeContext: Sendable {
     // A type declared in `types`.
     case declaration
 
-    // A procedure's signature, or a closure's.
+    // A procedure's signature, which declares the type parameters it names.
     case signature
+
+    // A closure's signature, inside a procedure declaring these type
+    // parameters. Its `some T` is the `T` of that procedure.
+    case closure(of: Set<Name>)
 
     // The signature of a contract's procedure.
     case contract
@@ -26,19 +30,11 @@ enum TypeContext: Sendable {
     case value
 
     // MARK: - Property
-    // Whether `some T` may stand here: a call fills it.
-    var takesTypeParameter: Bool {
-        switch self {
-        case .signature, .contract: true
-        case .declaration, .value: false
-        }
-    }
-
     // Whether `Self` may stand here: a claim says what answers it.
     var takesSelf: Bool {
         switch self {
         case .contract: true
-        case .declaration, .signature, .value: false
+        case .declaration, .signature, .closure, .value: false
         }
     }
 
@@ -47,11 +43,20 @@ enum TypeContext: Sendable {
     var takesWritableFields: Bool {
         switch self {
         case .declaration: true
-        case .signature, .contract, .value: false
+        case .signature, .closure, .contract, .value: false
         }
     }
 
     // MARK: - Initializer
     // MARK: - Public
+    // Whether `some T` may stand here: a call fills it.
+    func takes(typeParameter name: Name) -> Bool {
+        switch self {
+        case .signature, .contract: true
+        case let .closure(declared): declared.contains(name)
+        case .declaration, .value: false
+        }
+    }
+
     // MARK: - Private
 }

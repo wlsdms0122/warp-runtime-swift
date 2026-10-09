@@ -19,9 +19,9 @@ public extension Module {
             unchecked: Draft(
                 description: "The shared ground: what counts as a number, what orders, and what has a count.",
                 contracts: [
-                    // What arithmetic is asked of: two of one kind, answered in
-                    // that kind, and a quotient that is a fraction whatever the
-                    // kind.
+                    // What arithmetic is asked of: two of one type, answered in
+                    // that type, and a quotient that is a fraction whatever the
+                    // type.
                     ContractSpelling.numeric: [
                         "plus": .operation(answering: .selfType),
                         "minus": .operation(answering: .selfType),
@@ -29,7 +29,7 @@ public extension Module {
                         "remainder": .operation(answering: .selfType),
                         "dividedBy": .operation(answering: .double)
                     ],
-                    // What orders two of one kind.
+                    // What orders two of one type.
                     ContractSpelling.comparable: [
                         "lessThan": .operation(answering: .bool)
                     ],

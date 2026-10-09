@@ -23,15 +23,15 @@ struct ModuleDeclarationTests {
     // MARK: - Test
     @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
-        // Given. `first` calls its own `helper` as `first.helper`, and `second`
-        // declares a `helper` of its own, which is `second.helper`
+        // Given. `first` calls its own `helper` as `First.helper`, and `second`
+        // declares a `helper` of its own, which is `Second.helper`
         let first = try loader.loadDocument([
             "procedures": [
-                "first.entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "first.helper"]]]],
+                "First.entry": [
+                    "body": [["let": "said", "value": ["call": ["procedure": "First.helper"]]]],
                     "result": ["record": ["result": ["ref": "said"]]]
                 ],
-                "first.helper": [
+                "First.helper": [
                     "body": [["let": "done", "value": "from first"]],
                     "result": ["record": ["said": ["ref": "done"]]]
                 ]
@@ -39,7 +39,7 @@ struct ModuleDeclarationTests {
         ])
         let second = try loader.loadDocument([
             "procedures": [
-                "second.helper": [
+                "Second.helper": [
                     "body": [["let": "done", "value": "from second"]],
                     "result": ["record": ["said": ["ref": "done"]]]
                 ]
@@ -47,7 +47,7 @@ struct ModuleDeclarationTests {
         ])
 
         // When
-        let outputs = try await run([first, second], entry: "first.entry")
+        let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
         #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
@@ -59,7 +59,7 @@ struct ModuleDeclarationTests {
         let caller = try loader.loadDocument([
             "imports": ["greet"],
             "procedures": [
-                "caller.entry": [
+                "Caller.entry": [
                     "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
                     "result": ["record": ["result": ["ref": "said"]]]
                 ]
@@ -67,7 +67,7 @@ struct ModuleDeclarationTests {
         ])
         let library = try loader.loadDocument([
             "procedures": [
-                "greeting.greet": [
+                "Greeting.greet": [
                     "body": [["let": "done", "value": "hello"]],
                     "result": ["record": ["said": ["ref": "done"]]]
                 ]
@@ -86,13 +86,13 @@ struct ModuleDeclarationTests {
     func qualifiedNameReachesAcross() async throws {
         // Given. `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
-            "imports": ["second.helper"],
+            "imports": ["Second.helper"],
             "procedures": [
-                "first.entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "second.helper"]]]],
+                "First.entry": [
+                    "body": [["let": "said", "value": ["call": ["procedure": "Second.helper"]]]],
                     "result": ["record": ["result": ["ref": "said"]]]
                 ],
-                "first.helper": [
+                "First.helper": [
                     "body": [["let": "done", "value": "from first"]],
                     "result": ["record": ["said": ["ref": "done"]]]
                 ]
@@ -100,7 +100,7 @@ struct ModuleDeclarationTests {
         ])
         let second = try loader.loadDocument([
             "procedures": [
-                "second.helper": [
+                "Second.helper": [
                     "body": [["let": "done", "value": "from second"]],
                     "result": ["record": ["said": ["ref": "done"]]]
                 ]
@@ -108,7 +108,7 @@ struct ModuleDeclarationTests {
         ])
 
         // When
-        let outputs = try await run([first, second], entry: "first.entry")
+        let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
         #expect(outputs["result"] == .dictionary(["said": .string("from second")]))

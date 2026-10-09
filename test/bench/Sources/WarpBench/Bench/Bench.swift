@@ -91,7 +91,7 @@ struct Bench {
         init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
             self.path = path
 
-            guard let path else {
+            guard path != nil else {
                 self.rows = nil
                 self.missing = nil
 
@@ -540,7 +540,7 @@ struct Bench {
     // them is what a compile stops sharing once they are split. `link` lays
     // them down together and no spreading takes it away.
     //
-    // `spread` is what the row would cost on as many cores as it has documents
+    // `floor` is what the row would cost on as many cores as it has documents
     // and nothing else changed: one document's compile, and then the link. It
     // is a floor rather than a forecast, since it charges nothing for handing
     // the documents out or for taking the answers back.
@@ -552,15 +552,15 @@ struct Bench {
     ) -> String {
         typealias Dealt = (count: Int, cost: Cost)
 
-        let spread: (Dealt) -> Double = { dealt in dealt.cost.alone / Double(dealt.count) + dealt.cost.link }
+        let floor: (Dealt) -> Double = { dealt in dealt.cost.alone / Double(dealt.count) + dealt.cost.link }
         let columns: [Column<Dealt>] = [
             .figure("build us", decimals: 0, moves: true) { dealt in dealt.cost.build / 1000 },
             .figure("compile us", decimals: 0, moves: true) { dealt in dealt.cost.compile / 1000 },
             .figure("alone us", decimals: 0, moves: true) { dealt in dealt.cost.alone / 1000 },
             .figure("link us", decimals: 0, moves: true) { dealt in dealt.cost.link / 1000 },
-            .figure("spread us", decimals: 0, moves: false) { dealt in spread(dealt) / 1000 },
+            .figure("floor us", decimals: 0, moves: false) { dealt in floor(dealt) / 1000 },
             .figure("x", decimals: 2, moves: false) { dealt in
-                spread(dealt) > 0 ? dealt.cost.build / spread(dealt) : 0
+                floor(dealt) > 0 ? dealt.cost.build / floor(dealt) : 0
             }
         ]
         let rows: [(label: String, row: Dealt)] = costs.keys.sorted().compactMap { count in

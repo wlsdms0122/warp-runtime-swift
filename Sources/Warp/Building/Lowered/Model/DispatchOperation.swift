@@ -19,7 +19,7 @@ import Foundation
 // answer a contract this one calls through.
 //
 // So `calls` is empty in what compiling a document answers, and the link fills
-// it from the types it found. The run still picks and nothing else: every call
+// it from the types it found. The run picks and does nothing else: every call
 // in there is placed against its own row, arguments in that row's slot order.
 struct DispatchOperation: Sendable {
     // MARK: - Property

@@ -40,7 +40,7 @@ struct ObjectDependencyTests {
         get throws {
             try Module(
                 procedures: [
-                    "a.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "A.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                 ]
             )
         }
@@ -50,7 +50,7 @@ struct ObjectDependencyTests {
         get throws {
             try Module(
                 procedures: [
-                    "b.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                    "B.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
                 ]
             )
         }
@@ -63,7 +63,7 @@ struct ObjectDependencyTests {
                     "App.main": Procedure(
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(selector: "a.foo"))
+                        result: .call(Call(selector: "A.foo"))
                     )
                 ]
             )
@@ -101,7 +101,7 @@ struct ObjectDependencyTests {
         )
 
         // Then. The one it calls, and not the one standing beside it.
-        let named = try #require(behind.first(where: { one in one.declared.contains("a.foo") }))
+        let named = try #require(behind.first(where: { one in one.declared.contains("A.foo") }))
 
         #expect(compiled[0].dependencies == [try #require(named.fingerprint)])
     }
@@ -135,18 +135,18 @@ struct ObjectDependencyTests {
         // same thing either way.
         let lowered = try Module(
             procedures: [
-                "box.peek": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+                "Box.peek": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
             ]
         )
         let answered = try Module(
             procedures: [
-                "box.peek": Procedure(signature: Signature(returns: .int), implementation: .query(PeekQuery()))
+                "Box.peek": Procedure(signature: Signature(returns: .int), implementation: .query(PeekQuery()))
             ]
         )
 
         // When
-        let asLowered = try await written(calling: "box.peek", behind: lowered)
-        let asAnswered = try await written(calling: "box.peek", behind: answered)
+        let asLowered = try await written(calling: "Box.peek", behind: lowered)
+        let asAnswered = try await written(calling: "Box.peek", behind: answered)
 
         // Then. The two stand as different objects, and so does what calls
         // them.

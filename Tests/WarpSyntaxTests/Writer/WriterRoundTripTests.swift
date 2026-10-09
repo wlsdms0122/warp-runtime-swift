@@ -58,7 +58,7 @@ struct WriterRoundTripTests {
         // Given
         let module = try Module(
             types: ["Bank.Account": .record(["balance": .int])],
-            contracts: ["App.Describable": ["describe": Signature(returns: .string)]],
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),

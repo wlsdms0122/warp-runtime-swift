@@ -34,7 +34,7 @@ public struct Mutator: Sendable {
     // Every place in the value, each replaced the ways its kind can be.
     //
     // A number is the one that indexes, counts and names rows, so it is
-    // replaced by the three shapes an index goes wrong in. A list is replaced
+    // replaced by the shapes an index goes wrong in, and by text. A list is replaced
     // in length, because a reading that takes fields by position reads a
     // shorter list somewhere. The rest take a neighbouring kind, which is what
     // a reading that switches on the kind has to refuse.

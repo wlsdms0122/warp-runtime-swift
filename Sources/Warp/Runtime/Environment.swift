@@ -16,12 +16,7 @@ public protocol Environment: Sendable {
     // holding an open session, say) would otherwise reach every piece at once,
     // and siblings would share one conversation. This is where that state is
     // severed or forked. The language stays ignorant of what the state is.
-    //
-    // It lives here, with a default, rather than in a protocol a host may or
-    // may not adopt. A refinement is only found by hosts that already know to
-    // look for it, so the ones that need it most (the ones that never thought
-    // about ambient state) get silence and a wrong answer. A method everyone
-    // sees and may ignore is a decision; an optional cast is a trapdoor.
+    // Every environment answers it, the default running the work as it is.
     func isolateConcurrentWork<T: Sendable>(
         _ work: @Sendable () async throws -> T
     ) async throws -> T

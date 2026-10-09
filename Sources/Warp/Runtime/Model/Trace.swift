@@ -77,8 +77,8 @@ public struct Trace: Sendable, Equatable, CustomStringConvertible {
 
     // How the place reads in a message.
     //
-    //   hello.greet.many[2].call
-    //   hello.greet.closure[0].say
+    //   App.greet.many[2].call
+    //   App.greet.closure[0].say
     //
     // Names are joined with dots and what tells one from another of the same
     // name is bracketed: which round of a loop, which piece of a fan-out,

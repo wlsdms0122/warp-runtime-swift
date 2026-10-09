@@ -166,7 +166,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": [:]
+            "procedures": "entry"
         ]
 
         // When

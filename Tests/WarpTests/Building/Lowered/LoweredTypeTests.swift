@@ -226,8 +226,7 @@ struct LoweredTypeTests {
     @Test("a procedure type declared beside the types it names reads what they declare")
     func aProcedureTypeAmongDeclaredTypes() async throws {
         // Given. A declared record holding a procedure type whose parameter
-        // names a declared nullable type, lowered while the table that holds
-        // both rows is still being laid.
+        // names a declared nullable type.
         let module = try Module(
             types: [
                 "App.Maybe": .nullable(.int),

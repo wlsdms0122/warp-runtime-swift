@@ -90,7 +90,7 @@ public struct Loader: Sendable {
         // said. Whether the list is *right* is the reader's, and it refuses
         // there.
         //
-        // After the types and not before them: a document that will not even
+        // After the reading and not before it: a document that will not even
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
@@ -108,6 +108,7 @@ public struct Loader: Sendable {
         // A document says each thing one way: what the writer writes for the
         // program it read. Anything else is a second text for one program, and
         // a second identity for it.
+        //
         // A document is read and written by the standard table, the one
         // `canonical` writes with. A table a host composes is for what it
         // lowers into a document, and a document is spelled one way.
