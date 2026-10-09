@@ -217,25 +217,6 @@ indirect enum LoweredType: Sendable, Equatable {
         return self
     }
 
-    // Whether this is a nameless record or a map, through `?`, a field's
-    // `var` and the names that stand for no record: a structure no declared
-    // record's value is.
-    func isNamelessStructure(in table: LoweredTypeTable) -> Bool {
-        switch self {
-        case .record, .dictionary:
-            return true
-
-        case let .nullable(inner), let .variable(inner):
-            return inner.isNamelessStructure(in: table)
-
-        case let .named(row) where table.recordRows[row] == nil && !table.cycling.contains(row):
-            return table.loweredTypes[row].isNamelessStructure(in: table)
-
-        default:
-            return false
-        }
-    }
-
     // Whether this type proves nothing about the value it holds.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
@@ -286,55 +267,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return .nullable(self)
-        }
-    }
-
-    // What a slot said about the procedure it holds. A body applying a name a
-    // slot declared this way is judged on the slot's word, since the slot is
-    // what says which values may arrive there. A name says what the type it
-    // stands for says.
-    func isConstProcedure(in table: LoweredTypeTable) -> Bool {
-        guard case .procedure(_, _, .const, _)? = procedureHeld(in: table) else { return false }
-
-        return true
-    }
-
-    func isIsolatedProcedure(in table: LoweredTypeTable) -> Bool {
-        guard case .procedure(_, _, _, .isolated)? = procedureHeld(in: table) else { return false }
-
-        return true
-    }
-
-    // The positions a procedure a slot holding this holds takes in place.
-    // Empty where the slot says nothing of the procedure's parameters.
-    func inPlacePositions(in table: LoweredTypeTable) -> Set<Int> {
-        guard case let .procedure(parameters?, _, _, _)? = procedureHeld(in: table) else { return [] }
-
-        return Set(parameters.indices.filter { position in parameters[position].isInout })
-    }
-
-    // Whether a value this holds may carry a procedure that takes a parameter
-    // in place: one written here, or one inside a `?`, an array, a dictionary,
-    // a record's field or the type a name declares. A procedure's own
-    // parameters and answer are that procedure's business and are not walked.
-    func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
-        switch self {
-        case let .procedure(parameters, _, _, _):
-            return parameters?.contains { parameter in parameter.isInout } ?? false
-
-        case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
-            return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
-
-        case let .record(record):
-            return record.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
-
-        case let .named(row):
-            guard !walked.contains(row) else { return false }
-
-            return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
-
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection:
-            return false
         }
     }
 
@@ -432,6 +364,74 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Public
+    // Whether this is a nameless record or a map, through `?`, a field's
+    // `var` and the names that stand for no record: a structure no declared
+    // record's value is.
+    func isNamelessStructure(in table: LoweredTypeTable) -> Bool {
+        switch self {
+        case .record, .dictionary:
+            return true
+
+        case let .nullable(inner), let .variable(inner):
+            return inner.isNamelessStructure(in: table)
+
+        case let .named(row) where table.recordRows[row] == nil && !table.cycling.contains(row):
+            return table.loweredTypes[row].isNamelessStructure(in: table)
+
+        default:
+            return false
+        }
+    }
+
+    // What a slot said about the procedure it holds. A body applying a name a
+    // slot declared this way is judged on the slot's word, since the slot is
+    // what says which values may arrive there. A name says what the type it
+    // stands for says.
+    func isConstProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, .const, _)? = procedureHeld(in: table) else { return false }
+
+        return true
+    }
+
+    func isIsolatedProcedure(in table: LoweredTypeTable) -> Bool {
+        guard case .procedure(_, _, _, .isolated)? = procedureHeld(in: table) else { return false }
+
+        return true
+    }
+
+    // The positions a procedure a slot holding this holds takes in place.
+    // Empty where the slot says nothing of the procedure's parameters.
+    func inPlacePositions(in table: LoweredTypeTable) -> Set<Int> {
+        guard case let .procedure(parameters?, _, _, _)? = procedureHeld(in: table) else { return [] }
+
+        return Set(parameters.indices.filter { position in parameters[position].isInout })
+    }
+
+    // Whether a value this holds may carry a procedure that takes a parameter
+    // in place: one written here, or one inside a `?`, an array, a dictionary,
+    // a record's field or the type a name declares. A procedure's own
+    // parameters and answer are that procedure's business and are not walked.
+    func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
+        switch self {
+        case let .procedure(parameters, _, _, _):
+            return parameters?.contains { parameter in parameter.isInout } ?? false
+
+        case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
+            return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
+
+        case let .record(record):
+            return record.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
+
+        case let .named(row):
+            guard !walked.contains(row) else { return false }
+
+            return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
+
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection:
+            return false
+        }
+    }
+
     // What a walk through this type reaches by taking those segments. Nil
     // where this is not a type a call decides, which is where a walk has a
     // type to read the segments against and no need for one of these.
@@ -1105,15 +1105,6 @@ indirect enum LoweredType: Sendable, Equatable {
         takes(handed, in: table, assumingPairs: [], rigid: rigid)
     }
 
-    private func takes(
-        _ handed: LoweredType,
-        in table: LoweredTypeTable,
-        assumingPairs: [(LoweredType, LoweredType)],
-        rigid: Bool
-    ) -> Bool {
-        accepts(handed, in: table, assumingPairs: assumingPairs, rigid: rigid) && (!isInout || handed.isInout)
-    }
-
     // The same type through every name that stands for no record, at the
     // outermost only: a declared kind is what it stands for, and a name for a
     // record stays that record's.
@@ -1152,90 +1143,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // parameter is itself, and so is a name the table does not answer.
     func identical(to other: LoweredType, in table: LoweredTypeTable) -> Bool {
         matches(other, in: table, assumingPairs: [])
-    }
-
-    private func matches(
-        _ other: LoweredType,
-        in table: LoweredTypeTable,
-        assumingPairs: [(LoweredType, LoweredType)]
-    ) -> Bool {
-        if assumingPairs.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
-
-        let walked = assumingPairs + [(self, other)]
-
-        switch (self, other) {
-        case (.parameter, _), (_, .parameter):
-            return self == other
-
-        // A record under a name is that name, so two names are two types
-        // however alike, unless both name one declared record. Every other
-        // name is what it names.
-        case let (.named(mine), .named(theirs)):
-            guard mine != theirs else { return true }
-
-            if let myRecord = table.recordRows[mine], let theirRecord = table.recordRows[theirs] {
-                return myRecord == theirRecord
-            }
-
-            return table.recordRows[mine] == nil
-                && table.recordRows[theirs] == nil
-                && table.loweredTypes[mine].matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
-
-        case let (.named(mine), _):
-            return table.recordRows[mine] == nil
-                && table.loweredTypes[mine].matches(other, in: table, assumingPairs: walked)
-
-        case let (_, .named(theirs)):
-            return table.recordRows[theirs] == nil
-                && matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
-
-        case let (.nullable(mine), .nullable(theirs)),
-            let (.array(mine), .array(theirs)),
-            let (.dictionary(mine), .dictionary(theirs)),
-            let (.variable(mine), .variable(theirs)),
-            let (.inout(mine), .inout(theirs)):
-            return mine.matches(theirs, in: table, assumingPairs: walked)
-
-        case let (.record(mine), .record(theirs)):
-            return mine.layout == theirs.layout
-                && zip(mine.fields, theirs.fields).allSatisfy { one, other in
-                    one.matches(other, in: table, assumingPairs: walked)
-                }
-
-        case let (.procedure(mine, myAnswer, myConstness, myIsolation),
-                  .procedure(theirs, theirAnswer, theirConstness, theirIsolation)):
-            guard myConstness == theirConstness, myIsolation == theirIsolation else { return false }
-
-            switch (myAnswer, theirAnswer) {
-            case (nil, nil):
-                break
-
-            case let (myAnswer?, theirAnswer?):
-                guard myAnswer.matches(theirAnswer, in: table, assumingPairs: walked) else { return false }
-
-            default:
-                return false
-            }
-
-            switch (mine, theirs) {
-            case (nil, nil):
-                return true
-
-            case let (mine?, theirs?):
-                return mine.count == theirs.count
-                    && zip(mine, theirs).allSatisfy { one, other in
-                        one.matches(other, in: table, assumingPairs: walked)
-                    }
-
-            default:
-                return false
-            }
-
-        // Every type that holds another is answered above; what is left
-        // holds nothing.
-        default:
-            return self == other
-        }
     }
 
     // The judge asked where a value is read and not rewritten: refused the
@@ -1803,6 +1710,99 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Private
+    private func takes(
+        _ handed: LoweredType,
+        in table: LoweredTypeTable,
+        assumingPairs: [(LoweredType, LoweredType)],
+        rigid: Bool
+    ) -> Bool {
+        accepts(handed, in: table, assumingPairs: assumingPairs, rigid: rigid) && (!isInout || handed.isInout)
+    }
+
+    private func matches(
+        _ other: LoweredType,
+        in table: LoweredTypeTable,
+        assumingPairs: [(LoweredType, LoweredType)]
+    ) -> Bool {
+        if assumingPairs.contains(where: { mine, theirs in mine == self && theirs == other }) { return true }
+
+        let walked = assumingPairs + [(self, other)]
+
+        switch (self, other) {
+        case (.parameter, _), (_, .parameter):
+            return self == other
+
+        // A record under a name is that name, so two names are two types
+        // however alike, unless both name one declared record. Every other
+        // name is what it names.
+        case let (.named(mine), .named(theirs)):
+            guard mine != theirs else { return true }
+
+            if let myRecord = table.recordRows[mine], let theirRecord = table.recordRows[theirs] {
+                return myRecord == theirRecord
+            }
+
+            return table.recordRows[mine] == nil
+                && table.recordRows[theirs] == nil
+                && table.loweredTypes[mine].matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
+
+        case let (.named(mine), _):
+            return table.recordRows[mine] == nil
+                && table.loweredTypes[mine].matches(other, in: table, assumingPairs: walked)
+
+        case let (_, .named(theirs)):
+            return table.recordRows[theirs] == nil
+                && matches(table.loweredTypes[theirs], in: table, assumingPairs: walked)
+
+        case let (.nullable(mine), .nullable(theirs)),
+            let (.array(mine), .array(theirs)),
+            let (.dictionary(mine), .dictionary(theirs)),
+            let (.variable(mine), .variable(theirs)),
+            let (.inout(mine), .inout(theirs)):
+            return mine.matches(theirs, in: table, assumingPairs: walked)
+
+        case let (.record(mine), .record(theirs)):
+            return mine.layout == theirs.layout
+                && zip(mine.fields, theirs.fields).allSatisfy { one, other in
+                    one.matches(other, in: table, assumingPairs: walked)
+                }
+
+        case let (.procedure(mine, myAnswer, myConstness, myIsolation),
+                  .procedure(theirs, theirAnswer, theirConstness, theirIsolation)):
+            guard myConstness == theirConstness, myIsolation == theirIsolation else { return false }
+
+            switch (myAnswer, theirAnswer) {
+            case (nil, nil):
+                break
+
+            case let (myAnswer?, theirAnswer?):
+                guard myAnswer.matches(theirAnswer, in: table, assumingPairs: walked) else { return false }
+
+            default:
+                return false
+            }
+
+            switch (mine, theirs) {
+            case (nil, nil):
+                return true
+
+            case let (mine?, theirs?):
+                return mine.count == theirs.count
+                    && zip(mine, theirs).allSatisfy { one, other in
+                        one.matches(other, in: table, assumingPairs: walked)
+                    }
+
+            default:
+                return false
+            }
+
+        // Every type that holds another is answered above; what is left
+        // holds nothing.
+        default:
+            return self == other
+        }
+    }
+
     // The same question, carrying the names already being asked.
     private func holdsEveryByte(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
         switch self {

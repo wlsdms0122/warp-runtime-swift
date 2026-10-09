@@ -36,6 +36,26 @@ struct Flow {
         case round(Name?)
         case failure
 
+        // MARK: - Property
+        private var rank: Int {
+            switch self {
+            case .procedure: return 0
+            case .loop: return 1
+            case .round: return 2
+            case .failure: return 3
+            }
+        }
+
+        private var target: Name? {
+            switch self {
+            case let .loop(target), let .round(target):
+                return target
+
+            case .procedure, .failure:
+                return nil
+            }
+        }
+
         // MARK: - Initializer
         init(_ leave: Leave) {
             switch leave.reach {
@@ -80,24 +100,6 @@ struct Flow {
         }
 
         // MARK: - Private
-        private var rank: Int {
-            switch self {
-            case .procedure: return 0
-            case .loop: return 1
-            case .round: return 2
-            case .failure: return 3
-            }
-        }
-
-        private var target: Name? {
-            switch self {
-            case let .loop(target), let .round(target):
-                return target
-
-            case .procedure, .failure:
-                return nil
-            }
-        }
     }
 
     // MARK: - Property

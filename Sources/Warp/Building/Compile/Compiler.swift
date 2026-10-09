@@ -613,7 +613,6 @@ struct Compiler {
         _ constants: [Name: Expression],
         in module: Module
     ) throws -> [(name: Name, expression: Expression)] {
-
         var ordered: [(name: Name, expression: Expression)] = []
         var settled: Set<Name> = []
 

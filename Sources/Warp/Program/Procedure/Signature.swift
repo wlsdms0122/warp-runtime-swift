@@ -258,5 +258,4 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
-
 }
