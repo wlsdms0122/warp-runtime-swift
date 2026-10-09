@@ -765,6 +765,26 @@ struct ValidationTests {
         }
     }
 
+    @Test("var stands on a field of the record a declared type is, and on no record inside it", arguments: [
+        TypeExpression.array(.record(["a": .variable(.int)])),
+        .record(["b": .record(["c": .variable(.int)])]),
+        .dictionary(.record(["a": .variable(.int)]))
+    ])
+    func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
+        // When / Then. An inline record's fields are written through as they
+        // are, so `var` there says nothing
+        #expect {
+            try Module(types: ["App.T": type], procedures: [:])
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
+        }
+
+        // And on the declared record's own field it stands
+        #expect(throws: Never.self) {
+            try Module(types: ["App.T": .record(["a": .variable(.int)])], procedures: [:])
+        }
+    }
+
     @Test("a type read out of a body is no declaration anybody can write")
     func aProjectionIsRefusedWhereADeclarationGoes() throws {
         // When / Then. A declaration assembled in the host claiming what only

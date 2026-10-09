@@ -952,7 +952,7 @@ public struct Validator: Sendable {
             try held(name, as: .typeParameter, at: place)
 
         case let .array(inner), let .dictionary(inner):
-            try written(inner, in: context, at: place)
+            try written(inner, in: context.nested, at: place)
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
@@ -968,7 +968,7 @@ public struct Validator: Sendable {
                 )
             }
 
-            try written(inner, in: context, at: place)
+            try written(inner, in: context.nested, at: place)
 
         // A field of a record type is reached by a path alone, so its name is
         // a value's.
@@ -982,7 +982,7 @@ public struct Validator: Sendable {
                     try marked(field, at: here)
                 }
 
-                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context, at: here)
+                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context.nested, at: here)
             }
 
         // A procedure type's parameters are slots, each of which may be
@@ -992,10 +992,10 @@ public struct Validator: Sendable {
 
             for (position, parameter) in procedure.parameters.enumerated() {
                 try marked(parameter, at: place.index(position))
-                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+                try written(parameter.slotUnwrapped, in: context.nested, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context, at: place)
+            try written(procedure.returns ?? .any, in: context.nested, at: place)
 
         case .inout:
             throw ValidationError(
@@ -1006,8 +1006,8 @@ public struct Validator: Sendable {
 
         case .variable:
             throw ValidationError(
-                "writes `\(type.rendered)`, and only a field of a declared type"
-                    + " is written through. `var` is written on a field in `types`",
+                "writes `\(type.rendered)`, and `var` is written on a field of the record a type in"
+                    + " `types` declares. Any other record's field is written through as it is",
                 at: place
             )
         }

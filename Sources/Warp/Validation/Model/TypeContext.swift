@@ -47,6 +47,17 @@ enum TypeContext: Sendable {
         }
     }
 
+    // Where a type written inside one written here stands. A declared type's
+    // own fields are the ones a path writes through by `var`; a record
+    // inside one is an inline record, whose fields are written through as
+    // they are.
+    var nested: TypeContext {
+        switch self {
+        case .declaration: .value
+        case .signature, .closure, .contract, .value: self
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Public
     // Whether `some T` may stand here: a call fills it.

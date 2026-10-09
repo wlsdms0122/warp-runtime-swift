@@ -139,7 +139,7 @@ struct TypePlacementTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
         }
     }
 
@@ -161,7 +161,7 @@ struct TypePlacementTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
         }
 
         #expect {
