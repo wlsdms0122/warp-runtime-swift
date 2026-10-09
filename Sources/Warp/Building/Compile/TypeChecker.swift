@@ -715,10 +715,6 @@ struct TypeChecker {
         for (parameter, names) in mentions.sorted(by: { $0.key < $1.key }) {
             for reading in substitution.everyReading(of: parameter) {
                 for name in names {
-                    // One nothing declares was refused where the
-                    // declaration was judged.
-                    guard loweredTypes.declaresContract(name) else { continue }
-
                     if let refusal = refusal(
                         of: reading,
                         answering: name,
