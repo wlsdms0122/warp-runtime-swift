@@ -23,7 +23,6 @@ extension Closure {
                 constness: .unstated,
                 isolation: .unstated,
                 failing: .unstated,
-                handsBackAsDeclared: false,
                 implementation: .body(
                     LoweredBody(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])

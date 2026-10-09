@@ -22,7 +22,6 @@ struct LoweredBodyWalkTests {
         case closure
         case apply
         case cast
-        case checked
         case block
         case conditional
         case loop
@@ -42,7 +41,6 @@ struct LoweredBodyWalkTests {
             case .closure: self = .closure
             case .apply: self = .apply
             case .cast: self = .cast
-            case .checked: self = .checked
             case .block: self = .block
             case .conditional: self = .conditional
             case .loop: self = .loop
@@ -73,9 +71,6 @@ struct LoweredBodyWalkTests {
 
             case .cast:
                 return [.cast(leaf, as: .int, optional: false)]
-
-            case .checked:
-                return [.checked(.apply(leaf, arguments: []), try #require(CallJudgement(against: .int, handedBack: [])))]
 
             case .block:
                 return [.block(body)]

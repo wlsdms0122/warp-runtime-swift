@@ -392,12 +392,6 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
-    // A lowered row with what its document settled it proves of what it
-    // hands back.
-    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
-        table[row] = Linked(table[row], implementation: table[row].implementation, handsBackAsDeclared: handsBackAsDeclared)
-    }
-
     // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
         documents[origin].owned
@@ -629,10 +623,6 @@ struct Lowering {
         case let .call(call):
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
-        // It stands as the call it wraps, which is what has a row to read.
-        case let .checked(checked, _):
-            return standing(checked.operation, on: slots)
-
         case let .cast(_, type, optional):
             return optional ? nil : type
 
@@ -699,15 +689,11 @@ struct Lowering {
             // A selector naming a contract's procedure names no row. Which row
             // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            let lowered: CheckedCall = if let asked = contractProcedures[call.selector] {
-                .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
-            } else {
-                .call(try lower(call, in: scope, on: context, at: place))
+            if let asked = contractProcedures[call.selector] {
+                return .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
             }
 
-            guard case let .call(judging)? = context.judgements[place] else { return lowered.operation }
-
-            return .checked(lowered, judging)
+            return .call(try lower(call, in: scope, on: context, at: place))
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -798,7 +784,6 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
-                handsBackAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
@@ -827,11 +812,11 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, judging)? = context.judgements[place] else {
+        guard case let .apply(handed)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
-        let applied = CheckedCall.apply(
+        return .apply(
             try lower(callee, naming: nil, in: scope, on: context, at: place.child(.callee)),
             arguments: try arguments.enumerated().map { position, argument in
                 let here = place.child(.argument(position))
@@ -849,10 +834,6 @@ struct Lowering {
                 return .reference(address)
             }
         )
-
-        guard let judging else { return applied.operation }
-
-        return .checked(applied, judging)
     }
 
     private mutating func lower(

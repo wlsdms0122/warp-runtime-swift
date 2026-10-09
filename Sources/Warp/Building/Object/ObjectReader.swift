@@ -717,7 +717,6 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            handsBackAsDeclared: try cursor.field().flag(),
             judging: try implementation(cursor.next())
         )
 
@@ -885,29 +884,6 @@ struct ObjectReader {
                 optional: try cursor.field().flag()
             )
 
-        case .checked:
-            let judged = try checkedCall(cursor.next())
-            let against = try cursor.field().maybe(lowered)
-            let handedBack = try Field(cursor.next(), of: "handed back").list { written in
-                var back = try FieldCursor(written, of: "handed back")
-                let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
-
-                try back.end()
-
-                return taken
-            }
-            let positions = handedBack.map(\.position)
-
-            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }) else {
-                throw ObjectRefused("what a call hands back in place stands out of position order")
-            }
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
-                throw ObjectRefused("a judgement where a call stands judges nothing")
-            }
-
-            read = .checked(judged, judging)
-
         case .block: read = .block(try body(cursor.next()))
         case .conditional:
             read = .conditional(
@@ -970,30 +946,6 @@ struct ObjectReader {
             layout: held,
             judging: try cursor.field().list(operation)
         )
-
-        try cursor.end()
-
-        return read
-    }
-
-    // What a judgement where a call stands judges: a call, of any of the
-    // three kinds.
-    private func checkedCall(_ value: Value) throws -> CheckedCall {
-        var cursor = try FieldCursor(value, of: "call")
-        let read: CheckedCall
-
-        switch ObjectLayout.OperationTag(rawValue: try cursor.field().integer()) {
-        case .call: read = .call(try callOperation(cursor.next()))
-        case .dispatch: read = .dispatch(try dispatchOperation(cursor.next()))
-        case .apply:
-            read = .apply(
-                try operation(cursor.next()),
-                arguments: try Field(cursor.next(), of: "arguments").list(argument)
-            )
-
-        default:
-            throw ObjectRefused("'call' is made in a way this reads none of")
-        }
 
         try cursor.end()
 

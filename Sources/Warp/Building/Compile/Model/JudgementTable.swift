@@ -9,17 +9,11 @@ import Foundation
 
 // What the type check judged at each place that lowering reads back, by the
 // place it stands at. The type check writes it beside the calls it gathers,
-// reads it over a body for the hand-back proof, and lowering reads it where it
-// lowers what stands there. A place stands for one expression, so it holds one
+// and lowering reads it where it lowers what stands there. A place stands for one expression, so it holds one
 // judgement.
 struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
-
-    // Whether a reading of a type parameter of the body may hold what is
-    // not a value of it somewhere here, which the hand-back proof reads as
-    // proving nothing.
-    private(set) var loosened = false
 
     // The name a record built at a place takes: one written where a declared
     // record is read is built as that record.
@@ -56,12 +50,6 @@ struct JudgementTable: Sendable {
         self.names.merge(names) { _, theirs in theirs }
     }
 
-    // A reading of a type parameter here may hold what is not a value of
-    // it.
-    mutating func loosen() {
-        loosened = true
-    }
-
     // The other's entries beside this table's own, the other's standing
     // where both hold a place.
     mutating func absorb(_ other: JudgementTable) {
@@ -71,8 +59,6 @@ struct JudgementTable: Sendable {
             return theirs
         }
         Self.absorb(other.names, into: &names) { _, theirs in theirs }
-
-        loosened = loosened || other.loosened
     }
 
     // This table with the others' entries beside its own, for a construct

@@ -122,15 +122,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether this is a slot taking a variable in place whose type names a
-    // type parameter: one a call hands back to be judged, where the body
-    // writes it as the parameter and the caller holds it as what filled it.
-    var handsBackParameter: Bool {
-        guard case let .inout(held) = self else { return false }
-
-        return held.namesParameter
-    }
-
     // Every type parameter this names, by label, with the bounds it is held
     // to.
     var boundedParameters: [Name: [Name]] {
@@ -1023,58 +1014,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return self == other
-        }
-    }
-
-    // Whether every value read as `reading` is a value of this type as it
-    // stands, so a slot of this type has nothing to judge or to write where
-    // it lands: the same type, a part of it this takes whole, null where
-    // this may be null, or a procedure this accepts. A reading the build does not know the value of, one
-    // of `Any`, a contract or a type parameter this is not, is never one;
-    // the run says what arrived.
-    func takesAsItIs(_ reading: LoweredType, in table: LoweredTypeTable) -> Bool {
-        if passesEverything || reading == .never || self == reading {
-            return true
-        }
-
-        switch (self, reading) {
-        case (_, .any), (_, .composition), (_, .parameter), (_, .projection):
-            return false
-
-        // A type parameter a call fills from a reading of a type the build
-        // knows was held to its bounds there, the way the link holds a claim.
-        case (.parameter, _):
-            return reading.nominal(in: table) != nil
-
-        case (.nullable, .null):
-            return true
-
-        case let (.nullable(mine), .nullable(theirs)):
-            return mine.takesAsItIs(theirs, in: table)
-
-        case let (.nullable(mine), _):
-            return mine.takesAsItIs(reading, in: table)
-
-        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
-            return mine.takesAsItIs(theirs, in: table)
-
-        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
-            return zip(mine.fields, theirs.fields).allSatisfy { field, read in field.takesAsItIs(read, in: table) }
-
-        // A procedure stands as it is wherever a slot takes it, and the
-        // reading carries what the build derived of it, so one the slot
-        // accepts is proven. One naming a type parameter is a closure a
-        // generic body wrote, which the run reads against what filled it.
-        case (.procedure, .procedure):
-            return !namesParameter && !reading.namesParameter && accepts(reading, in: table)
-
-        // A value of a declared type answers the contracts its claims name,
-        // which the build already asked of it.
-        case (.composition, _):
-            return accepts(reading, in: table)
-
-        default:
-            return false
         }
     }
 
@@ -2355,22 +2294,23 @@ indirect enum LoweredType: Sendable, Equatable {
             isolation: linked.isolation
         )
 
-        // A type parameter the slot names is filled by what arrived, the way
-        // a call fills it at the build. One the procedure's own signature
-        // names is one a closure took from the generic body that made it,
-        // filled by that body's call, which the run does not know; it is read
-        // as what the slot asks there, held to its bounds.
-        let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
-        let asked = slot.filling(Substitution(filling: [slot], against: [given], in: table).readings)
-        let taken = given.namesParameter ? Substitution(filling: [given], against: [asked], in: table) : Substitution()
-
-        let bounded = given.boundedParameters.allSatisfy { label, bounds in
-            taken.everyReading(of: label).allSatisfy { filled in
-                LoweredType.composition(bounds).accepts(filled, in: table)
-            }
+        // A type parameter the procedure's own signature names is one a
+        // closure took from the generic body that made it, filled by that
+        // body's call, which no value says. A value arriving here gets its
+        // type whole, so it is no value of any procedure type.
+        guard !given.namesParameter else {
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table)),"
+                    + " whose type parameter only the call that made it fills"
+            )
         }
 
-        guard bounded, asked.accepts(taken.readings.isEmpty ? given : given.filling(taken.readings), in: table) else {
+        // A type parameter the slot names is filled by what arrived, the way
+        // a call fills it at the build.
+        let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
+        let asked = slot.filling(Substitution(filling: [slot], against: [given], in: table).readings)
+
+        guard asked.accepts(given, in: table) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
             )

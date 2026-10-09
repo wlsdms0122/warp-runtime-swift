@@ -281,32 +281,7 @@ final class Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try relocated(dispatch, in: context))
 
-        // What a call answers and hands back needs no judgement where it
-        // stands once the rows that may answer are known to answer what the
-        // call reads: a row its own document proved hands back as declared, or,
-        // through a contract, rows that each answer exactly that type and hand
-        // nothing back to judge.
-        case let .checked(.call(call), judging):
-            let relocated = try relocated(call, in: context)
-
-            guard !table[relocated.procedure].handsBackAsDeclared else { return .call(relocated) }
-
-            return .checked(.call(relocated), judging)
-
-        case let .checked(.dispatch(dispatch), judging):
-            let relocated = try relocated(dispatch, in: context)
-
-            guard judging.handedBack.isEmpty, relocated.calls.values.allSatisfy({ call in
-                guard let against = judging.against, let returns = table[call.procedure].returns else { return false }
-
-                return returns == against
-            }) else {
-                return .checked(.dispatch(relocated), judging)
-            }
-
-            return .dispatch(relocated)
-
-        case .literal, .local, .array, .record, .apply, .cast, .checked, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
         }
     }

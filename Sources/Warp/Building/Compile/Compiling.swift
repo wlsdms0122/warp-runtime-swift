@@ -205,12 +205,6 @@ struct Compiling {
         loweredRows.append(row)
     }
 
-    // What a lowered body was settled, over the whole document, to prove of
-    // what it hands back.
-    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
-        lowering.record(row, handsBackAsDeclared: handsBackAsDeclared)
-    }
-
     // The stand-ins, while the procedures themselves settle: a procedure folding through
     // a procedure would be a cycle, and which procedures are already lowered is a fact
     // of name order rather than of the text.

@@ -202,20 +202,6 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(
-                binding: nil,
-                code: .checked(
-                    .apply(
-                        .local(Address(slot: 6, steps: [])),
-                        arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
-                    ),
-                    CallJudgement(
-                        against: .int,
-                        handedBack: [HandedBack(position: 1, against: .string)]
-                    )!
-                ),
-                label: "checked"
-            ),
             Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
@@ -299,7 +285,6 @@ enum ObjectCoverageFixture {
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
-            handsBackAsDeclared: false,
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -315,7 +300,6 @@ enum ObjectCoverageFixture {
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            handsBackAsDeclared: false,
             judging: body
                 ? .body(
                     everyOperation,
