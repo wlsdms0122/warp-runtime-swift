@@ -902,7 +902,7 @@ struct Evaluator: Sendable {
         let first = try await evaluate(dispatch.first, in: &activation, at: trace)
         let spelling = ContractProcedure.spelling(of: dispatch.contract, procedure: dispatch.procedure)
 
-        if let name = first.nominal, let call = dispatch.calls[name] {
+        if let call = dispatch.calls[first.nominal] {
             return (call, try row(call.procedure, from: activation.origin), first)
         }
 
@@ -910,8 +910,8 @@ struct Evaluator: Sendable {
         // so far names, placed against it the way the link would place it.
         // What it ran on is the claim, which the link still holds to the
         // declarations behind it, so the pair is written down for the link.
-        if dispatch.calls.isEmpty, let name = first.nominal, let row = witnesses[spelling]?[name] {
-            loweredTypes.unsettled?.require(folded: Claim(type: name, contract: dispatch.contract))
+        if dispatch.calls.isEmpty, let row = witnesses[spelling]?[first.nominal] {
+            loweredTypes.unsettled?.require(folded: Claim(type: first.nominal, contract: dispatch.contract))
 
             let call = try CallOperation(
                 handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
@@ -928,15 +928,11 @@ struct Evaluator: Sendable {
         // Before the link, what answers is a declaration a claim names in a
         // document this one stands on, and one anywhere else is not one a
         // fold may run.
-        let because = dispatch.calls.isEmpty && first.nominal != nil
+        let because = dispatch.calls.isEmpty
             ? ", and no document this one stands on declares what answers '\(dispatch.contract)' for it"
             : ", which answers no procedure of '\(dispatch.contract)'"
 
-        throw ExecutionError(
-            "'\(spelling)' is sent to"
-                + " \(first.nominal.map { held in "'\(held)'" } ?? "\(first.type)")"
-                + because
-        )
+        throw ExecutionError("'\(spelling)' is sent to '\(first.nominal)'" + because)
     }
 
     // The arguments settled against the declaration, in parameter order: the

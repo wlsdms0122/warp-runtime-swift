@@ -264,12 +264,11 @@ public indirect enum Value: Sendable, Equatable {
     // a record under the declared name it settled to, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
     // spelling and a record with no name holds its names as data, so they
-    // are `Array` and `Dictionary`. Null and a procedure are an instance of
-    // no type a claim can name.
-    public var nominal: Name? {
+    // are `Array` and `Dictionary`.
+    public var nominal: Name {
         switch self {
-        case .null, .procedure:
-            return nil
+        case .null:
+            return TypeSpelling.null
 
         case .bool:
             return TypeSpelling.bool
@@ -291,6 +290,9 @@ public indirect enum Value: Sendable, Equatable {
 
         case let .record(record):
             return record.name ?? TypeSpelling.dictionary
+
+        case .procedure:
+            return TypeSpelling.procedure
         }
     }
 

@@ -19,15 +19,32 @@ final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,
     // since which types answer a contract is read off the claims of the whole
-    // list, so the name comes back and the asker writes it down. Asked
+    // list, so the names come back and the asker writes them down. Asked
     // rigidly, the documents settle it.
     enum Answering {
         case settled(Bool)
-        case leansOn(Name)
+        case leansOn([Name])
 
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
+        // What a reading comes to where it answers only if both parts do.
+        func and(_ other: Answering) -> Answering {
+            switch (self, other) {
+            case (.settled(false), _), (_, .settled(false)):
+                return .settled(false)
+
+            case (.settled(true), _):
+                return other
+
+            case (_, .settled(true)):
+                return self
+
+            case let (.leansOn(mine), .leansOn(theirs)):
+                return .leansOn(mine + theirs)
+            }
+        }
+
         // MARK: - Private
     }
 
@@ -120,13 +137,8 @@ final class LoweredTypeTable: Sendable {
     //
     // For a value already in hand and nothing else: a reading before the run
     // is not a name yet.
-    func settles(contract name: Name, arrived type: Name?) -> Bool? {
+    func settles(contract name: Name, arrived type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
-
-        // A value that is an instance of no type a claim names answers no
-        // contract, and no claim anywhere changes that, so a partial table
-        // settles this one too.
-        guard let type else { return false }
         guard settled else { return nil }
 
         return claimed.contains(type)
@@ -300,13 +312,6 @@ final class LoweredTypeTable: Sendable {
         case .any, .projection, .undeclared, .never:
             return .settled(true)
 
-        // A contract is answered by a type, and null is an instance of none,
-        // so what may be null answers no contract, a name for such a type
-        // included, unless the slot takes null as well: then null was taken
-        // above and the rest answers.
-        case _ where !orNull && reading.declaresNull(in: self):
-            return .settled(false)
-
         // A name that stands for no record answers as what it stands for,
         // since a value of it is an instance of that.
         case let .named(row) where recordRows[row] == nil:
@@ -320,17 +325,22 @@ final class LoweredTypeTable: Sendable {
         case let .parameter(_, bounds), let .composition(bounds):
             return .settled(bounds.contains(name))
 
+        // What may be null is a value of the type or null, so it answers
+        // where both do.
+        case let .nullable(inner):
+            return answering(contract: name, reading: inner, rigid: rigid, orNull: false)
+                .and(answering(contract: name, reading: .null, rigid: rigid, orNull: false))
+
         // A reading of a type a value is an instance of answers as that type
         // does: by what the documents claim about it, so the type comes back
         // and the asker writes it down. Where nothing is judged on arrival, or
         // the table holds every claim there is, it is held to what the
-        // documents say. A reading that is an instance of no type a claim
-        // names answers nothing.
+        // documents say.
         default:
             guard let type = reading.nominal(in: self) else { return .settled(false) }
             guard !rigid, !settled else { return .settled(settles(contract: name, arrived: type) != false) }
 
-            return .leansOn(type)
+            return .leansOn([type])
         }
     }
 }

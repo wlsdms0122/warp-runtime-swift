@@ -171,12 +171,14 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // every list, its element a type parameter nothing fills, which a
     // declaration answering the claim takes whatever it is.
     public static let nominalTypes: [Name: TypeExpression] = [
+        TypeSpelling.null: .null,
         TypeSpelling.bool: .bool,
         TypeSpelling.int: .int,
         TypeSpelling.double: .double,
         TypeSpelling.string: .string,
         TypeSpelling.array: .array(.parameter(name: TypeSpelling.selfElement)),
-        TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement))
+        TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement)),
+        TypeSpelling.procedure: .procedure(nil)
     ]
 
     // Bytes are a list of whole numbers in a compact spelling, so the type of

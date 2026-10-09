@@ -685,11 +685,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // The type a value read as this is an instance of, under the name a claim
     // writes and `Value.nominal` answers once the value arrives: a declared
     // record by its name, bytes as the list they are, and a record with no
-    // name as the map it is. Nil where the reading names no such type: null,
-    // a procedure, and every reading that stands for a type only a value
-    // decides.
+    // name as the map it is. Nil where the reading stands for a type only a
+    // value decides.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
+        case .null:
+            return TypeSpelling.null
+
         case .bool:
             return TypeSpelling.bool
 
@@ -708,6 +710,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case .dictionary, .record:
             return TypeSpelling.dictionary
 
+        case .procedure:
+            return TypeSpelling.procedure
+
         case let .named(row):
             guard let record = table.recordRows[row] else { return table.loweredTypes[row].nominal(in: table) }
 
@@ -716,7 +721,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .variable(inner), let .inout(inner):
             return inner.nominal(in: table)
 
-        case .any, .never, .null, .procedure, .nullable, .parameter, .composition, .projection, .undeclared:
+        case .any, .never, .nullable, .parameter, .composition, .projection, .undeclared:
             return nil
         }
     }
@@ -1630,16 +1635,12 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // A value handed to a slot of this type: a null where the type admits
-    // one, and otherwise the value settled. `locus` is where a refusal says
-    // the value stood, in the caller's terms.
+    // A value handed to a slot of this type, settled, and a null the type
+    // does not admit refused as null. `locus` is where a refusal says the
+    // value stood, in the caller's terms.
     func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
-        guard value != .null else {
-            guard admitsNull(in: table) else {
-                throw ArgumentError("\(locus): expected \(rendered(in: table)), got Null")
-            }
-
-            return value
+        guard value != .null || admitsNull(in: table) else {
+            throw ArgumentError("\(locus): expected \(rendered(in: table)), got Null")
         }
 
         return try settling(value, at: locus, in: table)
@@ -1671,8 +1672,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether a null that arrives is one of this type's values. `Any` is
-    // here and not below: it accepts what it is handed, null included.
+    // Whether a null that arrives may be one of this type's values, which
+    // `settling` then holds it to. `Any` is here and not below: it accepts
+    // what it is handed, null included.
     func admitsNull(in table: LoweredTypeTable) -> Bool {
         switch self {
         case .any:
@@ -1681,12 +1683,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .named(row):
             return table.loweredTypes[row].admitsNull(in: table)
 
-        // A parameter stands for what arrived and does not settle it, so an
-        // unbounded one holds a null the way it holds anything. A contract is
-        // answered by a type and null is of none, so a bounded one, and a
-        // composition, hold no null.
-        case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.isEmpty
+        // Null is held to the contracts as any value is, by `settling`.
+        case .parameter, .composition:
+            return true
 
         default:
             return declaresNull(in: table)
@@ -2101,7 +2100,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // about remembered, since a type may name itself through a row.
     private func couldBeProcedure(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
         switch self {
-        case .procedure, .any, .never, .projection, .undeclared:
+        case .procedure, .any, .never, .parameter, .composition, .projection, .undeclared:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -2111,11 +2110,6 @@ indirect enum LoweredType: Sendable, Equatable {
             guard !namedAsking.contains(row) else { return false }
 
             return table.loweredTypes[row].couldBeProcedure(in: table, namedAsking: namedAsking + [row])
-
-        // A contract is answered by a type, and a procedure is of none to
-        // answer one, so only an unbounded parameter may hold a procedure.
-        case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.isEmpty
 
         case .null, .bool, .int, .wholeLiteral, .double, .string, .array, .dictionary, .record:
             return false
@@ -2271,25 +2265,14 @@ indirect enum LoweredType: Sendable, Equatable {
             return value
 
         case nil:
-            guard let type = value.nominal, let unsettled = table.unsettled else {
-                throw ArgumentError(
-                    "\(path()): expected \(rendered(in: table)), and"
-                        + " \(value.nominal.map { held in "'\(held)'" } ?? "\(value.type)")"
-                        + " does not answer every procedure '\(name)' asks"
-                )
-            }
+            guard let unsettled = table.unsettled else { throw refusal(value, answering: name, at: path(), in: table) }
 
-            unsettled.require(folded: Claim(type: type, contract: name))
+            unsettled.require(folded: Claim(type: value.nominal, contract: name))
 
             return value
 
         case false?:
-            let arrived = value.nominal.map { held in "'\(held)'" } ?? "\(value.type)"
-
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), and \(arrived)"
-                    + " does not answer every procedure '\(name)' asks"
-            )
+            throw refusal(value, answering: name, at: path(), in: table)
         }
     }
 
@@ -2477,5 +2460,17 @@ indirect enum LoweredType: Sendable, Equatable {
 
     private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
+    }
+
+    private func refusal(
+        _ value: Value,
+        answering name: Name,
+        at path: String,
+        in table: LoweredTypeTable
+    ) -> ArgumentError {
+        ArgumentError(
+            "\(path): expected \(rendered(in: table)), and '\(value.nominal)'"
+                + " does not answer every procedure '\(name)' asks"
+        )
     }
 }

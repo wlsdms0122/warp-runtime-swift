@@ -505,8 +505,10 @@ struct TypeChecker {
     ) -> String? {
         switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
         // What leans on a claim is written down for the link to settle.
-        case let .leansOn(type):
-            fulfillment.require(Claim(type: type, contract: name), at: place)
+        case let .leansOn(types):
+            for type in types {
+                fulfillment.require(Claim(type: type, contract: name), at: place)
+            }
 
             return nil
 
