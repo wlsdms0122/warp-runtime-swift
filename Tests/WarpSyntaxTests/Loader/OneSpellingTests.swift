@@ -140,17 +140,6 @@ struct OneSpellingTests {
         }
     }
 
-    @Test("a dictionary literal has no document, since record is read back as a record")
-    func aDictionaryLiteralIsNotWritten() throws {
-        // Given
-        let module = try Module(
-            procedures: ["entry": Procedure(access: .public, body: [], result: .literal(.dictionary(["a": .int(1)])))]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) { try Writer().value(of: module) }
-    }
-
     @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [
         (written: Value.dictionary(["record": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.record.a"),
         (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "Int"])]), place: "procedures.entry.result.as?.of")

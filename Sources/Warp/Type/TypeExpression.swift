@@ -405,6 +405,28 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
+    // Whether a document writes this type as a string, which a `?` trails and
+    // a slot mark stands in front of. An inline record and a procedure type
+    // that writes its signature are written as a mapping under one key, and
+    // so is a list or a map of one of those.
+    var hasSpelling: Bool {
+        switch self {
+        case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
+            .selfType, .projection:
+            return true
+
+        case let .procedure(type, _, _):
+            return type == nil
+
+        case .record:
+            return false
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner),
+            let .inout(inner):
+            return inner.hasSpelling
+        }
+    }
+
     public var isInout: Bool {
         if case .inout = self { return true }
         return false

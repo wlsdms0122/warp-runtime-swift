@@ -156,7 +156,7 @@ struct ObjectWriter {
                         try signature(asked.signature),
                         constness(asked.constness),
                         isolation(asked.isolation),
-                        failing(asked.failing)
+                        failing(.these(asked.failing))
                     ])
                 }
             }

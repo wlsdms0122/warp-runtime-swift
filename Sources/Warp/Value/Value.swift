@@ -204,6 +204,25 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
+    // Whether a map is anywhere in here, however deep. A document writes a
+    // map as a record cast to the `Dictionary<T>` it is, so no literal holds
+    // one.
+    var holdsDictionary: Bool {
+        switch self {
+        case .null, .bool, .int, .double, .string, .bytes, .procedure:
+            return false
+
+        case let .array(elements):
+            return elements.contains { element in element.holdsDictionary }
+
+        case .dictionary:
+            return true
+
+        case let .record(record):
+            return record.values.contains { value in value.holdsDictionary }
+        }
+    }
+
     // The elements a value is indexed by, and nil for what has none. This is
     // where the `bytes = Array<Int>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they

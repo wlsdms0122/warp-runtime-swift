@@ -22,14 +22,14 @@ public struct ContractProcedure: Sendable, Equatable {
 
     // What a declaration answering it may fail with, and so what a call
     // through the contract may. Nothing, unless the contract names some.
-    public let failing: Failing
+    public let failing: Set<String>
 
     // MARK: - Initializer
     public init(
         signature: Signature = Signature(),
         constness: Constness = .unstated,
         isolation: Isolation = .unstated,
-        failing: Failing = .these([])
+        failing: Set<String> = []
     ) {
         self.signature = signature
         self.constness = constness

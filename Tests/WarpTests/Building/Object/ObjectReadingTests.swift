@@ -456,16 +456,16 @@ struct ObjectReadingTests {
 
     @Test("is refused where a record value's fields stand out of order")
     func aRecordOutOfOrder() async throws {
-        // Given. A real object whose body answers a dictionary literal, which
-        // it writes as a record with no name, its fields turned around. A
-        // reading that sorted them would read two writings as one object.
+        // Given. A real object whose body answers a record literal, which it
+        // writes as a record with no name, its fields turned around. A reading
+        // that sorted them would read two writings as one object.
         let sut = try Module(
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .literal(.dictionary(["a": .int(1), "b": .int(2)]))
+                    result: .literal(.record(Record(name: nil, ["a": .int(1), "b": .int(2)])))
                 )
             ]
         )
@@ -483,7 +483,7 @@ struct ObjectReadingTests {
             case let .array(values) = value[3],
             names.count == 2
         else {
-            Issue.record("an object writes a literal dictionary as a record's names and values")
+            Issue.record("an object writes a record literal as its names and values")
 
             return
         }

@@ -401,12 +401,17 @@ struct ObjectReader {
 
     private func contractProcedure(_ value: Value) throws -> ContractProcedure {
         var cursor = try FieldCursor(value, of: "contract procedure")
-        let read = ContractProcedure(
-            signature: try signature(cursor.next()),
-            constness: try constness(cursor.next()),
-            isolation: try isolation(cursor.next()),
-            failing: try failing(cursor.next())
-        )
+        let signature = try signature(cursor.next())
+        let constness = try constness(cursor.next())
+        let isolation = try isolation(cursor.next())
+
+        // A contract's procedure names what it may fail with, nothing
+        // included.
+        guard case let .these(failing) = try failing(cursor.next()) else {
+            throw ObjectRefused("a contract's procedure's 'failing' says which failures")
+        }
+
+        let read = ContractProcedure(signature: signature, constness: constness, isolation: isolation, failing: failing)
 
         try cursor.end()
 

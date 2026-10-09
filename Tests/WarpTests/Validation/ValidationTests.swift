@@ -702,6 +702,69 @@ struct ValidationTests {
         }
     }
 
+    @Test("a ? and a slot mark stand only where a type is written as a spelling", arguments: [
+        (TypeExpression.nullable(.record(["a": .int])), "a `?` trails a type's spelling"),
+        (.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
+        (.nullable(.array(.record(["a": .int]))), "a `?` trails a type's spelling"),
+        (.inout(.record(["a": .int])), "a mark stands in front of a type's spelling"),
+        (.inout(.array(.procedure(ProcedureType(returns: .int)))), "a mark stands in front of a type's spelling")
+    ])
+    func aMarkWithNoSpellingIsRefused(type: TypeExpression, refusal: String) throws {
+        // When / Then. An inline record and a written signature are mappings
+        // under one key, with nothing for a `?` to trail or a mark to stand
+        // before; a module made in Swift is held to it where it is made
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains(refusal)
+        }
+
+        // And a mark on a procedure type's key, and a `?` on a spelling, stand
+        let marked = TypeExpression.inout(.procedure(ProcedureType(returns: .int)))
+
+        #expect(throws: Never.self) {
+            try Module(
+                types: ["App.R": .record(["a": .variable(.nullable(.array(.int)))])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: marked)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("a literal holds no map, which a document writes as a record cast to it")
+    func aLiteralMapIsRefused() throws {
+        // When / Then
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        body: [],
+                        result: .literal(.array([.dictionary(["a": .int(1)])]))
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a literal holds a map")
+        }
+    }
+
     @Test("a type read out of a body is no declaration anybody can write")
     func aProjectionIsRefusedWhereADeclarationGoes() throws {
         // When / Then. A declaration assembled in the host claiming what only

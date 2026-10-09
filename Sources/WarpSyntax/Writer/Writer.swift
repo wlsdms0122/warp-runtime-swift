@@ -92,21 +92,9 @@ public struct Writer: Sendable {
                                 written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
                             }
 
-                            // A contract's procedure that writes no `failing`
-                            // fails with nothing, so one that may fail with
-                            // anything has no document to say it.
-                            switch asked.failing {
-                            case let .these(failures):
-                                if !failures.isEmpty {
-                                    written[ContractProcedureReader.CodingKeys.failing.name] = .array(
-                                        failures.sorted().map(Value.string)
-                                    )
-                                }
-
-                            case .unstated:
-                                throw WritingError(
-                                    "a contract's procedure says nothing of what it may fail with,"
-                                        + " and a document writing none says it fails with nothing"
+                            if !asked.failing.isEmpty {
+                                written[ContractProcedureReader.CodingKeys.failing.name] = .array(
+                                    asked.failing.sorted().map(Value.string)
                                 )
                             }
 

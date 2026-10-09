@@ -22,6 +22,7 @@ struct NullableTests {
     func aNullableReadingIsRefusedAtACall() async throws {
         // Given. The `?.` path answers `Int?`, and the callee declares `Int`
         let sut = try Module(
+            types: ["App.Task": .record(["size": .int])],
             procedures: [
                 "half": Procedure(
                     signature: Signature(
@@ -35,7 +36,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
+                            Parameter(name: "task", type: .nullable(.named("App.Task")))
                         ]
                     ),
                     body: [
@@ -59,12 +60,13 @@ struct NullableTests {
         // Given. The record may be null, so `?.` is the only spelling that
         // builds; what it answers is the field or null
         let sut = try Module(
+            types: ["App.Task": .record(["size": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
+                            Parameter(name: "task", type: .nullable(.named("App.Task")))
                         ],
                         returns: .nullable(.int)
                     ),

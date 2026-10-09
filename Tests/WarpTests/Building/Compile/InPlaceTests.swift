@@ -108,7 +108,7 @@ struct InPlaceTests {
         // names it holds them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .literal(.dictionary(Value.Dictionary(["x": .int(0)])))],
+            variables: ["seen": .cast(.record(["x": .literal(.int(0))]), as: .dictionary(.int), optional: false)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -139,10 +139,10 @@ struct InPlaceTests {
     @Test("a module variable that starts empty and declares nothing is refused")
     func moduleVariableStartedEmptyIsRefused() async throws {
         // Given. A variable that declares nothing holds the type of its start,
-        // and an empty dictionary holds no entry, so nothing says what the box
+        // and an empty list holds no element, so nothing says what the box
         // will hold
         let sut = try Module(
-            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            variables: ["seen": .array([])],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null))
             ]
@@ -162,7 +162,7 @@ struct InPlaceTests {
         // start says nothing about what the box will hold, the declaration
         // does, and a write of something else is held to it.
         let sut = try Module(
-            variables: ["seen": ModuleVariable(.literal(.dictionary(Value.Dictionary([:]))), declared: .dictionary(.int))],
+            variables: ["seen": ModuleVariable(.record([:]), declared: .dictionary(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -265,33 +265,6 @@ struct InPlaceTests {
 
         // Then
         #expect(answer == .array([.int(1), .int(9)]))
-    }
-
-    @Test("a var field holding an inline record is written through")
-    func varFieldHoldingAnInlineRecordIsWrittenThrough() async throws {
-        // Given. A declared type whose `var` field holds a record nobody
-        // declared, so the inner field is nobody's `var` and the path passes
-        let sut = try Module(
-            imports: [],
-            types: ["Outer": .record(["inner": .variable(.record(["a": .int]))])],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [
-                        Statement(
-                            binding: .variable("held"),
-                            expression: .cast(.record(["inner": .record(["a": .literal(.int(1))])]), as: .named("Outer"), optional: false)
-                        ),
-                        Statement(binding: .assignment([.key("held"), .key("inner"), .key("a")]), expression: .literal(.int(5)))
-                    ],
-                    result: reference("held", "inner", "a")
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut) == .int(5))
     }
 
     @Test("a module variable handed in place is one box, by the parameter and by its name")
@@ -453,10 +426,11 @@ struct InPlaceTests {
         // written body
         let sut = try Module(
             imports: ["Other.grow"],
+            types: ["App.All": .record(["items": .variable(.array(.int))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "all", type: .inout(.record(["items": .array(.int)])))]),
+                    signature: Signature(parameters: [Parameter(name: "all", type: .inout(.named("App.All")))]),
                     body: [
                         Statement(
                             expression: .call(Call(selector: "Other.grow", arguments: [reference("all", "items")]))
@@ -600,7 +574,7 @@ struct InPlaceTests {
         let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)]))
         let held: [String: TypeExpression] = [
             "plain": taking,
-            "nullable": .nullable(taking),
+            "nullable": .nullable(.named("App.Hook")),
             "array": .array(taking),
             "dictionary": .dictionary(taking),
             "record field": .record(["hook": taking]),

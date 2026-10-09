@@ -314,10 +314,10 @@ struct ClaimChecker {
                     )
                 }
 
-                if case let .these(allowed) = wanted.failing, !facts.failing.fails(within: allowed) {
+                if !facts.failing.fails(within: wanted.failing) {
                     return .waits(
                         "\(witness.spelled) declares '\(spelling)', which may fail with \(facts.failing.rendered),"
-                            + " and '\(contract)' lets '\(procedure)' fail with \(wanted.failing.rendered)"
+                            + " and '\(contract)' lets '\(procedure)' fail with \(Failing.these(wanted.failing).rendered)"
                     )
                 }
             }

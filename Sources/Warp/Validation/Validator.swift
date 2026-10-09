@@ -494,6 +494,13 @@ public struct Validator: Sendable {
                 )
             }
 
+            guard !value.holdsDictionary else {
+                throw ValidationError(
+                    "a literal holds a map, and a map is written as a record cast to the `Dictionary<T>` it is",
+                    at: place
+                )
+            }
+
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
 
@@ -878,6 +885,7 @@ public struct Validator: Sendable {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
+            try marked(parameter.declared, at: here)
             try written(parameter.declared.slotUnwrapped, in: context, at: here)
         }
 
@@ -952,6 +960,14 @@ public struct Validator: Sendable {
                 throw ValidationError("writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)", at: place)
             }
 
+            guard inner.hasSpelling else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and a `?` trails a type's spelling, which \(inner.rendered) is"
+                        + " written without. What may be null of it is declared under a name and written `Name?`",
+                    at: place
+                )
+            }
+
             try written(inner, in: context, at: place)
 
         // A field of a record type is reached by a path alone, so its name is
@@ -961,6 +977,11 @@ public struct Validator: Sendable {
                 let here = place.part(.fields).key(name.spelling)
 
                 try held(name, as: .value, at: here)
+
+                if context.takesWritableFields {
+                    try marked(field, at: here)
+                }
+
                 try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context, at: here)
             }
 
@@ -970,6 +991,7 @@ public struct Validator: Sendable {
             guard let procedure else { return }
 
             for (position, parameter) in procedure.parameters.enumerated() {
+                try marked(parameter, at: place.index(position))
                 try written(parameter.slotUnwrapped, in: context, at: place.index(position))
             }
 
@@ -988,6 +1010,28 @@ public struct Validator: Sendable {
                     + " is written through. `var` is written on a field in `types`",
                 at: place
             )
+        }
+    }
+
+    // A slot mark stands in front of a type's spelling or on the key a
+    // procedure type is written under, and a type written as any other
+    // mapping has no front for one.
+    private func marked(_ type: TypeExpression, at place: Place) throws {
+        switch type {
+        case let .inout(inner), let .variable(inner):
+            if inner.hasSpelling { return }
+
+            if case .procedure(.some, _, _) = inner { return }
+
+            throw ValidationError(
+                "writes `\(type.rendered)`, and a mark stands in front of a type's spelling or on a procedure"
+                    + " type's key, which \(inner.rendered) is written without. Declare it under a name and"
+                    + " mark the name",
+                at: place
+            )
+
+        default:
+            return
         }
     }
 

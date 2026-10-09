@@ -83,32 +83,6 @@ struct UnwritableTests {
         }
     }
 
-    @Test("a procedure whose parameter type has no spelling has no document, though it builds")
-    func aBuiltParameterTypeWithNoSpellingIsRefused() async throws {
-        // Given. A slot taking a record of one field or null: a record has no
-        // name for a `?` to trail
-        let module = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [Parameter(name: "either", type: .nullable(.record(["a": .int])))]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When
-        await #expect(throws: Never.self) { try await Builder().build([module] + Module.standard) }
-
-        // Then
-        #expect(throws: WritingError.self) {
-            try sut.value(of: module)
-        }
-    }
-
     @Test("one name composing is written as the name, and names in any order are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then

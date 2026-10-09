@@ -49,7 +49,7 @@ public struct ContractProcedureReader: Decodable {
             ),
             constness: try container.decodeIfPresent(Bool.self, forKey: .const) == true ? .const : .unstated,
             isolation: try container.decodeIfPresent(Bool.self, forKey: .isolated) == true ? .isolated : .unstated,
-            failing: .these(Set(try container.decodeIfPresent([String].self, forKey: .failing) ?? []))
+            failing: Set(try container.decodeIfPresent([String].self, forKey: .failing) ?? [])
         )
     }
 
