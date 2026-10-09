@@ -48,15 +48,8 @@ public enum NameGrammar: Sendable {
     // Whether a name written here is one this grammar takes.
     public func holds(_ name: Name) -> Bool {
         switch self {
-        // A dot is a dot wherever it stands, including where the scalar after
-        // it combines with it into one character, so the name is split on its
-        // bytes. A dot at either end stands for an empty segment, which is no
-        // identifier.
         case .type:
-            return !NameGrammar.reserved.contains(name)
-                && name.spelling.utf8
-                    .split(separator: NameGrammar.dot, omittingEmptySubsequences: false)
-                    .allSatisfy(Name.isIdentifier)
+            return !NameGrammar.reserved.contains(name) && NameGrammar.joinsIdentifiers(name)
 
         case .typeParameter:
             return !NameGrammar.reserved.contains(name) && name.isIdentifier
@@ -77,6 +70,17 @@ public enum NameGrammar: Sendable {
         case .contractProcedure:
             return name.isIdentifier
         }
+    }
+
+    // Whether a name is identifiers joined by dots: a type's name before the
+    // words the language writes itself are set aside. A dot is a dot wherever
+    // it stands, including where the scalar after it combines with it into
+    // one character, so the name is split on its bytes. A dot at either end
+    // stands for an empty segment, which is no identifier.
+    public static func joinsIdentifiers(_ name: Name) -> Bool {
+        name.spelling.utf8
+            .split(separator: dot, omittingEmptySubsequences: false)
+            .allSatisfy(Name.isIdentifier)
     }
 
     // Why a name written here is refused: one sentence to a grammar, whoever
