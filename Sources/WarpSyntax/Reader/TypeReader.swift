@@ -125,12 +125,94 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Public
-    // A type from its spelling. `qualifying` is what a declared name written
-    // short stands for, which is the notation's answer where a text may write
-    // one short and the name itself where every name is written full.
-    public static func parse(
+    // A type from its spelling, a declared name written short standing for
+    // what the notation reads it as.
+    public static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
+        try parse(written) { name in notation.qualified(name, as: .type) }
+    }
+
+    // Whether the reading takes this key as a procedure form's. Asked of the
+    // reading itself rather than of a list beside it, because a list and a
+    // parser drift and what they disagree about is a document one of them
+    // writes and the other refuses.
+    static func readsAsAProcedure(_ key: Name) -> Bool {
+        procedureKeywords(of: key.spelling) != nil
+    }
+
+    // What a procedure form's key says, read front to back: a slot's mark if one
+    // is written, the modifiers in either order, and `procedure`. Nil where the
+    // key is not a procedure form's, which a record's field name is.
+    //
+    // One mark, because that is what a slot writes. A key carrying two is not
+    // this form's and so is a field name, the way any other key that is not
+    // this form's is: what the spelling of a whole type refuses, a key that
+    // never claimed to be one is not asked.
+    //
+    // The mark comes back as itself rather than as something that applies it,
+    // so that what was read stays a value the caller can ask about.
+    static func procedureKeywords(
+        of key: String
+    ) -> (mark: SlotMark?, constness: Constness, isolation: Isolation)? {
+        let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
+
+        guard
+            let (constness, isolation, head) = modifiers(of: rest),
+            head == "procedure"
+        else {
+            return nil
+        }
+
+        return (mark, constness, isolation)
+    }
+
+    // The one spelling of a procedure type's head: `const` before `isolated`,
+    // both before the head.
+    static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
+        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
+            .compactMap { part in part }
+            .joined(separator: " ")
+    }
+
+    // The modifiers at the front of a type's text, in either order, and the
+    // text left after them. Nil where a modifier is written twice. A modifier
+    // is a keyword in front rather than an argument, because it says what a
+    // slot requires of the whole procedure rather than of a part of it.
+    static func modifiers(of text: String) -> (Constness, Isolation, String)? {
+        var rest = text
+        var constness = Constness.unstated
+        var isolation = Isolation.unstated
+
+        while true {
+            if let bare = dropPrefixed("const ", from: rest) {
+                guard constness == .unstated else { return nil }
+                constness = .const
+                rest = String(bare)
+            } else if let bare = dropPrefixed("isolated ", from: rest) {
+                guard isolation == .unstated else { return nil }
+                isolation = .isolated
+                rest = String(bare)
+            } else {
+                return (constness, isolation, rest)
+            }
+        }
+    }
+
+    // A written type's name, said in this notation's own terms: every other
+    // refusal a type's spelling earns is a `TypeFormError`.
+    static func named(_ text: String) throws -> Name {
+        do {
+            return try Name(text)
+        } catch let refusal as NameRefused {
+            throw TypeFormError(refusal.message)
+        }
+    }
+
+    // MARK: - Private
+    // `qualifying` is the notation's reading of a declared name, handed down
+    // the spelling's parts.
+    private static func parse(
         _ written: String,
-        qualifying: (Name) -> Name = { name in name }
+        qualifying: (Name) -> Name
     ) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: .whitespaces)
 
@@ -233,83 +315,6 @@ public struct TypeReader: Decodable {
         return holding.holding(try parse(inner, qualifying: qualifying))
     }
 
-    // Whether the reading takes this key as a procedure form's. Asked of the
-    // reading itself rather than of a list beside it, because a list and a
-    // parser drift and what they disagree about is a document one of them
-    // writes and the other refuses.
-    static func readsAsAProcedure(_ key: Name) -> Bool {
-        procedureKeywords(of: key.spelling) != nil
-    }
-
-    // What a procedure form's key says, read front to back: a slot's mark if one
-    // is written, the modifiers in either order, and `procedure`. Nil where the
-    // key is not a procedure form's, which a record's field name is.
-    //
-    // One mark, because that is what a slot writes. A key carrying two is not
-    // this form's and so is a field name, the way any other key that is not
-    // this form's is: what the spelling of a whole type refuses, a key that
-    // never claimed to be one is not asked.
-    //
-    // The mark comes back as itself rather than as something that applies it,
-    // so that what was read stays a value the caller can ask about.
-    static func procedureKeywords(
-        of key: String
-    ) -> (mark: SlotMark?, constness: Constness, isolation: Isolation)? {
-        let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
-
-        guard
-            let (constness, isolation, head) = modifiers(of: rest),
-            head == "procedure"
-        else {
-            return nil
-        }
-
-        return (mark, constness, isolation)
-    }
-
-    // The one spelling of a procedure type's head: `const` before `isolated`,
-    // both before the head.
-    static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
-            .compactMap { part in part }
-            .joined(separator: " ")
-    }
-
-    // The modifiers at the front of a type's text, in either order, and the
-    // text left after them. Nil where a modifier is written twice. A modifier
-    // is a keyword in front rather than an argument, because it says what a
-    // slot requires of the whole procedure rather than of a part of it.
-    static func modifiers(of text: String) -> (Constness, Isolation, String)? {
-        var rest = text
-        var constness = Constness.unstated
-        var isolation = Isolation.unstated
-
-        while true {
-            if let bare = dropPrefixed("const ", from: rest) {
-                guard constness == .unstated else { return nil }
-                constness = .const
-                rest = String(bare)
-            } else if let bare = dropPrefixed("isolated ", from: rest) {
-                guard isolation == .unstated else { return nil }
-                isolation = .isolated
-                rest = String(bare)
-            } else {
-                return (constness, isolation, rest)
-            }
-        }
-    }
-
-    // A written type's name, said in this notation's own terms: every other
-    // refusal a type's spelling earns is a `TypeFormError`.
-    static func named(_ text: String) throws -> Name {
-        do {
-            return try Name(text)
-        } catch let refusal as NameRefused {
-            throw TypeFormError(refusal.message)
-        }
-    }
-
-    // MARK: - Private
     // The parts an `&` at the top of a spelling joins, or nothing where the
     // spelling has no such `&`: one inside brackets belongs to the argument.
     private static func joined(_ text: String) -> [Substring]? {
@@ -339,7 +344,7 @@ public struct TypeReader: Decodable {
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         let notation = decoder.notation
         if let written = try? decoder.singleValueContainer().decode(String.self) {
-            return try parse(written) { name in notation.qualified(name, as: .type) }
+            return try parse(written, in: notation)
         }
 
         guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {

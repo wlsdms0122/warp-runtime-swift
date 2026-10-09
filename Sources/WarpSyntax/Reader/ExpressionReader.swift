@@ -247,9 +247,7 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = spelled {
-                let notation = decoder.notation
-
-                type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
+                type = try TypeReader.parse(spelling, in: decoder.notation)
             } else {
                 type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
                     .type

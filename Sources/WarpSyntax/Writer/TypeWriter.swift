@@ -27,7 +27,7 @@ struct TypeWriter {
         let read: TypeExpression
 
         do {
-            read = try TypeReader.parse(spelling) { name in readBy.qualified(name, as: .type) }
+            read = try TypeReader.parse(spelling, in: readBy)
         } catch {
             throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
         }

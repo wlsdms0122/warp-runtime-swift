@@ -307,15 +307,15 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
-            written[ProcedureReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
+            written[SignatureFieldsReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
-            written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
+            written[SignatureFieldsReader.CodingKeys.returns.name] = try value(of: returns)
         }
 
         if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
-            written[ProcedureReader.CodingKeys.bounds.name] = bounds
+            written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
         }
 
         return written

@@ -34,19 +34,9 @@ public struct ContractProcedureReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let bounds = try decoder.descendingIfPresent(to: CodingKeys.bounds)
 
         self.procedure = ContractProcedure(
-            signature: Signature(
-                parameters: try container.decodeIfPresent([ParameterReader].self, forKey: .parameters)?
-                    .map(\.parameter) ?? [],
-                returns: try container.decodeIfPresent(TypeReader.self, forKey: .returns)?.type,
-                bounds: try BoundsReader().bounds(
-                    try bounds?.read([Name: String].self),
-                    qualifying: { [notation = decoder.notation] name in notation.qualified(name, as: .type) },
-                    at: bounds?.steps ?? decoder.steps
-                )
-            ),
+            signature: try SignatureFieldsReader(reading: decoder).signature,
             constness: try container.decodeIfPresent(Bool.self, forKey: .const) == true ? .const : .unstated,
             isolation: try container.decodeIfPresent(Bool.self, forKey: .isolated) == true ? .isolated : .unstated,
             failing: Set(try container.decodeIfPresent([String].self, forKey: .failing) ?? [])

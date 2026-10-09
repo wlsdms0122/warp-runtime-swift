@@ -27,7 +27,7 @@ struct BoundsReader {
     // `bounds` stands.
     func bounds(
         _ written: [Name: String]?,
-        qualifying: (Name) -> Name = { name in name },
+        in notation: Notation,
         at steps: [Place.Step]
     ) throws -> [Name: Set<Name>] {
         // A bound is the names of contracts, one or several joined with `&`,
@@ -40,7 +40,7 @@ struct BoundsReader {
             let parsed: TypeExpression
 
             do {
-                parsed = try TypeReader.parse(bound, qualifying: qualifying)
+                parsed = try TypeReader.parse(bound, in: notation)
             } catch let refused as TypeFormError {
                 throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: here)
             }
