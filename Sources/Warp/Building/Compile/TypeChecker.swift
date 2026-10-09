@@ -2748,18 +2748,12 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
-            // The two ways answer one value, held side by side the way a list
-            // literal's elements are, so a whole literal one of them answers
-            // beside a fraction the other answers is the fraction it names.
-            let reading = attempted.reading.joinedPartByPart(rescued.reading)
+            // Each way is a place of its own, so a whole literal one of them
+            // answers is the Int it is before the two ways meet, part by part.
+            let reading = attempted.reading.asHeld.joinedPartByPart(rescued.reading.asHeld)
 
             return Inspection(
-                rewritten: ask.rewrites
-                    ? .attempt(
-                        reading.written(attempted.block, in: context.loweredTypes),
-                        rescue: reading.written(rescued.block, in: context.loweredTypes)
-                    )
-                    : expression,
+                rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
                 reading: reading,
