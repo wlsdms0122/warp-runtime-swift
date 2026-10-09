@@ -100,7 +100,7 @@ struct CallTests {
                 [try Module(procedures: ["entry": Procedure(access: .public, body: [])]), rival] + Module.standard
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("'Standard.Collection.keys' is declared more than once in this link")
+            error is BuildError && "\(error)".contains("'Standard.Collection.keys' is declared by")
         }
     }
 

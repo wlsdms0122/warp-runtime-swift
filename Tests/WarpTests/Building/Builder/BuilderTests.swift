@@ -367,7 +367,7 @@ struct BuilderTests {
         await #expect {
             try await builder.build([left, right])
         } throws: { error in
-            error is BuildError && "\(error)".contains("'shared' is declared more than once in this link")
+            error is BuildError && "\(error)".contains("'shared' is declared by")
         }
     }
 
