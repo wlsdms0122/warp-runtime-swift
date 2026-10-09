@@ -514,7 +514,9 @@ struct Evaluator: Sendable {
     // A place the build found handed in place is the caller's hold where the
     // closure's slot takes one, made before any argument is read the way a
     // call to a declaration makes its holds, and is read as a value where the
-    // slot takes a value.
+    // slot takes a value. The arguments are handed in as they were read: the
+    // build held each to the parameter the slot's procedure type writes, and
+    // held whatever fills the slot to take each of those parameters.
     //
     // What the call is judged on is judged where the closure it reaches
     // cannot prove it: its answer where the closure's own `returns` is not
@@ -584,9 +586,8 @@ struct Evaluator: Sendable {
         return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 
-    // The one way a closure is called: the arguments settled by the closure's
-    // own row, which the build never judged them against, the captured cells
-    // in their slots, the parameters in theirs, whatever the call handed in
+    // The one way a closure is called: the captured cells in their slots, the
+    // arguments in theirs as the caller has them, whatever the call handed in
     // place held as a box, and the body answered in the frame that was just
     // made. The row is asked whether this run may read it before anything
     // reads its rows.
@@ -622,9 +623,6 @@ struct Evaluator: Sendable {
             )
         }
 
-        let settled = try linked.settle(arguments) { position in
-            holds.contains { held in held.position == position }
-        }
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -635,7 +633,7 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .hold(handle)
         }
 
-        for (position, value) in settled.enumerated() {
+        for (position, value) in arguments.enumerated() {
             guard let value else { continue }
 
             activation.cells[frame.parameters[position]] = .value(value)

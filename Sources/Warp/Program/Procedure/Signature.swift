@@ -202,47 +202,5 @@ public struct Signature: Sendable, Equatable {
         }
     }
 
-    // The boundary itself, over arguments standing at their parameter's
-    // position. `skipping` names the positions a call fills another way, a
-    // parameter handed a variable in place, and those answer nil. The answer
-    // is built from the declaration, never copied from the caller: only
-    // declared names exist inside the boundary.
-    func settle(
-        _ given: [Value?],
-        over slots: [Slot],
-        skipping: (Int) -> Bool,
-        as subject: String,
-        in table: LoweredTypeTable
-    ) throws -> [Value?] {
-        guard given.count == slots.count else {
-            throw ArgumentError(
-                "\(subject) was given \(given.count) arguments, and it takes \(slots.count)"
-            )
-        }
-
-        // A null standing at a slot was given: null is a value the way any
-        // other is, and a caller that holds one hands it over rather than
-        // falling silent.
-        let missing = slots.indices
-            .filter { position in !skipping(position) && given[position] == nil }
-            .map { position in "'\(slots[position].name)'" }
-
-        guard missing.isEmpty else {
-            throw ArgumentError(
-                "\(subject) was given nothing for \(missing.joined(separator: ", "))"
-            )
-        }
-
-        var settled: [Value?] = Array(repeating: nil, count: slots.count)
-
-        for (position, slot) in slots.enumerated() {
-            guard let value = given[position] else { continue }
-
-            settled[position] = try slot.checking(value, at: "input '\(slot.name)'", in: table)
-        }
-
-        return settled
-    }
-
     // MARK: - Private
 }

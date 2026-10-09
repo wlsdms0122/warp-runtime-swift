@@ -234,14 +234,6 @@ public final class Linked: Sendable {
         )
     }
 
-    // The boundary this row keeps, over arguments standing at their slot's
-    // position, read by this row's own table: the slots' rows are numbered by
-    // it and by nothing else. `skipping` names the positions a call fills
-    // another way.
-    func settle(_ given: [Value?], skipping: (Int) -> Bool) throws -> [Value?] {
-        try signature.settle(given, over: slots, skipping: skipping, as: "'\(rendered)'", in: table)
-    }
-
     // How many arguments a call hands, against the slots this row keeps. A
     // count read out of an object is about to place values in a frame, so
     // another one is refused rather than trapped on.
