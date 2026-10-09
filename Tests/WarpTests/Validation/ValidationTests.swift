@@ -579,6 +579,23 @@ struct ValidationTests {
         }
     }
 
+    @Test("a closure writes no bounds, since the procedure around it owns them")
+    func aClosureWritesNoBounds() throws {
+        // Given
+        let closure = Procedure(
+            signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))]),
+            body: [],
+            result: .literal(.int(1))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(Procedure(body: [], result: .closure(closure)))
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a closure writes no bounds")
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
         // Given. The one value type a program cannot carry. A closure is made

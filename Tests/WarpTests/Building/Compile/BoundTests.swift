@@ -783,7 +783,7 @@ struct BoundTests {
                         Statement(binding: .constant("kept"), expression: .closure(Procedure(
                                 signature: Signature(
                                     parameters: [
-                                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["Nope"]))
+                                        Parameter(name: "it", type: .named("Nope"))
                                     ]
                                 ),
                                 body: [],
@@ -800,7 +800,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("names 'Nope', which no module in this link declares")
+            error is BuildError && "\(error)".contains("names type 'Nope', which no module in this link declares")
         }
     }
 

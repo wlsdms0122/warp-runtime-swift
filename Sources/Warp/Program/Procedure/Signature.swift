@@ -134,10 +134,6 @@ public struct Signature: Sendable, Equatable {
     // bounds declared for its name. The signature owns the bound and the
     // occurrences read it. A notation writes `bounds: { N: Numeric }` once and
     // `some N` in the slots, and this is where the one meets the many.
-    //
-    // An occurrence already carrying a bound keeps it: a nested procedure
-    // type may have declared its own, and overwriting would silently pick
-    // between two claims the build refuses out loud.
     public func bounded(by bounds: [Name: [Name]]) -> Signature {
         guard !bounds.isEmpty else { return self }
 

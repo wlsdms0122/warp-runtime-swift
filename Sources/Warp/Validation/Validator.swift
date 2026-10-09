@@ -453,6 +453,16 @@ public struct Validator: Sendable {
             let inside = place.child(.closure)
             let parameters = Set(procedure.signature.names)
 
+            // Its `some T` is the `T` of the procedure it is written in, and
+            // the signature that declares a type parameter owns its bound.
+            guard procedure.signature.parameterOccurrences.allSatisfy({ occurrence in occurrence.bounds.isEmpty }) else {
+                throw ValidationError(
+                    "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
+                        + " held to the bounds that procedure declares",
+                    at: inside
+                )
+            }
+
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
             for (position, parameter) in procedure.signature.names.enumerated() {

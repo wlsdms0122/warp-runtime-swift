@@ -487,8 +487,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // included, because they are the outer signature's own slots.
     func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
         switch self {
-        case let .parameter(name, own):
-            return .parameter(name: name, bounds: own.isEmpty ? bounds[name] ?? [] : own)
+        case let .parameter(name, _):
+            return .parameter(name: name, bounds: bounds[name] ?? [])
 
         case .projection, .composition, .selfType:
             return self
