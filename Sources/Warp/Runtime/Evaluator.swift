@@ -605,17 +605,6 @@ struct Evaluator: Sendable {
 
         try linked.refuseCount(arguments.count)
 
-        // A parameter handed in place takes a variable, and a call of a value
-        // hands one only where the build read the slot's procedure type, so a
-        // closure taking one where the slot wrote no parameters is refused
-        // here, before its body runs.
-        for (position, slot) in linked.slots.enumerated()
-        where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
-            throw ExecutionError(
-                "'\(linked.rendered)' takes '\(slot.name)' in place, and this call hands it a value"
-            )
-        }
-
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
