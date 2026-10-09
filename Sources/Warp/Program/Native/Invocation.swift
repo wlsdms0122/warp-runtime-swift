@@ -74,7 +74,8 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // Writes a value through the hold a parameter was handed. A native procedure
     // declaring a parameter `inout` answers into the caller's variable this
     // way. A link hands such a parameter a path, so one that was handed none
-    // is refused here.
+    // is refused here. What the host writes is a value from outside, so it
+    // comes in through the door the parameter's type keeps.
     public func write(_ key: P.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
@@ -82,7 +83,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             )
         }
 
-        try hold.write(value, at: [])
+        let slot = callee.slots[key.position]
+
+        try hold.write(
+            try slot.type.slotUnwrapped.settling(outside: value, at: "'\(key.name)'", in: callee.table),
+            at: []
+        )
     }
 
     // Nil for an argument that is null. Null spells as `null`, and a caller
