@@ -77,8 +77,8 @@ public struct Builder: Sendable {
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
-    // procedures it sends and the types its signatures name, neither of which a
-    // host wrote down, so a host has nothing to sort by.
+    // procedures it sends and the types and contracts it names, none of which
+    // a host wrote down, so a host has nothing to sort by.
     public func compile(_ modules: [Module]) async throws -> [Compiled] {
         try await compile(modules, against: [], supplying: .none)
     }
@@ -313,8 +313,8 @@ public struct Builder: Sendable {
         // stands on, by the place it stands at: the ones declaring what it
         // names, read off its object where it is compiled already, so how the
         // host split the documents between compiles changes nothing.
-        let supplied = compiled.map(\.declares) + laying.map(\.supplies)
-        let named = compiled.map(\.reaches) + laying.map(\.references)
+        let supplied = compiled.map(\.supplies) + laying.map(\.supplies)
+        let named = compiled.map(\.references) + laying.map(\.references)
         let standingOn = named.map { reaches in
             Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
         }

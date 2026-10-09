@@ -95,8 +95,8 @@ public struct Compiled: Sendable, Declaring {
     // this document named, each by its own fingerprint.
     //
     // Named and not every object the compile was handed. What a document
-    // reaches outside itself is the procedures it calls and the types its
-    // signatures name, and a document laid beside it that it never names
+    // reaches outside itself is the procedures it calls and the types and
+    // contracts it names, and a document laid beside it that it never names
     // decides nothing about what it compiled to.
     //
     // Nothing where one of them has no fingerprint. An object says what it
@@ -133,8 +133,8 @@ public struct Compiled: Sendable, Declaring {
     let hidden: Set<Name>
 
     // Every name this document declares to the other documents of a link,
-    // read off its tables: the dual of a module's `uses`.
-    var declares: Set<Reference> {
+    // read off its tables: its module's `supplies`.
+    var supplies: Set<Reference> {
         Set(
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
                 + contracts.flatMap { contract, procedures in
@@ -148,11 +148,12 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // Every name this document reaches outside itself, read off what its
-    // object holds: what its bodies send, the types they and its signatures
-    // stand on, and the names its claims and the pairs it leaned on write.
-    // An object keeps no list of what its document named, so this is that
-    // list worked out again from the facts the object does keep.
-    var reaches: Set<Reference> {
+    // object holds: its module's `references`. What its bodies send, the
+    // types they and its signatures stand on, and the names its claims and
+    // the pairs it leaned on write. An object keeps no list of what its
+    // document named, so this is that list worked out again from the facts
+    // the object does keep.
+    var references: Set<Reference> {
         var reached = Set(numbering.sending.map(Reference.procedure))
 
         reached.formUnion(typeNumbering.types.map(Reference.type))
@@ -176,7 +177,7 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion([.type(claim.type), .type(claim.contract)])
         }
 
-        return reached.subtracting(declares)
+        return reached.subtracting(supplies)
     }
 
     // Which document this stands against, which is what a host keeps it
