@@ -115,13 +115,13 @@ public struct ModuleReader: Decodable {
     // Asked twice because the two are in different places. The door holds the
     // document and reads the value; the reader is inside it and has a
     // container. One rule, said here for both.
-    public static func declaresImports(_ written: Value?) -> Bool {
+    static func declaresImports(_ written: Value?) -> Bool {
         guard let written else { return false }
 
         return written != .null
     }
 
-    public static func declaresImports<Key: CodingKey>(
+    static func declaresImports<Key: CodingKey>(
         in container: KeyedDecodingContainer<Key>,
         forKey key: Key
     ) throws -> Bool {
