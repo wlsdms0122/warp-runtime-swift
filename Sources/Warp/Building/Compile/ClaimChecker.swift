@@ -244,7 +244,7 @@ struct ClaimChecker {
         // no other name, so a claim about a declared name that is not itself
         // a record, an alias included, is about no type a value is.
         if languageType == nil {
-            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
+            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresRecord(row) else {
                 throw BuildError(
                     "'\(type)' is not itself a record, and no value is an instance of it under that name."
                         + " A claim about a declared type is about a record, under the name it was declared",

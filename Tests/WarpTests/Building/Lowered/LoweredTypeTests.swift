@@ -142,9 +142,9 @@ struct LoweredTypeTests {
         // names none
         #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(account))
         #expect(TypeExpression.named("App.Whole").lowered(in: table) == .int)
-        #expect(table.recordRows[alias] == account)
-        #expect(table.recordRows[account] == account)
-        #expect(table.recordRows[whole] == nil)
+        #expect(table.record(named: "Bank.Acct") == account)
+        #expect(table.record(named: "Bank.Account") == account)
+        #expect(table.record(named: "App.Whole") == nil)
     }
 
     @Test("a projection lowers to itself, and every judgement answers it as Any")

@@ -299,7 +299,7 @@ final class Relocating {
             guard judging.handedBack.isEmpty, relocated.calls.values.allSatisfy({ call in
                 guard let against = judging.against, let returns = table[call.procedure].returns else { return false }
 
-                return returns.identical(to: against, in: table[call.procedure].table)
+                return returns == against
             }) else {
                 return .checked(.dispatch(relocated), judging)
             }

@@ -552,33 +552,32 @@ struct BoundTests {
         }
     }
 
-    @Test("a name that reaches only names refuses at the build")
-    func aNameOnlyCycleRefusesAtTheBuild() async throws {
-        // Given. A type may name itself through a type, and a name that only
-        // names names never becomes one
+    @Test("a name that is no record and comes back to itself refuses at the load")
+    func aNameComingBackRefusesAtTheLoad() async throws {
+        // Given. A record may name itself, and a name that is no record
+        // spells no type where it reaches itself, through names or a structure
         let cycles: [[Name: TypeExpression]] = [
             ["Loop": .named("Loop")],
-            ["A": .named("B"), "B": .named("A")]
+            ["A": .named("B"), "B": .named("A")],
+            ["List": .array(.named("List"))]
         ]
 
         for types in cycles {
-            let sut = try Module(
-                types: types,
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
-
             // When / Then
-            await #expect {
-                try await builder.build([sut] + Module.standard)
+            #expect {
+                try Module(
+                    types: types,
+                    procedures: [
+                        entryName: Procedure(
+                            access: .public,
+                            signature: Signature(),
+                            body: [],
+                            result: .literal(.int(1))
+                        )
+                    ]
+                )
             } throws: { error in
-                error is BuildError && "\(error)".contains("through nothing but names")
+                error is ValidationError && "\(error)".contains("names itself through what it stands for")
             }
         }
 

@@ -1743,8 +1743,7 @@ struct TypeChecker {
             // depth.
             let read = inner.reading.asHeld
             let claim = type.lowered(in: context.loweredTypes)
-            let settled = claim.resolved(in: context.loweredTypes)
-
+            
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
             //
@@ -1779,22 +1778,22 @@ struct TypeChecker {
                 // which is the silent permanent null `as?` exists to avoid
                 // being. What is decidable before a run is decided before it.
                 try refuse(
-                    "reads \(read.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
+                    "reads \(read.rendered(in: context.loweredTypes)) as \(claim.rendered(in: context.loweredTypes)),"
                         + " and no value is both."
                         + " A cast names a type the value may turn out to"
                         + " have, and this one it never can",
                     at: place,
                     when: ask
                 )
-            } else if claim.identical(to: read, in: context.loweredTypes)
-                || handed.identical(to: read, in: context.loweredTypes) {
+            } else if claim == read
+                || handed == read {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? Int` hands on `Int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
                 // reading the question off the spelling let the second catch a
                 // repeat that the first waved through.
                 try refuse(
-                    "reads \(read.rendered(in: context.loweredTypes)) as \(settled.rendered(in: context.loweredTypes)),"
+                    "reads \(read.rendered(in: context.loweredTypes)) as \(claim.rendered(in: context.loweredTypes)),"
                         + " which it already is."
                         + " A cast opens what the types do not prove,"
                         + " and here they do",
@@ -1810,27 +1809,15 @@ struct TypeChecker {
             }
 
             return Inspection(
-                // The author's spelling stands. `settled` is what a refusal
-                // shows (a name walked through to the type it declares) and
-                // writing that back into the program would spend the name: a
-                // refusal would read `as { age: Int }` where the author wrote
-                // `as Person`, and a document written back out would have lost
-                // the declaration it leaned on. The run resolves names itself,
-                // so nothing needs it resolved early.
+                // The author's spelling stands, so a document written back
+                // out keeps the declaration it leaned on.
                 rewritten: ask.rewrites
                     ? .cast(inner.rewritten, as: type, optional: optional)
                     : expression,
                 calls: inner.calls,
                 judgements: inner.judgements,
-                // The author's spelling here too, and for the same reason it
-                // stands in what is written back: a refusal on the next
-                // statement quotes this reading, and quoting a type nobody
-                // wrote (`{ name: String }` where the author wrote `Person`) is
-                // the same name spent, one step later. Every consumer resolves
-                // names itself. `?` is asked of the fact: a name standing for a
-                // nullable already holds null, and wrapping it again would make
-                // the same type read as two different ones depending on
-                // whether the author wrote the name or what it stands for.
+                // `?` is asked of the fact: a type that already holds null is
+                // not wrapped again.
                 reading: handed,
                 flow: flow
             )
@@ -2109,7 +2096,7 @@ struct TypeChecker {
 
             // Read once, and every judgement below asks this reading: whether
             // it could be called, what it takes and what it answers.
-            let callee = called.reading.slotUnwrapped.resolved(in: context.loweredTypes)
+            let callee = called.reading.slotUnwrapped
             let answers: LoweredType
 
             if case let .procedure(_, returns?, _, _) = callee {
@@ -3169,7 +3156,7 @@ struct TypeChecker {
     // to one type, names resolved. Anything else is refused here.
     private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
         { name, one, other in
-            guard !one.identical(to: other, in: table) else { return }
+            guard one != other else { return }
 
             try refuse(
                 "takes '\(name)' as \(one.rendered(in: table)) one way and as"
@@ -3280,7 +3267,7 @@ struct TypeChecker {
             if
                 path.segments.count == 1,
                 case let .held(held)? = environment[head]?.holding,
-                !slot.slotUnwrapped.identical(to: held, in: context.loweredTypes)
+                slot.slotUnwrapped != held
             {
                 try refuse(
                     "hands '\(head)' in place as \(slot.slotUnwrapped.rendered(in: context.loweredTypes)),"
