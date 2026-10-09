@@ -262,7 +262,7 @@ struct ValueDecoder: Decoder {
         }
 
         private func mismatch(_ type: Any.Type) -> ReadingError {
-            ReadingError("expected \(type), found \(value.type)", at: steps)
+            ReadingError("expected \(type), found \(value.nominal)", at: steps)
         }
     }
 
@@ -317,7 +317,7 @@ struct ValueDecoder: Decoder {
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
         guard let record = value.asDictionary else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
+            throw ReadingError("expected a record, found \(value.nominal)", at: steps)
         }
 
         return KeyedDecodingContainer(KeyedContainer(
@@ -335,7 +335,7 @@ struct ValueDecoder: Decoder {
         // still answered by `decode` below, which holds bytes to their own
         // spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.type)", at: steps)
+            throw ReadingError("expected array, found \(value.nominal)", at: steps)
         }
 
         return UnkeyedContainer(
@@ -372,7 +372,7 @@ struct ValueDecoder: Decoder {
     // Every element, read where it stands.
     func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.type)", at: steps)
+            throw ReadingError("expected array, found \(value.nominal)", at: steps)
         }
 
         return try elements.enumerated().map { index, element in
@@ -396,7 +396,7 @@ struct ValueDecoder: Decoder {
     // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
         guard let record = value.asDictionary else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
+            throw ReadingError("expected a record, found \(value.nominal)", at: steps)
         }
 
         return try record.entries
@@ -417,7 +417,7 @@ struct ValueDecoder: Decoder {
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         if type == Data.self {
             guard case let .bytes(bytes) = value, let data = Data(bytes) as? T else {
-                throw ReadingError("expected \(type), found \(value.type)", at: steps)
+                throw ReadingError("expected \(type), found \(value.nominal)", at: steps)
             }
 
             return data
@@ -441,7 +441,7 @@ struct ValueDecoder: Decoder {
     // per key.
     private func held(_ key: String) throws -> Value? {
         guard value.holdsFields else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
+            throw ReadingError("expected a record, found \(value.nominal)", at: steps)
         }
 
         return (try? Name(key)).flatMap { name in value[name] }

@@ -164,7 +164,7 @@ struct Activation: Sendable {
 
                 case let .found(value):
                     return .unfit(
-                        "index reference \(name()) is \(value.type), expected Int or String"
+                        "index reference \(name()) is \(value.nominal), expected Int or String"
                     )
 
                 case let .unfit(reason):
@@ -174,7 +174,7 @@ struct Activation: Sendable {
             // The place the build proved, which is where a write lands too.
             case let .field(position, _, _):
                 guard case let .record(record) = current else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
+                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
                 guard record.values.indices.contains(position) else {
@@ -185,7 +185,7 @@ struct Activation: Sendable {
 
             case let .key(key, optional):
                 guard current.holdsFields else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.type)")
+                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
                 guard let next = current[key] else {
@@ -220,7 +220,7 @@ struct Activation: Sendable {
     // defect, not absence: the array is there and says how long it is.
     private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
         guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.type), expected array")
+            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected array")
         }
 
         guard index >= 0, index < elements.count else {
@@ -242,7 +242,7 @@ struct Activation: Sendable {
         segment: () -> PathSegment
     ) -> Walk {
         guard current.holdsFields else {
-            return .unfit("\(walked().rendered) drills a field into \(current.type)")
+            return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
         }
 
         guard let name = try? Name(key) else {

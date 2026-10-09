@@ -204,37 +204,6 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    public var type: ValueType {
-        switch self {
-        case .null:
-            return .null
-
-        case .bool:
-            return .bool
-
-        case .int:
-            return .int
-
-        case .double:
-            return .double
-
-        case .string:
-            return .string
-
-        case .bytes:
-            return .bytes
-
-        case .array:
-            return .array
-
-        case .record, .dictionary:
-            return .record
-
-        case .procedure:
-            return .procedure
-        }
-    }
-
     // The elements a value is indexed by, and nil for what has none. This is
     // where the `bytes = Array<Int>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
@@ -384,7 +353,7 @@ public indirect enum Value: Sendable, Equatable {
             return .dictionary(held.writing(name, with: value))
 
         default:
-            throw ValueRefused("\(type) holds no fields, so '\(name)' cannot be written into it")
+            throw ValueRefused("\(nominal) holds no fields, so '\(name)' cannot be written into it")
         }
     }
 
@@ -707,7 +676,7 @@ public indirect enum Value: Sendable, Equatable {
 
         default:
             throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
             )
         }
     }
@@ -738,7 +707,7 @@ public indirect enum Value: Sendable, Equatable {
 
         default:
             throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
             )
         }
     }
@@ -792,7 +761,7 @@ public indirect enum Value: Sendable, Equatable {
 
         default:
             throw ExecutionError(
-                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(type), which has no such part"
+                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(nominal), which has no such part"
             )
         }
     }

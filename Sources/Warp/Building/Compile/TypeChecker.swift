@@ -1467,7 +1467,7 @@ struct TypeChecker {
 
         default:
             throw BuildError(
-                "index reference \(inner.rendered) is \(settled.type), expected Int or String",
+                "index reference \(inner.rendered) is \(settled.nominal), expected Int or String",
                 at: place
             )
         }

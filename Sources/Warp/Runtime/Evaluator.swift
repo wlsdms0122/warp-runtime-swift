@@ -539,7 +539,7 @@ struct Evaluator: Sendable {
 
         guard case let .procedure(closure) = value else {
             throw ExecutionError(
-                "this call names \(value.type), and only a procedure can be called"
+                "this call names \(value.nominal), and only a procedure can be called"
             )
         }
 
@@ -1023,7 +1023,7 @@ struct Evaluator: Sendable {
 
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
-            throw ExecutionError("a condition must answer Bool, got \(value.type)")
+            throw ExecutionError("a condition must answer Bool, got \(value.nominal)")
         }
 
         return answer

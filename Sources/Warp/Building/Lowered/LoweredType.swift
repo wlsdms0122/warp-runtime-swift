@@ -1553,7 +1553,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 throw CastRefused(
                     mismatch.message,
                     expected: rendered(in: table),
-                    actual: "\(value.type)"
+                    actual: "\(value.nominal)"
                 )
             }
 
@@ -2393,6 +2393,6 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
-        ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
+        ArgumentError("\(path): expected \(rendered(in: table)), got \(value.nominal)")
     }
 }

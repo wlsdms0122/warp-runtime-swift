@@ -7,9 +7,10 @@
 
 import Foundation
 
-// What a declaration says it takes. Distinct from `ValueType`, which is what a
-// value *is*: `Any` is only ever something a declaration says, and a type
-// names an element, fields, or a declared name where a value has none.
+// What a declaration says it takes. Distinct from `Value.nominal`, the type a
+// value is an instance of: `Any` is only ever something a declaration says,
+// and a type names an element, fields, or a declared name where a value has
+// none.
 //
 // A type is an expression for the same reason an expression is: it composes.
 // `Array<String>` is `array` applied to `String`, and a name is a name for one

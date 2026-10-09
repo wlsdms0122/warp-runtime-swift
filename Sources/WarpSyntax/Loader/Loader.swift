@@ -286,7 +286,7 @@ public struct Loader: Sendable {
         }
 
         guard let held = value.asDictionary else {
-            throw ReadingError("a document is names and values, and this one is \(value.type)")
+            throw ReadingError("a document is names and values, and this one is \(value.nominal)")
         }
 
         return held
