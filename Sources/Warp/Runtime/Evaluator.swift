@@ -83,13 +83,15 @@ struct Evaluator: Sendable {
     // MARK: - Public
     // A run starting from an entry, its arguments by name.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
+        try entry.settling(
+            returned: try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
+        )
     }
 
     // Calling a closure a procedure holds. What may be called is what the
     // build proved answers. The arguments are handed by position, every
-    // position given, and settle against the closure's own declaration the
-    // way a written application's do.
+    // position given, and are values from outside, each judged at the
+    // closure's own declaration.
     func call(
         _ closure: Closure,
         handing arguments: [Value],
@@ -164,8 +166,9 @@ struct Evaluator: Sendable {
         return try settling.settling(value, at: "'\(activation.frame.names[slot])'", in: loweredTypes)
     }
 
-    // A body run as a procedure: what it answers is caught here, and what it
-    // answers is settled against what it declared.
+    // A body run as a procedure: what it answers is caught here. The build
+    // held every way out to what the body declares, so it is handed on as it
+    // came.
     //
     // Both halves are the frame, and neither works without the other, so there
     // is one of these rather than one per way of reaching a body. A body is
@@ -200,7 +203,7 @@ struct Evaluator: Sendable {
             throw ExecutionError("a leave reached the frame it started in, and nothing there answers one")
         }
 
-        return try callee.settling(returned: returned)
+        return returned
     }
 
     // A body answers what it says it answers, and a body that says nothing
@@ -459,14 +462,15 @@ struct Evaluator: Sendable {
                 values[handed.position] = try activation.value(at: handed.address)
             }
 
-            return try await answer(callee, with: try settled(callee, given: values), at: trace)
+            return try await answer(callee, with: try settled(callee, given: values, judging: call.judged), at: trace)
 
         case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
             let settled = try settled(
                 callee,
                 given: try await given(call.arguments, first: first, in: &activation, at: trace),
-                holding: call.handed
+                holding: call.handed,
+                judging: call.judged
             )
 
             guard handedBack.isEmpty else {
@@ -482,7 +486,8 @@ struct Evaluator: Sendable {
             let settled = try settled(
                 callee,
                 given: try await given(call.arguments, first: first, in: &activation, at: trace),
-                holding: call.handed
+                holding: call.handed,
+                judging: call.judged
             )
 
             guard handedBack.isEmpty else {
@@ -589,10 +594,11 @@ struct Evaluator: Sendable {
     }
 
     // The one way a closure is called: the arguments settled by the closure's
-    // own row, the captured cells in their slots, the parameters in theirs,
-    // whatever the call handed in place held as a box, and the body answered
-    // in the frame that was just made. The row is asked whether this run may
-    // read it before anything reads its rows.
+    // own row, which the build never judged them against, the captured cells
+    // in their slots, the parameters in theirs, whatever the call handed in
+    // place held as a box, and the body answered in the frame that was just
+    // made. The row is asked whether this run may read it before anything
+    // reads its rows.
     //
     // Making the frame and answering from it are one act here, so no caller
     // holds a frame it has not answered from.
@@ -935,19 +941,25 @@ struct Evaluator: Sendable {
         throw ExecutionError("'\(spelling)' is sent to '\(first.nominal)'" + because)
     }
 
-    // The arguments settled against the declaration, in parameter order: the
-    // signature's own boundary, over the order the row keeps. A position
-    // handed in place is filled with a hold rather than a value, so the
-    // boundary leaves it to the hold. The values are born beside the row they
-    // were settled by, so nothing else pairs them.
+    // The arguments as the row takes them, in parameter order: the
+    // signature's own boundary, over the order the row keeps, judging the
+    // positions the call names and handing the rest over as they are. A
+    // position handed in place is filled with a hold rather than a value, so
+    // the boundary leaves it to the hold. The values are born beside the row
+    // they were settled by, so nothing else pairs them.
     private func settled(
         _ callee: Linked,
         given: [Value?],
-        holding handed: [CallOperation.Handed] = []
+        holding handed: [CallOperation.Handed] = [],
+        judging judged: [Int]
     ) throws -> Settled {
-        Settled(values: try callee.settle(given) { position in
-            handed.contains { handed in handed.position == position }
-        })
+        Settled(
+            values: try callee.settle(
+                given,
+                skipping: { position in handed.contains { handed in handed.position == position } },
+                judging: judged.contains
+            )
+        )
     }
 
     // Every argument a call wrote, in position order. A loop rather than a

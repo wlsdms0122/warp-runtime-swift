@@ -769,7 +769,8 @@ struct ObjectWriter {
             }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
-            })
+            }),
+            .array(call.judged.map { position in .int(position) })
         ])
     }
 

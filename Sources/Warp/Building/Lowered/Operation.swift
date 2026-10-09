@@ -28,9 +28,9 @@ indirect enum Operation: Sendable {
     case closure(Int, captures: [(Int, Int)])
 
     // Calling a value. The arguments are positional and settle against the
-    // closure's own row, after the judgement the call stands in holds each
-    // the build did not prove a value of what the slot reads there against
-    // that slot. One the build found handed in place is the caller's place.
+    // closure's own row, which the build did not judge them against: it
+    // judged them against the slot the value stood in. One the build found
+    // handed in place is the caller's place.
     case apply(Operation, arguments: [Argument])
 
     case cast(Operation, as: LoweredType, optional: Bool)

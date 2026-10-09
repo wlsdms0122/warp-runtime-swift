@@ -1001,13 +1001,18 @@ indirect enum LoweredType: Sendable, Equatable {
     // of `Any`, a contract or a type parameter this is not, is never one;
     // the run says what arrived.
     func takesAsItIs(_ reading: LoweredType, in table: LoweredTypeTable) -> Bool {
-        if self == .any || reading == .never || identical(to: reading, in: table) {
+        if passesEverything || reading == .never || identical(to: reading, in: table) {
             return true
         }
 
         switch (self, reading) {
         case (_, .any), (_, .composition), (_, .parameter), (_, .projection), (_, .undeclared):
             return false
+
+        // A type parameter a call fills from a reading of a type the build
+        // knows was held to its bounds there, the way the link holds a claim.
+        case (.parameter, _):
+            return reading.nominal(in: table) != nil
 
         case (.nullable, .null):
             return true

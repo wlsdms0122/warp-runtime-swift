@@ -226,13 +226,15 @@ public struct Signature: Sendable, Equatable {
 
     // The boundary itself, over arguments standing at their parameter's
     // position. `skipping` names the positions a call fills another way, a
-    // parameter handed a variable in place, and those answer nil. The answer
-    // is built from the declaration, never copied from the caller: only
-    // declared names exist inside the boundary.
+    // parameter handed a variable in place, and those answer nil. `judging`
+    // names the positions judged at their slot; the rest are handed over as
+    // they are. The answer is built from the declaration, never copied from
+    // the caller: only declared names exist inside the boundary.
     func settle(
         _ given: [Value?],
         over slots: [Slot],
         skipping: (Int) -> Bool = { _ in false },
+        judging: (Int) -> Bool = { _ in true },
         as subject: String,
         in table: LoweredTypeTable
     ) throws -> [Value?] {
@@ -260,7 +262,7 @@ public struct Signature: Sendable, Equatable {
         for (position, slot) in slots.enumerated() {
             guard let value = given[position] else { continue }
 
-            settled[position] = try slot.checking(value, at: "input '\(slot.name)'", in: table)
+            settled[position] = judging(position) ? try slot.checking(value, at: "input '\(slot.name)'", in: table) : value
         }
 
         return settled

@@ -2452,6 +2452,21 @@ struct TypeChecker {
                 selector: call.selector,
                 arguments: zip(arguments, taking).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
             )
+
+            // What the build proves a value of the slot's type as it stands,
+            // the run need not judge again where the call hands it over. A
+            // call through a contract is judged at the row the run picks.
+            if context.contractProcedures[call.selector] == nil {
+                for (position, slot) in slots.enumerated() where !slot.type.isInout {
+                    let read = taking[position].written(sent[position], in: context.loweredTypes).asHeld
+
+                    judgements.record(
+                        asItIs: slot.type.takesAsItIs(read, in: context.loweredTypes),
+                        at: place.child(.argument(position))
+                    )
+                }
+            }
+
             let reading = answered(
                 by: signature,
                 over: context.slots(of: call.selector),

@@ -29,10 +29,10 @@ struct JudgementTable: Sendable {
     // settles to nothing.
     private(set) var writes: [Place: LoweredType] = [:]
 
-    // Whether what the statement at a place binds or writes is, by what the
-    // build read, a value of the type it lands in as it stands, so the run
-    // has nothing to judge there. A statement walked again holds what its
-    // last walk read.
+    // Whether what lands at a place, what a statement binds or writes or
+    // what a call hands to a declaration's slot, is, by what the build read,
+    // a value of the type it lands in as it stands, so the run has nothing
+    // to judge there. A place walked again holds what its last walk read.
     private(set) var asItIs: [Place: Bool] = [:]
 
     // The name a record built at a place takes: one written where a declared
@@ -69,8 +69,8 @@ struct JudgementTable: Sendable {
         writes[place] = settling
     }
 
-    // Whether the run has nothing to judge where the statement at this
-    // place binds or writes.
+    // Whether the run has nothing to judge where what stands at this place
+    // lands.
     func landsAsItIs(at place: Place) -> Bool {
         asItIs[place] == true
     }
@@ -81,8 +81,8 @@ struct JudgementTable: Sendable {
         names[place]
     }
 
-    // Whether what the statement at this place binds or writes needs no
-    // judging there. A statement walked again holds what its last walk read.
+    // Whether what lands at this place needs no judging there. A place
+    // walked again holds what its last walk read.
     mutating func record(asItIs: Bool, at place: Place) {
         self.asItIs[place] = asItIs
     }

@@ -1042,6 +1042,7 @@ struct Lowering {
             },
             to: callee,
             row: stands,
+            asItIs: { position in context.judgements.landsAsItIs(at: place.child(.argument(position))) },
             in: loweredTypes,
             at: place
         )

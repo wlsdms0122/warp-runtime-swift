@@ -277,7 +277,8 @@ enum ObjectCoverageFixture {
     static let callOperation = CallOperation(
         procedure: 0,
         arguments: [.literal(.int(12)), .literal(.int(13)), nil],
-        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))]
+        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))],
+        judged: [1]
     )
 
     static let dispatchOperation = DispatchOperation(

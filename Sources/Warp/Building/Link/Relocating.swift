@@ -278,8 +278,8 @@ final class Relocating {
         // What a call answers and hands back needs no judgement where it
         // stands once the rows that may answer are known to answer what the
         // call reads: a row its own document proved hands back as declared, or,
-        // through a contract, rows that each settle exactly that type where
-        // they answer and hand nothing back to judge.
+        // through a contract, rows that each answer exactly that type and hand
+        // nothing back to judge.
         case let .checked(.call(call), judging):
             let relocated = try relocated(call, in: context)
 
@@ -331,7 +331,8 @@ final class Relocating {
         return CallOperation(
             procedure: procedure,
             arguments: call.arguments,
-            handed: call.handed
+            handed: call.handed,
+            judged: call.judged
         )
     }
 

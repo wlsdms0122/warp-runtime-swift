@@ -90,7 +90,7 @@ struct LoweredBodyWalkTests {
                 return [.attempt(body, rescue: empty, failure: 0)]
 
             case .call:
-                return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: []))]
+                return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: [], judged: []))]
 
             case .dispatch:
                 return [
@@ -268,7 +268,7 @@ struct LoweredBodyWalkTests {
     @Test("the calls beside a dispatch are neither walked nor rewritten")
     func aDispatchsCallsAreTheLinks() {
         // Given
-        let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [])
+        let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [], judged: [])
         let sut = Warp.Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [], calls: ["t": beside])
         )

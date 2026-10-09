@@ -237,12 +237,13 @@ public final class Linked: Sendable {
     // The boundary this row keeps, over arguments standing at their slot's
     // position, read by this row's own table: the slots' rows are numbered by
     // it and by nothing else. `skipping` names the positions a call fills
-    // another way.
+    // another way, and `judging` the positions judged at their slot.
     func settle(
         _ given: [Value?],
-        skipping: (Int) -> Bool = { _ in false }
+        skipping: (Int) -> Bool = { _ in false },
+        judging: (Int) -> Bool = { _ in true }
     ) throws -> [Value?] {
-        try signature.settle(given, over: slots, skipping: skipping, as: "'\(rendered)'", in: table)
+        try signature.settle(given, over: slots, skipping: skipping, judging: judging, as: "'\(rendered)'", in: table)
     }
 
     // The same, over arguments handed by position: the way every call hands
@@ -267,7 +268,8 @@ public final class Linked: Sendable {
         return try returns.settling(returns.reachesRecord ? returns.fitted(value, in: table) : value, at: "returns", in: table)
     }
 
-    // The returned value, checked against what was declared.
+    // What an entry answers, at the door it leaves the run through, judged
+    // against what it declares.
     func settling(returned value: Value) throws -> Value {
         guard let returns else { return value }
 

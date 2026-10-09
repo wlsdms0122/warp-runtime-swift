@@ -1040,7 +1040,8 @@ struct ObjectReader {
                 try held.end()
 
                 return taken
-            }
+            },
+            judged: try Field(cursor.next(), of: "judged").list { written in try Field(written, of: "judged").count() }
         )
 
         try cursor.end()
