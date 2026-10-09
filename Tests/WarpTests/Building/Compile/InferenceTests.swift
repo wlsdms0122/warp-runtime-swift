@@ -613,7 +613,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("name[0] indexes into String, and only an array or a dictionary is indexed")
+                && "\(error)".contains("name[0] indexes into String, and an array is indexed by a position")
         }
     }
 

@@ -1068,7 +1068,8 @@ struct TypeChecker {
             case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
-                        + " and only an array or a dictionary is indexed"
+                        + " and an array is indexed by a position or a name the run settles,"
+                        + " a dictionary by a name the run settles alone"
                 )
 
             // A dictionary holds entries of one type under names that are
