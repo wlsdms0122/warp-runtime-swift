@@ -564,6 +564,21 @@ struct ValidationTests {
         }
     }
 
+    @Test("a literal names no record, at whatever depth it holds one", arguments: [
+        Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
+        .array([.record(Record(name: "Int", ["x": .int(1)]))])
+    ])
+    func aNamedLiteralIsRefused(carried: Value) throws {
+        // When / Then
+        #expect {
+            try Module(
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a literal writes a record's name")
+        }
+    }
+
     @Test("a procedure is not data, so it cannot stand as a literal")
     func aProcedureLiteralIsRefused() throws {
         // Given. The one value type a program cannot carry. A closure is made

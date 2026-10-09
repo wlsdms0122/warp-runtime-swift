@@ -184,6 +184,26 @@ public indirect enum Value: Sendable, Equatable {
         holdsClosure { _ in true }
     }
 
+    // Whether a record in here, however deep, carries a name. A record takes
+    // one from a declared record it is written into, a door it comes through
+    // or a cast, so a value that already carries one was named by none of
+    // those.
+    public var holdsName: Bool {
+        switch self {
+        case .null, .bool, .int, .double, .string, .bytes, .procedure:
+            return false
+
+        case let .array(elements):
+            return elements.contains { element in element.holdsName }
+
+        case let .dictionary(held):
+            return held.entries.contains { _, value in value.holdsName }
+
+        case let .record(record):
+            return record.name != nil || record.values.contains { value in value.holdsName }
+        }
+    }
+
     public var type: ValueType {
         switch self {
         case .null:
