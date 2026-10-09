@@ -366,6 +366,53 @@ struct ValidationTests {
         }
     }
 
+    @Test("a parameter declared twice is refused where the module is made, however it was made")
+    func aParameterDeclaredTwiceIsRefused() throws {
+        // Given. Two parameters under one name would be one name the body
+        // reads two ways
+        let twice = Procedure(
+            signature: Signature(parameters: [Parameter(name: "x", type: .int), Parameter(name: "x", type: .string)]),
+            body: [],
+            result: .literal(.int(1))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(twice)
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("parameters[1]: declares 'x' twice")
+        }
+    }
+
+    @Test("a name no path reads back is refused where it is declared, read or not")
+    func aNameNoPathReadsIsRefused() throws {
+        // Given. A path reads `a.b` as the field `b` of `a`, so a statement,
+        // a parameter or a module's constant spelled that way is never reached
+        let statement = Procedure(body: [Statement(binding: .constant("a.b"), expression: .literal(.int(1)))])
+        let parameter = Procedure(
+            signature: Signature(parameters: [Parameter(name: "a[0]", type: .int)]),
+            body: []
+        )
+
+        // When / Then
+        for procedure in [statement, parameter] {
+            #expect {
+                try Validator().validate(procedure)
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("is no name a path reads")
+            }
+        }
+
+        #expect {
+            try Module(
+                constants: ["App.k": .literal(.int(1))],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("constants.App.k: 'App.k' is no name a path reads")
+        }
+    }
+
     @Test("a reference must start with a name")
     func referenceMustHaveAHead() {
         // Given
@@ -514,7 +561,7 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'Any' is not a type a value is an instance of, and a claim is about one")
+                && "\(error)".contains("satisfies.Any: 'Any' names no type a document may declare")
         }
     }
 
@@ -537,6 +584,63 @@ struct ValidationTests {
         )
 
         #expect(sut.claims == ["Int": ["App.Described"]])
+    }
+
+    @Test("a name in the types namespace is held to one grammar wherever a module built in Swift spells it", arguments: [
+        ("imports", [:], TypeExpression.named("consuming Int")),
+        ("types.Int", ["Int": .string], .int),
+        ("imports", [:], .parameter(name: "T", bounds: ["Array<Int>"]))
+    ] as [(String, [Name: TypeExpression], TypeExpression)])
+    func aTypeNamespaceNameHoldsOneGrammar(place: String, types: [Name: TypeExpression], parameter: TypeExpression) throws {
+        // When / Then
+        #expect {
+            try Module(
+                types: types,
+                procedures: [
+                    "App.keep": Procedure(
+                        signature: Signature(parameters: [Parameter(name: "value", type: parameter)]),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("\(place): ")
+                && "\(error)".contains("names no type a document may declare")
+        }
+    }
+
+    @Test("a literal names no record, at whatever depth it holds one", arguments: [
+        Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
+        .array([.record(Record(name: "Int", ["x": .int(1)]))])
+    ])
+    func aNamedLiteralIsRefused(carried: Value) throws {
+        // When / Then
+        #expect {
+            try Module(
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a literal writes a record's name")
+        }
+    }
+
+    @Test("a closure writes no bounds, since the procedure around it owns them")
+    func aClosureWritesNoBounds() throws {
+        // Given
+        let closure = Procedure(
+            signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))]),
+            body: [],
+            result: .literal(.int(1))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(Procedure(body: [], result: .closure(closure)))
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a closure writes no bounds")
+        }
     }
 
     @Test("a procedure is not data, so it cannot stand as a literal")

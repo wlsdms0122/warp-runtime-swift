@@ -830,7 +830,7 @@ struct WriterTests {
             ],
             returns: .bool
         )
-        let module = try Module(
+        let draft = Draft(
             types: ["Predicate": .procedure(bounded.type, .unstated)],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
@@ -839,7 +839,7 @@ struct WriterTests {
 
         // When / Then
         #expect(throws: WritingError.self) {
-            try sut.value(of: module)
+            try sut.value(of: draft)
         }
 
         // A parameter written on its own refuses too. Every surface below the
@@ -850,7 +850,7 @@ struct WriterTests {
         }
 
         // A bounded variable declared as a type directly refuses the same way
-        let variable = try Module(
+        let variable = Draft(
             types: ["Loose": .parameter(name: "T", bounds: ["Scalar"])],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))

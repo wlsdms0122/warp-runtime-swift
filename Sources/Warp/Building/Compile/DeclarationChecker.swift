@@ -58,12 +58,7 @@ struct DeclarationChecker {
         // carrying where each name was written, and asking a module again
         // would be spelling that a second way.
         for (_, declaration) in declared.sorted { $0.key < $1.key } {
-            try mentioned(
-                in: declaration.held,
-                at: declaration.place,
-                parameterized: false,
-                resolve: table
-            )
+            try mentioned(in: declaration.held, at: declaration.place, resolve: table)
         }
 
         return table
@@ -122,7 +117,7 @@ struct DeclarationChecker {
                 let place = Place.variable(name.spelling, in: .of(module))
 
                 if let declared = variable.declared {
-                    try mentioned(in: declared, at: place, parameterized: false, resolve: table)
+                    try mentioned(in: declared, at: place, resolve: table)
                 }
 
                 try judge(subexpressions: variable.start, at: place, in: table)
@@ -146,11 +141,9 @@ struct DeclarationChecker {
             try judge(cast: named, at: place, in: table)
         }
 
-        // A name saying what it holds is a mention like the other two, and
-        // unparameterized: what fills a type parameter is a call filling the
-        // slot that names it, and a name inside a body is no such slot.
+        // A name saying what it holds is a mention like the other two.
         for (place, declared) in held.declaring(at: place) {
-            try mentioned(in: declared, at: place, parameterized: false, resolve: table)
+            try mentioned(in: declared, at: place, resolve: table)
         }
     }
 
@@ -163,32 +156,10 @@ struct DeclarationChecker {
         in table: TypeTable
     ) throws {
         for (position, parameter) in signature.parameters.enumerated() {
-            let here = place.part(.parameters).index(position)
-
-            try mentioned(
-                in: parameter.declared.slotUnwrapped,
-                at: here,
-                parameterized: true,
-                resolve: table
-            )
+            try mentioned(in: parameter.declared.slotUnwrapped, at: place.part(.parameters).index(position), resolve: table)
         }
 
-        // Two parameters under one name would be one name the body reads
-        // two ways.
-        for (position, parameter) in signature.parameters.enumerated()
-        where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
-            throw BuildError(
-                "declares '\(parameter.name)' twice",
-                at: place.part(.parameters).index(position)
-            )
-        }
-
-        try mentioned(
-            in: signature.returns ?? .any,
-            at: place.part(.returns),
-            parameterized: true,
-            resolve: table
-        )
+        try mentioned(in: signature.returns ?? .any, at: place.part(.returns), resolve: table)
 
         try judgeBounds(signature.parameterOccurrences, at: place, in: table)
     }
@@ -221,7 +192,7 @@ struct DeclarationChecker {
         at place: Place,
         in table: TypeTable
     ) throws {
-        try mentioned(in: named, at: place, parameterized: true, resolve: table)
+        try mentioned(in: named, at: place, resolve: table)
 
         if let refusal = named.resolved(in: table).unreadableClaim {
             throw BuildError(refusal, at: place)
@@ -229,22 +200,15 @@ struct DeclarationChecker {
     }
 
     // A named type may name itself, so this checks that a name resolves rather
-    // than walking into what it resolves to.
-    //
-    // `parameterized` says whether a type parameter written here has a call to
-    // fill it. A signature's slots do (the walk into a procedure type turns it
-    // on) and a declared type does not: a parameter there would stand for
-    // nothing any call ever decides, so it is refused where it is declared,
-    // and everything a `named` type can hide is judged here rather than at the
-    // sites that name it.
+    // than walking into what it resolves to. Where each word may stand was
+    // held at the load, by the `Validator`.
     private func mentioned(
         in type: TypeExpression,
         at place: Place,
-        parameterized: Bool,
         resolve table: TypeTable
     ) throws {
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .string:
+        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter:
             return
 
         // The build's own note to itself, written where a declaration goes. A
@@ -261,47 +225,14 @@ struct DeclarationChecker {
                 at: place
             )
 
-        // A contract's procedures read `Self` as the type answering the
-        // contract before they are judged, so one standing here stands
-        // where nothing answers one.
-        case .selfType:
-            throw BuildError(
-                "writes `Self`, which stands for the type that answers a contract"
-                    + " and is written in that contract's procedures alone",
-                at: place
-            )
-
-        case .parameter:
-            guard parameterized else {
-                throw BuildError(
-                    "writes `\(type.rendered)`, and nothing here is"
-                        + " filled by a call. A type parameter lives in a signature",
-                    at: place
-                )
-            }
-
-        // The flag rides through rather than turning on: a procedure type in a
-        // signature's slot is part of that signature, and one in a declared
-        // type is not a filling site. A parameter written there is never bound
-        // at any call, so the bound it claims would be a claim nothing judges.
         case let .procedure(type, _, _):
             guard let type else { return }
 
             for (position, parameter) in type.parameters.enumerated() {
-                try mentioned(
-                    in: parameter.slotUnwrapped,
-                    at: place.index(position),
-                    parameterized: parameterized,
-                    resolve: table
-                )
+                try mentioned(in: parameter.slotUnwrapped, at: place.index(position), resolve: table)
             }
 
-            try mentioned(
-                in: type.returns ?? .any,
-                at: place,
-                parameterized: parameterized,
-                resolve: table
-            )
+            try mentioned(in: type.returns ?? .any, at: place, resolve: table)
 
             try judgeBounds(type.parameterOccurrences, at: place, in: table)
 
@@ -337,14 +268,12 @@ struct DeclarationChecker {
                 )
             }
 
-        case let .array(element), let .dictionary(element):
-            try mentioned(in: element, at: place, parameterized: parameterized, resolve: table)
+        case let .array(inner), let .dictionary(inner), let .inout(inner), let .variable(inner):
+            try mentioned(in: inner, at: place, resolve: table)
 
-        // The reader refuses a `?` that says nothing new, but the reader sees
-        // spellings, and a name may hide one of the refused types behind it.
-        // The rule is the model's, so it is held here too, where names resolve:
-        // whatever surface wrote the type, `?` wraps only what does not already
-        // answer the null question.
+        // The load held a `?` to saying something new on what it wraps as
+        // written. A name may stand for what it says nothing on, and that is
+        // known here, where names resolve.
         case let .nullable(inner):
             var resolved = inner
 
@@ -352,13 +281,7 @@ struct DeclarationChecker {
                 resolved = underneath
             }
 
-            switch resolved {
-            // `Self?` is the claimed type or null at a claim, and through a
-            // call a nullable reading of the parameter the call fills.
-            case let .parameter(name, _) where name == TypeSpelling.selfType:
-                break
-
-            case .any, .null, .never, .parameter, .nullable:
+            if case .named = inner, !resolved.takesQuestionMark {
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)`. A `?` says"
@@ -366,45 +289,14 @@ struct DeclarationChecker {
                         + " `\(resolved.rendered)?` is refused by",
                     at: place
                 )
-
-            default:
-                break
             }
 
-            try mentioned(in: inner, at: place, parameterized: parameterized, resolve: table)
+            try mentioned(in: inner, at: place, resolve: table)
 
-        // A field written `var` is a fact about a declared type: a path may
-        // write through it. A record written inline in a signature declares no
-        // type, so it has no field to make writable.
         case let .record(fields):
-            for (name, field) in fields.sorted { $0.key < $1.key } {
-                var held = field
-
-                if case let .variable(inner) = field, !parameterized {
-                    held = inner
-                }
-
-                try mentioned(
-                    in: held,
-                    at: place.part(.fields).key(name.spelling),
-                    parameterized: parameterized,
-                    resolve: table
-                )
+            for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
+                try mentioned(in: field, at: place.part(.fields).key(name.spelling), resolve: table)
             }
-
-        case .inout:
-            throw BuildError(
-                "writes `\(type.rendered)`, and only a parameter is handed a"
-                    + " variable in place. `inout` is written on a parameter's type",
-                at: place
-            )
-
-        case .variable:
-            throw BuildError(
-                "writes `\(type.rendered)`, and only a field of a declared type"
-                    + " is written through. `var` is written on a field in `types`",
-                at: place
-            )
         }
     }
 

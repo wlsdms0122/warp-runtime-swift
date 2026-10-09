@@ -116,12 +116,6 @@ struct Sending {
 
                 return try handing(of: send, reaching: signature, called: label, at: place)
             }
-        } catch let .misplaced(positions) as SendNumberingError {
-            throw BuildError(
-                "'\(label)' sends procedures standing at \(positions), which is"
-                    + " not one procedure to a place from the first",
-                at: place
-            )
         } catch let .unnumbered(selector) as SendNumberingError {
             throw BuildError("'\(label)' sends '\(selector)', and its document never asked for it", at: place)
         }

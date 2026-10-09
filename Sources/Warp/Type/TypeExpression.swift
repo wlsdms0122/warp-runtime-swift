@@ -281,16 +281,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // The refusal a cast earns for naming a type there is nothing to read. Nil
-    // where the type names one. Said here, once, because a cast's claim is
-    // judged in two places: the declaration scan that sees every cast in every
-    // module, and the walk that knows what the value reads as.
-    //
-    // Each of the three says its own, because a refusal carries its reason:
-    // telling an author that `T` names no type is false. A call names it,
-    // elsewhere. A type parameter anywhere in the claim is the third, since
-    // nothing in a body fills it and the run would settle what arrived against
-    // no type there.
+    // The refusal a cast earns for naming a type there is nothing to read, once
+    // its names are resolved. Nil where the type names one. Each of the two
+    // says its own, because a refusal carries its reason.
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
@@ -302,12 +295,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return "reads as \(rendered), which no value is."
                 + " A cast names the type a value turns out to have, and"
                 + " nothing arrives to have this one"
-        }
-
-        if isGeneric {
-            return "reads as \(rendered), whose type the call"
-                + " decides. A cast names a type here, and this one is named"
-                + " somewhere else"
         }
 
         return nil
@@ -427,6 +414,20 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
+    // Whether a `?` on this says something new. It says nothing on what
+    // already takes null, on `Never`, which no value is, and on a type
+    // parameter, which stands for the whole type the call fills in.
+    public var takesQuestionMark: Bool {
+        switch self {
+        case .any, .null, .never, .parameter, .nullable:
+            return false
+
+        case .bool, .int, .double, .string, .array, .dictionary, .record, .procedure, .variable,
+            .inout, .named, .projection, .composition, .selfType:
+            return true
+        }
+    }
+
     public var isInout: Bool {
         if case .inout = self { return true }
         return false
@@ -487,8 +488,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // included, because they are the outer signature's own slots.
     func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
         switch self {
-        case let .parameter(name, own):
-            return .parameter(name: name, bounds: own.isEmpty ? bounds[name] ?? [] : own)
+        case let .parameter(name, _):
+            return .parameter(name: name, bounds: bounds[name] ?? [])
 
         case .projection, .composition, .selfType:
             return self

@@ -88,7 +88,8 @@ public struct ExpressionReader: Decodable {
 
             // A form is keys the notation reserved, and a name under which a
             // value stands is not one of them. So a value the document named
-            // is data, and reading it as a form would spend the name.
+            // is read as the literal it spells, name included, for the
+            // `Validator` to refuse; reading it as a form would drop the name.
             case let .record(record) where record.name != nil:
                 return .literal(value)
 

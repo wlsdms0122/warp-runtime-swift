@@ -248,7 +248,7 @@ struct UnheldClaimTests {
         )
         let program = try Module(
             constants: [
-                "App.counted": .call(
+                "counted": .call(
                     Call(
                         selector: "App.count",
                         arguments: [
@@ -266,7 +266,7 @@ struct UnheldClaimTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("App.counted")])
+                    result: .reference([.key("counted")])
                 )
             ]
         )

@@ -493,7 +493,8 @@ public struct Writer: Sendable {
         case .null, .bool, .int, .double, .string, .bytes:
             return value
 
-        // A named record is data wherever it stands, and is read as such.
+        // A draft is written as it is, held to no rule, so a named record is
+        // written with its name and reads back as the literal it was.
         case let .record(record) where record.name != nil:
             return value
 

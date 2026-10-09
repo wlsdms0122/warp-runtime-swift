@@ -46,13 +46,20 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         Name.isIdentifier(spelling.utf8[...])
     }
 
-    // Whether this is spelled the way a declaration, a notation's prefix and a
-    // record's name all spell one: identifiers joined by dots, and not a
-    // scalar's keyword.
+    // Whether this is a name of the type namespace, the way a declared type,
+    // a contract, a notation's prefix and a record's name all spell one:
+    // identifiers joined by dots, not a scalar's keyword, and none of the
+    // names the language gives its own types.
     public var isDeclarable: Bool {
         let bytes = spelling.utf8
 
-        guard Name.scalarKeywords[spelling] == nil else { return false }
+        guard
+            Name.scalarKeywords[spelling] == nil,
+            TypeExpression.keywords[self] == nil,
+            TypeExpression.nominalTypes[self] == nil
+        else {
+            return false
+        }
 
         var end: String.UTF8View.Index? = bytes.endIndex
 
@@ -67,9 +74,27 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         return true
     }
 
+    // Whether a path reads this back as one key, which is what a name in the
+    // value namespace is: a path is written with `.`, `[`, `]` and `?`, and
+    // white space at a key's ends is not part of it, so a name holding one of
+    // those is never the key a path reaches. A dot is a step here and a
+    // character of a type's name, which is why the two namespaces have two
+    // grammars.
+    public var isPathKey: Bool {
+        guard let first = spelling.unicodeScalars.first, let last = spelling.unicodeScalars.last else {
+            return false
+        }
+
+        return !spelling.contains { character in Name.pathPunctuation.contains(character) }
+            && !CharacterSet.whitespaces.contains(first)
+            && !CharacterSet.whitespaces.contains(last)
+    }
+
     public var description: String { spelling }
 
     private static let dot = UInt8(ascii: ".")
+
+    private static let pathPunctuation: Set<Character> = [".", "[", "]", "?"]
 
     // MARK: - Initializer
     public init(_ spelling: String) throws {

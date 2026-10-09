@@ -68,16 +68,20 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
     }
 
-    @Test("a ? that says nothing new is refused")
-    func uselessNullableIsRefused() throws {
+    @Test("a ? that says nothing new is refused where the document is read", arguments: [
+        "Int??", "Null?", "Any?", "Never?", "some T?"
+    ])
+    func uselessNullableIsRefused(written: String) throws {
         // When / Then. Twice says it once too often; what already admits null
         // gains nothing; never admits nothing; a parameter stands for the whole
         // filled type.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("Int??") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("Null?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("Any?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("Never?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("some T?") }
+        #expect(throws: ValidationError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
+            ])
+        }
     }
 
     @Test("names joined with & read as a composition, in name order, and write back the same way")

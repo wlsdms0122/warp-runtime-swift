@@ -16,21 +16,11 @@ public struct SignatureReader: Decodable {
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
-        let parameters = try decoder.singleValueContainer()
-            .decode([ParameterReader].self)
-            .map(\.parameter)
-
-        // Two parameters under one name would be one name the body reads two
-        // ways, so the reading refuses the second before a body can.
-        for (position, parameter) in parameters.enumerated()
-        where parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
-            throw ReadingError(
-                "parameter '\(parameter.name)' is declared twice",
-                at: decoder.steps + [.index(position)]
-            )
-        }
-
-        self.signature = Signature(parameters: parameters)
+        self.signature = Signature(
+            parameters: try decoder.singleValueContainer()
+                .decode([ParameterReader].self)
+                .map(\.parameter)
+        )
     }
 
     // MARK: - Public

@@ -417,7 +417,7 @@ struct LoweringTests {
                             selector: "Standard.Logic.equal",
                             arguments: [
                                 .call(Call(selector: "App.tag", arguments: [.reference([.key("held")])])),
-                                .literal(.record(Record(name: "Tag", ["a": .int(1)])))
+                                .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
                             ]
                         ))
                     ),

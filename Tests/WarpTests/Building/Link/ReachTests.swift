@@ -124,7 +124,7 @@ struct ReachTests {
         // module constant; each calls a procedure nothing else names
         let sut = try Module(
             constants: [
-                "App.folded": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "folded": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
@@ -135,7 +135,7 @@ struct ReachTests {
                             expression: .closure(Procedure(body: [], result: .call(Call(selector: "App.leaf"))))
                         ),
                         Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [])),
-                        Statement(binding: .constant("second"), expression: .apply(reference("App.folded"), arguments: []))
+                        Statement(binding: .constant("second"), expression: .apply(reference("folded"), arguments: []))
                     ],
                     result: reference("second")
                 ),
@@ -159,13 +159,13 @@ struct ReachTests {
         // writes it; the entry applies what it reads out of the variable
         let sut = try Module(
             variables: [
-                "App.held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .apply(reference("App.held"), arguments: [])
+                    result: .apply(reference("held"), arguments: [])
                 ),
                 "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
                 "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
@@ -185,14 +185,14 @@ struct ReachTests {
         // Given. `App.aside` alone reads the variable, and nothing reaches it
         let sut = try Module(
             variables: [
-                "App.held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
                 "App.aside": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .apply(reference("App.held"), arguments: [])
+                    result: .apply(reference("held"), arguments: [])
                 ),
                 "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
             ]
