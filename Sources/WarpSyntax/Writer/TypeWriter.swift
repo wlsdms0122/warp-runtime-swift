@@ -159,9 +159,6 @@ struct TypeWriter {
 
             let spelling = TypeReader.procedureSpelling(constness, isolation, as: .key)
 
-            // No bound check of its own: a procedure type written as a type has
-            // no `bounds` surface, and the `.parameter` case refuses any bound
-            // the walk below meets. One guard, wherever the walk started.
             var written: [Name: Value] = [:]
 
             if !type.parameters.isEmpty {

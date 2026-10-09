@@ -16,7 +16,7 @@ import Warp
 // it. Building the language's types directly is what a front end with a syntax
 // of its own does, and a host assembling procedures in native code does the
 // same, but neither can hand what it built to anything running elsewhere unless
-// the result can be written down. Reading was half a door.
+// the result can be written down.
 //
 // Only the types that stand one to one with the language are written. Nothing
 // here reaches for a spelling (no `is`, no template, no `abort`) because a

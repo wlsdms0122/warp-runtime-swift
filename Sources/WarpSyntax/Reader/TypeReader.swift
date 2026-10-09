@@ -28,10 +28,6 @@ public struct TypeReader: Decodable {
     // position order, and what it answers. No names, since a value carries
     // none.
     struct ProcedureTypeReader: Decodable {
-        // No `bounds` here on purpose: a nested procedure type's parameters are
-        // the declaring procedure's own slots, so the declaring signature owns
-        // every bound. Two `bounds` records binding one name would be two claims
-        // about one thing, written a document apart.
         enum CodingKeys: String, CodingKey, CaseIterable {
             case parameters
             case returns
@@ -192,14 +188,12 @@ public struct TypeReader: Decodable {
             return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
         }
 
-        // Constness is a keyword in front rather than an argument, because it says
-        // what a slot requires of the whole procedure rather than of a part of
-        // it. The same place a reader expects an adjective. A type parameter
-        // rather than a name: `some T` is worked out from the call, where `T`
-        // alone would be looked up in the table of declared types. A slot only
-        // names the parameter. Its bound is declared once, in the
-        // signature's `bounds`, because the signature owns what its names mean
-        // and a bound repeated per slot is one claim written several times.
+        // A type parameter rather than a name: `some T` is worked out from the
+        // call, where `T` alone would be looked up in the table of declared
+        // types. A slot only names the parameter. Its bound is declared once,
+        // in the signature's `bounds`, because the signature owns what its
+        // names mean and a bound repeated per slot is one claim written
+        // several times.
         if text == "some" || text.hasPrefix("some ") {
             let bare = text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)
 
@@ -315,7 +309,9 @@ public struct TypeReader: Decodable {
     }
 
     // The modifiers at the front of a type's text, in either order, and the
-    // text left after them. Nil where a modifier is written twice.
+    // text left after them. Nil where a modifier is written twice. A modifier
+    // is a keyword in front rather than an argument, because it says what a
+    // slot requires of the whole procedure rather than of a part of it.
     static func modifiers(of text: String) -> (Constness, Isolation, String)? {
         var rest = text
         var constness = Constness.unstated

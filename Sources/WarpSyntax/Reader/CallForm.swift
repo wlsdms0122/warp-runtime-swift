@@ -13,17 +13,9 @@ import Warp
 // and an expression is a value the run calls. A string is never a value that
 // could be called, so the two readings never meet.
 //
-// A call names a symbol, never a document. Naming the document would write a
-// linkage fact into the call site; which module declared it is the builder's
-// business.
-//
-// It is a tag rather than the bare name a procedure is written under,
-// because a tag is read at the load and which procedures exist is not known
-// until the build.
-//
-// A body a procedure is to run travels as a closure argument like any other value. A
-// call carries no body of its own kind. One channel, one rule: what crosses
-// into a procedure is isolated.
+// A call names a declaration, never a document: which module declared it is
+// the build's to resolve. A body a procedure is to run travels as a closure
+// argument, like any other value.
 public struct CallForm: Decodable, Sendable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure

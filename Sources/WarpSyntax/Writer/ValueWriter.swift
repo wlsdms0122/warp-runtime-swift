@@ -46,11 +46,11 @@ public struct ValueWriter: Encodable {
         case let .string(string):
             try container.encode(string)
 
-        // A Codable carrier has no compact spelling for bytes, and `bytes =
-        // array<byte>` says what to write instead: the array they are. It reads
-        // back as that array rather than as bytes, which is the same thing this
-        // carrier does to `1.0`. A spelling is a fact about the value, and a
-        // carrier that cannot hold one loses it. Refusing here instead would
+        // A Codable carrier has no compact spelling for bytes, so it writes
+        // the `Array<Int>` they are. It reads back as that array rather than
+        // as bytes, which is the same thing this carrier does to `1.0`. A
+        // spelling is a fact about the value, and a carrier that cannot hold
+        // one loses it. Refusing here instead would
         // close the only way out for a value that never spelled itself bytes:
         // an `Array<Int>` slot hands on what it was given, and what it was
         // given may have been written `x"6869"`.

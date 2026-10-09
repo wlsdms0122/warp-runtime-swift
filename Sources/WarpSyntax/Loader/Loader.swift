@@ -52,7 +52,7 @@ public struct Loader: Sendable {
     //
     // Which document this is, handed in rather than worked out: deriving it
     // means writing the document back to its canonical bytes, and that is the
-    // serialization's job. Reading a document has never needed the wire.
+    // serialization's job.
     //
     //     let module = try Loader().load(document, identity: Identity.of(document))
     //
@@ -327,10 +327,9 @@ public struct Loader: Sendable {
         } catch let refusal as ReadingError {
             throw refusal.read(in: document)
         }
-        // Nothing arrives here refusing in `Codable`'s terms. A reader written
-        // outside this package still refuses that way, and `ValueDecoder` turns
-        // it into a reading at the boundary it crossed, which is the only place
-        // that still knows how deep it was. Catching it again here could only
-        // add a document to an address already thrown away.
+        // A reader written outside this package may refuse in `Codable`'s
+        // terms, and `ValueDecoder` turns that into a reading at the boundary
+        // it crossed, which is the only place that still knows how deep it
+        // was. So only a reading arrives here.
     }
 }
