@@ -11,7 +11,7 @@ import Foundation
 // where a hold stands instead or where a dispatch hands what it read. A parameter
 // handed in place takes the caller's hold: the slot holding it and the path
 // below it. The build held every argument to the slot it lands in, so the run
-// judges one only at the row a call through a contract picks.
+// judges none.
 struct CallOperation: Sendable {
     struct Handed: Sendable {
         // MARK: - Property

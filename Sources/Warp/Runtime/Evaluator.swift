@@ -907,9 +907,8 @@ struct Evaluator: Sendable {
     // first refuses or fails before one after it is read. A loop rather than
     // a map, since reading one may run what produced it. A dispatch read the
     // first to pick the row, so what it read stands there rather than a
-    // second reading of the same operand, and each argument is judged at the
-    // slot of the row it picked as soon as it is read. A position handed in
-    // place holds no value here, since its box is read through the hold.
+    // second reading of the same operand. A position handed in place holds
+    // no value here, since its box is read through the hold.
     private func given(
         _ call: CallOperation,
         to callee: Linked,
@@ -934,7 +933,7 @@ struct Evaluator: Sendable {
                 continue
             }
 
-            given.append(first != nil ? try callee.judged(read, at: position) : read)
+            given.append(read)
         }
 
         return given

@@ -243,13 +243,6 @@ public final class Linked: Sendable {
         }
     }
 
-    // An argument a call wrote, judged at the slot standing at its position,
-    // read by this row's own table: the slots' rows are numbered by it and by
-    // nothing else.
-    func judged(_ value: Value, at position: Int) throws -> Value {
-        try slots[position].checking(value, at: "input '\(slots[position].name)'", in: table)
-    }
-
     // Arguments handed by position from outside the build: the door a host
     // hands a closure values through, and a procedure the host answers its
     // sends. One for each slot, a slot taking a variable in place taking none
