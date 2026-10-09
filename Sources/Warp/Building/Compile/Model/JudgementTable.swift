@@ -100,14 +100,17 @@ struct JudgementTable: Sendable {
         loosened = true
     }
 
+    // The other's entries beside this table's own, the other's standing
+    // where both hold a place.
     mutating func absorb(_ other: JudgementTable) {
-        for (place, judgement) in other.judgements {
-            record(judgement, at: place)
-        }
+        Self.absorb(other.judgements, into: &judgements) { _, theirs in
+            assertionFailure("one place stands for one expression")
 
-        writes.merge(other.writes) { _, theirs in theirs }
-        asItIs.merge(other.asItIs) { _, theirs in theirs }
-        names.merge(other.names) { _, theirs in theirs }
+            return theirs
+        }
+        Self.absorb(other.writes, into: &writes) { _, theirs in theirs }
+        Self.absorb(other.asItIs, into: &asItIs) { _, theirs in theirs }
+        Self.absorb(other.names, into: &names) { _, theirs in theirs }
 
         loosened = loosened || other.loosened
     }
@@ -125,4 +128,32 @@ struct JudgementTable: Sendable {
     }
 
     // MARK: - Private
+    // A table carried up through every construct holding it is inserted
+    // into the larger of the two, so an entry is hashed again only where it
+    // joins a larger table and not at every level it passes. `resolve` is
+    // asked with this table's entry first and the other's second.
+    private static func absorb<Value>(
+        _ other: [Place: Value],
+        into own: inout [Place: Value],
+        resolve: (Value, Value) -> Value
+    ) {
+        guard !other.isEmpty else { return }
+
+        guard !own.isEmpty else {
+            own = other
+
+            return
+        }
+
+        guard own.count < other.count else {
+            own.merge(other, uniquingKeysWith: resolve)
+
+            return
+        }
+
+        let smaller = own
+
+        own = other
+        own.merge(smaller) { theirs, mine in resolve(mine, theirs) }
+    }
 }
