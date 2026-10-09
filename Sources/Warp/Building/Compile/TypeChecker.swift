@@ -3459,9 +3459,6 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
         let subject = "sending '\(call.selector)'"
 
-        // Filling the type parameters reads the arguments by position too.
-        try refuseCount(handing: call.arguments.count, taking: declared.parameters.count, as: subject, at: site.place)
-
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgement (a parameter read two ways has
@@ -3505,10 +3502,9 @@ struct TypeChecker {
 
     // A call hands exactly as many arguments as its callee takes, so another
     // count is refused before any position is read. Every judgement of a
-    // call by position stands behind it: the gate a gathered call passes
-    // asks it at its entrance, and a walk asks it where the call stands, ahead
-    // of what it reads in place there, so the count is what an author is told
-    // first.
+    // call by position stands behind it: the walk asks it where the call
+    // stands, ahead of what it reads in place there and before the call is
+    // gathered for the gate, so the count is what an author is told first.
     private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
         guard handed != count else { return }
 
