@@ -173,11 +173,11 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
         if parameter.type != .any {
-            written[ParameterReader.CodingKeys.type.name] = try value(of: parameter.type)
+            written[ParameterFieldsReader.CodingKeys.type.name] = try value(of: parameter.type)
         }
 
         if let description = parameter.description {
-            written[ParameterReader.CodingKeys.description.name] = .string(description)
+            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
         }
 
         // A record holding nothing but the name is one pair, which a notation

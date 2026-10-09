@@ -14,8 +14,6 @@ import Warp
 struct ParameterReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case name
-        case type
-        case description
     }
 
     // MARK: - Property
@@ -64,6 +62,7 @@ struct ParameterReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: ParameterFieldsReader.CodingKeys.allCases.map(\.stringValue),
             context: "parameter"
         )
 

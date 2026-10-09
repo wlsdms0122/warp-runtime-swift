@@ -12,7 +12,7 @@ import Warp
 // apart from the name because the pair form a notation offers writes the name
 // as the key and these under it.
 struct ParameterFieldsReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case type
         case description
     }
