@@ -37,7 +37,8 @@ indirect enum Operation: Sendable {
 
     // A call's answer judged against what the call reads it as, where the
     // callee declares a wider one: a type parameter the call filled, the
-    // `returns` a value's slot wrote, a contract's answer. Refused at the run
+    // `returns` a value's slot wrote where the closure reached does not prove
+    // it by its own, a contract's answer. Refused at the run
     // the way a value arriving at a parameter is. An answer of the type the
     // call reads is handed on as it came, which is what lets a tie answer the
     // side that arrived. Nothing after it stands on this type's shape: a field

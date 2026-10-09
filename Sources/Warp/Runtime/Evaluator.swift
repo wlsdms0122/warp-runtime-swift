@@ -517,10 +517,16 @@ struct Evaluator: Sendable {
     // closure's slot takes one, made before any argument is read the way a
     // call to a declaration makes its holds, and is read as a value where the
     // slot takes a value.
+    //
+    // What the call is judged on is judged where the closure it reaches
+    // cannot prove it: its answer where the closure's own `returns` is not
+    // one the call reads as it stands, and a variable handed back where the
+    // closure's slot names a type parameter, since a closure that wrote a
+    // type there settles every write to it.
     private func apply(
         _ callee: Operation,
         arguments: [Argument],
-        judging handedBack: [HandedBack] = [],
+        judging: CallJudgement? = nil,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -560,19 +566,26 @@ struct Evaluator: Sendable {
             }
         }
 
-        guard !handedBack.isEmpty else {
-            return try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        let handedBack = judging?.handedBack ?? []
+        let answered: Value
+
+        if handedBack.isEmpty {
+            answered = try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        } else {
+            // A closure taking by value what the call hands in place writes
+            // nothing back.
+            let judged = holds.filter { position, _ in linked.slots[position].type.handsBackParameter }
+
+            answered = try await self.judging(handedBack, through: judged) {
+                try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+            }
         }
 
-        // A closure taking by value what the call hands in place writes
-        // nothing back, and one that wrote a type at a slot settles every
-        // write to it, so only a slot it holds naming a type parameter is
-        // judged.
-        let judged = holds.filter { position, _ in linked.slots[position].type.handsBackParameter }
-
-        return try await judging(handedBack, through: judged) {
-            try await answer(closure, as: linked, given: given, holding: holds, at: trace)
+        guard let against = judging?.against, !against.takesAsItIs(linked.returns ?? .any, in: loweredTypes) else {
+            return answered
         }
+
+        return try against.settling(answered, at: "answer", in: loweredTypes)
     }
 
     // The one way a closure is called: the arguments settled by the closure's
@@ -826,13 +839,7 @@ struct Evaluator: Sendable {
             answered = try await self.call(call, reaching: row, first: first, judging: handedBack, in: &activation, at: trace)
 
         case let .apply(callee, arguments):
-            answered = try await apply(
-                callee,
-                arguments: arguments,
-                judging: handedBack,
-                in: &activation,
-                at: trace
-            )
+            return try await apply(callee, arguments: arguments, judging: judging, in: &activation, at: trace)
         }
 
         guard let against = judging.against else { return answered }
