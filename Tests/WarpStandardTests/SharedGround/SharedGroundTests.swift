@@ -1,5 +1,5 @@
 //
-//  FoundationTests.swift
+//  SharedGroundTests.swift
 //  WarpStandardTests
 //
 //  Created by JSilver on 10/7/26.
@@ -12,7 +12,7 @@ import WarpStandard
 import WarpTestSupport
 
 @Suite("What the shared ground answers")
-struct FoundationTests {
+struct SharedGroundTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test

@@ -10,9 +10,9 @@ import Warp
 
 public extension Module {
     // A list rather than one module: these are separate bundles, and a host
-    // takes the ones its programs have use for. Together with `foundation`,
+    // takes the ones its programs have use for. Together with `sharedGround`,
     // which holds the contracts the other bundles' signatures mention and
     // what answers them for the types the language names. Each bundle is a
     // list of its own, under `bundled`.
-    static let standard: [Module] = foundation + logic + math + text + collection + control + concurrent
+    static let standard: [Module] = sharedGround + logic + math + text + collection + control + concurrent
 }

@@ -85,11 +85,11 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.math + Module.text + Module.foundation)
+            try await Builder().build([sut] + Module.math + Module.text + Module.sharedGround)
         }
 
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.sharedGround)
         }
     }
 
@@ -127,7 +127,7 @@ struct StandardTests {
     @Test("a bundle mentioning the shared contracts needs Standard in the link")
     func aBundleNeedsStandardInTheLink() async throws {
         // Given. Collection's procedures mention `Collection` and
-        // `Comparable`, which only the foundation module declares
+        // `Comparable`, which only the shared ground declares
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -142,7 +142,7 @@ struct StandardTests {
             ]
         )
 
-        // When / Then, without the foundation the contract name resolves to
+        // When / Then, without the shared ground the contract name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
             try await Builder().build([sut] + Module.collection)
@@ -151,7 +151,7 @@ struct StandardTests {
         }
 
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.sharedGround)
         }
     }
 

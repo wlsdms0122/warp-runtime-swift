@@ -1,5 +1,5 @@
 //
-//  Module+Foundation.swift
+//  Module+SharedGround.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/23/26.
@@ -14,7 +14,7 @@ public extension Module {
     // what a number, an ordering and a count are for `Int`, `Double`,
     // `String`, `Array` and `Dictionary`. A document calling a contract's
     // procedure stands behind this one, so what answers stands before it.
-    static let foundation: [Module] = [
+    static let sharedGround: [Module] = [
         Module(
             unchecked: Draft(
                 description: "The shared ground: what counts as a number, what orders, and what has a count.",
