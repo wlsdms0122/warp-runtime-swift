@@ -3560,10 +3560,10 @@ struct TypeChecker {
     }
 
     // Each argument held to what the callee takes at its position: the one
-    // judgement a call to a declaration and a call of a value share. The
-    // count; every composition a position mentions, held to its bounds, with
-    // what leans on a claim this table cannot settle written down for the
-    // link; and what each position takes. What an argument holds is read
+    // judgement a call to a declaration and a call of a value share, once
+    // each has refused another count. What each position takes, then every
+    // composition it mentions held to its bounds, with what leans on a claim
+    // this table cannot settle written down for the link. What an argument holds is read
     // from the body it was written in, so a name bound to a call carries that
     // call's declared answer. A declaration's slots name each position; a
     // value's type writes the positions alone.
@@ -3585,6 +3585,14 @@ struct TypeChecker {
             let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
             let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
 
+            guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {
+                throw BuildError(
+                    "\(subject) with \(named), which holds \(given.rendered(in: loweredTypes))"
+                        + " where \(type.rendered(in: loweredTypes)) is declared",
+                    at: at
+                )
+            }
+
             // A pair the link settles is written down at the call, which an
             // object records; a refusal here stands at the argument.
             if let refusal = refusal(
@@ -3596,14 +3604,6 @@ struct TypeChecker {
                 at: place
             ) {
                 throw BuildError("\(subject): \(refusal)", at: at)
-            }
-
-            guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {
-                throw BuildError(
-                    "\(subject) with \(named), which holds \(given.rendered(in: loweredTypes))"
-                        + " where \(type.rendered(in: loweredTypes)) is declared",
-                    at: at
-                )
             }
         }
     }
