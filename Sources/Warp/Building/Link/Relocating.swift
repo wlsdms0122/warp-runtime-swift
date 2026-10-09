@@ -337,8 +337,7 @@ final class Relocating {
         return CallOperation(
             procedure: procedure,
             arguments: call.arguments,
-            handed: call.handed,
-            judged: call.judged
+            handed: call.handed
         )
     }
 

@@ -148,20 +148,6 @@ struct Evaluator: Sendable {
     }
 
     // MARK: - Private
-    // What a name takes: the value settled to what the name said it holds, or
-    // the value as it stands where the name said nothing. A declaration is a
-    // boundary like a parameter's, so it is crossed by the one judge.
-    private func held(
-        _ value: Value,
-        as settling: LoweredType?,
-        in slot: Int,
-        of activation: Activation
-    ) throws -> Value {
-        guard let settling else { return value }
-
-        return try settling.settling(value, at: "'\(activation.frame.names[slot])'", in: loweredTypes)
-    }
-
     // A body run as a procedure: what it answers is caught here. The build
     // held every way out to what the body declares, so it is handed on as it
     // came.
@@ -229,31 +215,23 @@ struct Evaluator: Sendable {
             let result = try await run(instruction, in: &activation, at: trace)
 
             switch instruction.binding {
-            case let .bind(slot, settling)?:
-                activation.cells[slot] = .value(try held(result, as: settling, in: slot, of: activation))
+            case let .bind(slot)?:
+                activation.cells[slot] = .value(result)
 
             // A new box, so a variable declared inside a block shadows rather
             // than writes an outer one of the same name.
-            case let .declare(slot, settling)?:
-                activation.cells[slot] = .hold(
-                    Handle(
-                        activation.frame.names[slot],
-                        try held(result, as: settling, in: slot, of: activation)
-                    )
-                )
+            case let .declare(slot)?:
+                activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))
 
             // A write lands in a box the enclosing bodies also hold.
-            case let .assign(address, settling)?:
+            case let .assign(address)?:
                 guard case let .hold(handle) = activation.cells[address.slot] else {
                     throw ExecutionError(
                         "'\(activation.spelled(address).rendered)' writes a name that is not a variable here"
                     )
                 }
 
-                try handle.write(
-                    try held(result, as: settling, in: address.slot, of: activation),
-                    at: try activation.projections(of: address)
-                )
+                try handle.write(result, at: try activation.projections(of: address))
 
             // A nameless statement ran for its effect, and the answer is
             // dropped, which is what leaving the name off said.
@@ -925,15 +903,13 @@ struct Evaluator: Sendable {
         throw ExecutionError("'\(spelling)' is sent to '\(first.nominal)'" + because)
     }
 
-    // Every argument a call wrote, in position order, each judged at the
-    // row's slot as soon as it is read where the call names its position, so
-    // an argument standing first refuses or fails before one after it is
-    // read. A loop rather than a map, since reading one may run what produced
-    // it. A dispatch read the first to pick the row, so what it read stands
-    // there rather than a second reading of the same operand. A position
-    // handed in place holds no value here, since its box is read through the
-    // hold. The values are born beside the row they were judged by, so
-    // nothing else pairs them.
+    // Every argument a call wrote, in position order, so an argument standing
+    // first refuses or fails before one after it is read. A loop rather than
+    // a map, since reading one may run what produced it. A dispatch read the
+    // first to pick the row, so what it read stands there rather than a
+    // second reading of the same operand, and each argument is judged at the
+    // slot of the row it picked as soon as it is read. A position handed in
+    // place holds no value here, since its box is read through the hold.
     private func given(
         _ call: CallOperation,
         to callee: Linked,
@@ -958,7 +934,7 @@ struct Evaluator: Sendable {
                 continue
             }
 
-            given.append(call.judged.contains(position) ? try callee.judged(read, at: position) : read)
+            given.append(first != nil ? try callee.judged(read, at: position) : read)
         }
 
         return given

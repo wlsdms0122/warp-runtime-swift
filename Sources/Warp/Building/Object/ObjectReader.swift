@@ -808,9 +808,9 @@ struct ObjectReader {
         let read: Instruction.Binding
 
         switch ObjectLayout.BindingTag(rawValue: try cursor.field().integer()) {
-        case .bind: read = .bind(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .declare: read = .declare(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .assign: read = .assign(try address(cursor.next()), settling: try cursor.field().maybe(lowered))
+        case .bind: read = .bind(try cursor.field().count())
+        case .declare: read = .declare(try cursor.field().count())
+        case .assign: read = .assign(try address(cursor.next()))
         case nil: throw ObjectRefused("'binding' binds in a way this reads none of")
         }
 
@@ -1007,7 +1007,7 @@ struct ObjectReader {
             arguments: try Field(cursor.next(), of: "arguments").list { written in
                 try Field(written, of: "argument").maybe(operation)
             },
-            judging: try Field(cursor.next(), of: "handed").list { written in
+            handing: try Field(cursor.next(), of: "handed").list { written in
                 var held = try FieldCursor(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.field().count(),
@@ -1017,8 +1017,7 @@ struct ObjectReader {
                 try held.end()
 
                 return taken
-            },
-            judged: try Field(cursor.next(), of: "judged").list { written in try Field(written, of: "judged").count() }
+            }
         )
 
         try cursor.end()

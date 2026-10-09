@@ -22,7 +22,7 @@ struct LoweredBody: Sendable {
         func reads(_ slots: Range<Int>) -> Bool {
             switch self {
             case let .instruction(instruction):
-                guard case let .assign(address, _)? = instruction.binding else { return false }
+                guard case let .assign(address)? = instruction.binding else { return false }
 
                 return address.reads(slots)
 
@@ -54,10 +54,10 @@ struct LoweredBody: Sendable {
             switch self {
             case let .instruction(instruction):
                 switch instruction.binding {
-                case let .bind(slot, _)?, let .declare(slot, _)?:
+                case let .bind(slot)?, let .declare(slot)?:
                     standing.stand(on: slot)
 
-                case let .assign(address, _)?:
+                case let .assign(address)?:
                     address.stand(in: &standing)
 
                 case nil:

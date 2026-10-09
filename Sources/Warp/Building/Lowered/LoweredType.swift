@@ -866,10 +866,9 @@ indirect enum LoweredType: Sendable, Equatable {
         accepts(other, in: table, assumingPairs: [], rigid: false)
     }
 
-    // The same question where nothing is judged where the value arrives: a
-    // named type answers a contract by the claims the documents already
-    // say, rather than by one the link may still find. What a declaration
-    // answering for another is held to.
+    // The same question asked rigidly: a named type answers a contract by
+    // the claims the documents already say, rather than by one the link may
+    // still find. What a declaration answering for another is held to.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
         accepts(other, in: table, assumingPairs: [], rigid: rigid)
     }

@@ -2439,20 +2439,6 @@ struct TypeChecker {
                 arguments: zip(arguments, taking).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
             )
 
-            // What the build proves a value of the slot's type as it stands,
-            // the run need not judge again where the call hands it over. A
-            // call through a contract is judged at the row the run picks.
-            if context.contractProcedures[call.selector] == nil {
-                for (position, slot) in slots.enumerated() where !slot.type.isInout {
-                    let read = taking[position].written(sent[position], in: context.loweredTypes).asHeld
-
-                    judgements.record(
-                        asItIs: slot.type.takesAsItIs(read, in: context.loweredTypes),
-                        at: argumentPlaces[position]
-                    )
-                }
-            }
-
             let reading = answered(
                 by: signature,
                 answering: context.answer(of: call.selector),
@@ -3012,12 +2998,6 @@ struct TypeChecker {
                         when: ask
                     )
 
-                    // The write settles to what it was held to, so what the
-                    // box holds is what it reads as.
-                    if let held {
-                        judgements.record(write: held, at: here)
-                    }
-
                     into = held
 
                     if case let .held(held) = binding.holding, path.segments.count == 1 {
@@ -3048,7 +3028,6 @@ struct TypeChecker {
                             at: here,
                             when: ask
                         ) {
-                            judgements.record(write: reached, at: here)
                             into = reached
                         }
 
@@ -3071,14 +3050,10 @@ struct TypeChecker {
                 break
             }
 
-            // What the build proves a value of the type it lands in, the run
-            // need not judge again where it lands. Literals are read as the
-            // type reads them, and a record built where it reads a declared
-            // record is built as that record.
+            // Literals are read as the type they land in reads them, and a
+            // record built where it reads a declared record is built as that
+            // record.
             if let into, ask.rewrites {
-                let read = into.written(inner.reading, in: context.loweredTypes).asHeld
-
-                judgements.record(asItIs: into.takesAsItIs(read, in: context.loweredTypes), at: here)
                 judgements.record(names: into.naming(inner.rewritten, at: here, in: context.loweredTypes))
                 rewritten = Body(
                     rewritten.statements.dropLast() + [

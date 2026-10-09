@@ -180,10 +180,10 @@ enum ObjectCoverageFixture {
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
     static let everyOperation = LoweredBody(
         instructions: [
-            Instruction(binding: .bind(0, settling: .int), code: .literal(.int(1)), label: "bind"),
-            Instruction(binding: .declare(1, settling: nil), code: .literal(.string("s")), label: "declare"),
+            Instruction(binding: .bind(0), code: .literal(.int(1)), label: "bind"),
+            Instruction(binding: .declare(1), code: .literal(.string("s")), label: "declare"),
             Instruction(
-                binding: .assign(Address(slot: 2, steps: everyStep), settling: .bool),
+                binding: .assign(Address(slot: 2, steps: everyStep)),
                 code: .local(Address(slot: 3, steps: [])),
                 label: "assign"
             ),
@@ -274,8 +274,7 @@ enum ObjectCoverageFixture {
     static let callOperation = CallOperation(
         procedure: 0,
         arguments: [.literal(.int(12)), .literal(.int(13)), nil],
-        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))],
-        judged: [1]
+        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))]
     )
 
     static let dispatchOperation = DispatchOperation(

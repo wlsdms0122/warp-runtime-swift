@@ -627,14 +627,14 @@ struct ObjectWriter {
         typealias Tag = ObjectLayout.BindingTag
 
         switch binding {
-        case let .bind(slot, settling):
-            return tagged(Tag.bind, .int(slot), ObjectWriter.maybe(settling, lowered))
+        case let .bind(slot):
+            return tagged(Tag.bind, .int(slot))
 
-        case let .declare(slot, settling):
-            return tagged(Tag.declare, .int(slot), ObjectWriter.maybe(settling, lowered))
+        case let .declare(slot):
+            return tagged(Tag.declare, .int(slot))
 
-        case let .assign(address, settling):
-            return tagged(Tag.assign, self.address(address), ObjectWriter.maybe(settling, lowered))
+        case let .assign(address):
+            return tagged(Tag.assign, self.address(address))
         }
     }
 
@@ -759,8 +759,7 @@ struct ObjectWriter {
             }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
-            }),
-            .array(call.judged.map { position in .int(position) })
+            })
         ])
     }
 
