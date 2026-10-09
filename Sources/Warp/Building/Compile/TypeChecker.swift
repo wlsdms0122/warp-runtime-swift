@@ -336,7 +336,7 @@ struct TypeChecker {
             // parameter reaches, named for the path that reached it) fills with
             // nothing, which is `Any`. One rule, and the useful half comes for
             // free.
-            recording(only.symbol.declared, read?.asHeld ?? .any)
+            recording(only.symbol.declared, read ?? .any)
         }
     }
 
@@ -2754,22 +2754,21 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
-            // Each way is a place of its own, so a whole literal one of them
-            // answers is the Int it is before the two ways meet, part by part.
-            let reading = attempted.reading.asHeld.joinedPartByPart(rescued.reading.asHeld)
+            // What the attempt answers is where its two ways meet.
+            let shape = LiteralShape.either(
+                LiteralShape(attempted.literalShape, reading: attempted.reading),
+                LiteralShape(rescued.literalShape, reading: rescued.reading)
+            )
 
             return Inspection(
                 rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
-                reading: reading,
+                reading: shape.folded,
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
                 flow: flow,
-                literalShape: .either(
-                    LiteralShape(attempted.literalShape, reading: attempted.reading),
-                    LiteralShape(rescued.literalShape, reading: rescued.reading)
-                )
+                literalShape: shape
             )
         }
     }
@@ -3460,9 +3459,6 @@ struct TypeChecker {
         let loweredTypes = context.loweredTypes
         let subject = "sending '\(call.selector)'"
 
-        // Filling the type parameters reads the arguments by position too.
-        try refuseCount(handing: call.arguments.count, taking: declared.parameters.count, as: subject, at: site.place)
-
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
         // refuse whatever arrived. The judgement (a parameter read two ways has
@@ -3502,41 +3498,13 @@ struct TypeChecker {
             writing: fulfillment,
             at: site.place
         )
-
-        // A procedure may judge its own constant arguments before any run. A type
-        // cannot say that a string a host parses is well formed, and the
-        // procedure can. The procedure's own keys name its
-        // parameters, so each constant is asked for under the name of the slot
-        // it stands at, through the same door the procedure reads an argument
-        // through when it answers.
-        func validate(_ query: some Query, given constants: [Name: Value]) throws {
-            try query.validate(Question(arguments: constants))
-        }
-
-        if case let .native(.query(query), _)? = context.declared(call.selector)?.implementation {
-            var constants: [Name: Value] = [:]
-
-            for (slot, argument) in zip(slots, call.arguments) {
-                constants[slot.name] = argument.constantValue
-            }
-
-            do {
-                try validate(query, given: constants)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.child(.arguments)
-                )
-            }
-        }
     }
 
     // A call hands exactly as many arguments as its callee takes, so another
     // count is refused before any position is read. Every judgement of a
-    // call by position stands behind it: the gate a gathered call passes
-    // asks it at its entrance, and a walk asks it where the call stands, ahead
-    // of what it reads in place there, so the count is what an author is told
-    // first.
+    // call by position stands behind it: the walk asks it where the call
+    // stands, ahead of what it reads in place there and before the call is
+    // gathered for the gate, so the count is what an author is told first.
     private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
         guard handed != count else { return }
 

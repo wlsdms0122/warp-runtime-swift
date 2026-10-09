@@ -68,6 +68,11 @@ final class LoweredTypeTable: Sendable {
     // says so.
     let cycling: [Int]
 
+    // The rows a chain of names takes to `Never`, a cycle's among them. No
+    // value is one under any name, so a mention of one lowers to `Never`
+    // and every judge reads one fact.
+    let neverRows: Set<Int>
+
     // Which types satisfy each declared contract, by the contract's own
     // spelling. Which types those are is no type the table lowers: what puts
     // a type under a contract is a document's claim, held to the declarations
@@ -107,6 +112,7 @@ final class LoweredTypeTable: Sendable {
         labels: [Name],
         recordRows: [Int?],
         cycling: [Int] = [],
+        neverRows: Set<Int> = [],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
         unsettled: Fulfillment? = nil,
@@ -116,6 +122,7 @@ final class LoweredTypeTable: Sendable {
         self.labels = labels
         self.recordRows = recordRows
         self.cycling = cycling
+        self.neverRows = neverRows
         self.satisfying = satisfying
         self.settled = settled
         self.unsettled = unsettled
@@ -246,19 +253,22 @@ final class LoweredTypeTable: Sendable {
             loweredTypes[row] = .never
         }
 
-        // The record a row names: the last row on the way to a record type,
-        // along names alone, since a name for what may be null names no
-        // record. Every chain is finite by now.
-        let recordRows = loweredTypes.indices.map { start -> Int? in
+        // The last row on the way from each row along names alone, since a
+        // name for what may be null is no name for what it holds. Every chain
+        // is finite by now. The record a row names is the one it ends at.
+        let ends = loweredTypes.indices.map { start -> Int in
             var row = start
 
             while case let .named(next) = loweredTypes[row] {
                 row = next
             }
 
-            guard case .record = loweredTypes[row] else { return nil }
-
             return row
+        }
+        let recordRows = ends.map { end -> Int? in
+            guard case .record = loweredTypes[end] else { return nil }
+
+            return end
         }
 
         return LoweredTypeTable(
@@ -266,6 +276,7 @@ final class LoweredTypeTable: Sendable {
             labels: labels,
             recordRows: recordRows,
             cycling: cycling,
+            neverRows: Set(ends.indices.filter { row in loweredTypes[ends[row]] == .never }),
             satisfying: satisfying,
             settled: settled,
             unsettled: unsettled,

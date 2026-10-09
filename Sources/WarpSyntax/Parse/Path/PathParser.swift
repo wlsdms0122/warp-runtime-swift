@@ -225,6 +225,13 @@ public struct PathParser: Sendable {
             throw PathSyntaxError("empty index segment '[]' in reference path")
         }
 
+        // Digits are a whole number however many there are, and never a name.
+        let digits = inner.first.map { sign in "+-".contains(sign) } == true ? inner.dropFirst() : Substring(inner)
+
+        guard digits.isEmpty || !digits.allSatisfy({ digit in ("0"..."9").contains(digit) }) else {
+            throw PathSyntaxError("index segment '[\(inner)]' is a whole number past what an Int holds, and so no position")
+        }
+
         return .indexRef(try parse(inner), optional: optional)
     }
 }

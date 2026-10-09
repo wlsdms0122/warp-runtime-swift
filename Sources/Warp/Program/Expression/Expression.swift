@@ -175,8 +175,7 @@ public indirect enum Expression: Sendable {
     }
 
     // The value of an expression that needs no scope. Nil the moment any part
-    // must resolve at run time. The build hands it to a procedure the host
-    // answers, which may judge the arguments a call writes as constants.
+    // must resolve at run time.
     var constantValue: Value? {
         switch self {
         case let .literal(value):

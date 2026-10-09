@@ -8,54 +8,31 @@
 import Foundation
 
 public struct Question<P: NativeProcedure>: Sendable {
-    // The arguments a procedure reads: settled by the row a run sent, with the
-    // run as the way back in for a procedure handed a procedure, or given by
-    // name where a caller asks the procedure directly, with no declaration and no
-    // run behind them.
-    private enum ArgumentSource: Sendable {
-        // The row being asked travels with the run: the sends it declared are
-        // its document's numbers, and only a run can say which rows they are.
-        case settled(Settled, of: Linked, Evaluator)
-        case given([Name: Value])
-    }
-
     // MARK: - Property
-    // The way back in travels with the arguments rather than being handed to
-    // `Query.evaluate`: most procedures never call anything, and a parameter every
-    // procedure declares to serve the few that do is a parameter in the wrong
-    // place.
-    private let arguments: ArgumentSource
+    // The arguments a procedure reads, settled by the row a run sent. The row
+    // being asked travels with the run: the sends it declared are its
+    // document's numbers, and only a run can say which rows they are. The way
+    // back in travels with the arguments rather than being handed to
+    // `Query.evaluate`: most procedures never call anything, and a parameter
+    // every procedure declares to serve the few that do is a parameter in the
+    // wrong place.
+    private let settled: Settled
+    private let callee: Linked
+    private let evaluator: Evaluator
 
     // MARK: - Initializer
-    // Asking a procedure with no declaration and no run behind it: the build
-    // judging a call's constant arguments against the procedure that answers
-    // it. Not a door out of the package, because what makes a procedure
-    // answerable is the build that took its declaration, and a question built
-    // beside that skips it.
-    init(arguments: [Name: Value] = [:]) {
-        self.arguments = .given(arguments)
-    }
-
     init(settled: Settled, of callee: Linked, evaluator: Evaluator) {
-        self.arguments = .settled(settled, of: callee, evaluator)
+        self.settled = settled
+        self.callee = callee
+        self.evaluator = evaluator
     }
 
     // MARK: - Public
-    // What an argument holds, named by the procedure's own key.
-    //
-    // A settled question reads the place the key stands at, since the run
-    // ordered the arguments by the declaration this key belongs to. A given
-    // one holds a call's constant arguments by name, and an argument that is
-    // not a constant reads as null: whether null fits a slot is the
-    // signature's to judge, and the build has judged it before this is asked.
+    // What an argument holds, named by the procedure's own key: the place the
+    // key stands at, since the run ordered the arguments by the declaration
+    // this key belongs to.
     public subscript(key: P.Parameters) -> Value {
-        switch arguments {
-        case let .settled(settled, _, _):
-            return settled[key.position]
-
-        case let .given(given):
-            return given[key.name] ?? .null
-        }
+        settled[key.position]
     }
 
     // Sending a procedure this procedure declared it sends, the way
@@ -65,13 +42,9 @@ public struct Question<P: NativeProcedure>: Sendable {
         _ key: P.Imports,
         handing arguments: [Value] = []
     ) async throws -> Value {
-        guard case let .settled(_, callee, evaluator) = self.arguments,
-            callee.sends.indices.contains(key.position)
-        else {
+        guard callee.sends.indices.contains(key.position) else {
             throw ExecutionError(
-                "this procedure sends '\(key.selector)', and this question was asked"
-                    + " with no link behind it. A constant settles from"
-                    + " procedures that send nothing"
+                "this procedure sends '\(key.selector)', and the link resolved no row for it"
             )
         }
 
@@ -87,11 +60,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // procedure states by declaring the parameter `const Procedure`. The
     // arguments are handed by position, the way every call hands them.
     public func call(_ closure: Closure, handing arguments: [Value] = []) async throws -> Value {
-        guard case let .settled(_, _, evaluator) = self.arguments else {
-            throw ExecutionError("this question was asked with no way back into the run")
-        }
-
-        return try await evaluator.call(closure, handing: arguments, at: Trace())
+        try await evaluator.call(closure, handing: arguments, at: Trace())
     }
 
     // MARK: - Private
