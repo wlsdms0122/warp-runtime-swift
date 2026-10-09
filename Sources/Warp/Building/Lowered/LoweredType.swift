@@ -981,8 +981,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether every value read as `reading` is a value of this type as it
     // stands, so a slot of this type has nothing to judge or to write where
-    // it lands: the same type, a part of it this takes whole, or null where
-    // this may be null. A reading the build does not know the value of, one
+    // it lands: the same type, a part of it this takes whole, null where
+    // this may be null, or a procedure this accepts. A reading the build does not know the value of, one
     // of `Any`, a contract or a type parameter this is not, is never one;
     // the run says what arrived.
     func takesAsItIs(_ reading: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -1010,6 +1010,16 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)):
             return mine.takesAsItIs(theirs, in: table)
+
+        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
+            return zip(mine.fields, theirs.fields).allSatisfy { field, read in field.takesAsItIs(read, in: table) }
+
+        // A procedure stands as it is wherever a slot takes it, and the
+        // reading carries what the build derived of it, so one the slot
+        // accepts is proven. One naming a type parameter is a closure a
+        // generic body wrote, which the run reads against what filled it.
+        case (.procedure, .procedure):
+            return !namesParameter && !reading.namesParameter && accepts(reading, in: table)
 
         // A value of a declared type answers the contracts its claims name,
         // which the build already asked of it.
