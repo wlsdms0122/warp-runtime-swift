@@ -1129,7 +1129,7 @@ struct Lowering {
         in place: [Int: Int],
         of label: Name
     ) throws -> LoweredType {
-        try type.renumbered { number in
+        try type.replacingRows { number in
             guard let stands = place[number] else {
                 throw BuildError.unjudged(
                     "type \'\(loweredTypes.labels[number])\', which its document never numbered",
@@ -1137,7 +1137,7 @@ struct Lowering {
                 )
             }
 
-            return stands
+            return .named(stands)
         }
     }
 

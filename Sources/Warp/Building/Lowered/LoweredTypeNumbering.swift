@@ -42,7 +42,7 @@ struct LoweredTypeNumbering: Sendable {
         // MARK: - Public
         // One type a document wrote, read as this link's rows.
         func read(_ type: LoweredType, at place: Place) throws -> LoweredType {
-            try type.renumbered { number in try row(types, at: number, in: place) }
+            try type.replacingRows { number in .named(try row(types, at: number, in: place)) }
         }
 
         // MARK: - Private

@@ -1465,34 +1465,34 @@ indirect enum LoweredType: Sendable, Equatable {
         couldBeProcedure(in: table, namedAsking: [])
     }
 
-    // Which rows this type stands on. Read by answering every number with
+    // Which rows this type stands on. Read by answering every row with
     // itself, so the walk over the tree stays written once.
     func standing(into types: inout Set<Int>) {
-        _ = renumbered { row in
+        _ = replacingRows { row in
             types.insert(row)
 
-            return row
+            return .named(row)
         }
     }
 
-    // The same type with every row it stands on answered again. A type is a
-    // tree and its rows stand at the leaves, so a caller that can answer one
-    // number answers the whole of it, and the walk over the tree is written
-    // once.
-    func renumbered(_ type: (Int) throws -> Int) rethrows -> LoweredType {
+    // The same type with every row it stands on answered again, by another
+    // row or by the type an alias stands for. A type is a tree and its rows
+    // stand at the leaves, so a caller that can answer one row answers the
+    // whole of it, and the walk over the tree is written once.
+    func replacingRows(by type: (Int) throws -> LoweredType) rethrows -> LoweredType {
         switch self {
         case let .array(element):
-            return .array(try element.renumbered(type))
+            return .array(try element.replacingRows(by: type))
 
         case let .dictionary(entry):
-            return .dictionary(try entry.renumbered(type))
+            return .dictionary(try entry.replacingRows(by: type))
 
         case let .record(held):
             return .record(
                 LoweredRecord(
                     layout: held.layout,
                     fields: try held.fields.map { field in
-                        try field.renumbered(type)
+                        try field.replacingRows(by: type)
                     }
                 )
             )
@@ -1500,24 +1500,24 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .procedure(parameters, returns, constness, isolation):
             return .procedure(
                 parameters: try parameters?.map { parameter in
-                    try parameter.renumbered(type)
+                    try parameter.replacingRows(by: type)
                 },
-                returns: try returns?.renumbered(type),
+                returns: try returns?.replacingRows(by: type),
                 constness: constness,
                 isolation: isolation
             )
 
         case let .variable(inner):
-            return .variable(try inner.renumbered(type))
+            return .variable(try inner.replacingRows(by: type))
 
         case let .inout(inner):
-            return .inout(try inner.renumbered(type))
+            return .inout(try inner.replacingRows(by: type))
 
         case let .nullable(inner):
-            return .nullable(try inner.renumbered(type))
+            return try inner.replacingRows(by: type).admittingNull
 
         case let .named(row):
-            return .named(try type(row))
+            return try type(row)
 
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
