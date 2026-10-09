@@ -881,9 +881,9 @@ indirect enum LoweredType: Sendable, Equatable {
         assumingPairs: [(LoweredType, LoweredType)],
         rigid: Bool
     ) -> Bool {
-        // Two declared records are one type where they are one record, an
-        // alias of it included, and two types under two names, whatever their
-        // structure: a value of one fits only its own.
+        // Two declared records are one type where they are one record, and
+        // two types under two names, whatever their structure: a value of one
+        // fits only its own.
         if
             case let .named(mine) = self,
             case let .named(theirs) = other,
@@ -930,15 +930,6 @@ indirect enum LoweredType: Sendable, Equatable {
         // A nullable slot takes null, whatever it declares besides.
         case (.nullable, .null):
             return true
-
-        // A name that stands for no record is read as what it stands for
-        // before a composition asks it, so an alias of `Any` is the `Any` it
-        // is.
-        case let (.composition, .named(row)) where table.recordRows[row] == nil,
-            let (.nullable(.composition), .named(row)) where table.recordRows[row] == nil:
-            guard !assumingPairs.contains(where: { pair in pair.0 == self && pair.1 == other }) else { return true }
-
-            return accepts(table.loweredTypes[row], in: table, assumingPairs: assumingPairs + [(self, other)], rigid: rigid)
 
         // A value read as `Any` or along a path a call decides is of a type
         // the build does not know, and one read as a composition of a type
@@ -1181,15 +1172,6 @@ indirect enum LoweredType: Sendable, Equatable {
         takes(handed, in: table, assumingPairs: [], rigid: rigid)
     }
 
-    // The same type through every name that stands for no record, at the
-    // outermost only: a declared kind is what it stands for, and a name for a
-    // record stays that record's.
-    func throughAliases(in table: LoweredTypeTable) -> LoweredType {
-        guard case let .named(row) = self, table.recordRows[row] == nil else { return self }
-
-        return table.loweredTypes[row].throughAliases(in: table)
-    }
-
     // The same type with every row it holds walked through to what that row
     // stands for, in its elements, entries, `?` and fields at every depth. A
     // procedure type stands as it is written, so what a call of one answers
@@ -1237,9 +1219,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // takes the other, walked in step through lists, dictionaries, what may
     // be null and record fields, a record read as a dictionary by each of its
     // fields. Which was read first says nothing. At each position a reading
-    // of `Any` makes its position `Any`; a name that stands for no record
-    // meets the other reading as what it stands for. Elsewhere it is the one
-    // that takes the other. Rigidly, because a parameter read in a body is
+    // of `Any` makes its position `Any`. Elsewhere it is the one that takes
+    // the other. Rigidly, because a parameter read in a body is
     // that body's own and nothing fills it. Nil where neither takes the
     // other.
     func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
@@ -2110,14 +2091,11 @@ indirect enum LoweredType: Sendable, Equatable {
     // cannot order it. A record's field is read without its `var`, which is
     // a fact about the field and not about the value joined.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
-        let mine = throughAliases(in: table)
-        let theirs = given.throughAliases(in: table)
-
-        guard mine != .any, theirs != .any else { return .any }
+        guard self != .any, given != .any else { return .any }
 
         let looser = takesGiven ? self : given
 
-        switch (mine, theirs) {
+        switch (self, given) {
         case let (.array(element), .array(other)):
             return .array(element.merged(with: other, in: table))
 
@@ -2260,16 +2238,6 @@ indirect enum LoweredType: Sendable, Equatable {
             guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
 
             return table.loweredTypes[row].couldBothHold(other, in: table, assumingQuestions: assumingQuestions + [question])
-        }
-
-        // A name that stands for no record is what it stands for. A record's
-        // name on the other side stays until a structure meets it, since a
-        // value of a declared record keeps its name wherever it is settled,
-        // and whatever wraps this side meets that name.
-        if case let .named(row) = other, table.recordRows[row] == nil {
-            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
-
-            return couldBothHold(table.loweredTypes[row], in: table, assumingQuestions: assumingQuestions + [question])
         }
 
         if provesNothing || other.provesNothing { return true }

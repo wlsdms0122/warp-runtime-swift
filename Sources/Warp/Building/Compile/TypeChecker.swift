@@ -822,7 +822,7 @@ struct TypeChecker {
             found.merge(slot.type.boundedParameters) { first, _ in first }
         }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
             guard let valueOfSeveral = substitution.everyReading(of: parameter).first(where: { reading in
-                switch reading.throughAliases(in: loweredTypes) {
+                switch reading {
                 case let .composition(read):
                     return !read.isEmpty
 
