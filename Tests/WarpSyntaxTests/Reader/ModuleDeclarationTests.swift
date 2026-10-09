@@ -151,18 +151,17 @@ struct ModuleDeclarationTests {
                 ]
             ]
         ])
-        let cyclic = try loader.loadDocument([
-            "const": ["a": ["ref": "b"], "b": ["ref": "a"]],
-            "procedures": ["entry": ["body": [["let": "seen", "value": ["ref": "a"]]]]]
-        ])
 
         // When / Then
         let outputs = try await run(composed)
 
         #expect(outputs["result"] == .string("https://example.com/api"))
 
-        await #expect(throws: BuildError.self) {
-            try await Builder().build([cyclic])
+        #expect(throws: ValidationError.self) {
+            try loader.loadDocument([
+                "const": ["a": ["ref": "b"], "b": ["ref": "a"]],
+                "procedures": ["entry": ["body": [["let": "seen", "value": ["ref": "a"]]]]]
+            ])
         }
     }
 

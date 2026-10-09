@@ -48,6 +48,8 @@ public struct Validator: Sendable {
             )
         }
 
+        try acyclic(module.constants, in: module)
+
         // A variable's start is written like a constant and sees what a
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
@@ -192,6 +194,55 @@ public struct Validator: Sendable {
             said.compactMap { said in said }.joined(separator: ", and "),
             at: Place([.part(.imports)], in: .of(module))
         )
+    }
+
+    // A constant settles from what it names, so constants that name each
+    // other back have nothing to settle from. Refused standing on one of
+    // them.
+    private func acyclic(_ constants: [Name: Expression], in module: Module) throws {
+        var settled: Set<Name> = []
+
+        // What the walk is standing on, root first. Where it meets a name
+        // already on it, everything from that name down is the cycle, and
+        // nothing above it is, which is the difference between what names
+        // itself back and what merely waits on something that does.
+        var walking: [Name] = []
+
+        func walk(_ name: Name, reading expression: Expression) throws {
+            guard !settled.contains(name) else { return }
+
+            if let met = walking.firstIndex(of: name) {
+                let cycle = walking[met...].sorted()
+
+                throw ValidationError(
+                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
+                        + " cycle. A constant may name another declared beside it, but"
+                        + " not one that names it back",
+                    // Any of them is where the fix can be made, so the one
+                    // walked to is the first in sorted order: a cycle has no
+                    // first member, and reading one off the walk would name a
+                    // different constant depending on where the walk started.
+                    at: .constant(cycle[0].spelling, in: .of(module))
+                )
+            }
+
+            walking.append(name)
+
+            // Sorted, so a module with two mistakes in it refuses the same one
+            // every run. What a set hands back is seeded per process.
+            for read in expression.pathHeads.sorted() {
+                guard let reading = constants[read] else { continue }
+
+                try walk(read, reading: reading)
+            }
+
+            walking.removeLast()
+            settled.insert(name)
+        }
+
+        for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
+            try walk(name, reading: expression)
+        }
     }
 
     // A private procedure is named by its document, and the code a host

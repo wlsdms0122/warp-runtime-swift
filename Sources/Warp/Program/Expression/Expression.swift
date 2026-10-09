@@ -289,6 +289,20 @@ public indirect enum Expression: Sendable {
         }
     }
 
+    // Every name a path in here is headed by, at whatever depth, a closure's
+    // body and an index's own path included.
+    //
+    // Flat, because a body may not introduce a name the module bound, so a
+    // head spelled as a module's constant is that constant wherever it
+    // stands.
+    var pathHeads: Set<Name> {
+        subexpressions.reduce(into: Set<Name>()) { names, held in
+            guard case let .reference(path) = held else { return }
+
+            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+        }
+    }
+
     // Whether every way through this expression leaves. Structural and
     // conservative: a loop may run no round and an attempt's rescue may finish
     // normally, so neither counts; a call is judged at the build, where its

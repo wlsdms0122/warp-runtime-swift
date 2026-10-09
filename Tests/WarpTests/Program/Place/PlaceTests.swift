@@ -608,20 +608,18 @@ struct PlaceTests {
     }
 
     @Test("constants that name each other are placed at one of the cycle, and the same one")
-    func aConstantCycleIsPlacedInSortedOrder() async throws {
-        // Given. A cycle has no first member, so which of them an author is
-        // sent to is chosen rather than found. Read off a dictionary it would
-        // be a different constant per run, and the two below are written in the
-        // order that makes an unsorted answer the likely one.
-        let sut = try Module(
-            constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantCycleIsPlacedInSortedOrder() throws {
+        // Given / When. Refused where the module is made. A cycle has no first
+        // member, so which of them an author is sent to is chosen rather than
+        // found. Read off a dictionary it would be a different constant per run,
+        // and the two below are written in the order that makes an unsorted answer
+        // the likely one.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
@@ -630,24 +628,22 @@ struct PlaceTests {
     }
 
     @Test("a constant merely blocked by a cycle is neither placed nor accused")
-    func aConstantWaitingOnARingIsNotOnIt() async throws {
-        // Given. `aardvark` names one of a cycle, so it never settles either and
-        // is still waiting when the cycle is refused. It is sorted first, which
-        // is how it becomes the place if what is waiting is mistaken for what
-        // is wrong, and changing it would leave the cycle exactly as it is.
-        let sut = try Module(
-            constants: [
-                "aardvark": reference("zebra"),
-                "zebra": reference("yak"),
-                "yak": reference("zebra")
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantWaitingOnARingIsNotOnIt() throws {
+        // Given / When. Refused where the module is made. `aardvark` names one of
+        // a cycle, so it never settles either and is still waiting when the cycle
+        // is refused. It is sorted first, which is how it becomes the place if
+        // what is waiting is mistaken for what is wrong, and changing it would
+        // leave the cycle exactly as it is.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: [
+                    "aardvark": reference("zebra"),
+                    "zebra": reference("yak"),
+                    "yak": reference("zebra")
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
@@ -657,24 +653,22 @@ struct PlaceTests {
     }
 
     @Test("a constant on a cycle's edge is not counted as part of it")
-    func aConstantReadByACycleIsNotOnIt() async throws {
-        // Given. `delta` is read by one of a cycle and settles perfectly well,
-        // so the cycle is the only thing wrong here. Narrowing by what nothing
-        // reads keeps it anyway, because something does read it.
-        let sut = try Module(
-            constants: [
-                "beta": .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("gamma"), reference("delta")])),
-                "gamma": reference("beta"),
-                "delta": reference("epsilon"),
-                "epsilon": .literal(.int(1))
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantReadByACycleIsNotOnIt() throws {
+        // Given / When. Refused where the module is made. `delta` is read by one
+        // of a cycle and settles perfectly well, so the cycle is the only thing
+        // wrong here. Narrowing by what nothing reads keeps it anyway, because
+        // something does read it.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: [
+                    "beta": .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("gamma"), reference("delta")])),
+                    "gamma": reference("beta"),
+                    "delta": reference("epsilon"),
+                    "epsilon": .literal(.int(1))
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
