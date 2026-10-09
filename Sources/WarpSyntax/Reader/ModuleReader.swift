@@ -8,8 +8,8 @@
 import Foundation
 import Warp
 
-// A document, which is a module and not a procedure: metadata, and the procedures
-// it declares. Which procedure runs is named when a run starts.
+// A document, which is a module and not a procedure: what it imports and
+// what it declares. Which procedure runs is named when a run starts.
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case imports
@@ -54,8 +54,6 @@ public struct ModuleReader: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let notation = decoder.notation
 
-        let procedures = try container.superDecoder(forKey: .procedures).read([Name: ProcedureReader].self)
-
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
@@ -86,7 +84,8 @@ public struct ModuleReader: Decodable {
                 .mapValues(\.expression),
             variables: try Self.record(VariableReader.self, in: container, forKey: .variables)
                 .mapValues(\.variable),
-            procedures: procedures.mapValues(\.procedure)
+            procedures: try Self.record(ProcedureReader.self, in: container, forKey: .procedures)
+                .mapValues(\.procedure)
         )
     }
 

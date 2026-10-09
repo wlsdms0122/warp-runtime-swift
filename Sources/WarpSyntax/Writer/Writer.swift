@@ -64,10 +64,12 @@ public struct Writer: Sendable {
             Module.versionKey: .int(ModuleReader.version),
             ModuleReader.CodingKeys.imports.name: .array(
                 (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
-            ),
-            ModuleReader.CodingKeys.procedures.name:
-                .dictionary(try draft.procedures.mapValues(value(of:)))
+            )
         ]
+
+        if !draft.procedures.isEmpty {
+            written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try draft.procedures.mapValues(value(of:)))
+        }
 
         if let description = draft.description {
             written[ModuleReader.CodingKeys.description.name] = .string(description)
