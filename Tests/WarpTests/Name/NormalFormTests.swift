@@ -56,25 +56,6 @@ struct NormalFormTests {
         #expect(!(("b" as Name) < "ab"))
     }
 
-    @Test("a type's name is identifiers joined by dots, never a scalar's keyword nor a type the language names", arguments: [
-        ("Account", true), ("Bank.Account", true), ("_x1", true), ("Int.Range", true),
-        ("true", false), ("Bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false),
-        ("Int", false), ("Array", false), ("Self", false), ("consuming Int", false)
-    ])
-    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        // When / Then
-        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
-    }
-
-    @Test("a value's name is one a path reads back as its key", arguments: [
-        ("total", true), ("a b", true), ("café", true), ("x-y", true),
-        ("a.b", false), ("a[0]", false), ("a]", false), ("a?", false), (" a", false), ("a ", false)
-    ])
-    func aValueNameIsAPathKey(name: String, holds: Bool) {
-        // When / Then
-        #expect(((try? Name(name))?.isPathKey ?? false) == holds)
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

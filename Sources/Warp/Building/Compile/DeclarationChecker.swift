@@ -208,22 +208,8 @@ struct DeclarationChecker {
         resolve table: TypeTable
     ) throws {
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter:
+        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
             return
-
-        // The build's own note to itself, written where a declaration goes. A
-        // declaration is a promise, and this is a type worked out from a body.
-        // Nobody promised it, and no document could have spelled it. It is
-        // refused here rather than left to the reader, because a reader is one
-        // way a declaration is built and a host assembling one is another.
-        case let .projection(of, path):
-            throw BuildError(
-                "writes `\(type.rendered)`, which is a type the build"
-                    + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
-                    + " only that body can read",
-                at: place
-            )
 
         case let .procedure(type, _, _):
             guard let type else { return }
@@ -336,7 +322,7 @@ struct DeclarationChecker {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a contract",
-                    at: place
+                    at: place.part(.bounds).key(parameter.spelling)
                 )
             }
         }

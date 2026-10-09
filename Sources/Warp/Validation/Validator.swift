@@ -8,10 +8,9 @@
 import Foundation
 
 // Checks a module against itself, before anything is resolved: what its text
-// answers alone. Every name a procedure reads is one it can see, every name in
-// the types namespace is one a document may declare, every name in the value
-// namespace is one a path reads, and every word a type writes stands where it
-// may.
+// answers alone. Every name a procedure reads is one it can see, every name it
+// writes holds the grammar of where it is written, and every word a type
+// writes stands where it may.
 //
 // The walk is structural: a call's arguments are expressions whose insides
 // this reads, so validation never consults the procedure table.
@@ -36,7 +35,7 @@ public struct Validator: Sendable {
         // else. Which is also why it is checked here rather than per procedure:
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
-            try readable(name, at: .constant(name.spelling, in: .of(module)))
+            try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
 
             try validate(
                 expression,
@@ -52,7 +51,7 @@ public struct Validator: Sendable {
         // constant sees: the constants beside it, and no variable. A variable
         // holds nothing until the run starts.
         for (name, variable) in module.variables.sorted(by: { one, other in one.key < other.key }) {
-            try readable(name, at: .variable(name.spelling, in: .of(module)))
+            try held(name, as: .value, at: .variable(name.spelling, in: .of(module)))
 
             guard !constants.contains(name) else {
                 throw ValidationError(
@@ -76,41 +75,14 @@ public struct Validator: Sendable {
             }
         }
 
-        // Every name the module spells in the type namespace: the types and
-        // contracts it declares, and every one it names in a type, a bound, a
-        // cast or a claim. A claim about a type the language names a value an
-        // instance of (`Int`, `Array`) names no declaration, and so is no
-        // mention.
-        let mentioned = module.references.compactMap { reference -> Name? in
-            guard case let .type(name) = reference else { return nil }
-
-            return name
-        }
-
-        for name in Set(module.types.keys).union(module.contracts.keys).union(mentioned).sorted()
-        where !name.isDeclarable {
-            let place: Place = if module.types[name] != nil {
-                .type(name.spelling, in: .of(module))
-            } else if module.contracts[name] != nil {
-                .contract(name.spelling, in: .of(module))
-            } else if module.claims[name] != nil {
-                .satisfies(name.spelling, in: .of(module))
-            } else {
-                Place([.part(.imports)], in: .of(module))
-            }
-
-            throw ValidationError(
-                "'\(name)' names no type a document may declare. A type is named by identifiers joined by"
-                    + " dots, and the names the language gives its own types are the language's",
-                at: place
-            )
-        }
-
         for (name, type) in module.types.sorted(by: { one, other in one.key < other.key }) {
+            try held(name, as: .type, at: .type(name.spelling, in: .of(module)))
             try written(type, in: .declaration, at: .type(name.spelling, in: .of(module)))
         }
 
         for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
+            try held(contract, as: .type, at: .contract(contract.spelling, in: .of(module)))
+
             for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
                 let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 
@@ -126,6 +98,22 @@ public struct Validator: Sendable {
                 }
 
                 try validate(asked.signature, in: .contract, at: place)
+            }
+        }
+
+        // A claim names two types: the one it is about and the contract it
+        // says that type answers. A claim about a type the language names a
+        // value an instance of (`Int`, `Array`) is about no declaration, so
+        // its key is that type's and no name a document writes.
+        for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
+            let place = Place.satisfies(type.spelling, in: .of(module))
+
+            if TypeExpression.nominalTypes[type] == nil {
+                try held(type, as: .type, at: place)
+            }
+
+            for contract in contracts.sorted() {
+                try held(contract, as: .type, at: place)
             }
         }
 
@@ -217,7 +205,7 @@ public struct Validator: Sendable {
         try validate(procedure.signature, in: .signature, at: place)
 
         for (position, parameter) in procedure.signature.names.enumerated() {
-            try introduced(parameter, in: .procedure(bound: bound), at: place.part(.parameters).index(position))
+            try collides(parameter, in: .procedure(bound: bound), at: place.part(.parameters).index(position))
         }
 
         try reads(procedure, at: place)
@@ -231,7 +219,11 @@ public struct Validator: Sendable {
             block,
             visible: bound.union(parameters),
             variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
-            scope: .procedure(bound: bound, parameters: parameters),
+            scope: .procedure(
+                bound: bound,
+                parameters: parameters,
+                typeParameters: procedure.signature.parameterNames
+            ),
             at: place
         )
     }
@@ -325,7 +317,8 @@ public struct Validator: Sendable {
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try introduced(name, in: scope, at: here)
+                    try held(name, as: .value, at: here)
+                    try collides(name, in: scope, at: here)
 
                     guard !declared.contains(name) else {
                         throw ValidationError("two statements here are named '\(name)'", at: here)
@@ -504,12 +497,12 @@ public struct Validator: Sendable {
                 )
             }
 
-            try validate(procedure.signature, in: .signature, at: inside)
+            try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
 
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
             for (position, parameter) in procedure.signature.names.enumerated() {
-                try introduced(parameter, in: scope, at: inside.part(.parameters).index(position))
+                try collides(parameter, in: scope, at: inside.part(.parameters).index(position))
             }
 
             // A parameter it takes in place is a variable in its body, the way
@@ -797,6 +790,16 @@ public struct Validator: Sendable {
     // the answer's, and a bound only on a name some slot writes as `some T`,
     // since one on a name nobody wrote binds nothing.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
+        for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
+            let here = place.part(.bounds).key(parameter.spelling)
+
+            try held(parameter, as: .typeParameter, at: here)
+
+            for contract in contracts.sorted() {
+                try held(contract, as: .type, at: here)
+            }
+        }
+
         let named = signature.parameterNames
         let unwritten = signature.bounds.keys.filter { name in !named.contains(name) }.sorted()
 
@@ -811,6 +814,8 @@ public struct Validator: Sendable {
         for (position, parameter) in signature.parameters.enumerated() {
             let here = place.part(.parameters).index(position)
 
+            try held(parameter.name, as: .value, at: here)
+
             guard !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) else {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
@@ -823,15 +828,42 @@ public struct Validator: Sendable {
         }
     }
 
-    // A type held to where it is written: `inout` only in front of a
-    // parameter, `var` only on a field of a type declared in `types`, a type
-    // parameter only where a call fills it, `Self` only in a contract's
-    // procedures, and `?` only where it says something new. What a name
-    // stands for is the build's to resolve, so a name is not walked into.
+    // A type held to where it is written: every name in it holding its
+    // grammar, `inout` only in front of a parameter, `var` only on a field of
+    // a type declared in `types`, a type parameter only where a call fills it,
+    // `Self` only in a contract's procedures, and `?` only where it says
+    // something new. What a name stands for is the build's to resolve, so a
+    // name is not walked into.
     private func written(_ type: TypeExpression, in context: TypeContext, at place: Place) throws {
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .string, .named, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .double, .string:
             return
+
+        case let .named(name):
+            try held(name, as: .type, at: place)
+
+        case let .composition(names):
+            guard !names.isEmpty else {
+                throw ValidationError(
+                    "joins nothing with `&`, and a composition names the contracts a value answers",
+                    at: place
+                )
+            }
+
+            for name in names.sorted() {
+                try held(name, as: .type, at: place)
+            }
+
+        // The build's own note to itself: a type it read out of a body, which
+        // nobody declared and no document spells.
+        case let .projection(of, path):
+            throw ValidationError(
+                "writes `\(type.rendered)`, which is a type the build"
+                    + " read out of a body. A declaration says what a call fills,"
+                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
+                    + " only that body can read",
+                at: place
+            )
 
         case .selfType:
             guard context.takesSelf else {
@@ -842,14 +874,16 @@ public struct Validator: Sendable {
                 )
             }
 
-        case .parameter:
-            guard context.takesTypeParameter else {
+        case let .parameter(name):
+            guard context.takes(typeParameter: name) else {
                 throw ValidationError(
                     "writes `\(type.rendered)`, and nothing here is"
                         + " filled by a call. A type parameter lives in a signature",
                     at: place
                 )
             }
+
+            try held(name, as: .typeParameter, at: place)
 
         case let .array(inner), let .dictionary(inner):
             try written(inner, in: context, at: place)
@@ -862,13 +896,14 @@ public struct Validator: Sendable {
 
             try written(inner, in: context, at: place)
 
+        // A field of a record type is reached by a path alone, so its name is
+        // a value's.
         case let .record(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
-                try written(
-                    context.takesWritableFields ? field.fieldUnwrapped : field,
-                    in: context,
-                    at: place.part(.fields).key(name.spelling)
-                )
+                let here = place.part(.fields).key(name.spelling)
+
+                try held(name, as: .value, at: here)
+                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context, at: here)
             }
 
         // A procedure type's parameters are slots, each of which may be
@@ -898,33 +933,26 @@ public struct Validator: Sendable {
         }
     }
 
-    // A name in the value namespace is read by a path, so one no path reads
-    // back as its key is a declaration nothing can reach.
-    private func readable(_ name: Name, at place: Place) throws {
-        guard !name.isPathKey else { return }
+    // A name held to the grammar of where it is written.
+    private func held(_ name: Name, as grammar: NameGrammar, at place: Place) throws {
+        guard !grammar.holds(name) else { return }
 
-        throw ValidationError(
-            "'\(name)' is no name a path reads. A path is written with `.`, `[`, `]` and `?`,"
-                + " so a name holding one, or white space at either end, is never the one it reaches",
-            at: place
-        )
+        throw ValidationError(grammar.refusal(of: name), at: place)
     }
 
     // A name a body introduces: a parameter, a statement's name, or the one a
     // construct hands its body. Every such name passes here, so the module's
     // bound names and the parameters around it are checked at whatever depth
-    // the name appears.
+    // the name appears. A parameter's grammar is its signature's.
     //
     // A module's constant is folded wherever its name is read and its variable
     // is read through the module's box, so a name introduced under either
     // spelling would never be the one that answers.
-    private func introduced(
+    private func collides(
         _ name: Name,
         in scope: Scope,
         at place: Place
     ) throws {
-        try readable(name, at: place)
-
         if scope.bound.contains(name) {
             throw ValidationError(
                 "'\(name)' collides with a name the module bound, which it would"

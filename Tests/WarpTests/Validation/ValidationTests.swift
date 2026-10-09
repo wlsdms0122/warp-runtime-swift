@@ -561,7 +561,7 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("satisfies.Any: 'Any' names no type a document may declare")
+                && "\(error)".contains("satisfies.Any: 'Any' is no type's name")
         }
     }
 
@@ -586,10 +586,14 @@ struct ValidationTests {
         #expect(sut.claims == ["Int": ["App.Described"]])
     }
 
-    @Test("a name in the types namespace is held to one grammar wherever a module built in Swift spells it", arguments: [
-        ("imports", [:], TypeExpression.named("consuming Int"), [:]),
+    @Test("a name in the types namespace is held to one grammar where a module built in Swift spells it", arguments: [
+        ("procedures.App.keep.parameters[0]", [:], TypeExpression.named("a b"), [:]),
         ("types.Int", ["Int": .string], .int, [:]),
-        ("imports", [:], .parameter(name: "T"), ["T": ["Array<Int>"]])
+        ("procedures.App.keep.bounds.T", [:], .parameter(name: "T"), ["T": ["Array<Int>"]]),
+        ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Self"), [:]),
+        ("procedures.App.keep.parameters[0]", [:], .parameter(name: "A.B"), [:]),
+        ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Int"), [:]),
+        ("procedures.App.keep.bounds.some", [:], .parameter(name: "some"), ["some": ["App.Shown"]])
     ] as [(String, [Name: TypeExpression], TypeExpression, [Name: Set<Name>])])
     func aTypeNamespaceNameHoldsOneGrammar(
         place: String,
@@ -612,7 +616,90 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError && "\(error)".hasPrefix("\(place): ")
-                && "\(error)".contains("names no type a document may declare")
+                && ("\(error)".contains("is no type's name") || "\(error)".contains("is no type parameter's name"))
+        }
+    }
+
+    @Test("a record type's field and a contract's parameter are value names, held where a module built in Swift writes them")
+    func aFieldAndAContractParameterAreValueNames() throws {
+        // When / Then. A dot in a field's name is a step to a path, so no path
+        // reaches the field
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "value", type: .record(["a.b": .int]))]),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0].fields")
+                && "\(error)".contains("is no name a path reads")
+        }
+
+        // And a contract's parameter is a parameter like any other
+        #expect {
+            try Module(
+                contracts: [
+                    "App.Shown": ["show": Signature(parameters: [Parameter(name: "o.f", type: .selfType)], returns: .string)]
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("contracts.App.Shown.show.parameters[0]")
+                && "\(error)".contains("is no name a path reads")
+        }
+    }
+
+    @Test("a ? that says nothing new is refused where it is written", arguments: [
+        TypeExpression.nullable(.nullable(.int)), .nullable(.null), .nullable(.any), .nullable(.never),
+        .nullable(.parameter(name: "T"))
+    ])
+    func aNeedlessQuestionMarkIsRefused(type: TypeExpression) throws {
+        // When / Then. Twice says it once too often; what already admits null
+        // gains nothing; never admits nothing; a parameter stands for the whole
+        // filled type
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains("a `?` says nothing")
+        }
+    }
+
+    @Test("a type read out of a body is no declaration anybody can write")
+    func aProjectionIsRefusedWhereADeclarationGoes() throws {
+        // When / Then. A declaration assembled in the host claiming what only
+        // a walk produces: a declaration says what a call fills, and nothing
+        // fills a path only one body can read
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))]
+                        ),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains("read out of a body")
         }
     }
 

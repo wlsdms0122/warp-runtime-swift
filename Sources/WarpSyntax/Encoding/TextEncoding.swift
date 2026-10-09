@@ -472,10 +472,12 @@ public struct TextEncoding {
                 case let .bytes(bytes):
                     settled = .bytes(bytes)
 
-                // A bare token in front of a record is the record's name: the
-                // declared type the value settled to.
+                // A bare token in front of a record is the record's name, the
+                // declared type the value settled to, where it is written as a
+                // type's name. Any other bare token is a scalar, the record
+                // after it the next value.
                 case let .bare(bare):
-                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), name.isDeclarable {
+                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), NameGrammar.type.holds(name) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: name))

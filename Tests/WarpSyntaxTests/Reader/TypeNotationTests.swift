@@ -68,23 +68,7 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
     }
 
-    @Test("a ? that says nothing new is refused where the document is read", arguments: [
-        "Int??", "Null?", "Any?", "Never?", "some T?"
-    ])
-    func uselessNullableIsRefused(written: String) throws {
-        // When / Then. Twice says it once too often; what already admits null
-        // gains nothing; never admits nothing; a parameter stands for the whole
-        // filled type.
-        #expect(throws: ValidationError.self) {
-            try Loader().load([
-                "warp": 1,
-                "imports": [],
-                "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
-            ])
-        }
-    }
-
-    @Test("names joined with & read as a composition, in name order, and write back the same way")
+    @Test("names joined with & read as the set of them, and write back in name order")
     func compositionsParse() throws {
         // When / Then
         #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
@@ -119,9 +103,13 @@ struct TypeNotationTests {
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
     func aBoundBelongsToTheSignature() throws {
         // When / Then. The slot names the parameter and nothing else. The
-        // bound is declared once, in the signature's `bounds`.
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("some T: Comparable") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("some T:") }
+        // bound is declared once, in the signature's `bounds`, and what follows
+        // `some` is no type parameter's name.
+        for written in ["some T: Comparable", "some T:"] {
+            #expect(throws: ValidationError.self) {
+                try loader.loadProcedure(["parameters": [["name": "of", "type": .string(written)]]])
+            }
+        }
 
         // And. A bound on a name no slot writes binds nothing, and is
         // refused where `bounds` stands.

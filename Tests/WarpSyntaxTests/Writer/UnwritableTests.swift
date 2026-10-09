@@ -73,8 +73,6 @@ struct UnwritableTests {
             .nullable(.variable(.int)),
             .composition(["Foo", "Int"]),
             .composition(["Foo", "Array<Int>"]),
-            .parameter(name: "a.b"),
-            .parameter(name: "a<b>"),
             .named("Array<Int>"),
             .array(.named("Int"))
         ]

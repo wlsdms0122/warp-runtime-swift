@@ -128,10 +128,6 @@ struct ValueWalk {
     // Fields under names, with the name of the layout they stood on where
     // there was one. Held in byte order, the order written.
     private mutating func opening(_ held: Value.Dictionary, named name: Name?) throws -> Step {
-        if let name, !name.isDeclarable {
-            throw EncodingRefused("the record's name is not a type's name")
-        }
-
         try opening()
 
         if !held.isEmpty {

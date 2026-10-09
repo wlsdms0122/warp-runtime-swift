@@ -386,19 +386,11 @@ public struct BinaryEncoding {
     private func name(from reading: inout Cursor) throws -> Name {
         let spelling = try text(from: &reading)
 
-        let name: Name
-
         do {
-            name = try Name(spelling)
+            return try Name(spelling)
         } catch let refusal as NameRefused {
             throw EncodingRefused(refusal.message)
         }
-
-        guard name.isDeclarable else {
-            throw EncodingRefused("the record's name is not a type's name")
-        }
-
-        return name
     }
 
     private func text(from reading: inout Cursor) throws -> String {
