@@ -63,15 +63,6 @@ public struct Executor: Sendable {
             )
         }
 
-        // A run hands its entry values, and a parameter handed in place takes
-        // a variable.
-        if let parameter = entry.signature.inPlace {
-            throw ExecutionError(
-                "entry '\(entry.label)' takes '\(parameter)' in place, and a run hands"
-                    + " its entry values"
-            )
-        }
-
         return try await Evaluator(image, observer: observer, environment: environment)
             .run(entry, arguments: arguments)
     }

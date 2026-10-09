@@ -554,7 +554,7 @@ struct InPlaceTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ExecutionError && "\(error)".contains("takes 'count' in place, and this call hands it a value")
+            error is ExecutionError && "\(error)".contains("takes 'count' in place, and a value from outside is no variable")
         }
     }
 

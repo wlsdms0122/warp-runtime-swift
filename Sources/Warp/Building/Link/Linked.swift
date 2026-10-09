@@ -252,24 +252,42 @@ public final class Linked: Sendable {
 
     // Arguments handed by position from outside the build: the door a host
     // hands a closure values through, and a procedure the host answers its
-    // sends. One for each slot, a slot taking a variable in place taking none
-    // of them, and each fitted and judged by the door rule.
+    // sends. One for each slot, each fitted and judged by the door rule.
     func settle(outside given: [Value]) throws -> [Value] {
-        if let slot = slots.first(where: { slot in slot.type.isInout }) {
-            throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and this call hands it a value")
-        }
-
+        try refuseInPlace()
         try refuseCount(given.count)
 
-        return try zip(slots, given).map { slot, value in
-            try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
-        }
+        return try zip(slots, given).map(settled)
     }
 
     // Arguments given by name: the door a run's entry is handed values
-    // through.
+    // through, settled into the order a run keeps them in. A name the
+    // declaration lacks is refused, and so is one it declares that was not
+    // given; a null standing at a name was given, since null is a value the
+    // way any other is. Each is fitted and judged by the door rule.
     func settle(_ given: [Name: Value]) throws -> [Value] {
-        try signature.settle(given, over: slots, as: "entry '\(label)'", in: table)
+        try refuseInPlace()
+
+        let undeclared = given.keys
+            .filter { name in !slots.contains { slot in slot.name == name } }
+            .sorted()
+
+        guard undeclared.isEmpty else {
+            throw ArgumentError(
+                "entry '\(label)' declares no parameter"
+                    + " \(undeclared.map { name in "'\(name)'" }.joined(separator: ", "))"
+            )
+        }
+
+        let values = slots.compactMap { slot in given[slot.name] }
+
+        guard values.count == slots.count else {
+            let missing = slots.filter { slot in given[slot.name] == nil }.map { slot in "'\(slot.name)'" }
+
+            throw ArgumentError("entry '\(label)' was given nothing for \(missing.joined(separator: ", "))")
+        }
+
+        return try zip(slots, values).map(settled)
     }
 
     // What this row answers where it crosses a door, a value from outside
@@ -321,6 +339,19 @@ public final class Linked: Sendable {
     }
 
     // MARK: - Private
+    // A value from outside is no variable, so a row taking one in place takes
+    // nothing through a door.
+    private func refuseInPlace() throws {
+        guard let slot = slots.first(where: { slot in slot.type.isInout }) else { return }
+
+        throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
+    }
+
+    // One value from outside at its slot, fitted and judged by the door rule.
+    private func settled(_ slot: Slot, _ value: Value) throws -> Value {
+        try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
+    }
+
     // The rows a body can send a run into, read off its code: every call, every
     // row that answers a contract it calls through, and every closure it writes,
     // whose body is a row of its own. Read once the link has answered every

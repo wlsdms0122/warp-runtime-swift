@@ -144,13 +144,23 @@ struct SignatureTests {
 
     // MARK: - Public
     // MARK: - Private
-    // The boundary over no table, answered by name.
+    // The entry's door over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
-        let slots = signature.lowered(in: .empty)
-        let settled = try signature.settle(given, over: slots, as: "entry '\(entryName)'", in: .empty)
+        let entry = Linked.unlowered(
+            label: entryName,
+            origin: 0,
+            procedure: Procedure(signature: signature, body: []),
+            const: false,
+            isolated: false,
+            failing: .these([]),
+            builtin: false,
+            sends: [],
+            in: .empty
+        )
+        let settled = try entry.settle(given)
 
-        return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
-            named[slots[entry.offset].name] = entry.element
+        return settled.enumerated().reduce(into: [Name: Value]()) { named, value in
+            named[entry.slots[value.offset].name] = value.element
         }
     }
 }
