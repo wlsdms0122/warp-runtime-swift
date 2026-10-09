@@ -35,10 +35,6 @@ public struct Invocation<P: NativeProcedure>: Sendable {
 
     public var selector: Name { callee.label }
 
-    // The declaration being sent, so a procedure reads its arguments by the names
-    // the declaration gave them.
-    public var signature: Signature { callee.signature }
-
     // MARK: - Initializer
     init(
         of callee: Linked,
@@ -118,12 +114,8 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
-        guard callee.sends.indices.contains(key.position) else {
-            throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
-        }
-
-        return try await evaluator.send(
-            callee.sends[key.position],
+        try await evaluator.send(
+            try callee.sent(key.position, as: key.selector),
             from: callee.origin,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace

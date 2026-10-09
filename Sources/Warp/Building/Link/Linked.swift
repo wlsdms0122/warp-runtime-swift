@@ -109,6 +109,15 @@ public final class Linked: Sendable {
         return sends
     }
 
+    // The send a native declared at a place, which a call it makes reaches.
+    func sent(_ position: Int, as selector: Name) throws -> Sent {
+        guard sends.indices.contains(position) else {
+            throw ExecutionError("'\(rendered)' sends '\(selector)', and the link resolved no row for it")
+        }
+
+        return sends[position]
+    }
+
     // Whether this row is a written body.
     var isWritten: Bool {
         if case .body = implementation { return true }
