@@ -150,9 +150,7 @@ struct SignatureTests {
         let settled = try signature.settle(given, over: slots, as: "entry '\(entryName)'", in: .empty)
 
         return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
-            guard let value = entry.element else { return }
-
-            named[slots[entry.offset].name] = value
+            named[slots[entry.offset].name] = entry.element
         }
     }
 }

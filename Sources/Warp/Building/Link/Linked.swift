@@ -246,34 +246,45 @@ public final class Linked: Sendable {
         try signature.settle(given, over: slots, skipping: skipping, judging: judging, as: "'\(rendered)'", in: table)
     }
 
-    // The same, over arguments handed by position: the way every call hands
-    // them.
-    func settle(applied given: [Value]) throws -> [Value] {
-        try signature.settle(applied: given, over: slots, as: "'\(rendered)'", in: table)
+    // How many arguments a call hands, against the slots this row keeps. A
+    // count read out of an object is about to place values in a frame, so
+    // another one is refused rather than trapped on.
+    func refuseCount(_ count: Int) throws {
+        guard count == slots.count else {
+            throw ArgumentError("'\(rendered)' was given \(count) arguments, and it takes \(slots.count)")
+        }
     }
 
-    // The same, over arguments given by name: the door a host outside the
-    // build comes through.
-    func settle(_ given: [Name: Value]) throws -> [Value?] {
+    // Arguments handed by position from outside the build: the door a host
+    // hands a closure values through, and a procedure the host answers its
+    // sends. One for each slot, a slot taking a variable in place taking none
+    // of them, and each fitted and judged by the door rule.
+    func settle(outside given: [Value]) throws -> [Value] {
+        if let slot = slots.first(where: { slot in slot.type.isInout }) {
+            throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and this call hands it a value")
+        }
+
+        try refuseCount(given.count)
+
+        return try zip(slots, given).map { slot, value in
+            try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
+        }
+    }
+
+    // Arguments given by name: the door a run's entry is handed values
+    // through.
+    func settle(_ given: [Name: Value]) throws -> [Value] {
         try signature.settle(given, over: slots, as: "entry '\(label)'", in: table)
     }
 
-    // What a procedure the host answers hands back, at the door it comes
-    // through: a value from outside, fitted to what the procedure declares
-    // the way an entry's arguments are, and judged against it the way a
-    // body's answer is.
+    // What this row answers where it crosses a door, a value from outside
+    // or one leaving to the host: what a procedure the host answers hands
+    // back, and what an entry answers the run's host. It is fitted to what
+    // the row declares and judged against it.
     func settling(answered value: Value) throws -> Value {
         guard let returns else { return value }
 
         return try returns.settling(outside: value, at: "returns", in: table)
-    }
-
-    // What an entry answers, at the door it leaves the run through, judged
-    // against what it declares.
-    func settling(returned value: Value) throws -> Value {
-        guard let returns else { return value }
-
-        return try returns.settling(value, at: "returns", in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made

@@ -81,23 +81,33 @@ struct Evaluator: Sendable {
     }
 
     // MARK: - Public
-    // A run starting from an entry, its arguments by name.
+    // A run starting from an entry, its arguments by name. Both ends are
+    // doors: what the host hands in and what the entry hands back.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
         try entry.settling(
-            returned: try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
+            answered: try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
         )
     }
 
     // Calling a closure a procedure holds. What may be called is what the
     // build proved answers. The arguments are handed by position, every
-    // position given, and are values from outside, each judged at the
-    // closure's own declaration.
+    // position given, and are values from outside, each crossing the door
+    // at the closure's own declaration.
     func call(
         _ closure: Closure,
         handing arguments: [Value],
         at trace: Trace
     ) async throws -> Value {
-        try await answer(closure, as: try closure.answered(), given: arguments, holding: [], at: trace)
+        let linked = try closure.answered()
+
+        return try await answer(
+            closure,
+            as: linked,
+            given: try linked.settle(outside: arguments),
+            holding: [],
+            judging: { _ in false },
+            at: trace
+        )
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -607,6 +617,7 @@ struct Evaluator: Sendable {
         as linked: Linked,
         given arguments: [Value?],
         holding holds: [(position: Int, handle: Handle)],
+        judging: @escaping (Int) -> Bool = { _ in true },
         at trace: Trace
     ) async throws -> Value {
         guard case let .body(body, frame) = linked.implementation else {
@@ -629,9 +640,11 @@ struct Evaluator: Sendable {
             )
         }
 
-        let settled = try linked.settle(arguments) { position in
-            holds.contains { held in held.position == position }
-        }
+        let settled = try linked.settle(
+            arguments,
+            skipping: { position in holds.contains { held in held.position == position } },
+            judging: judging
+        )
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -1080,8 +1093,8 @@ struct Evaluator: Sendable {
         return row
     }
 
-    // A send's arguments over the callee's boundary, standing at its
-    // positions.
+    // A send's arguments, values a procedure the host answers made, through
+    // the door at the callee's boundary, standing at its positions.
     private func settled(
         _ callee: Linked,
         sending: Sent,
@@ -1096,6 +1109,6 @@ struct Evaluator: Sendable {
             )
         }
 
-        return Settled(values: try callee.settle(applied: values).map { value in Optional(value) })
+        return Settled(values: try callee.settle(outside: values))
     }
 }

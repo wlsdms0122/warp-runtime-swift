@@ -166,18 +166,18 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
-    // Arguments given by name, settled into the order a run keeps them in.
-    // A name the declaration lacks is refused, and so is one it declares that
-    // was not given. A door a host outside the build comes through, since
-    // the build resolves names itself, and so a value is fitted to its type
-    // here, a field the declaration never named left out.
-    // `subject` is what a refusal names the procedure as.
+    // Arguments given by name, the door an entry's come through, settled
+    // into the order a run keeps them in. A name the declaration lacks is
+    // refused, and so is one it declares that was not given; a null standing
+    // at a name was given, since null is a value the way any other is. Each
+    // value is fitted and judged by the door rule. `subject` is what a
+    // refusal names the procedure as.
     func settle(
         _ given: [Name: Value],
         over slots: [Slot],
         as subject: String,
         in table: LoweredTypeTable
-    ) throws -> [Value?] {
+    ) throws -> [Value] {
         let undeclared = given.keys
             .filter { name in !slots.contains { slot in slot.name == name } }
             .sorted()
@@ -189,30 +189,16 @@ public struct Signature: Sendable, Equatable {
             )
         }
 
-        return try settle(
-            slots.map { slot in given[slot.name].map { value in slot.type.fitted(value, in: table) } },
-            over: slots,
-            as: subject,
-            in: table
-        )
-    }
+        let values = slots.compactMap { slot in given[slot.name] }
 
-    // Arguments handed by position, the way every call hands them: one for
-    // each slot, and none handed in place.
-    func settle(
-        applied given: [Value],
-        over slots: [Slot],
-        as subject: String,
-        in table: LoweredTypeTable
-    ) throws -> [Value] {
-        guard given.count == slots.count else {
-            throw ArgumentError(
-                "\(subject) was given \(given.count) arguments, and it takes \(slots.count)"
-            )
+        guard values.count == slots.count else {
+            let missing = slots.filter { slot in given[slot.name] == nil }.map { slot in "'\(slot.name)'" }
+
+            throw ArgumentError("\(subject) was given nothing for \(missing.joined(separator: ", "))")
         }
 
-        return try zip(slots, given).map { slot, value in
-            try slot.checking(value, at: "input '\(slot.name)'", in: table)
+        return try zip(slots, values).map { slot, value in
+            try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
         }
     }
 
