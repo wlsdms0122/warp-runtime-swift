@@ -251,10 +251,11 @@ struct Case: Sendable, CustomStringConvertible {
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
         // MARK: - Property
-        // What a runner says for itself: the version this module is read at,
-        // and that its declarations send nothing. A case writing either is
-        // refused rather than quietly overruled.
-        static let runnersKeys: Set<Name> = ["warp", "imports"]
+        // What a vocabulary declares: what the host's procedures are, and the
+        // types, contracts and claims their signatures stand on. Which version
+        // it is read at and what it sends are the runner's to say, and what a
+        // program declares beside them (constants, variables) is a document's.
+        static let declaringKeys: Set<Name> = ["types", "contracts", "satisfies", "procedures"]
 
         // The module as the reader takes it.
         let module: Value
@@ -603,11 +604,10 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        if let taken = module.names.first(where: Vocabulary.runnersKeys.contains) {
+        if let taken = module.names.first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
-                "the vocabulary a case asks for writes '\(taken)', which is the"
-                    + " runner's to say. A case says what the module declares and"
-                    + " nothing about how it is read"
+                "the vocabulary a case asks for writes '\(taken)'. A vocabulary declares `types`,"
+                    + " `contracts`, `satisfies` and `procedures`, and how it is read is the runner's"
             )
         }
 

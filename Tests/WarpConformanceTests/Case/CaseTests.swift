@@ -123,6 +123,44 @@ struct CaseTests {
         }
     }
 
+    @Test("is refused where its vocabulary writes what a vocabulary does not declare", arguments: [
+        "warp 1", "imports []", "const {\n      k 1\n    }", "var {\n      v 2\n    }", "description \"d\""
+    ])
+    func aVocabularyKeyItDoesNotDeclare(key: String) throws {
+        // When / Then. The runner builds the host's module from what a
+        // vocabulary declares, so a key it would not read is refused rather
+        // than dropped
+        #expect {
+            try Case(from: try TextEncoding().value(from: """
+                warpt 1
+                {
+                  expect {
+                    answers 1
+                  }
+                  name "broken"
+                  note "a vocabulary writing a key it does not declare"
+                  program {
+                    imports []
+                    procedures {
+                      entry {
+                        access "public"
+                        result 1
+                      }
+                    }
+                    warp 1
+                  }
+                  test 1
+                  vocabulary {
+                    \(key)
+                    procedures {}
+                  }
+                }
+                """), in: "broken")
+        } throws: { error in
+            error is ConformanceError && "\(error)".contains("A vocabulary declares `types`")
+        }
+    }
+
     @Test("is refused where it writes a key its subject cannot use", arguments: [
         ("object {}", "documents [\n    {}\n  ]", "a case about an object writes `documents`"),
         ("bytes x\"57415250010700\"", "documents [\n    {}\n  ]", "a case about an encoding writes `documents`"),
