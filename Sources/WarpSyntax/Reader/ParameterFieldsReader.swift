@@ -31,6 +31,12 @@ struct ParameterFieldsReader: Decodable {
             context: "parameter"
         )
 
+        try self.init(reading: decoder)
+    }
+
+    // The same fields read beside others the caller has already held the
+    // record's keys to.
+    init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type

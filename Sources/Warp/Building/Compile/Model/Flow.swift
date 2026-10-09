@@ -36,6 +36,26 @@ struct Flow {
         case round(Name?)
         case failure
 
+        // MARK: - Property
+        private var rank: Int {
+            switch self {
+            case .procedure: return 0
+            case .loop: return 1
+            case .round: return 2
+            case .failure: return 3
+            }
+        }
+
+        private var target: Name? {
+            switch self {
+            case let .loop(target), let .round(target):
+                return target
+
+            case .procedure, .failure:
+                return nil
+            }
+        }
+
         // MARK: - Initializer
         init(_ leave: Leave) {
             switch leave.reach {
@@ -80,24 +100,6 @@ struct Flow {
         }
 
         // MARK: - Private
-        private var rank: Int {
-            switch self {
-            case .procedure: return 0
-            case .loop: return 1
-            case .round: return 2
-            case .failure: return 3
-            }
-        }
-
-        private var target: Name? {
-            switch self {
-            case let .loop(target), let .round(target):
-                return target
-
-            case .procedure, .failure:
-                return nil
-            }
-        }
     }
 
     // MARK: - Property
@@ -111,8 +113,7 @@ struct Flow {
 
     // What every `return` inside here carried out of the procedure. Nothing
     // absorbs one, so this only ever gathers on the way up. Kept apart rather
-    // than joined, so each is held to the declaration on its own: two that
-    // disagree join to `Any`, and `Any` fits everything.
+    // than joined, so each is held to the declaration on its own.
     var answered: [Answer] = []
 
     // The names read here that the body this flow came out of did not
@@ -137,6 +138,14 @@ struct Flow {
 
     // MARK: - Initializer
     // MARK: - Public
+    // What a body that writes no `returns` hands its caller: its result and
+    // every `return`, each read as a name holds it, joined. Each way out is a
+    // place of its own and none of them declares a fraction, so a whole
+    // literal one of them answers is the Int it is before the ways meet.
+    func answer(resulting result: LoweredType) -> LoweredType {
+        answered.map(\.reading.asHeld).reduce(result.asHeld) { joined, answered in joined.joined(answered) }
+    }
+
     // A write on the way that goes on.
     mutating func land(_ later: (type: LoweredType, definite: Bool), on name: Name) {
         going?.land(later, on: name)

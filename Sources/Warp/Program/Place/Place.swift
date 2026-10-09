@@ -170,8 +170,8 @@ public struct Place: Sendable, Hashable {
         // knows what its reader is looking at.
         case part(Part)
 
-        // The type a statement writes, carried the same way and for the same
-        // reason: two texts spelling one type two ways arrive as one type.
+        // The construct a statement writes, carried the same way and for the
+        // same reason: two texts spelling one construct two ways arrive as one.
         case construct(Construct)
 
         // A position in an array the document writes.

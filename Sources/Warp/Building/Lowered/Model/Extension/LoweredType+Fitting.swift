@@ -24,7 +24,7 @@ extension LoweredType {
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        try settling(reachesRecord ? fitted(value, in: table) : value, at: path(), in: table)
+        try settling(fitted(value, in: table), at: path(), in: table)
     }
 
     // A value a cast reads, named the way this type names it: a nameless

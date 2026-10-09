@@ -454,11 +454,11 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a dictionary value's entries stand out of order")
-    func aDictionaryOutOfOrder() async throws {
-        // Given. A real object whose body answers a dictionary literal, its
-        // entries turned around. A reading that sorted them would read two
-        // writings as one object.
+    @Test("is refused where a record value's fields stand out of order")
+    func aRecordOutOfOrder() async throws {
+        // Given. A real object whose body answers a dictionary literal, which
+        // it writes as a record with no name, its fields turned around. A
+        // reading that sorted them would read two writings as one object.
         let sut = try Module(
             procedures: [
                 "App.entry": Procedure(
@@ -479,15 +479,17 @@ struct ObjectReadingTests {
             case var .array(result) = body[1],
             case var .array(literal) = result[0],
             case var .array(value) = literal[1],
-            case let .array(entries) = value[1],
-            entries.count == 2
+            case let .array(names) = value[2],
+            case let .array(values) = value[3],
+            names.count == 2
         else {
-            Issue.record("an object writes a literal dictionary as its entries")
+            Issue.record("an object writes a literal dictionary as a record's names and values")
 
             return
         }
 
-        value[1] = .array(entries.reversed())
+        value[2] = .array(names.reversed())
+        value[3] = .array(values.reversed())
         literal[1] = .array(value)
         result[0] = .array(literal)
         body[1] = .array(result)
@@ -500,7 +502,7 @@ struct ObjectReadingTests {
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
-            error is ObjectRefused && "\(error)".contains("'value' writes its names out of order, or one of them twice")
+            error is ObjectRefused && "\(error)".contains("not in name order")
         }
     }
 

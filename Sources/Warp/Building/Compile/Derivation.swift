@@ -139,10 +139,7 @@ struct Derivation {
     // What may come out of a block: everything its statements and its result
     // may fail with.
     func failing(_ block: Block, given failing: (Name) -> Failing?) -> Failing {
-        block.body.statements
-            .reduce(Failing.these([])) { carried, statement in
-                carried.joined(self.failing(statement.expression, given: failing))
-            }
+        self.failing(block.body, given: failing)
             .joined(block.result.map { result in self.failing(result, given: failing) } ?? .these([]))
     }
 

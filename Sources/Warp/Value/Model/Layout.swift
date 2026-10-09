@@ -13,8 +13,8 @@ import Foundation
 // reader or a host is the same layout for the same fields.
 //
 // A name is part of the layout, so `Account` and `Vault` are two layouts over
-// one set of fields. What a field holds is not: `{title: string}` and
-// `{title: int}` are one layout under two types.
+// one set of fields. What a field holds is not: `{ title: String }` and
+// `{ title: Int }` are one layout under two types.
 //
 // Inside a link a name is a row of the lowered type table; outside one it is a
 // spelling, which is why a reader and a host may write one. A slot that

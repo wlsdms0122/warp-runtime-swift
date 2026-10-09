@@ -7,9 +7,9 @@
 
 import Foundation
 
-// Deliberately not a `RecoverableFailure`. A call that names nothing, or calls
-// with arguments the callee never declared, is an author mistake. Absorbing it
-// into a rescue path would hide the one class of defect building exists to find.
+// What the build refuses: a mistake in what an author wrote, such as a call
+// that names nothing or hands what its callee never declared. No rescue holds
+// one.
 public struct BuildError: WarpError {
     // MARK: - Property
     public let message: String

@@ -21,7 +21,7 @@ struct DecodedQuery: Query {
         var declared: Parameter {
             switch self {
             case .bytes:
-                return Parameter(name: "bytes", type: .bytes)
+                return Parameter(name: "bytes", type: .array(.int))
 
             case .encoding:
                 return Parameter(name: "encoding", type: .string)

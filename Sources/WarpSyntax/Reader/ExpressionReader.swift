@@ -14,7 +14,7 @@ import Warp
 //
 //   scalar                  . A literal, and strings are always literal text
 //   array                   . Elements are expressions
-//   { ref: a.b[0] }         . A name to resolve in the consuming scope
+//   { ref: a.b[0] }         . A name to resolve in the scope that reads it
 //   { record: { … } }       . A record whose fields are expressions
 //   { call: <call> }        . A call where a value is wanted, the same form a
 //                              statement writes

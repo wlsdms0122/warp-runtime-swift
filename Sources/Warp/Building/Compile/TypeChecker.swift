@@ -372,11 +372,6 @@ struct TypeChecker {
     // Read rather than judged, because this is asked of a body the walk may
     // read again, and a refusal here would be one the judging pass is about to
     // state in its own place.
-    //
-    // Named for the reading and not for the answer, because the sibling below
-    // (what a *signature* answers) is the other question, and the two are kept
-    // apart on purpose: one is what the author wrote and one is what the build
-    // worked out.
     private func reading(
         from block: Block,
         at place: Place,
@@ -391,10 +386,7 @@ struct TypeChecker {
             ask: .probing
         )
 
-        // Each way out is a place of its own, and none of them declares a
-        // fraction, so a whole literal one of them answers is the Int it is
-        // before the ways meet.
-        return walked.flow.answered.map(\.reading.asHeld).reduce(walked.reading.asHeld) { joined, answered in joined.joined(answered) }
+        return walked.flow.answer(resulting: walked.reading)
     }
 
     // One answer, held to the `returns`. The refusal stands where the author
@@ -716,10 +708,6 @@ struct TypeChecker {
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             for reading in substitution.everyReading(of: parameter) {
                 for name in names.sorted() {
-                    // One nothing declares was refused where the
-                    // declaration was judged.
-                    guard loweredTypes.declaresContract(name) else { continue }
-
                     if let refusal = refusal(
                         of: reading,
                         answering: name,
@@ -1046,9 +1034,8 @@ struct TypeChecker {
                 .map { .refused($0) }
             }
 
-            // What an index lands on, once the walk knows it is an array (or
-            // bytes, an array in a compact spelling). An element past the end
-            // is a defect at the run, not an absence, so `?[` says nothing
+            // What an index lands on, once the walk knows it is an array. An
+            // element past the end is a defect at the run, not an absence, so `?[` says nothing
             // here unless it just unwrapped the array's own null.
             func indexed(_ element: LoweredType) -> PathReading? {
                 if let refusal = needless(.element) { return refusal }
@@ -1356,25 +1343,17 @@ struct TypeChecker {
 
     // What a call answers: the declaration's returns, filled from the operands
     // where the declaration is generic. One statement of the rule, whichever
-    // ask gathered the readings, and the operands are asked for lazily, so a
-    // non-generic call never pays for taking them.
+    // ask gathered the readings, and the filling is asked for lazily, so a
+    // non-generic call never pays for it.
     private func answered(
         by signature: Signature?,
-        over slots: [Slot],
         answering: LoweredType?,
-        readings sent: @autoclosure () throws -> [LoweredType],
-        in loweredTypes: LoweredTypeTable
-    ) rethrows -> LoweredType {
+        filling filled: @autoclosure () -> [Name: LoweredType]
+    ) -> LoweredType {
         guard let signature, let returns = answering else { return .any }
         guard signature.isGeneric else { return returns }
 
-        return returns.filling(
-            substitution(
-                over: slots,
-                readings: try sent(),
-                in: loweredTypes
-            ).readings
-        )
+        return returns.filling(filled())
     }
 
     // The segments a stopped walk leaves stand as written, and an index
@@ -1547,7 +1526,7 @@ struct TypeChecker {
     }
 
     // A condition chooses a way through a body, so what it reads has to be a
-    // bool, and a value read as `Any` is one once a cast says so.
+    // `Bool`, and a value read as `Any` is one once a cast says so.
     private func held(
         _ reading: LoweredType,
         asCondition place: Place,
@@ -1831,7 +1810,7 @@ struct TypeChecker {
                 // The author's spelling stands. `settled` is what a refusal
                 // shows (a name walked through to the type it declares) and
                 // writing that back into the program would spend the name: a
-                // refusal would read `as { age: int }` where the author wrote
+                // refusal would read `as { age: Int }` where the author wrote
                 // `as Person`, and a document written back out would have lost
                 // the declaration it leaned on. The run resolves names itself,
                 // so nothing needs it resolved early.
@@ -1843,7 +1822,7 @@ struct TypeChecker {
                 // The author's spelling here too, and for the same reason it
                 // stands in what is written back: a refusal on the next
                 // statement quotes this reading, and quoting a type nobody
-                // wrote (`{ name: string }` where the author wrote `Person`) is
+                // wrote (`{ name: String }` where the author wrote `Person`) is
                 // the same name spent, one step later. Every consumer resolves
                 // names itself. `?` is asked of the fact: a name standing for a
                 // nullable already holds null, and wrapping it again would make
@@ -1864,7 +1843,7 @@ struct TypeChecker {
             var fields: [Name: LoweredType] = [:]
             var shapes: [Name: LiteralShape] = [:]
 
-            for (name, field) in record.sorted { $0.key < $1.key } {
+            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
                 let inner = try await inspected(
                     field,
                     naming: nil,
@@ -1953,9 +1932,7 @@ struct TypeChecker {
             // does. The answer is written into its signature, so the run
             // reads the closure as the build did.
             if procedure.signature.returns == nil {
-                let answered = inner.flow.answered.map(\.reading.asHeld).reduce(inner.reading.asHeld) { joined, answered in
-                    joined.joined(answered)
-                }
+                let answered = inner.flow.answer(resulting: inner.reading)
 
                 procedure = procedure.with(
                     signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
@@ -2353,10 +2330,8 @@ struct TypeChecker {
                     rewritten: expression,
                     reading: answered(
                         by: signature,
-                        over: context.slots(of: call.selector),
                         answering: context.answer(of: call.selector),
-                        readings: readings,
-                        in: context.loweredTypes
+                        filling: substitution(over: slots, readings: readings, in: context.loweredTypes).readings
                     ),
                     flow: flow
                 )
@@ -2475,10 +2450,8 @@ struct TypeChecker {
 
             let reading = answered(
                 by: signature,
-                over: context.slots(of: call.selector),
                 answering: context.answer(of: call.selector),
-                readings: sent,
-                in: context.loweredTypes
+                filling: filled
             )
 
             if let judging = CallJudgement(
@@ -2779,18 +2752,12 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
-            // The two ways answer one value, held side by side the way a list
-            // literal's elements are, so a whole literal one of them answers
-            // beside a fraction the other answers is the fraction it names.
-            let reading = attempted.reading.joinedPartByPart(rescued.reading)
+            // Each way is a place of its own, so a whole literal one of them
+            // answers is the Int it is before the two ways meet, part by part.
+            let reading = attempted.reading.asHeld.joinedPartByPart(rescued.reading.asHeld)
 
             return Inspection(
-                rewritten: ask.rewrites
-                    ? .attempt(
-                        reading.written(attempted.block, in: context.loweredTypes),
-                        rescue: reading.written(rescued.block, in: context.loweredTypes)
-                    )
-                    : expression,
+                rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
                 reading: reading,
@@ -3499,11 +3466,7 @@ struct TypeChecker {
         // refuse whatever arrived. The judgment (a parameter read two ways has
         // no answer, a bounded one takes only what answers its bounds) is
         // the one every call surface shares, so this only gathers what the call
-        // wrote into each slot. This is what one signature says in place of the
-        // several a language with overloading would need: `some N` on both
-        // sides and on the way out is a whole number and a whole number
-        // answering a whole number, and a whole number and a fraction refused,
-        // without a way to declare a name twice.
+        // wrote into each slot.
         let slots: [Slot]
 
         switch judged(
@@ -3540,9 +3503,7 @@ struct TypeChecker {
 
         // A procedure may judge its own constant arguments before any run. A type
         // cannot say that a string a host parses is well formed, and the
-        // procedure can. It happens here rather than while decoding, because a
-        // notation judging arguments would have to know the vocabulary; judging
-        // belongs where names resolve. The procedure's own keys name its
+        // procedure can. The procedure's own keys name its
         // parameters, so each constant is asked for under the name of the slot
         // it stands at, through the same door the procedure reads an argument
         // through when it answers.
@@ -3570,9 +3531,10 @@ struct TypeChecker {
 
     // A call hands exactly as many arguments as its callee takes, so another
     // count is refused before any position is read. Every judgement of a
-    // call by position stands behind it: the shared one asks it at its own
-    // entrance, and a walk asks it where the call stands, ahead of what it
-    // reads in place there, so the count is what an author is told first.
+    // call by position stands behind it: the gate a gathered call passes
+    // asks it at its entrance, and a walk asks it where the call stands, ahead
+    // of what it reads in place there, so the count is what an author is told
+    // first.
     private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
         guard handed != count else { return }
 
@@ -3580,10 +3542,10 @@ struct TypeChecker {
     }
 
     // Each argument held to what the callee takes at its position: the one
-    // judgement a call to a declaration and a call of a value share. The
-    // count; every composition a position mentions, held to its bounds, with
-    // what leans on a claim this table cannot settle written down for the
-    // link; and what each position takes. What an argument holds is read
+    // judgement a call to a declaration and a call of a value share, once
+    // each has refused another count. What each position takes, then every
+    // composition it mentions held to its bounds, with what leans on a claim
+    // this table cannot settle written down for the link. What an argument holds is read
     // from the body it was written in, so a name bound to a call carries that
     // call's declared answer. A declaration's slots name each position; a
     // value's type writes the positions alone.
@@ -3598,14 +3560,20 @@ struct TypeChecker {
         writing fulfillment: Fulfillment,
         at place: Place
     ) throws {
-        try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
-
         for (position, (type, reading)) in zip(types, readings).enumerated() {
             let at = place.child(.argument(position))
             let given = LiteralShape(shapes[position], reading: reading)
             let slot = slots?[position]
             let named = slot.map { slot in "\(slot.name)" } ?? "argument \(position)"
             let quoted = slot.map { slot in "'\(slot.name)'" } ?? named
+
+            guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {
+                throw BuildError(
+                    "\(subject) with \(named), which holds \(given.rendered(in: loweredTypes))"
+                        + " where \(type.rendered(in: loweredTypes)) is declared",
+                    at: at
+                )
+            }
 
             // A pair the link settles is written down at the call, which an
             // object records; a refusal here stands at the argument.
@@ -3618,14 +3586,6 @@ struct TypeChecker {
                 at: place
             ) {
                 throw BuildError("\(subject): \(refusal)", at: at)
-            }
-
-            guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {
-                throw BuildError(
-                    "\(subject) with \(named), which holds \(given.rendered(in: loweredTypes))"
-                        + " where \(type.rendered(in: loweredTypes)) is declared",
-                    at: at
-                )
             }
         }
     }

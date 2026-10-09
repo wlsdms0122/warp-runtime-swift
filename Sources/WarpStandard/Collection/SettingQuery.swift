@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The record with one name bound to another value. It answers a new record, so
+// The map with one name bound to another value. It answers a new map, so
 // an author writes a changed mapping without the language growing a way to
 // write into one.
 struct SettingQuery: Query {

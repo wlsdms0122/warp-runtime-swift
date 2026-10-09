@@ -45,7 +45,7 @@ public extension Module {
                 claims: witnesses.reduce(into: [Name: Set<Name>]()) { claims, witness in
                     claims[witness.type, default: []].insert(witness.contract)
                 },
-                procedures: Dictionary(uniqueKeysWithValues: witnesses.map(\.declaration))
+                procedures: Dictionary(uniqueKeysWithValues: witnesses.map { witness in (witness.name, witness.procedure) })
             ),
             builtin: true
         )
@@ -58,7 +58,8 @@ public extension Module {
         // MARK: - Property
         let type: Name
         let contract: Name
-        let declaration: (name: Name, procedure: Procedure)
+        let name: Name
+        let procedure: Procedure
 
         // MARK: - Initializer
         init(_ type: Name, answering contract: Name, _ asked: String, by declaring: (String) -> Procedure) {
@@ -66,7 +67,8 @@ public extension Module {
 
             self.type = type
             self.contract = contract
-            self.declaration = (Name(normal: spelling), declaring(spelling))
+            self.name = Name(normal: spelling)
+            self.procedure = declaring(spelling)
         }
 
         // MARK: - Public
@@ -75,14 +77,9 @@ public extension Module {
 
     // The contracts this module declares, by the names a claim writes.
     private enum Contracts {
-        // MARK: - Property
         static let numeric: Name = "Standard.Numeric"
         static let comparable: Name = "Standard.Comparable"
         static let collection: Name = "Standard.Collection"
-
-        // MARK: - Initializer
-        // MARK: - Public
-        // MARK: - Private
     }
 
     // Every declaration answering a contract here: arithmetic for the two

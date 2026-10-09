@@ -298,7 +298,7 @@ struct TypeTests {
         // Given. Assembled against the table it is judged against, so what is
         // being asked is the claim and not which link made the row
         let types = try TypeTable()
-        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
+        let closure = Closure.assembled(answering: .int(1), in: types)
 
         // When / Then
         #expect(throws: ArgumentError.self) {

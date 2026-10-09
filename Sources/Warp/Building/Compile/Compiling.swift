@@ -144,13 +144,8 @@ struct Compiling {
 
         assert(held.origin == origin, "a document is laid at the origin it is held at")
 
-        // What the build read off a body stands by the row it was read off.
-        let own = lowering.own(origin)
-
         for (name, answer) in read {
-            guard let row = own[name] else { continue }
-
-            answers[row] = answer
+            self.read(answer, as: name, of: origin)
         }
     }
 

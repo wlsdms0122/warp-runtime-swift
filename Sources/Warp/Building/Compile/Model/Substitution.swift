@@ -77,16 +77,13 @@ struct Substitution: Sendable {
         (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 
-    // A parameter read once more. Two readings agree when one takes the other.
-    // A list of numbers and a whole number are not a disagreement, they are a
-    // parameter read once loosely and once tightly, and the loose reading is
-    // the one that holds both. With the table, because a reading may stand on
-    // a row and the type that row holds. Asking without it would call those
-    // two a disagreement, which is the same question the build asks elsewhere
-    // and answers correctly. Rigidly, because a parameter read here is the
-    // calling body's own and nothing fills it: a whole number and a parameter
-    // bounded to numbers are held by the parameter. What holds both is
-    // `holdingBoth`, and a parameter read as `Any` anywhere is `Any` there.
+    // A parameter read once more. Two readings join only where one rigidly
+    // takes the other: a whole literal and a fraction, and the same through
+    // lists, maps, `?` and fields. With the table, because a reading may
+    // stand on a row and the type that row holds. Rigidly, because a
+    // parameter read here is the calling body's own and nothing fills it.
+    // What holds both is `holdingBoth`, and a parameter read as `Any`
+    // anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer

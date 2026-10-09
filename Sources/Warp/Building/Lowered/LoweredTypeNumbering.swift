@@ -25,12 +25,11 @@ import Foundation
 // Only declared types are numbered. A contract a bound names is written by
 // its name, since a contract stands on no row.
 struct LoweredTypeNumbering: Sendable {
-    // What a number turned out to be, with the reason where it is not a row:
-    // a name the link does not declare, or a number the document never gave.
+    // What a number turned out to be: a row, or the name the link does not
+    // declare.
     enum Resolution: Sendable {
         case row(Int)
         case unfound(Name)
-        case unnumbered
     }
 
     // A document's type numbers resolved to the rows of one link, worked out
@@ -70,12 +69,6 @@ struct LoweredTypeNumbering: Sendable {
                     "'\(name)' is named here, and no module in this link declares it",
                     at: place
                 )
-
-            case .unnumbered:
-                throw BuildError.unjudged(
-                    "a type standing at \(number), which its document never numbered",
-                    at: place
-                )
             }
         }
     }
@@ -108,17 +101,8 @@ struct LoweredTypeNumbering: Sendable {
     // Every number this gave, resolved to the rows of one link.
     func rows(in loweredTypes: LoweredTypeTable) -> Renumbering {
         Renumbering(
-            types: types.indices.map { number in type(number, in: loweredTypes) }
+            types: types.map { name in loweredTypes.row(named: name).map(Resolution.row) ?? .unfound(name) }
         )
-    }
-
-    // Which row of a link a number stands for, read from that link's table.
-    func type(_ number: Int, in loweredTypes: LoweredTypeTable) -> Resolution {
-        guard types.indices.contains(number) else { return .unnumbered }
-
-        let name = types[number]
-
-        return loweredTypes.row(named: name).map(Resolution.row) ?? .unfound(name)
     }
 
     // MARK: - Private

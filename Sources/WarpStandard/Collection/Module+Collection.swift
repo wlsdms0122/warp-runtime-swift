@@ -13,7 +13,7 @@ public extension Module {
 
     private static let nativeCollection = Module(
         unchecked: Draft(
-            description: "Counting, appending, gathering and the names of a record.",
+            description: "Appending, gathering, and the names a map holds.",
             procedures: [
                 "Standard.Collection.appending": Procedure(
                     description: "The elements with one more at the end.",
@@ -32,7 +32,7 @@ public extension Module {
                     implementation: .query(GatheringQuery())
                 ),
                 "Standard.Collection.keys": Procedure(
-                    description: "The names a record holds, in order.",
+                    description: "The names a map holds, in order.",
                     signature: Signature(
                         of: KeysQuery.self,
                         returns: .array(.string)
@@ -40,7 +40,7 @@ public extension Module {
                     implementation: .query(KeysQuery())
                 ),
                 "Standard.Collection.setting": Procedure(
-                    description: "The record with one name bound to another value.",
+                    description: "The map with one name bound to another value.",
                     signature: Signature(
                         of: SettingQuery.self,
                         returns: .dictionary(.parameter(name: "Value"))

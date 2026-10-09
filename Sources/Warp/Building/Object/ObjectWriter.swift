@@ -93,12 +93,13 @@ struct ObjectWriter {
                 .array(try record.values.map(self.value))
             )
 
+        // Names as data are a record with no name, written as one.
         case let .dictionary(dictionary):
             return tagged(
-                Tag.dictionary,
-                .array(try dictionary.entries.map { (entry) throws(ObjectUnwritable) -> Value in
-                    .array([name(entry.name), try self.value(entry.value)])
-                })
+                Tag.record,
+                Self.maybe(nil, name),
+                .array(dictionary.names.map(name)),
+                .array(try dictionary.values.map(self.value))
             )
 
         // A document nobody wrote down is one an object cannot spell, so a

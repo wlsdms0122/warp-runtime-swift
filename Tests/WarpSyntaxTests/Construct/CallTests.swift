@@ -147,11 +147,10 @@ struct CallTests {
         #expect(outputs["result"] == .string("hey!"))
     }
 
-    @Test("a call carries values only, and a blocks key has no meaning to refuse quietly")
-    func aBlocksKeyIsRefusedAtTheLoad() {
-        // Given. A body a procedure is to run travels as a closure argument, so
-        // `blocks:` names nothing. An unknown key is refused where it is
-        // written rather than dropped.
+    @Test("a key the call does not name is refused at the load")
+    func anUnknownKeyIsRefusedAtTheLoad() {
+        // Given. A call's keys are closed, so one it does not name is refused
+        // where it is written.
         let sut: Value = [
             "procedures": [
                 "entry": [
@@ -160,7 +159,7 @@ struct CallTests {
                             "let": "walked",
                             "value": ["call": [
                                 "procedure": "helper",
-                                "blocks": ["body": ["body": [["let": "step", "value": 1]]]]
+                                "mystery": 2
                             ]
                         ]]
                     ]
@@ -172,7 +171,7 @@ struct CallTests {
         #expect {
             try loader.loadDocument(sut)
         } throws: { error in
-            "\(error)".contains("blocks")
+            "\(error)".contains("mystery")
         }
     }
 

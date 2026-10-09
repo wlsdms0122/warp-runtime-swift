@@ -10,9 +10,9 @@ import Warp
 
 // Whether one orders before the other.
 struct LessThanQuery: Query {
-    // What this takes: two values of the one type answering
-    // `Standard.Comparable`. The type is each declaration's own, since one
-    // query answers for every type that orders.
+    // What this takes: two values of the one type a declaration answers
+    // `Standard.Comparable` for. The type is each declaration's own, since one
+    // query answers for each type the shared ground claims it for.
     enum Parameters: Int, ParameterSet {
         case lhs
         case rhs

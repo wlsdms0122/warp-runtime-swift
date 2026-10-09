@@ -48,7 +48,6 @@ enum ObjectLayout {
         case bytes
         case array
         case record
-        case dictionary
         case closure
     }
 

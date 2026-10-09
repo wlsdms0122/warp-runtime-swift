@@ -57,7 +57,7 @@ struct DeclarationChecker {
         // The table is walked whole rather than per module: it arrives
         // carrying where each name was written, and asking a module again
         // would be spelling that a second way.
-        for (_, declaration) in declared.sorted { $0.key < $1.key } {
+        for (_, declaration) in declared.sorted(by: { $0.key < $1.key }) {
             try mentioned(in: declaration.held, at: declaration.place, resolve: table)
         }
 
@@ -69,7 +69,7 @@ struct DeclarationChecker {
     // table is what the whole link declared.
     func judge(_ modules: [Module], in table: TypeTable) throws {
         for module in modules {
-            for (name, procedure) in module.procedures.sorted { $0.key < $1.key } {
+            for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
                 if procedure.implementation.native != nil {
@@ -107,7 +107,7 @@ struct DeclarationChecker {
                 }
             }
 
-            for (name, constant) in module.constants.sorted { $0.key < $1.key } {
+            for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
             }
 

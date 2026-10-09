@@ -11,18 +11,18 @@ import Foundation
 // construct stands where a statement's value does, and the statement's name
 // is how what it answers gets a name.
 //
-// The data types:
+// The data constructs:
 //
 //   literal   . A `Value`, verbatim. The type system already says what data
 //                is, so an expression does not restate it
-//   reference . A name to resolve in the consuming scope
+//   reference . A name to resolve in the scope that reads it
 //   array     . Elements are expressions
 //   record    . Fields are expressions
 //   call      . The procedure it names and its arguments by position
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
-// appears, instead of borrowing the name of whatever bound it.
+// appears, rather than taking the name of whatever bound it.
 //
 // `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
@@ -144,10 +144,10 @@ public indirect enum Expression: Sendable {
     // two walks calling one statement's construct two things is two documents
     // as far as an author following the names is concerned.
     //
-    // It is what this implementation calls the type and **not** a key read
-    // off any document: a host registers the forms it likes under the
+    // It is what this implementation calls the construct and **not** a key
+    // read off any document: a host registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
-    // two texts that arrive here as one type.
+    // two texts that arrive here as one construct.
     public var construct: Construct {
         switch self {
         case .literal: .literal
@@ -175,10 +175,9 @@ public indirect enum Expression: Sendable {
     }
 
     // The value of an expression that needs no scope. Nil the moment any part
-    // must resolve at run time. Load-time gates (an atom validating its literal
-    // operand, the builder judging a constant argument) use this to judge what
-    // can be judged before any run.
-    public var constantValue: Value? {
+    // must resolve at run time. The build hands it to a procedure the host
+    // answers, which may judge the arguments a call writes as constants.
+    var constantValue: Value? {
         switch self {
         case let .literal(value):
             return value

@@ -86,6 +86,16 @@ public struct Mutator: Sendable {
 
             return mutations
 
+        // Bytes are a list in a compact spelling, so they are replaced in
+        // length the same way, which is how an identity or a fingerprint
+        // reads wrong.
+        case let .bytes(bytes):
+            var mutations: [Value] = [.bytes(Array(bytes.dropLast())), .bytes([]), .int(0), .dictionary(Value.Dictionary([:]))]
+
+            if let first = bytes.first { mutations.append(.bytes(bytes + [first])) }
+
+            return mutations
+
         case let .dictionary(dictionary):
             var mutations: [Value] = [.dictionary(Value.Dictionary([:])), .array([]), .int(0)]
 

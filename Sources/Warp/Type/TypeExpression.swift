@@ -74,10 +74,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // a variable, and what arrives is the inner type.
     case `inout`(TypeExpression)
 
-    // The declared type, or null. The one union the language has, and it is
-    // null-only on purpose. `?.` answers this; a general union would put back
-    // the "is it this or that" question the whole type system exists to
-    // answer once.
+    // The declared type, or null. `?.` answers this.
     case nullable(TypeExpression)
 
     // A type a module declared. Kept rather than expanded so that a type may
@@ -178,11 +175,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement)),
         TypeSpelling.procedure: .procedure(nil)
     ]
-
-    // Bytes are a list of whole numbers in a compact spelling, so the type of
-    // one is the type of that list. What a procedure the host answers
-    // declares where it takes or answers bytes.
-    public static let bytes = TypeExpression.array(.int)
 
     // How the type reads in a message. A declaration an author wrote should come
     // back to them in the spelling they wrote it in.
@@ -354,8 +346,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether anything in here is a type parameter. A declaration without one
-    // is read the way it always was, so nothing pays for a feature it does not
-    // use.
+    // is read as written, so nothing pays for a feature it does not use.
     var isGeneric: Bool {
         switch self {
         // Both are types a call decides, and the deep question is only
@@ -454,12 +445,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // The same type with every name it holds walked through to what that name
     // declares. At every depth, not only the outermost.
-    //
-    // A name is a spelling, and two spellings of one type are one type: a
-    // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
-    // are the same thing said twice. Resolving only the outermost made that
-    // depend on where the author happened to write the name, so the same
-    // question got two answers depending on nesting.
     func resolved(in types: TypeTable) -> TypeExpression {
         resolved(in: types, assuming: [])
     }

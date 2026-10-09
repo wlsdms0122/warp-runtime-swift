@@ -191,7 +191,7 @@ struct Bench {
 
     // As many procedures as the most documents, so the widest spread is one procedure to
     // a document.
-    private static let fanoutWords = documentCounts.reduce(1, max)
+    private static let fanoutProcedures = documentCounts.reduce(1, max)
 
     // MARK: - Initializer
     // MARK: - Public
@@ -273,7 +273,7 @@ struct Bench {
         var costs: [Int: Cost] = [:]
 
         for count in documentCounts {
-            let dealing = try Dealing(of: fanoutWords, across: count)
+            let dealing = try Dealing(of: fanoutProcedures, across: count)
             let fanout = try await Fanout(dealing)
 
             costs[dealing.documents] = Cost(
@@ -285,7 +285,7 @@ struct Bench {
         }
 
         print("")
-        print(Self.table(costs, of: fanoutWords, against: printed?["documents"], from: against))
+        print(Self.table(costs, of: fanoutProcedures, against: printed?["documents"], from: against))
     }
 
     // MARK: - Private

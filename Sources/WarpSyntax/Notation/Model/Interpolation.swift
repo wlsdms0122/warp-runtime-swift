@@ -14,11 +14,9 @@ import Warp
 // one. Which procedures it spends is the notation's answer: a template asks
 // each piece how it reads and writes the pieces one after another.
 //
-// Qualified names are what these should be, though nothing here checks it. A
-// name is its declared spelling: `Standard.Text.text` names one declaration wherever
-// a template is written, and a document declaring a `text` of its own declares
-// a different name. Two modules claiming one spelling is a refused link
-// instead of a silent winner.
+// A name is its declared spelling: `Standard.Text.text` names one declaration
+// wherever a template is written, and a document declaring a `text` of its own
+// declares a different name.
 public struct Interpolation: Sendable, Equatable {
     // MARK: - Property
     // The keys a template is written under: the text, and what its

@@ -13,7 +13,6 @@ import Foundation
 // answering one of those questions reads the name from here and no two of
 // them can come to spell one type two ways.
 public enum TypeSpelling {
-    // MARK: - Property
     public static let any: Name = "Any"
     public static let never: Name = "Never"
     public static let null: Name = "Null"
@@ -32,8 +31,4 @@ public enum TypeSpelling {
     // parameter nothing fills, spelled with a dot, which no document's `some`
     // writes, so it is no parameter a declaration names.
     public static let selfElement: Name = "Self.Element"
-
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
 }

@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // The readable projection. The writer has one layout, sorted keys and two
 // spaces an indent, and the reader takes any layout that spells the same value:
