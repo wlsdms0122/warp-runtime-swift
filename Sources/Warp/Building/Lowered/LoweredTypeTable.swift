@@ -139,6 +139,12 @@ final class LoweredTypeTable: Sendable {
         rows[name]
     }
 
+    // The record a value under this name is a value of, or nil where the
+    // name declares no record.
+    func record(named name: Name) -> Int? {
+        row(named: name).flatMap { row in recordRows[row] }
+    }
+
     // What a mention of a row lowers to: the row, where it is kept as one,
     // and what the alias stands for otherwise.
     func mention(of row: Int) -> LoweredType {

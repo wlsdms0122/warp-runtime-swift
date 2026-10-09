@@ -273,10 +273,14 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether a value of this may hold a record, which is all the walk
     // writes or leaves out: what holds none comes back as it is, unwalked.
+    // Where contracts are asked, a value of any type may stand.
     var reachesRecord: Bool {
         switch self {
-        case .named, .record:
+        case .named, .record, .composition:
             return true
+
+        case let .parameter(_, bounds):
+            return !bounds.isEmpty
 
         case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.reachesRecord
@@ -1515,9 +1519,16 @@ indirect enum LoweredType: Sendable, Equatable {
             return value
 
         // Both ask the contracts and neither settles: a value stands as what
-        // it arrived as.
+        // it arrived as. One under a declared record's name answers them as
+        // that record, so it is held to the record first.
         case let .parameter(_, bounds), let .composition(bounds):
-            return try bounds.reduce(value) { value, contract in
+            guard !bounds.isEmpty else { return value }
+
+            let held = try table.record(named: value.nominal).map { record in
+                try LoweredType.named(record).settling(value, at: path(), in: table)
+            } ?? value
+
+            return try bounds.reduce(held) { value, contract in
                 try standing(value, answering: contract, at: path(), in: table)
             }
 
@@ -2470,7 +2481,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A tag already canonical is the same spelling. One that is not
         // is an alias or another record, told apart by the table once.
         if case let .record(record) = value, let written = record.name,
-           written != label, table.row(named: written).map({ spelled in table.recordRows[spelled] == nominal }) != true {
+           written != label, table.record(named: written) != nominal {
             throw ArgumentError("\(path()): is a \(written), and the slot declares \(label)")
         }
 
@@ -2655,6 +2666,13 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.shaped(value, leavingOut: leavingOut, in: table)
+
+        // Where contracts are asked, a value under a declared record's name
+        // is shaped as that record.
+        case let (.parameter(_, bounds), _), let (.composition(bounds), _):
+            guard !bounds.isEmpty, let record = table.record(named: value.nominal) else { return value }
+
+            return LoweredType.named(record).shaped(value, leavingOut: leavingOut, in: table)
 
         case let (.array(element), .array(items)) where element.reachesRecord:
             return .array(items.map { item in element.shaped(item, leavingOut: leavingOut, in: table) })
