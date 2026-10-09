@@ -94,13 +94,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // `named`. A name is looked up in a table and this is worked out from the
     // call.
     //
-    // The names bound it: a parameter bounded by `Comparable` takes only
-    // what answers the contract by that name, and one bounded by several
-    // takes only what answers every one of them. A bound is a declaration
-    // like a type (a module binds a name to the procedures it asks) so a
-    // signature writes the names. In name order, so one set has one
-    // spelling.
-    case parameter(name: Name, bounds: [Name] = [])
+    // The contracts bounding it are the signature's `bounds`, written once
+    // for the name, so a mention carries the name alone.
+    case parameter(name: Name)
 
     // A value of whatever type answers every contract here, written
     // `A & B`, with no name of its own to tie one mention to another. One
@@ -213,15 +209,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .string:
             return TypeSpelling.string.spelling
 
-        // The diagnostic voice, not the notation. `rendered` tells an author
-        // what a type *is*, and the procedure case below already writes a type
-        // no document spells. So the bound rides along: `some N` alone would
-        // hide the one fact a bound refusal is about. What a document spells is
-        // the writer's question, and the writer answers it with `bounds`.
-        case let .parameter(name, bounds):
-            return bounds.isEmpty
-                ? "some \(name)"
-                : "some \(name): \(bounds.map(\.spelling).joined(separator: " & "))"
+        case let .parameter(name):
+            return "some \(name)"
 
         case let .composition(names):
             return names.map(\.spelling).joined(separator: " & ")
@@ -300,8 +289,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         return nil
     }
 
-    // Every declared name this reaches: the types it names, and the
-    // contracts it bounds a parameter by.
+    // Every declared name this reaches: the types and contracts it names.
     //
     // A parameter's own name is not one of them. It stands for a type the
     // call decides rather than one a module declared, and what a walk through
@@ -331,38 +319,34 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .named(name):
             [name]
 
-        case let .parameter(_, bounds):
-            Set(bounds)
-
         case let .composition(names):
             Set(names)
 
-        case .selfType, .projection:
+        case .parameter, .selfType, .projection:
             []
         }
     }
 
-    // Every type parameter mentioned in here, occurrence by occurrence, each
-    // with the bounds it carries.
-    var parameterOccurrences: [ParameterOccurrence] {
+    // Every type parameter named in here.
+    var parameterNames: Set<Name> {
         switch self {
-        case let .parameter(name, bounds):
-            return [ParameterOccurrence(name: name, bounds: bounds)]
+        case let .parameter(name):
+            return [name]
 
         case .projection, .composition, .selfType:
             return []
 
         case let .array(element), let .dictionary(element), let .nullable(element):
-            return element.parameterOccurrences
+            return element.parameterNames
 
         case let .record(fields):
-            return fields.values.flatMap { field in field.parameterOccurrences }
+            return fields.values.reduce(into: Set()) { named, field in named.formUnion(field.parameterNames) }
 
         case let .procedure(type, _, _):
-            return type?.parameterOccurrences ?? []
+            return type?.parameterNames ?? []
 
         case let .variable(inner), let .inout(inner):
-            return inner.parameterOccurrences
+            return inner.parameterNames
 
         case .any, .never, .null, .bool, .int, .double, .string, .named:
             return []
@@ -478,43 +462,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // question got two answers depending on nesting.
     func resolved(in types: TypeTable) -> TypeExpression {
         resolved(in: types, assuming: [])
-    }
-
-    // The occurrence side of `Signature.bounded(by:)`, walked through every
-    // place a type parameter may sit. A nested procedure type's parameters
-    // included, because they are the outer signature's own slots.
-    func bounded(by bounds: [Name: [Name]]) -> TypeExpression {
-        switch self {
-        case let .parameter(name, _):
-            return .parameter(name: name, bounds: bounds[name] ?? [])
-
-        case .projection, .composition, .selfType:
-            return self
-
-        case let .array(element):
-            return .array(element.bounded(by: bounds))
-
-        case let .dictionary(entry):
-            return .dictionary(entry.bounded(by: bounds))
-
-        case let .record(fields):
-            return .record(fields.mapValues { field in field.bounded(by: bounds) })
-
-        case let .procedure(type, constness, isolation):
-            return .procedure(type?.bounded(by: bounds), constness, isolation)
-
-        case let .nullable(inner):
-            return .nullable(inner.bounded(by: bounds))
-
-        case let .variable(inner):
-            return .variable(inner.bounded(by: bounds))
-
-        case let .inout(inner):
-            return .inout(inner.bounded(by: bounds))
-
-        case .any, .never, .null, .bool, .int, .double, .string, .named:
-            return self
-        }
     }
 
     // The same type with `Self` written as `type` wherever it stands: what a

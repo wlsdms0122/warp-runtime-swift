@@ -344,11 +344,7 @@ struct ObjectReader {
         case .`inout`: read = .inout(try expression(cursor.next()))
         case .nullable: read = .nullable(try expression(cursor.next()))
         case .named: read = .named(try name(cursor.next()))
-        case .parameter:
-            read = .parameter(
-                name: try name(cursor.next()),
-                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
-            )
+        case .parameter: read = .parameter(name: try name(cursor.next()))
 
         case .composition:
             let names = try Field(cursor.next(), of: "composition").ordered(name)
@@ -445,7 +441,16 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "signature")
         let read = Signature(
             parameters: try Field(cursor.next(), of: "parameters").list(parameter),
-            returns: try cursor.field().maybe(expression)
+            returns: try cursor.field().maybe(expression),
+            bounds: try keyed(cursor.next(), of: "bounds") { written in
+                let contracts = try Field(written, of: "bounds").ordered(name)
+
+                guard !contracts.isEmpty else {
+                    throw ObjectRefused("'bounds' holds a type parameter to nothing")
+                }
+
+                return Set(contracts)
+            }
         )
 
         try cursor.end()

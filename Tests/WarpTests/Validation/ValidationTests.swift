@@ -587,18 +587,23 @@ struct ValidationTests {
     }
 
     @Test("a name in the types namespace is held to one grammar wherever a module built in Swift spells it", arguments: [
-        ("imports", [:], TypeExpression.named("consuming Int")),
-        ("types.Int", ["Int": .string], .int),
-        ("imports", [:], .parameter(name: "T", bounds: ["Array<Int>"]))
-    ] as [(String, [Name: TypeExpression], TypeExpression)])
-    func aTypeNamespaceNameHoldsOneGrammar(place: String, types: [Name: TypeExpression], parameter: TypeExpression) throws {
+        ("imports", [:], TypeExpression.named("consuming Int"), [:]),
+        ("types.Int", ["Int": .string], .int, [:]),
+        ("imports", [:], .parameter(name: "T"), ["T": ["Array<Int>"]])
+    ] as [(String, [Name: TypeExpression], TypeExpression, [Name: Set<Name>])])
+    func aTypeNamespaceNameHoldsOneGrammar(
+        place: String,
+        types: [Name: TypeExpression],
+        parameter: TypeExpression,
+        bounds: [Name: Set<Name>]
+    ) throws {
         // When / Then
         #expect {
             try Module(
                 types: types,
                 procedures: [
                     "App.keep": Procedure(
-                        signature: Signature(parameters: [Parameter(name: "value", type: parameter)]),
+                        signature: Signature(parameters: [Parameter(name: "value", type: parameter)], bounds: bounds),
                         body: [],
                         result: .literal(.int(1))
                     ),
@@ -630,7 +635,7 @@ struct ValidationTests {
     func aClosureWritesNoBounds() throws {
         // Given
         let closure = Procedure(
-            signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))]),
+            signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], bounds: ["T": ["Standard.Comparable"]]),
             body: [],
             result: .literal(.int(1))
         )

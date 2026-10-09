@@ -369,8 +369,8 @@ struct ClaimChecker {
         // The contract's procedure as the claim reads it: `Self` is the type
         // the claim is about, wherever it stands.
         let substituted = asked.replacingSelf(with: claimed)
-        let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        let asks = substituted.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
+        let takes = given.lowered(in: loweredTypes).map(\.type)
+        let asks = substituted.lowered(in: loweredTypes).map(\.type)
         let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
         // What fills the declaration's own parameters is held to their bounds
@@ -378,7 +378,7 @@ struct ClaimChecker {
         // writes there is filled by no call: what each was read as, and each
         // reading of it that its join is not. A bound nothing declares was
         // refused where the declaration was judged.
-        for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
+        for (parameter, names) in given.bounds.sorted(by: { $0.key < $1.key }) {
             let bounds = names.filter { name in loweredTypes.declaresContract(name) }.sorted()
 
             for reading in substitution.everyReading(of: parameter)
@@ -408,9 +408,11 @@ struct ClaimChecker {
                     + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
         }
 
-        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes) else { return nil }
+        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds) else {
+            return nil
+        }
 
-        let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+        let answered = (given.returns?.lowered(in: loweredTypes, bounds: given.bounds) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
             .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes, rigid: true) else {

@@ -487,7 +487,7 @@ public struct Validator: Sendable {
 
             // Its `some T` is the `T` of the procedure it is written in, and
             // the signature that declares a type parameter owns its bound.
-            guard procedure.signature.parameterOccurrences.allSatisfy({ occurrence in occurrence.bounds.isEmpty }) else {
+            guard procedure.signature.bounds.isEmpty else {
                 throw ValidationError(
                     "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
                         + " held to the bounds that procedure declares",

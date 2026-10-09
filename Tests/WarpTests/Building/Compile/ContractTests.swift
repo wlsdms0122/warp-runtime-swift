@@ -281,9 +281,10 @@ struct ContractTests {
                 "Chart.draw": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["Chart.Plottable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .int
+                        returns: .int,
+                        bounds: ["T": ["Chart.Plottable"]]
                     ),
                     body: [],
                     result: .call(Call(selector: "Chart.Plottable.height", arguments: [reference("it")]))
@@ -391,8 +392,9 @@ struct ContractTests {
             procedures: [
                 "Array.sort": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T", bounds: ["Standard.Comparable"])))],
-                        returns: .int
+                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T")))],
+                        returns: .int,
+                        bounds: ["T": ["Standard.Comparable"]]
                     ),
                     body: [],
                     result: .literal(.int(0))
@@ -515,9 +517,10 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(
@@ -559,9 +562,10 @@ struct ContractTests {
             "App.tell": Procedure(
                 signature: Signature(
                     parameters: [
-                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                        Parameter(name: "it", type: .parameter(name: "T"))
                     ],
-                    returns: .string
+                    returns: .string,
+                    bounds: ["T": ["App.Describable"]]
                 ),
                 body: [],
                 result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
@@ -603,9 +607,10 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(

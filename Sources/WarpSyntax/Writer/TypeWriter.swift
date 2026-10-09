@@ -42,36 +42,15 @@ struct TypeWriter {
         return written
     }
 
-    func stripped(_ signature: Signature) -> Signature {
-        Signature(
-            parameters: signature.parameters.map { parameter in
-                Parameter(
-                    name: parameter.name,
-                    type: parameter.type.map(stripped),
-                    description: parameter.description
-                )
-            },
-            returns: signature.returns.map(stripped)
+    // The bounds, written once, at the signature that declares the names.
+    func bounds(of signature: Signature) -> Value? {
+        guard !signature.bounds.isEmpty else { return nil }
+
+        return .dictionary(
+            signature.bounds.mapValues { named in
+                Value.string(named.sorted().map(\.spelling).joined(separator: " & "))
+            }
         )
-    }
-
-    // The bounds, gathered from every occurrence (the nested ones included,
-    // because a nested signature's parameters are this signature's own slots)
-    // and written once, at the declaring signature. A name two occurrences
-    // bound differently is two claims about one thing: a signature the link
-    // refuses has no document.
-    func bounds(of signature: Signature) throws -> Value? {
-        let held = signature.parameterBounding
-
-        if let refusal = held.refusal {
-            throw WritingError(refusal + ", so there is no `bounds` to write")
-        }
-
-        let bounds = held.table
-            .filter { _, named in !named.isEmpty }
-            .mapValues { named in Value.string(named.sorted().map(\.spelling).joined(separator: " & ")) }
-
-        return bounds.isEmpty ? nil : .dictionary(bounds)
     }
 
     // MARK: - Private
@@ -102,22 +81,9 @@ struct TypeWriter {
                     + " fills"
             )
 
-        // Bare, because an occurrence names the parameter and its bound is
-        // written once, in the `bounds` of the signature that declares the
-        // name. A signature entry strips the bound before writing and emits it
-        // there, so a bound still on the type here means no signature owns it,
-        // and no surface of the document could carry it: writing the name alone
-        // would be a document that reads back meaning something else.
-        case let .parameter(name, bounds):
-            guard bounds.isEmpty else {
-                throw WritingError(
-                    "'some \(name)' is bounded by"
-                        + " '\(bounds.map(\.spelling).joined(separator: " & "))', and nothing"
-                        + " here declares it. A bound is written in the `bounds` of"
-                        + " a procedure's signature, which this type is not part of"
-                )
-            }
-
+        // Bare, because a slot names the parameter and its bound is written
+        // in the `bounds` of the signature that declares the name.
+        case let .parameter(name):
             return .string("some \(name)")
 
         case let .composition(names):
@@ -159,9 +125,6 @@ struct TypeWriter {
 
             let spelling = TypeReader.procedureSpelling(constness, isolation, as: .key)
 
-            // No bound check of its own: a procedure type written as a type has
-            // no `bounds` surface, and the `.parameter` case refuses any bound
-            // the walk below meets. One guard, wherever the walk started.
             var written: [Name: Value] = [:]
 
             if !type.parameters.isEmpty {
@@ -239,53 +202,6 @@ struct TypeWriter {
         }
     }
 
-    // The type with every occurrence's bound removed. What a signature's slots
-    // spell, the bound having moved to the signature's own `bounds`. Nested
-    // signatures are walked too: their parameters are the declaring signature's
-    // slots, and the one `bounds` at the declaration speaks for every
-    // occurrence in them.
-    private func stripped(_ type: TypeExpression) -> TypeExpression {
-        switch type {
-        case let .parameter(name, _):
-            return .parameter(name: name)
-
-        // Neither carries a bound to strip: a composition is its bounds, and
-        // a slot spells it whole.
-        case .projection, .composition, .selfType:
-            return type
-
-        case let .array(element):
-            return .array(stripped(element))
-
-        case let .dictionary(entry):
-            return .dictionary(stripped(entry))
-
-        case let .record(fields):
-            return .record(fields.mapValues(stripped))
-
-        case let .procedure(type, constness, isolation):
-            return .procedure(type.map(stripped), constness, isolation)
-
-        case let .nullable(inner):
-            return .nullable(stripped(inner))
-
-        case let .variable(inner):
-            return .variable(stripped(inner))
-
-        case let .inout(inner):
-            return .inout(stripped(inner))
-
-        case .any, .never, .null, .bool, .int, .double, .string, .named:
-            return type
-        }
-    }
-
-    private func stripped(_ type: ProcedureType) -> ProcedureType {
-        ProcedureType(
-            parameters: type.parameters.map(stripped),
-            returns: type.returns.map(stripped)
-        )
-    }
 
     // One fact (only a type with a spelling of its own composes) said with the
     // place the author wrote, so the refusal points at their text.

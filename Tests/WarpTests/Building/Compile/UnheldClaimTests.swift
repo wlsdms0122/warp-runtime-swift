@@ -26,8 +26,9 @@ struct UnheldClaimTests {
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
-                        returns: .string
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])]))
@@ -48,8 +49,9 @@ struct UnheldClaimTests {
             procedures: [
                 "App.mine": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
-                        returns: .string
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(Call(selector: "App.tell", arguments: [.reference([.key("it")])]))
@@ -89,9 +91,10 @@ struct UnheldClaimTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(
@@ -159,9 +162,10 @@ struct UnheldClaimTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(
@@ -220,9 +224,10 @@ struct UnheldClaimTests {
                 "App.count": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .int
+                        returns: .int,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .literal(.int(1))

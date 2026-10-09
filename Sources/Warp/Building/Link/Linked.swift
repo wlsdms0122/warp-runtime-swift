@@ -132,7 +132,7 @@ public final class Linked: Sendable {
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
-        let returns = signature.returns?.lowered(in: table)
+        let returns = signature.returns?.lowered(in: table, bounds: signature.bounds)
 
         self.label = label
         self.origin = origin

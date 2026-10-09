@@ -54,12 +54,12 @@ struct TypingContext: Sendable {
     // What the procedure being read holds its type parameters to. A closure
     // written in its body reads the same names, so a `some T` inside is the
     // `T` the caller filled, bound the way the declaration bound it.
-    var bounds: [Name: [Name]] = [:]
+    var bounds: [Name: Set<Name>] = [:]
 
     // MARK: - Initializer
     // MARK: - Public
     // The same context, reading the body of a procedure bound this way.
-    func bounding(_ bounds: [Name: [Name]]) -> TypingContext {
+    func bounding(_ bounds: [Name: Set<Name>]) -> TypingContext {
         var held = self
         held.bounds = bounds
 

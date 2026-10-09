@@ -148,7 +148,7 @@ struct DeclarationChecker {
     }
 
     // Everything a signature is held to where it is declared: every type it
-    // mentions resolves, and every bound it names is declared and single. The
+    // mentions resolves, and every bound it names is a declared contract. The
     // facts every consumer of the signature reads instead of re-deriving.
     private func judge(
         _ signature: Signature,
@@ -161,7 +161,7 @@ struct DeclarationChecker {
 
         try mentioned(in: signature.returns ?? .any, at: place.part(.returns), resolve: table)
 
-        try judgeBounds(signature.parameterOccurrences, at: place, in: table)
+        try judge(bounds: signature.bounds, at: place, in: table)
     }
 
     // A procedure the host answers calls a procedure it was handed with
@@ -233,8 +233,6 @@ struct DeclarationChecker {
             }
 
             try mentioned(in: type.returns ?? .any, at: place, resolve: table)
-
-            try judgeBounds(type.parameterOccurrences, at: place, in: table)
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some
@@ -327,39 +325,14 @@ struct DeclarationChecker {
     }
 
     // Whether a signature's bounded parameters could ever be judged: every
-    // name a bound names has to be one somebody declared, and one name is held
-    // to one set of them. A bound names a contract. Each occurrence carries
-    // its bounds separately, so occurrences carrying different sets for one
-    // name are two claims about one thing.
-    private func judgeBounds(
-        _ occurrences: [ParameterOccurrence],
+    // name a bound names has to be a contract somebody declared.
+    private func judge(
+        bounds: [Name: Set<Name>],
         at place: Place,
         in table: TypeTable
     ) throws {
-        // How each mention is written is judged mention by mention, so no
-        // one of them stands for the others.
-        var misspelled: Set<Name> = []
-
-        for occurrence in occurrences {
-            let names = occurrence.bounds
-
-            if Set(names).count != names.count || names != names.sorted() {
-                misspelled.insert(occurrence.name)
-            }
-        }
-
-        if let misspelled = misspelled.min() {
-            throw BuildError("`some \(misspelled)` names its bounds once each and in name order", at: place)
-        }
-
-        let bounds = ParameterBounding(occurrences)
-
-        if let refusal = bounds.refusal {
-            throw BuildError(refusal, at: place)
-        }
-
-        for (parameter, names) in bounds.table.sorted(by: { $0.key < $1.key }) {
-            for bound in names where table.contracts[bound] == nil {
+        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
+            for bound in names.sorted() where table.contracts[bound] == nil {
                 throw BuildError(
                     "`some \(parameter)` names '\(bound)', which no module in this"
                         + " link declares as a contract",

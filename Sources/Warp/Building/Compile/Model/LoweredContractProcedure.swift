@@ -66,7 +66,7 @@ struct LoweredContractProcedure: Sendable {
                     isolation: asked.isolation,
                     failing: asked.failing,
                     slots: signature.lowered(in: types.loweredTypes),
-                    answers: signature.returns?.lowered(in: types.loweredTypes),
+                    answers: signature.returns?.lowered(in: types.loweredTypes, bounds: signature.bounds),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
                         held[type] = ContractProcedure.spelling(of: type, procedure: procedure)
                     }

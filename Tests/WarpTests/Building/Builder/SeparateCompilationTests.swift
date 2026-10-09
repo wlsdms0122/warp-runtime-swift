@@ -755,9 +755,10 @@ struct SeparateCompilationTests {
                     "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T"))
                             ],
-                            returns: .string
+                            returns: .string,
+                            bounds: ["T": ["App.Describable"]]
                         ),
                         body: [],
                         result: .call(
@@ -903,9 +904,10 @@ struct SeparateCompilationTests {
                     "App.tell": Procedure(
                         signature: Signature(
                             parameters: [
-                                Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                                Parameter(name: "it", type: .parameter(name: "T"))
                             ],
-                            returns: .string
+                            returns: .string,
+                            bounds: ["T": ["App.Describable"]]
                         ),
                         body: [],
                         result: .call(

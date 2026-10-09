@@ -144,7 +144,7 @@ struct Compiler {
                     in: opening(declaration.signature),
                     declaring: symbol.declared,
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature.parameterBounding.table),
+                    with: context().bounding(declaration.signature.bounds),
                     folding: folding,
                     writing: fulfillment
                 )

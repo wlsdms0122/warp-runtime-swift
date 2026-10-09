@@ -11,7 +11,8 @@ extension LoweredType {
     // This type as a declaration writes it: lowering run backwards. A
     // declared name goes back to its label, so what it stands for, a mark
     // lowering dropped included, is read again where the spelling is
-    // lowered. A whole literal is read as the Int a name holds it as.
+    // lowered. A whole literal is read as the Int a name holds it as. A type
+    // parameter goes back to its name, its bounds being the signature's.
     func spelled(in table: LoweredTypeTable) -> TypeExpression {
         switch self {
         case .any:
@@ -68,8 +69,8 @@ extension LoweredType {
         case let .named(row):
             return .named(table.labels[row])
 
-        case let .parameter(label, bounds):
-            return .parameter(name: label, bounds: bounds)
+        case let .parameter(label, _):
+            return .parameter(name: label)
 
         case let .composition(names):
             return .composition(names)

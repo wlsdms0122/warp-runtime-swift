@@ -106,18 +106,14 @@ struct TypeNotationTests {
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
 
-        // Then. Every occurrence carries the bound the signature declared
+        // Then. The signature holds the bound, and every slot names the
+        // parameter
         let signature = sut.procedures[entryName]?.signature
 
-        #expect(
-            signature?.parameter(named: "of")?.type
-                == .parameter(name: "T", bounds: ["Comparable"])
-        )
-        #expect(
-            signature?.parameter(named: "value")?.type
-                == .parameter(name: "T", bounds: ["Comparable"])
-        )
-        #expect(signature?.returns == .parameter(name: "T", bounds: ["Comparable"]))
+        #expect(signature?.bounds == ["T": ["Comparable"]])
+        #expect(signature?.parameter(named: "of")?.type == .parameter(name: "T"))
+        #expect(signature?.parameter(named: "value")?.type == .parameter(name: "T"))
+        #expect(signature?.returns == .parameter(name: "T"))
     }
 
     @Test("a bound in a slot is not a spelling, and a bound nobody mentions is refused")
@@ -190,10 +186,8 @@ struct TypeNotationTests {
         // Then
         let signature = sut.procedures[entryName]?.signature
 
-        #expect(
-            signature?.parameter(named: "of")?.type
-                == .array(.parameter(name: "Element", bounds: ["Comparable"]))
-        )
+        #expect(signature?.bounds == ["Element": ["Comparable"]])
+        #expect(signature?.parameter(named: "of")?.type == .array(.parameter(name: "Element")))
 
         guard case let .procedure(.some(inner), _, _) = signature?.parameter(named: "by")?.type else {
             Issue.record("the procedure type did not survive reading")
@@ -201,10 +195,7 @@ struct TypeNotationTests {
             return
         }
 
-        #expect(
-            inner.parameters.first
-                == .parameter(name: "Element", bounds: ["Comparable"])
-        )
+        #expect(inner.parameters.first == .parameter(name: "Element"))
     }
 
     @Test("a name nothing builds in is a declared type")

@@ -12,8 +12,10 @@ extension TypeExpression {
     // name nothing declares, a bound naming no contract and `Self` outside a
     // contract stand for no type, so no value is one and each lowers to
     // `Never`. A build refuses every such mention before it reads a lowering,
-    // and a table a host builds is held to the same judge.
-    func lowered(in table: LoweredTypeTable) -> LoweredType {
+    // and a table a host builds is held to the same judge. `bounds` are what the
+    // signature this type is written in holds each type parameter to, by its
+    // name.
+    func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>] = [:]) -> LoweredType {
         switch self {
         case .any:
             return .any
@@ -37,10 +39,10 @@ extension TypeExpression {
             return .string
 
         case let .array(element):
-            return .array(element.lowered(in: table))
+            return .array(element.lowered(in: table, bounds: bounds))
 
         case let .dictionary(entry):
-            return .dictionary(entry.lowered(in: table))
+            return .dictionary(entry.lowered(in: table, bounds: bounds))
 
         case let .record(fields):
             let ordered = fields.sorted { left, right in left.key < right.key }
@@ -48,26 +50,26 @@ extension TypeExpression {
             return .record(
                 LoweredRecord(
                     layout: Layout(name: nil, ordered: ordered.map(\.key)),
-                    fields: ordered.map { _, field in field.lowered(in: table) }
+                    fields: ordered.map { _, field in field.lowered(in: table, bounds: bounds) }
                 )
             )
 
         case let .procedure(type, constness, isolation):
             return .procedure(
-                parameters: type?.parameters.map { parameter in parameter.lowered(in: table) },
-                returns: type?.returns?.lowered(in: table),
+                parameters: type?.parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) },
+                returns: type?.returns?.lowered(in: table, bounds: bounds),
                 constness: constness,
                 isolation: isolation
             )
 
         case let .variable(inner):
-            return .variable(inner.lowered(in: table))
+            return .variable(inner.lowered(in: table, bounds: bounds))
 
         case let .inout(inner):
-            return .inout(inner.lowered(in: table))
+            return .inout(inner.lowered(in: table, bounds: bounds))
 
         case let .nullable(inner):
-            return .nullable(inner.lowered(in: table))
+            return .nullable(inner.lowered(in: table, bounds: bounds))
 
         // Types and contracts are two tables and no name is in both, so a
         // mention is looked for in each. A contract standing as a type is a
@@ -82,8 +84,8 @@ extension TypeExpression {
             return .composition([name])
 
         // A bound names a contract.
-        case let .parameter(name, names):
-            return lowered(bounds: names, in: table) { bounds in .parameter(label: name, bounds: bounds) }
+        case let .parameter(name):
+            return lowered(bounds: Array(bounds[name] ?? []), in: table) { bounds in .parameter(label: name, bounds: bounds) }
 
         case let .composition(names):
             return lowered(bounds: names, in: table, as: LoweredType.composition)
