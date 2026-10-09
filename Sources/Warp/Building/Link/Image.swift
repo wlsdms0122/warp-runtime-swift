@@ -84,7 +84,7 @@ public struct Image: Sendable {
             throw ValueRefused("no type named '\(declared)' is declared here")
         }
 
-        return try LoweredType.named(row).settling(outside: value, at: declared.spelling, in: loweredTypes)
+        return try loweredTypes.mention(of: row).settling(outside: value, at: declared.spelling, in: loweredTypes)
     }
 
     // MARK: - Private

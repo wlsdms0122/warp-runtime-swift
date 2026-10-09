@@ -474,7 +474,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which holds App.Marked where App.Pick is declared")
+            error is BuildError && "\(error)".contains("which holds App.Marked where Procedure<(Int) -> Int> is declared")
         }
     }
 

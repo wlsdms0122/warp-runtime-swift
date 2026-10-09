@@ -32,22 +32,23 @@ struct LoweredTypeTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a lowered type renders as the author wrote it")
+    @Test("a lowered type renders as the author wrote it, an alias as what it stands for")
     func aLoweredTypeRendersAsWritten() throws {
         // Given. Every declared type, and a few that name them
         let table = types.loweredTypes
         let written: [TypeExpression] = Array(types.types.values) + [
-            .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
             .parameter(name: "T"),
-            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
-            .dictionary(.named("App.Maybe"))
+            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const)
         ]
 
         // When / Then
         for type in written {
             #expect(type.lowered(in: table).rendered(in: table) == type.rendered, "\(type.rendered)")
         }
+
+        #expect(TypeExpression.array(.named("Bank.Acct")).lowered(in: table).rendered(in: table) == "Array<Bank.Account>")
+        #expect(TypeExpression.dictionary(.named("App.Maybe")).lowered(in: table).rendered(in: table) == "Dictionary<Int?>")
     }
 
     @Test("a lowered type spells back to a type that lowers to it")
@@ -127,7 +128,7 @@ struct LoweredTypeTests {
         #expect(!ordered.accepts(unbounded, in: table, rigid: true))
     }
 
-    @Test("a name lowers to its row, and the row of the record it names is the chain's end")
+    @Test("a record's name lowers to its row, and an alias to what it stands for")
     func aNameLowersToARow() throws {
         // Given
         let table = types.loweredTypes
@@ -137,9 +138,10 @@ struct LoweredTypeTests {
         let account = try #require(table.row(named: "Bank.Account"))
         let whole = try #require(table.row(named: "App.Whole"))
 
-        // Then. The alias names the account's record, and a name for a kind
+        // Then. The alias is the account's record, and a name for a kind
         // names none
-        #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(alias))
+        #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(account))
+        #expect(TypeExpression.named("App.Whole").lowered(in: table) == .int)
         #expect(table.recordRows[alias] == account)
         #expect(table.recordRows[account] == account)
         #expect(table.recordRows[whole] == nil)
