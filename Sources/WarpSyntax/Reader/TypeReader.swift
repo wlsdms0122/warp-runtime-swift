@@ -269,10 +269,8 @@ public struct TypeReader: Decodable {
 
         // A type parameter rather than a name: `some T` is worked out from the
         // call, where `T` alone would be looked up in the table of declared
-        // types. A slot only names the parameter. Its bound is declared once,
-        // in the signature's `bounds`, because the signature owns what its
-        // names mean and a bound repeated per slot is one claim written
-        // several times.
+        // types. A slot only names the parameter; its bound is the
+        // signature's, under `BoundsReader`.
         if text == "some" || text.hasPrefix("some ") {
             return .parameter(name: try named(text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)))
         }

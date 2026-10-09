@@ -29,12 +29,10 @@ public indirect enum Value: Sendable, Equatable {
     case array([Value])
 
     // Fields under names, and the name of the declared record type it is a
-    // value of, where it has one. A record made by a literal, answered by a
-    // native procedure or read out of a document has no name; it takes one
-    // where it is written into a declared record, by a literal, at the door
-    // a host hands it through or by a cast, and from then on it fits only
-    // that name. Two records of one structure under two names are two
-    // values.
+    // value of, where it has one. A record a literal makes has no name; one
+    // takes a name where it is written into a declared record, at the door a
+    // host hands it through or by a cast, and from then on it fits only that
+    // name. Two records of one structure under two names are two values.
     case record(Record)
 
     // Names and values where the names are data: what a document hands in,
@@ -609,17 +607,17 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The equality conditions test with. Strict except that worth unifies
-    // across spellings: a whole number beside the fraction of the same worth,
-    // and bytes beside an array of what its elements are worth, applied
-    // recursively through arrays and records.
+    // a whole number with the fraction of the same worth, and bytes, being an
+    // array, equal the array of the same elements, applied recursively
+    // through arrays and records.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
         case let (.int(whole), .double(fraction)), let (.double(fraction), .int(whole)):
             return Value.sameWorth(whole: whole, fraction: fraction)
 
-        // Bytes are an array of bytes in a compact spelling. `1` and `1.0`
-        // again, one collection up: the worth is the elements', read through
-        // the one projection that owns the equation.
+        // Bytes are an array of whole numbers in a compact spelling, so the
+        // elements are compared, read through the one projection that owns
+        // the equation.
         case (.bytes, .array), (.array, .bytes):
             guard let mine = elements, let theirs = other.elements else { return false }
 

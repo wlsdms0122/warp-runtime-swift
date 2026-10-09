@@ -39,12 +39,12 @@ struct JoinedQuery: Query {
             case let .array(elements) = question[.strings],
             case let .string(separator) = question[.separator]
         else {
-            throw ExecutionError("Standard.Text.joined asks an Array and a String")
+            throw ExecutionError("Standard.Text.joined asks an Array<String> and a String")
         }
 
         let written = try elements.map { element -> String in
             guard case let .string(text) = element else {
-                throw ExecutionError("Standard.Text.joined asks an array of strings")
+                throw ExecutionError("Standard.Text.joined asks an Array<String>")
             }
 
             return text

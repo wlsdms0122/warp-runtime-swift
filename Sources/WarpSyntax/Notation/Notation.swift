@@ -47,7 +47,7 @@ public struct Notation: Sendable {
     // is.
     public let spelling: (any ExpressionSpelling)?
 
-    // What `{ format:, with: }` lowers to, and nothing where this notation does
+    // What `{ format:, with: }` is spent into, and nothing where this notation does
     // not offer a template.
     //
     // The two keys stay reserved either way. That much is the document's, and

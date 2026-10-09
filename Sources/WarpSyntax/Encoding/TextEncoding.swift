@@ -11,8 +11,7 @@ import Warp
 // The encoding a document is read in. By a person. The binary is what a
 // document travels as; this is the same document laid out for eyes. A dump, not
 // a syntax: machines write it, people read it, and composing by hand is a front
-// end's job in a front end's notation, which is why there are no comments to
-// lose on the way back.
+// end's job in a front end's notation.
 //
 // A whole number and a fraction are different tokens here by grammar. `1` is
 // whole and `1.0` is a fraction. And there is nothing else: no commas to
@@ -23,9 +22,9 @@ import Warp
 // two spaces an indent), so a text that has been through it is the same bytes
 // everywhere. Layout is free on the way in: the reader takes keys in any order
 // and any whitespace between tokens, and a key written bare or quoted is one
-// key either way. What it does not take is a second
-// spelling of a value, `1.50` for `1.5` or `\u0041` for `A`, since those are
-// two texts for one value rather than two layouts of one text.
+// key either way. What it does not take is a second spelling of a value,
+// `1.50` for `1.5` or `\u0041` for `A`, since those are two texts for one
+// value rather than two layouts of one text.
 public struct TextEncoding {
     private enum Token: Equatable {
         case arrayOpen
@@ -516,7 +515,7 @@ public struct TextEncoding {
                     opened.append(.record(held: held, key: nil, name: name))
 
                 // A record with no key is waiting for a field name, and every
-                // token it could meet in that state was answered above
+                // token it could meet in that state was answered above.
                 case .record(_, .none, _):
                     throw refused("a record writes a field name here", at: at)
                 }

@@ -10,17 +10,10 @@ import Warp
 
 // The other direction: a program written back out as data. `Loader` reads a
 // document and answers with a module; this takes a module and answers with the
-// document that would load into it.
-//
-// It exists because a program has to be able to leave the machine that built
-// it. Building the language's types directly is what a front end with a syntax
-// of its own does, and a host assembling procedures in native code does the
-// same, but neither can hand what it built to anything running elsewhere unless
-// the result can be written down.
-//
-// Only the types that stand one to one with the language are written, so a
-// program that arrived spelled is written back unspelled, and it means the
-// same thing.
+// document that would load into it, so a program built in Swift can leave the
+// machine that built it. Only the types that stand one to one with the
+// language are written, so a program that arrived spelled is written back
+// unspelled, and it means the same thing.
 public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
@@ -273,16 +266,9 @@ public struct Writer: Sendable {
 
     // MARK: - Private
     // The keys a block writes, with whoever reads it asked whether an empty
-    // `body` is written or dropped. Asked rather than remembered: a writer
-    // carrying its own list of which forms demand the key is a list that goes
-    // stale the moment a form is added, and what it writes then is a document
-    // its own reader refuses.
-    //
-    // Every caller names its reader, and `nil` is a reader rather than a
-    // default. A rescue and a procedure are read by their own readers, which
-    // take `body` as a key that may be absent. Said out loud because a way of
-    // writing a block without saying who reads it is a way of skipping the
-    // question, and skipping it is the failure this asks about.
+    // `body` is written or dropped. A rescue and a procedure are read by their
+    // own readers, which take `body` as a key that may be absent, and say
+    // `nil`.
     private func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?

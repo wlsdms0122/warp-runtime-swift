@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// What a template lowers to, for a notation that offers one.
+// What a template is spent into, for a notation that offers one.
 //
 // A template is written under `format` and `with`, in a notation that offers
 // one. Which procedures it spends is the notation's answer: a template asks

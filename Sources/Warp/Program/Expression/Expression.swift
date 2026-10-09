@@ -26,12 +26,8 @@ import Foundation
 //
 // `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
-// finding it is the build's job, not the grammar's.
-//
-// There is no operator here. Equality, negation and the connectives are procedures
-// like any other, so the grammar says what a program *is* and never what one
-// computes. A connective declines to ask its later sides by taking procedures
-// rather than values, which is a thing a declaration can say.
+// finding it is the build's job, not the grammar's. Equality, negation and the
+// connectives are procedures like any other.
 //
 // How a document writes any of this is `WarpSyntax`.
 public indirect enum Expression: Sendable {

@@ -193,8 +193,8 @@ struct PathParser: Sendable {
         }
     }
 
-    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
-    // `[]` is an author mistake refused at the load, not carried into the model.
+    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an
+    // empty `[]` refuses.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
             .trimmingCharacters(in: Path.whiteSpace)

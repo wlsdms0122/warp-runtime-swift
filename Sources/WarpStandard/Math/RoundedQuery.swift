@@ -19,7 +19,7 @@ struct RoundedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .double(real) = question[.number] else {
-            throw ExecutionError("Standard.Math.rounded asks a fraction")
+            throw ExecutionError("Standard.Math.rounded asks a Double")
         }
 
         return .int(try integer.of(real, rounded: .toNearestOrAwayFromZero))

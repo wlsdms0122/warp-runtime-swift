@@ -16,11 +16,9 @@ public struct Signature: Sendable, Equatable {
     // and the order the run keeps them in.
     public let parameters: [Parameter]
 
-    // What a call returns, or nil where nothing was declared. Absence is
-    // spelled by being absent rather than by a type meaning "no claim". `Any`
-    // is a claim, so a declaration nobody wrote stays distinguishable from one
-    // somebody wrote. Nothing is checked either way; they differ in what they
-    // say.
+    // What a call returns, or nil where nothing was declared. A call reads a
+    // declaration writing none as what its body answers, and one writing
+    // `Any` as `Any`.
     public let returns: TypeExpression?
 
     // The contracts each type parameter is bounded by, by its name. The

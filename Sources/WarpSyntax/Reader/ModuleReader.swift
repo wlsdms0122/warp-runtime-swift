@@ -25,13 +25,7 @@ public struct ModuleReader: Decodable {
     // MARK: - Property
     // Which types a reader has to understand. It goes up when a type is added
     // or an existing one changes what it means, and does not move for a new
-    // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
-    //
-    // Every document says it. A reader that filled in a default would be
-    // reading a document that never said which language it was written for, and
-    // a file that is not a document at all would get as far as having its keys
-    // judged. Turned away for being a malformed module rather than for not
-    // being one.
+    // procedure, which is vocabulary. Every document says it.
     public static let version = 1
 
     // What the document declares, unjudged. Reading and checking are two
@@ -119,18 +113,9 @@ public struct ModuleReader: Decodable {
     }
 
     // A document says which language it is written for, and one that does not
-    // is not a document. Reading silence as some version would mean guessing
-    // at the one question that has to be answerable from the bytes alone, and
-    // it is what lets a file of some other kind entirely walk in and be turned
-    // away for its keys rather than for what it is.
-    //
-    // Any version but this reader's is refused rather than guessed at. Read
-    // through its own container, before anything else and before
-    // the keys are judged, because everything after it is read by rules a newer
-    // document may not be written to. Including which keys exist. A later
-    // version adding a key would otherwise be turned away as malformed, and a
-    // reader has to tell "I am too old for this" (upgrade me) from "this is
-    // wrong" (fix the sender).
+    // is not a document. Any version but this reader's is refused. Read
+    // through its own container, before the keys are judged, so a reader too
+    // old for a document says so rather than refusing its keys.
     private static func checkVersion(in decoder: Decoder) throws {
         let document = try decoder.container(keyedBy: AnyCodingKey.self)
         let key = AnyCodingKey(stringValue: Module.versionKey.spelling)

@@ -10,14 +10,9 @@ import Warp
 
 // The keyword table: which key a document may write, and which form reads it.
 // The language's constructs are anonymous, so this is the only place that
-// admits they have names.
-//
-// A form's `key` is the spelling it proposes, not the one it gets. The table is
-// what a notation *is*, so the composer of the table has the last say: the
-// same form can be registered under another spelling, and a built-in spelling
-// can be dropped. Otherwise a form type would be its own name forever, and two
-// notations that wanted the same key could never both exist, which is a fact
-// about a `static let`, not about the language.
+// admits they have names. A form's `key` is the spelling it proposes; the
+// composer of the table has the last say, registering a form under another
+// spelling or dropping a built-in one.
 public struct ConstructRegistry: Sendable {
     // MARK: - Property
     public static let standard = ConstructRegistry(unchecked: [

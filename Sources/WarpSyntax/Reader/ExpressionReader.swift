@@ -44,12 +44,11 @@ public struct ExpressionReader: Decodable {
 
     // MARK: - Public
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which construct keys a statement may write is the
-    // registry's answer, which travels in the decoder rather than in the data.
-    //
-    // Not public: a form reading an expression goes through `init(from:)`, which
-    // is where a refusal from this grammar is given the address of the walk
-    // that asked for it.
+    // closure carries statements, and which construct keys a statement may
+    // write is the registry's answer, which travels in the decoder rather than
+    // in the data. A form reading an expression goes through `init(from:)`,
+    // where a refusal from this grammar is given the address of the walk that
+    // asked for it.
     static func read(_ value: Value, in decoder: Decoder) throws -> Warp.Expression {
         try read(value, at: decoder.steps, in: decoder)
     }
@@ -291,7 +290,7 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
+            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps))
                 .expression
         } catch let refusal as ReadingError {
             throw refusal
@@ -317,8 +316,7 @@ public struct ExpressionReader: Decodable {
         }
 
         guard record.names.contains(Interpolation.formatKey) else {
-            // Only `with` remains, with is format's companion, meaningless
-            // alone.
+            // Only `with` remains, and `with` is `format`'s companion.
             throw ExpressionFormError(
                 "`with` only accompanies `format` (found keys: \(record.names))"
             )

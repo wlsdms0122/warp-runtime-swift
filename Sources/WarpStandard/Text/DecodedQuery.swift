@@ -38,7 +38,7 @@ struct DecodedQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard let bytes = question[.bytes].bytes else {
-            throw ExecutionError(Self.refusal(bytes: question[.bytes]) ?? "Standard.Text.decoded asks bytes")
+            throw ExecutionError(Self.refusal(bytes: question[.bytes]) ?? "Standard.Text.decoded asks an Array<Int>")
         }
 
         let encoding = try CharacterEncoding(question[.encoding], for: "Standard.Text.decoded")
