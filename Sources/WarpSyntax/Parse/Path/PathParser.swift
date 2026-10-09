@@ -213,7 +213,13 @@ public struct PathParser: Sendable {
                 .trimmingCharacters(in: .whitespaces)
         }
 
-        if let literal = Int(inner) { return .index(literal, optional: optional) }
+        if let literal = Int(inner) {
+            guard literal >= 0 else {
+                throw PathSyntaxError("index segment '[\(literal)]' is below zero, and a whole number below zero is no position")
+            }
+
+            return .index(literal, optional: optional)
+        }
 
         guard !inner.isEmpty else {
             throw PathSyntaxError("empty index segment '[]' in reference path")

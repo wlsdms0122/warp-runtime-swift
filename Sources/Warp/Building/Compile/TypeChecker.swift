@@ -1466,6 +1466,13 @@ struct TypeChecker {
         // entry.
         switch settled {
         case let .int(index):
+            guard index >= 0 else {
+                throw BuildError(
+                    "index reference \(inner.rendered) is \(index), and a whole number below zero is no position",
+                    at: place
+                )
+            }
+
             return .index(index, optional: optionally)
 
         case let .string(key):
