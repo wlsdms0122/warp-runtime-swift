@@ -913,7 +913,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A record is a dictionary whose fields happen to be known: a record
         // whose every field is the entry type is such a mapping. Not the
-        // other way round, since a `dictionary` promises nothing about which
+        // other way round, since a `Dictionary<T>` promises nothing about which
         // fields exist.
         case let (.dictionary(mine), .record(theirs)):
             return theirs.fields.allSatisfy { field in mine.accepts(field, in: table, assumingPairs: assumingPairs, rigid: rigid) }
@@ -1118,10 +1118,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // stands for, in its elements, entries, `?` and fields at every depth. A
     // procedure type stands as it is written, so what a call of one answers
     // keeps the record names its signature wrote.
-    //
-    // A row is a spelling, and two spellings of one type are one type: a
-    // reading of `{ inner: Person }` and a claim of `{ inner: { name: string } }`
-    // are the same thing said twice.
     func resolved(in table: LoweredTypeTable) -> LoweredType {
         resolved(in: table, assuming: [])
     }
@@ -2183,8 +2179,8 @@ indirect enum LoweredType: Sendable, Equatable {
                 in: table
             )
 
-        // The scalars, each by its own kind: an int slot refuses every
-        // fraction, `2.0` included, and a double slot every whole number.
+        // The scalars, each by its own kind: an `Int` slot refuses every
+        // fraction, `2.0` included, and a `Double` slot every whole number.
         case .null, .bool, .int, .wholeLiteral, .double, .string:
             guard let settled = scalar(value) else { throw mismatch(value, at: path(), in: table) }
 

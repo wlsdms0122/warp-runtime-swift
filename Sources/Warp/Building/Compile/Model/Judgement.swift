@@ -21,9 +21,10 @@ enum Judgement: Sendable {
     // there settles every write to it.
     case apply(inPlace: [Int], judging: CallJudgement?)
 
-    // A call whose callee declares a wider answer than the call reads, or
-    // hands back in place what it holds as its own type parameter: what it
-    // is judged on where it stands.
+    // A call whose answer is read as what filled the callee's type
+    // parameter, or answered by the row a contract's procedure picks, or
+    // which hands back in place what the callee holds as its own type
+    // parameter: what it is judged on where it stands.
     case call(CallJudgement)
 
     // A closure literal: what its row carries that the literal does not

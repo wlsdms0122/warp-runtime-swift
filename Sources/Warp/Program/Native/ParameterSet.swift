@@ -18,8 +18,7 @@ import Foundation
 // arguments in, which is a fact of the wire.
 // `Signature.init(of:returns:)` is the door that says so.
 public protocol ParameterSet: CaseIterable, Hashable, Sendable {
-    // What it takes: the name a document writes to fill this, the type, and
-    // the members it must be one of.
+    // What it takes: the name a document writes to fill this, and the type.
     var declared: Parameter { get }
 
     // Where it stands among the procedure's parameters.

@@ -371,11 +371,6 @@ struct TypeChecker {
     // Read rather than judged, because this is asked of a body the walk may
     // read again, and a refusal here would be one the judging pass is about to
     // state in its own place.
-    //
-    // Named for the reading and not for the answer, because the sibling below
-    // (what a *signature* answers) is the other question, and the two are kept
-    // apart on purpose: one is what the author wrote and one is what the build
-    // worked out.
     private func reading(
         from block: Block,
         at place: Place,
@@ -1047,9 +1042,8 @@ struct TypeChecker {
                 .map { .refused($0) }
             }
 
-            // What an index lands on, once the walk knows it is an array (or
-            // bytes, an array in a compact spelling). An element past the end
-            // is a defect at the run, not an absence, so `?[` says nothing
+            // What an index lands on, once the walk knows it is an array. An
+            // element past the end is a defect at the run, not an absence, so `?[` says nothing
             // here unless it just unwrapped the array's own null.
             func indexed(_ element: LoweredType) -> PathReading? {
                 if let refusal = needless(.element) { return refusal }
@@ -1531,7 +1525,7 @@ struct TypeChecker {
     }
 
     // A condition chooses a way through a body, so what it reads has to be a
-    // bool, and a value read as `Any` is one once a cast says so.
+    // `Bool`, and a value read as `Any` is one once a cast says so.
     private func held(
         _ reading: LoweredType,
         asCondition place: Place,
@@ -1815,7 +1809,7 @@ struct TypeChecker {
                 // The author's spelling stands. `settled` is what a refusal
                 // shows (a name walked through to the type it declares) and
                 // writing that back into the program would spend the name: a
-                // refusal would read `as { age: int }` where the author wrote
+                // refusal would read `as { age: Int }` where the author wrote
                 // `as Person`, and a document written back out would have lost
                 // the declaration it leaned on. The run resolves names itself,
                 // so nothing needs it resolved early.
@@ -1827,7 +1821,7 @@ struct TypeChecker {
                 // The author's spelling here too, and for the same reason it
                 // stands in what is written back: a refusal on the next
                 // statement quotes this reading, and quoting a type nobody
-                // wrote (`{ name: string }` where the author wrote `Person`) is
+                // wrote (`{ name: String }` where the author wrote `Person`) is
                 // the same name spent, one step later. Every consumer resolves
                 // names itself. `?` is asked of the fact: a name standing for a
                 // nullable already holds null, and wrapping it again would make
@@ -3474,11 +3468,7 @@ struct TypeChecker {
         // refuse whatever arrived. The judgment (a parameter read two ways has
         // no answer, a bounded one takes only what answers its bounds) is
         // the one every call surface shares, so this only gathers what the call
-        // wrote into each slot. This is what one signature says in place of the
-        // several a language with overloading would need: `some N` on both
-        // sides and on the way out is a whole number and a whole number
-        // answering a whole number, and a whole number and a fraction refused,
-        // without a way to declare a name twice.
+        // wrote into each slot.
         let slots: [Slot]
 
         switch judged(
@@ -3515,9 +3505,7 @@ struct TypeChecker {
 
         // A procedure may judge its own constant arguments before any run. A type
         // cannot say that a string a host parses is well formed, and the
-        // procedure can. It happens here rather than while decoding, because a
-        // notation judging arguments would have to know the vocabulary; judging
-        // belongs where names resolve. The procedure's own keys name its
+        // procedure can. The procedure's own keys name its
         // parameters, so each constant is asked for under the name of the slot
         // it stands at, through the same door the procedure reads an argument
         // through when it answers.

@@ -53,7 +53,7 @@ final class Relocating {
 
     // What each document's type numbers turned out to be in this link.
     //
-    // ResolvedTable once per number rather than at every type met: a name is read
+    // Resolved once per number rather than at every type met: a name is read
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
