@@ -472,10 +472,11 @@ struct BoundTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a name for a procedure type takes no value of a contract, as the procedure type does not")
+    @Test("a name for a procedure type takes a value read as a contract only through a cast")
     func aNameForAProcedureTypeTakesNoContractValue() async throws {
-        // Given. A procedure is of no type that answers a contract, through
-        // a name standing for its type as well
+        // Given. A slot of a type takes a value read as a contract only
+        // through a cast, and a name standing for a procedure type is such a
+        // slot
         let sut = try Module(
             types: ["App.Pick": .procedure(ProcedureType(parameters: [.int], returns: .int))],
             contracts: Self.markers("App.Marked"),

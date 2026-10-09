@@ -30,12 +30,21 @@ struct FoldedContractTests {
                 )
             ]
         )
-        let modules = try documents(returning: .any, giving: .literal(.null)) + [answering] + Module.standard
+        let asking = try documents(returning: .any, giving: .literal(.null)) + Module.standard
 
         // When / Then. Null is an instance of `Null`, so the fold writes the
-        // pair down and the list answers it, as it does for any other value.
+        // pair down and the list answers it, as it does for any other value:
+        // with the claim the build stands, and without it the list refuses
+        // the pair where it was folded.
         await #expect(throws: Never.self) {
-            try await Builder().build(modules)
+            try await Builder().build(asking + [answering])
+        }
+
+        await #expect {
+            try await Builder().build(asking)
+        } throws: { error in
+            "\(error)".contains("constants.App.counted:")
+                && "\(error)".contains("no document in this link says 'Null' answers it")
         }
     }
 

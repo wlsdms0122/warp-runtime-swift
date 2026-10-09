@@ -822,13 +822,13 @@ struct TypeChecker {
         )
     }
 
-    // Why a value of a contract fills a bounded parameter it cannot, or nil
-    // where none does. A bounded parameter is one type wherever it stands,
-    // and a value of a contract is of whichever type answers it, so two of
-    // them, or one inside a list or a record, are not known to be one type.
-    // Standing alone at one position, the value is the one thing the
-    // parameter stands for, and the call reads the parameter as the
-    // contract the way it read the value.
+    // Why a value of more than one type fills a bounded parameter it cannot,
+    // or nil where none does. A bounded parameter is one type wherever it
+    // stands, and a value of a contract is of whichever type answers it, and
+    // one of what may be null of the type or `Null`, so two of them, or one
+    // inside a list or a record, are not known to be one type. Standing
+    // alone at one position, the value is the one thing the parameter stands
+    // for, and the call reads the parameter the way it read the value.
     private func contractValueRefusal(
         over slots: [Slot],
         substitution: Substitution,
@@ -837,10 +837,17 @@ struct TypeChecker {
         for (parameter, bounds) in slots.reduce(into: [Name: [Name]](), { found, slot in
             found.merge(slot.type.boundedParameters) { first, _ in first }
         }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
-            guard let valueOfContract = substitution.everyReading(of: parameter).first(where: { reading in
-                guard case let .composition(read) = reading.throughAliases(in: loweredTypes) else { return false }
+            guard let valueOfSeveral = substitution.everyReading(of: parameter).first(where: { reading in
+                switch reading.throughAliases(in: loweredTypes) {
+                case let .composition(read):
+                    return !read.isEmpty
 
-                return !read.isEmpty
+                case .nullable:
+                    return true
+
+                default:
+                    return false
+                }
             }) else {
                 continue
             }
@@ -853,9 +860,9 @@ struct TypeChecker {
 
             let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
 
-            return "'\(parameter)' is read as \(valueOfContract.rendered(in: loweredTypes)), a value of whichever type"
-                + " answers it, and \(spelled) is one type wherever it stands. A value of a contract"
-                + " fills a bounded parameter only where the parameter stands alone at one position"
+            return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: loweredTypes)), a value of more than one"
+                + " type, and \(spelled) is one type wherever it stands. A value of a contract or of what may"
+                + " be null fills a bounded parameter only where the parameter stands alone at one position"
         }
 
         return nil
@@ -3597,7 +3604,7 @@ struct TypeChecker {
                     if let slot {
                         _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
                     } else {
-                        _ = try type.slotUnwrapped.checking(constant, at: named, in: loweredTypes)
+                        _ = try type.slotUnwrapped.settling(constant, at: named, in: loweredTypes)
                     }
                 } catch {
                     throw BuildError("\(subject): \(error)", at: at)

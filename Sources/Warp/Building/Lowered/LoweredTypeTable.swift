@@ -131,12 +131,10 @@ final class LoweredTypeTable: Sendable {
         rows[name]
     }
 
-    // Whether the type of a value that arrived answers every procedure a
-    // contract asks. Nil where nothing declares the contract: what an
-    // undeclared name means is for whoever asked to say.
-    //
-    // For a value already in hand and nothing else: a reading before the run
-    // is not a name yet.
+    // Whether a type answers every procedure a contract asks, by what the
+    // documents claim about it. Nil where nothing declares the contract, what
+    // an undeclared name means being for whoever asked to say, and where the
+    // table does not hold every claim there is.
     func settles(contract name: Name, arrived type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
         guard settled else { return nil }
@@ -337,7 +335,7 @@ final class LoweredTypeTable: Sendable {
         // the table holds every claim there is, it is held to what the
         // documents say.
         default:
-            guard let type = reading.nominal(in: self) else { return .settled(false) }
+            guard let type = reading.nominal(in: self) else { return .settled(true) }
             guard !rigid, !settled else { return .settled(settles(contract: name, arrived: type) != false) }
 
             return .leansOn([type])

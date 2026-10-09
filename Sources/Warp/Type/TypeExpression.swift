@@ -169,7 +169,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // list is a list whatever it holds, and a value does not say which
     // elements a slot declared it to hold. So a claim about one is about
     // every list, its element a type parameter nothing fills, which a
-    // declaration answering the claim takes whatever it is.
+    // declaration answering the claim takes whatever it is. A claim about
+    // `Procedure` is the same about every procedure, whatever it takes and
+    // answers.
     public static let nominalTypes: [Name: TypeExpression] = [
         TypeSpelling.null: .null,
         TypeSpelling.bool: .bool,
@@ -557,8 +559,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declare.
     //
     // `Any` is not this. An undeclared type accepts a null that arrives, but
-    // it does not *spell* null as a value. The looser question, "does a null
-    // that arrives pass", is `admitsNull` and includes `Any`.
+    // it does not *spell* null as a value.
     public func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }

@@ -685,8 +685,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // The type a value read as this is an instance of, under the name a claim
     // writes and `Value.nominal` answers once the value arrives: a declared
     // record by its name, bytes as the list they are, and a record with no
-    // name as the map it is. Nil where the reading stands for a type only a
-    // value decides.
+    // name as the map it is. Nil where the reading names no one type: a type
+    // only a value decides, `Never`, and a name that stands for no type.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
         case .null:
@@ -1635,17 +1635,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // A value handed to a slot of this type, settled, and a null the type
-    // does not admit refused as null. `locus` is where a refusal says the
-    // value stood, in the caller's terms.
-    func checking(_ value: Value, at locus: String, in table: LoweredTypeTable) throws -> Value {
-        guard value != .null || admitsNull(in: table) else {
-            throw ArgumentError("\(locus): expected \(rendered(in: table)), got Null")
-        }
-
-        return try settling(value, at: locus, in: table)
-    }
-
     // What a cast does, said once. The judgment is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
@@ -1669,26 +1658,6 @@ indirect enum LoweredType: Sendable, Equatable {
             }
 
             return .null
-        }
-    }
-
-    // Whether a null that arrives may be one of this type's values, which
-    // `settling` then holds it to. `Any` is here and not below: it accepts
-    // what it is handed, null included.
-    func admitsNull(in table: LoweredTypeTable) -> Bool {
-        switch self {
-        case .any:
-            return true
-
-        case let .named(row):
-            return table.loweredTypes[row].admitsNull(in: table)
-
-        // Null is held to the contracts as any value is, by `settling`.
-        case .parameter, .composition:
-            return true
-
-        default:
-            return declaresNull(in: table)
         }
     }
 
@@ -2100,6 +2069,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // about remembered, since a type may name itself through a row.
     private func couldBeProcedure(in table: LoweredTypeTable, namedAsking: [Int]) -> Bool {
         switch self {
+        // A type parameter or a contract stands for whichever type fills or
+        // answers it, `Procedure` among them.
         case .procedure, .any, .never, .parameter, .composition, .projection, .undeclared:
             return true
 
@@ -2264,15 +2235,16 @@ indirect enum LoweredType: Sendable, Equatable {
         case true?:
             return value
 
-        case nil:
-            guard let unsettled = table.unsettled else { throw refusal(value, answering: name, at: path(), in: table) }
-
-            unsettled.require(folded: Claim(type: value.nominal, contract: name))
+        case nil where table.unsettled != nil:
+            table.unsettled?.require(folded: Claim(type: value.nominal, contract: name))
 
             return value
 
-        case false?:
-            throw refusal(value, answering: name, at: path(), in: table)
+        case nil, false?:
+            throw ArgumentError(
+                "\(path()): expected \(rendered(in: table)), and '\(value.nominal)'"
+                    + " does not answer every procedure '\(name)' asks"
+            )
         }
     }
 
@@ -2460,17 +2432,5 @@ indirect enum LoweredType: Sendable, Equatable {
 
     private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.type)")
-    }
-
-    private func refusal(
-        _ value: Value,
-        answering name: Name,
-        at path: String,
-        in table: LoweredTypeTable
-    ) -> ArgumentError {
-        ArgumentError(
-            "\(path): expected \(rendered(in: table)), and '\(value.nominal)'"
-                + " does not answer every procedure '\(name)' asks"
-        )
     }
 }
