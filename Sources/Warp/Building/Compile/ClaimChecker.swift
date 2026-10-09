@@ -371,11 +371,7 @@ struct ClaimChecker {
         let substituted = asked.replacingSelf(with: claimed)
         let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
         let asks = substituted.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        var substitution = Substitution()
-
-        for (taken, written) in zip(takes, asks) {
-            taken.binding(against: written, into: &substitution, in: loweredTypes)
-        }
+        let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are, rigidly, since what the contract

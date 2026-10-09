@@ -1123,7 +1123,15 @@ enum Library {
                                   ref "pick.index"
                                 }
                                 {
-                                  ref "total"
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "total"
+                                      }
+                                      1
+                                    ]
+                                    procedure "Standard.Numeric.plus"
+                                  }
                                 }
                               ]
                               procedure "Standard.Comparable.lessThan"

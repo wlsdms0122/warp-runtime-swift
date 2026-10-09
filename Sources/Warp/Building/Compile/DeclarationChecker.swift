@@ -353,6 +353,11 @@ struct DeclarationChecker {
             }
 
             switch resolved {
+            // `Self?` is the claimed type or null at a claim, and through a
+            // call a nullable reading of the parameter the call fills.
+            case let .parameter(name, _) where name == TypeSpelling.selfType:
+                break
+
             case .any, .null, .never, .parameter, .nullable:
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which"

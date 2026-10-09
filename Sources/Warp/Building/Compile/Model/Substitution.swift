@@ -53,6 +53,23 @@ struct Substitution: Sendable {
     private(set) var apart: [Name: [LoweredType]] = [:]
 
     // MARK: - Initializer
+    init() {}
+
+    // What a call puts in the type parameters `declared` names, read by
+    // holding each declared type beside what arrived at its position. What
+    // a procedure arriving takes fills a parameter only where nothing that
+    // arrived does.
+    init(filling declared: [LoweredType], against given: [LoweredType], in table: LoweredTypeTable) {
+        var taking = Substitution()
+        var holding: [Held] = []
+
+        for (slot, reading) in zip(declared, given) {
+            slot.binding(against: reading, into: &self, taking: &taking, holding: &holding, in: table)
+        }
+
+        read(takenBy: taking)
+    }
+
     // MARK: - Public
     // What a parameter is held to its bounds as: what it is read as, and each
     // reading that does not say.
@@ -151,6 +168,16 @@ struct Substitution: Sendable {
 
         for (parameter, readings) in other.apart.sorted(by: { $0.key < $1.key }) {
             apart[parameter, default: []].append(contentsOf: readings)
+        }
+    }
+
+    // What procedures arriving take, read where nothing else reads a
+    // parameter, or only what holds no value does.
+    mutating func read(takenBy taking: Substitution) {
+        for (parameter, reading) in taking.readings where readings[parameter, default: .never] == .never {
+            readings[parameter] = reading
+            disagreeing[parameter] = taking.disagreeing[parameter]
+            apart[parameter] = taking.apart[parameter]
         }
     }
 
