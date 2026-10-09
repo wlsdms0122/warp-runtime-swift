@@ -68,12 +68,10 @@ public struct ParameterReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let name = try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps)
+        let fields = try ParameterFieldsReader(reading: decoder)
 
-        self.parameter = Parameter(
-            name: try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps),
-            type: try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type,
-            description: try container.decodeIfPresent(String.self, forKey: .description)
-        )
+        self.parameter = Parameter(name: name, type: fields.type, description: fields.description)
     }
 
     // MARK: - Public
