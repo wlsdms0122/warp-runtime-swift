@@ -75,11 +75,10 @@ public struct Validator: Sendable {
         }
 
         // A claim is about a type a value is an instance of, under its name,
-        // since the run picks what answers by the type the value is. `Any`,
-        // `Never`, `Null` and `Procedure` are types no value is an instance
-        // of by name, `Self` names a type only inside a contract's
-        // procedures, and a spelling that is no name, `Array<Int>` included,
-        // names no such type.
+        // since the run picks what answers by the type the value is. `Any`
+        // and `Never` are types no value is an instance of by name, `Self`
+        // names a type only inside a contract's procedures, and a spelling
+        // that is no name, `Array<Int>` included, names no such type.
         for name in module.claims.keys.sorted() where TypeExpression.nominalTypes[name] == nil {
             if TypeExpression.keywords[name] != nil {
                 throw ValidationError(

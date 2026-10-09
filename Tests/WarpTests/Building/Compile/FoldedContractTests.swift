@@ -16,31 +16,35 @@ struct FoldedContractTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a value that is an instance of no type is refused however much of the list is in hand")
-    func aValueOfNoTypeIsRefused() async throws {
+    @Test("a null leans on a claim about Null the way any value leans on its type's")
+    func aNullLeansOnAClaimAboutNull() async throws {
         // Given. A procedure answering `Any` hands null where a contract is
-        // asked, and the reading says nothing about what arrives.
-        let modules = try documents(returning: .any, giving: .literal(.null)) + Module.standard
+        // asked, and a document claims the contract for `Null`.
+        let answering = try Module(
+            claims: ["Null": ["App.Describable"]],
+            procedures: [
+                "Null.describe": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .null)], returns: .string),
+                    body: [],
+                    result: .literal(.string("none"))
+                )
+            ]
+        )
+        let asking = try documents(returning: .any, giving: .literal(.null)) + Module.standard
 
-        // When / Then. Null is an instance of no type a claim names, so no
-        // claim anywhere puts it under a contract, and a document compiled
-        // against part of the list settles this where the whole list would.
-        // The refusal stands where the constant is folded, which is the
-        // compile itself.
-        await #expect {
-            var compiled: [Compiled] = []
-
-            for origin in try ModuleGraph(modules).standing {
-                compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
-            }
-        } throws: { error in
-            "\(error)".contains("expected some T: App.Describable, got Null")
+        // When / Then. Null is an instance of `Null`, so the fold writes the
+        // pair down and the list answers it, as it does for any other value:
+        // with the claim the build stands, and without it the list refuses
+        // the pair where it was folded.
+        await #expect(throws: Never.self) {
+            try await Builder().build(asking + [answering])
         }
 
         await #expect {
-            try await Builder().build(modules)
+            try await Builder().build(asking)
         } throws: { error in
-            "\(error)".contains("expected some T: App.Describable, got Null")
+            "\(error)".contains("constants.App.counted:")
+                && "\(error)".contains("no document in this link says 'Null' answers it")
         }
     }
 

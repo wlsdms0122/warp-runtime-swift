@@ -340,7 +340,7 @@ struct BoundTests {
         }
     }
 
-    @Test("null is not a value of a contract standing as a type")
+    @Test("null is refused where a contract stands and no document claims it for Null")
     func nullIsRefusedWhereAContractStands() async throws {
         // Given
         let sut = try Module(
@@ -364,7 +364,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("'it' holds Null, which does not answer every procedure")
+            error is BuildError && "\(error)".contains("no document in this link says 'Null' answers it")
         }
     }
 
@@ -472,10 +472,11 @@ struct BoundTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a name for a procedure type takes no value of a contract, as the procedure type does not")
+    @Test("a name for a procedure type takes a value read as a contract only through a cast")
     func aNameForAProcedureTypeTakesNoContractValue() async throws {
-        // Given. A procedure is of no type that answers a contract, through
-        // a name standing for its type as well
+        // Given. A slot of a type takes a value read as a contract only
+        // through a cast, and a name standing for a procedure type is such a
+        // slot
         let sut = try Module(
             types: ["App.Pick": .procedure(ProcedureType(parameters: [.int], returns: .int))],
             contracts: Self.markers("App.Marked"),
@@ -866,8 +867,8 @@ struct BoundTests {
 
     @Test("min handed null first is held to the parameter it declares first")
     func minHandedNullIsHeldToItsFirstParameter() async throws {
-        // Given. The first argument is a reference that reads null. Null is a
-        // value, and no value of `some T: Comparable` is one, so the boundary
+        // Given. The first argument is a reference that reads null, and no
+        // document claims `Standard.Comparable` for `Null`, so the boundary
         // refuses before the ordering procedure is asked anything
         let sut = try Module(
             procedures: [
@@ -886,7 +887,7 @@ struct BoundTests {
         await #expect {
             try await run(sut, arguments: ["absent": .null])
         } throws: { error in
-            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, got Null")
+            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, and 'Null' does not answer every procedure 'Standard.Comparable' asks")
         }
     }
 
