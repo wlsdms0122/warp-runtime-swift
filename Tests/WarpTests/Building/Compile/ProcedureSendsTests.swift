@@ -411,40 +411,6 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
-    // Sending two procedures, the second standing at a place nothing before it does.
-    private struct ScatteredQuery: Query {
-        typealias Parameters = NoParameters
-
-        enum Imports: Int, ImportSet {
-            case first = 0
-            case apart = 5
-
-            // MARK: - Property
-            var selector: Name {
-                switch self {
-                case .first:
-                    return "Int.plus"
-
-                case .apart:
-                    return "Int.minus"
-                }
-            }
-
-            // MARK: - Initializer
-            // MARK: - Public
-            // MARK: - Private
-        }
-
-        // MARK: - Property
-        // MARK: - Initializer
-        // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value {
-            try await question.send(.first)
-        }
-
-        // MARK: - Private
-    }
-
     // MARK: - Property
     private static let sending = try! Module(
         procedures: [
@@ -848,24 +814,6 @@ struct ProcedureSendsTests {
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("uses [\"Int.times\"], which it does not import")
-        }
-    }
-
-    @Test("a procedure whose sends stand apart is refused where the module is made")
-    func aProcedureSendingFromScatteredPlacesIsRefused() {
-        // Given / When / Then. A run reaches a sent procedure by the place the procedure
-        // names it at, so a place nothing stands at reaches nothing.
-        #expect {
-            try Module(
-                procedures: [
-                    "App.scattered": Procedure(
-                        signature: Signature(returns: .int),
-                        implementation: .query(ScatteredQuery())
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("this procedure sends procedures standing at [0, 5]")
         }
     }
 

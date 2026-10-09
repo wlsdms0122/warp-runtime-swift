@@ -150,26 +150,6 @@ struct DeclaredNameTests {
         #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
     }
 
-    @Test("a construct that binds the name says what it holds, and the author does not")
-    func aConstructBoundNameTakesNoDeclaration() throws {
-        // Given. A loop binds the round under the statement's name
-        let statement = Statement(
-            binding: .constant("walk", declared: .int),
-            expression: .loop(while: .literal(.bool(false)), body: Block(body: []))
-        )
-
-        // When / Then. Refused where the module is made
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(access: .public, body: [statement], result: .literal(.int(1)))
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("this construct binds the name")
-        }
-    }
-
     @Test("a declaration inside a module variable is held the way one inside a procedure is")
     func aDeclarationInsideAModuleVariableIsHeld() async throws {
         // Given

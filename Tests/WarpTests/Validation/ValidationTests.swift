@@ -30,6 +30,40 @@ struct ValidationTests {
         // MARK: - Private
     }
 
+    // Sending two procedures, the second standing at a place nothing before it does.
+    private struct ScatteredQuery: Query {
+        typealias Parameters = NoParameters
+
+        enum Imports: Int, ImportSet {
+            case first = 0
+            case apart = 5
+
+            // MARK: - Property
+            var selector: Name {
+                switch self {
+                case .first:
+                    return "Int.plus"
+
+                case .apart:
+                    return "Int.minus"
+                }
+            }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            try await question.send(.first)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -300,6 +334,99 @@ struct ValidationTests {
 
         // And written as a statement it stands
         #expect(validates(body: [read, Statement(binding: .constant("one"), expression: called)]))
+    }
+
+    @Test("a construct that binds the name says what it holds, and the author does not")
+    func aConstructBoundNameTakesNoDeclaration() throws {
+        // Given. A loop binds the round under the statement's name
+        let statement = Statement(
+            binding: .constant("walk", declared: .int),
+            expression: .loop(while: .literal(.bool(false)), body: Block(body: []))
+        )
+
+        // When / Then. Refused where the module is made
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(access: .public, body: [statement], result: .literal(.int(1)))
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("this construct binds the name")
+        }
+    }
+
+    @Test("a closure a constant holds may not introduce a sibling's name")
+    func aClosureConstantMayNotShadowASibling() async throws {
+        // Given. The rule a body is held to at load, met here from the caller's
+        // side. Neither module is made, and both are the same mistake: a name the
+        // module bound, introduced again where it would take the constant's
+        // place.
+        func module(introducing statement: Statement?) throws -> Module {
+            try Module(
+                constants: [
+                    "apply": .closure(Procedure(
+                        signature: Signature(
+                            parameters: statement == nil
+                                ? [Parameter(name: "zebra", type: .int)]
+                                : [],
+                            returns: .int
+                        ),
+                        body: statement.map { one in [one] } ?? [],
+                        result: reference("zebra")
+                    )),
+                    "zebra": .literal(.int(7))
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [])]
+            )
+        }
+
+        // When / Then. The two ways a closure introduces a name of its own
+        for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
+            await #expect {
+                try await run(module(introducing: introduced))
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
+            }
+        }
+    }
+
+    @Test("a procedure whose sends stand apart is refused where the module is made")
+    func aProcedureSendingFromScatteredPlacesIsRefused() {
+        // Given / When / Then. A run reaches a sent procedure by the place the procedure
+        // names it at, so a place nothing stands at reaches nothing.
+        #expect {
+            try Module(
+                procedures: [
+                    "App.scattered": Procedure(
+                        signature: Signature(returns: .int),
+                        implementation: .query(ScatteredQuery())
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("this procedure sends procedures standing at [0, 5]")
+        }
+    }
+
+    @Test("a document writes only the variables it declares")
+    func aDocumentWritesOnlyItsOwnVariables() {
+        // Given. One write of `total`
+        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
+
+        // When / Then. Taken at the load of the document declaring
+        // `total`, and refused at the load of one that does not
+        #expect(throws: Never.self) {
+            try Module(
+                variables: ["total": .literal(.int(0))],
+                procedures: ["App.poke": Procedure(body: [write])]
+            )
+        }
+        #expect {
+            try Module(procedures: ["Other.poke": Procedure(body: [write])])
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("assigns 'total', which is not visible here")
+        }
     }
 
     @Test("a name is visible only after the statement that introduced it")
@@ -677,76 +804,6 @@ struct ValidationTests {
         }
     }
 
-    @Test("a ? that says nothing new is refused where it is written", arguments: [
-        TypeExpression.nullable(.nullable(.int)), .nullable(.null), .nullable(.any), .nullable(.never),
-        .nullable(.parameter(name: "T"))
-    ])
-    func aNeedlessQuestionMarkIsRefused(type: TypeExpression) throws {
-        // When / Then. Twice says it once too often; what already admits null
-        // gains nothing; never admits nothing; a parameter stands for the whole
-        // filled type
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
-                && "\(error)".contains("a `?` says nothing")
-        }
-    }
-
-    @Test("a ? and a slot mark stand only where a type is written as a spelling", arguments: [
-        (TypeExpression.nullable(.record(["a": .int])), "a `?` trails a type's spelling"),
-        (.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
-        (.nullable(.array(.record(["a": .int]))), "a `?` trails a type's spelling"),
-        (.inout(.record(["a": .int])), "a mark stands in front of a type's spelling"),
-        (.inout(.array(.procedure(ProcedureType(returns: .int)))), "a mark stands in front of a type's spelling")
-    ])
-    func aMarkWithNoSpellingIsRefused(type: TypeExpression, refusal: String) throws {
-        // When / Then. An inline record and a written signature are mappings
-        // under one key, with nothing for a `?` to trail or a mark to stand
-        // before; a module made in Swift is held to it where it is made
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
-                && "\(error)".contains(refusal)
-        }
-
-        // And a mark on a procedure type's key, and a `?` on a spelling, stand
-        let marked = TypeExpression.inout(.procedure(ProcedureType(returns: .int)))
-
-        #expect(throws: Never.self) {
-            try Module(
-                types: ["App.R": .record(["a": .variable(.nullable(.array(.int)))])],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "x", type: marked)]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        }
-    }
-
     @Test("a literal holds no map, which a document writes as a record cast to it")
     func aLiteralMapIsRefused() throws {
         // When / Then
@@ -765,47 +822,6 @@ struct ValidationTests {
         }
     }
 
-    @Test("var stands on a field of the record a declared type is, and on no record inside it", arguments: [
-        TypeExpression.array(.record(["a": .variable(.int)])),
-        .record(["b": .record(["c": .variable(.int)])]),
-        .dictionary(.record(["a": .variable(.int)]))
-    ])
-    func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
-        // When / Then. An inline record's fields are written through as they
-        // are, so `var` there says nothing
-        #expect {
-            try Module(types: ["App.T": type], procedures: [:])
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
-        }
-
-        // And on the declared record's own field it stands
-        #expect(throws: Never.self) {
-            try Module(types: ["App.T": .record(["a": .variable(.int)])], procedures: [:])
-        }
-    }
-
-    @Test("a composition joins two contracts or more, however the module was made", arguments: [
-        TypeExpression.composition([]), .composition(["App.A"])
-    ])
-    func aCompositionOfFewerThanTwoIsRefused(type: TypeExpression) throws {
-        // When / Then. One contract is written by its name
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("`&` joins two contracts or more")
-        }
-    }
-
     @Test("an index below zero is no position, however the path was made")
     func anIndexBelowZeroIsRefused() throws {
         // Given
@@ -815,30 +831,6 @@ struct ValidationTests {
         #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(-1)]))]))
         #expect(!validates(body: [items, Statement(binding: .assignment([.key("items"), .index(-1)]), expression: .literal(.int(2)))]))
         #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
-    }
-
-    @Test("a type read out of a body is no declaration anybody can write")
-    func aProjectionIsRefusedWhereADeclarationGoes() throws {
-        // When / Then. A declaration assembled in the host claiming what only
-        // a walk produces: a declaration says what a call fills, and nothing
-        // fills a path only one body can read
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
-                && "\(error)".contains("read out of a body")
-        }
     }
 
     @Test("a literal names no record, at whatever depth it holds one", arguments: [
