@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // Reading and writing data are one mapping seen from two sides, and the whole of
 // what they promise is that they are the same one.

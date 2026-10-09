@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 // Warp's own bytes, held to the two promises that justify having our own:
 // the same document is the same bytes, and bytes the writer would not write
