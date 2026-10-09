@@ -17,6 +17,16 @@ extension LoweredType {
         shaped(value, leavingOut: true, in: table)
     }
 
+    // A value from outside at the door it comes through, fitted to this type
+    // and then judged against it: the one rule every door keeps.
+    func settling(
+        outside value: Value,
+        at path: @autoclosure () -> String,
+        in table: LoweredTypeTable
+    ) throws -> Value {
+        try settling(reachesRecord ? fitted(value, in: table) : value, at: path(), in: table)
+    }
+
     // A value a cast reads, named the way this type names it: a nameless
     // record or a map of fields where a declared record is read takes the
     // record's name, at the same depths, and keeps every field it holds.

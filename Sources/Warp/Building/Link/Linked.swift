@@ -265,7 +265,7 @@ public final class Linked: Sendable {
     func settling(answered value: Value) throws -> Value {
         guard let returns else { return value }
 
-        return try returns.settling(returns.reachesRecord ? returns.fitted(value, in: table) : value, at: "returns", in: table)
+        return try returns.settling(outside: value, at: "returns", in: table)
     }
 
     // What an entry answers, at the door it leaves the run through, judged

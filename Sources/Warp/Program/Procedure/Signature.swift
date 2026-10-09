@@ -99,13 +99,6 @@ public struct Signature: Sendable, Equatable {
         parameters.firstIndex { parameter in parameter.name == name }
     }
 
-    // The returned value, settled against what was declared.
-    public func settling(returned value: Value, in types: TypeTable = .empty) throws -> Value {
-        guard let returns else { return value }
-
-        return try returns.settling(value, at: "returns", in: types)
-    }
-
     // This declaration as the run reads it: its parameters as slots, in
     // position order.
     func lowered(in table: LoweredTypeTable) -> [Slot] {

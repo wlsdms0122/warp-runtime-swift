@@ -48,21 +48,21 @@ struct TypeTests {
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record holds exactly the fields declared, one short or one over refusing")
+    @Test("a record from outside is fitted to the fields declared, one short refusing")
     func recordDeclaresFields() throws {
-        // Given. A record type is its fields, and a place holds a value as
-        // it is
+        // Given. A record type is its fields, and the door a value from
+        // outside comes through leaves out a field it does not declare
         let sut = TypeExpression.record(["id": .string, "done": .bool])
 
         // When
         let settled = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true)]), at: "task")
+        let fitted = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
 
         // Then
         #expect(settled["id"] == .string("a"))
+        #expect(fitted["id"] == .string("a"))
+        #expect(fitted["extra"] == nil)
 
-        #expect(throws: ArgumentError.self) {
-            try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
-        }
         #expect(throws: ArgumentError.self) {
             try sut.settling(.dictionary(["id": .string("a")]), at: "task")
         }

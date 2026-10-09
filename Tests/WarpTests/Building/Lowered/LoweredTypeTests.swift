@@ -396,7 +396,7 @@ struct LoweredTypeTests {
 
         // When / Then
         #expect {
-            try Parameter(name: "held", type: .procedure(nil)).checking(made)
+            try TypeExpression.procedure(nil).settling(made, at: "input 'held'")
         } throws: { error in
             "\(error)".contains("read where the link that made it is being read")
         }

@@ -197,7 +197,9 @@ struct CastAgreementTests {
             .couldBothHold(reading: theirs.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
+    // What a cast to the type answers, the judge a run asks of a value it
+    // reads as one: named the way the type names it, every field kept.
     private func settled(_ value: Value, as type: TypeExpression) -> Value? {
-        try? type.settling(value, at: "witness", in: types)
+        try? type.lowered(in: types.loweredTypes).reading(value, optional: false, in: types.loweredTypes)
     }
 }

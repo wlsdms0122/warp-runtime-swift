@@ -85,9 +85,7 @@ public struct Image: Sendable {
             throw ValueRefused("no type named '\(declared)' is declared here")
         }
 
-        let type = LoweredType.named(row)
-
-        return try type.settling(type.fitted(value, in: loweredTypes), at: declared.spelling, in: loweredTypes)
+        return try LoweredType.named(row).settling(outside: value, at: declared.spelling, in: loweredTypes)
     }
 
     // MARK: - Private
