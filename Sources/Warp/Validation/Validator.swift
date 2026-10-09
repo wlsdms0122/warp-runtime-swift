@@ -379,19 +379,22 @@ public struct Validator: Sendable {
                     throw ValidationError(Expression.declarationOnABoundName, at: here)
                 }
 
-                // What a name says it holds is the statement's, beside the
-                // construct it writes.
+                // What a name says it holds, the name itself and the path a
+                // write names are the statement's, beside the construct it
+                // writes.
+                let named = place.statement(statement.name?.spelling, at: position)
+
                 if let declared = binding.declared {
-                    try written(declared, in: .value, at: place.statement(statement.name?.spelling, at: position))
+                    try written(declared, in: .value, at: named)
                 }
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try held(name, as: .value, at: here)
-                    try collides(name, in: scope, at: here)
+                    try held(name, as: .value, at: named)
+                    try collides(name, in: scope, at: named)
 
                     guard !declared.contains(name) else {
-                        throw ValidationError("two statements here are named '\(name)'", at: here)
+                        throw ValidationError("two statements here are named '\(name)'", at: named)
                     }
 
                     declared.insert(name)
@@ -402,15 +405,15 @@ public struct Validator: Sendable {
                 // the build, where the variable's type is known.
                 case let .assignment(path):
                     if let refusal = path.markedHead {
-                        throw ValidationError(refusal, at: here)
+                        throw ValidationError(refusal, at: named)
                     }
 
-                    try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: here)
+                    try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: named)
 
                     guard let head = path.head else {
                         throw ValidationError(
                             "writes a path headed by no name. A write starts at a variable",
-                            at: here
+                            at: named
                         )
                     }
 
@@ -421,7 +424,7 @@ public struct Validator: Sendable {
                             "which is not visible here. Declare it earlier or check the spelling"
                         }
 
-                        throw ValidationError("assigns '\(head)', \(reason)", at: here)
+                        throw ValidationError("assigns '\(head)', \(reason)", at: named)
                     }
                 }
             }
