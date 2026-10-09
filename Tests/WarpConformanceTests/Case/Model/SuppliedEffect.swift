@@ -10,7 +10,8 @@ import Warp
 import WarpSyntax
 import WarpStandard
 
-// The same, through the door that reaches outside the run.
+// A procedure a case asked for that runs, through the door that reaches
+// outside the run. What it answers is the case's, as `SuppliedQuery`'s is.
 struct SuppliedEffect<Parameters: ParameterSet>: Effect {
     // MARK: - Property
     let answers: Value

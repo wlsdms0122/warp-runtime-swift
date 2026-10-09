@@ -12,7 +12,8 @@ import WarpTestSupport
 
 // A document is checked against itself, before anything is resolved. The walk
 // is structural, which is what these ask: not whether a particular notation
-// rejects a particular text, but what the language considers visible where.
+// rejects a particular text, but what the language considers visible where,
+// which grammar each name holds, and where each word of a type stands.
 @Suite("A document checked against itself")
 struct ValidationTests {
     // A procedure the host answers, written where a closure literal stands.
@@ -550,8 +551,8 @@ struct ValidationTests {
 
     @Test("a claim about a type no value is an instance of is refused where the document is read")
     func aClaimAboutNoValuesTypeIsRefused() throws {
-        // When / Then. The run picks what answers by the type a value is, and
-        // no value is an instance of `Any` by name.
+        // When / Then. `Any` is a word the language writes itself, so a claim
+        // keyed by it names no type a document writes.
         #expect {
             try Module(
                 imports: [],

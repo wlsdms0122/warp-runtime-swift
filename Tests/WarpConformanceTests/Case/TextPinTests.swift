@@ -14,7 +14,7 @@ import WarpSyntax
 // spelling for the wrong value would agree with itself. What breaks that
 // circle is a bytes case holding the same spelling: the specification says
 // every scalar and every name a text case reads appears in some bytes case,
-// and this asks. A container's shape is not a spelling.
+// and this asks. A container's structure is not a spelling.
 @Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
     // What a text spells and a reader could take wrongly: a scalar, or a

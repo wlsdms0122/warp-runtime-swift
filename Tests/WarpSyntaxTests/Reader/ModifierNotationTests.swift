@@ -28,10 +28,8 @@ struct ModifierNotationTests {
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
     func everyMarkRoundTrips(mark: SlotMark) throws {
-        // Given. The reading, the writing and the document's vocabulary all
-        // come off one list, so a mark added to it is asked these questions
-        // without anyone remembering to ask. Both forms a marked type takes:
-        // a name, and a procedure under its one key
+        // Given. Both forms a marked type takes: a name, and a procedure
+        // under its one key
         let named = mark.marking(.named("Handle"))
         let form = mark.marking(.procedure(ProcedureType(returns: .int)))
 

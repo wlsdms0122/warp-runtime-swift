@@ -191,8 +191,7 @@ struct Case: Sendable, CustomStringConvertible {
         }
 
         // Which of the fixed place sets this declaration reads its arguments
-        // through. A case declares `first` and `second`, in that order, and
-        // nothing else, so the names pick one.
+        // through, which its names pick.
         private func places(_ declared: [Name]) throws -> any ParameterSet.Type {
             switch declared {
             case []:
@@ -333,9 +332,7 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        // Said, but not as a number. A different answer from the one above: that
-        // one is "this is not a case", and this one is "this is a case and it is
-        // wrong", which is the distinction the check exists to keep.
+        // Said, but not as a number: a case, and a wrong one.
         guard case let .int(version) = declared else {
             throw ConformanceError(
                 "a case says which test it is written for as a whole number,"
@@ -360,11 +357,7 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
 
         // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
-        // exactly one. The slot groups them so that this is a question about
-        // one record instead of a rule about sibling keys, but a record is not
-        // a choice, so the count is still counted here. A case edited from one to the other
-        // and left holding both would otherwise start asking a different
-        // question than it reads as, and nobody would be told.
+        // exactly one: a record is not a choice, so the count is counted here.
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,

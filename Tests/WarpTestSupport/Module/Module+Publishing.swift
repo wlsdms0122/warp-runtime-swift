@@ -10,8 +10,8 @@ import Warp
 
 public extension Module {
     // This module with the entry made public, where it declares one. A test
-    // names the entry outside the text, so the text is not where the word is
-    // written.
+    // names the entry outside the text, so the text is not where its access
+    // is written.
     func publishing(_ entry: Name) throws -> Module {
         guard let procedure = procedures[entry] else { return self }
 

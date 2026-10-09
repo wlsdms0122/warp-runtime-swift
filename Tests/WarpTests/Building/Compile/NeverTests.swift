@@ -158,7 +158,7 @@ struct NeverTests {
         #expect(try await run([sut]) == .string("s"))
 
         // And the write is definite (every exit made it) so `y` reads as
-        // exactly what the result wrote, and an int slot refuses it
+        // exactly what the result wrote, and an `Int` slot refuses it
         let refusing = try Module(
             procedures: [
                 entryName: Procedure(

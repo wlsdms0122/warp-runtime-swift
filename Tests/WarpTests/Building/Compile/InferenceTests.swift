@@ -99,7 +99,7 @@ struct InferenceTests {
 
     @Test("a type parameter a procedure answers becomes what the walk answers")
     func aWalkAnswersWhatItsProcedureDoes() async throws {
-        // Given. `map` over strings with a procedure answering int. What the
+        // Given. `map` over strings with a procedure answering `Int`. What the
         // walk answers follows the procedure rather than the array it walks,
         // so asking for the array's type back is the disagreement
         let counting = Procedure(
@@ -506,7 +506,7 @@ struct InferenceTests {
 
     @Test("a declared answer the body's answer fits builds")
     func agreeingTypesBuild() async throws {
-        // Given. `counts` declares an int and answers one
+        // Given. `counts` declares an `Int` and answers one
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -1628,7 +1628,7 @@ struct InferenceTests {
     func aRescueReadsTheBodysPartialWrites() async throws {
         // Given. The body writes a null and then risks a failing cast: the
         // rescue runs with that write in the box, so inside the rescue the name
-        // reads `String?` and the plain string slot refuses.
+        // reads `String?` and the plain `String` slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1676,7 +1676,7 @@ struct InferenceTests {
     func aRoundReadsItsEarlierRoundsWrites() async throws {
         // Given. The first round reads the seed, but the body also writes a
         // null, and every later round reads that: inside the loop the name
-        // reads `String?`, so the plain string slot refuses.
+        // reads `String?`, so the plain `String` slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1823,7 +1823,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. `held` reads `String?`, and the plain string slot says
+        // When / Then. `held` reads `String?`, and the plain `String` slot says
         // so
         await #expect {
             try await builder.build([sut] + Module.standard)

@@ -10,9 +10,10 @@ import Testing
 import Warp
 import WarpSyntax
 
-// What a runner refuses as a case. No case can ask this, since a file the
-// runner refuses stops the suite, so it is asked here of a case written for it.
-@Suite("A case the runner refuses")
+// What a runner refuses as a case, and a case it fails. No case can ask this,
+// since a file the runner refuses stops the suite, so it is asked here of a
+// case written for it.
+@Suite("A case the runner refuses or fails")
 struct CaseTests {
     // MARK: - Property
     // MARK: - Initializer

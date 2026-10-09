@@ -26,7 +26,7 @@ struct ObjectMutationTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("is refused wherever it is mutated, and never traps")
+    @Test("is refused or read back as it was written wherever it is mutated, and never traps")
     func everyMutationIsAnswered() throws {
         // Given
         let written = try Self.everything.object()

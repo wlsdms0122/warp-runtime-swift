@@ -54,7 +54,7 @@ struct WriterTests {
                 )
             ]
         ),
-        // Messages nested inside other expressions, deeper than a document's
+        // Calls nested inside other expressions, deeper than a document's
         // fixed types would ever place them
         try! Module(
             procedures: [
@@ -402,7 +402,7 @@ struct WriterTests {
                 ]
             ]
         ],
-        // Messages: calls by position, carried bodies, closures, invocation, templates
+        // Calls: by position, carried bodies, closures, invocation, templates
         [
             "imports": ["Standard.Collection.filter", "Standard.Text.joined", "Standard.Logic.notEqual", "Standard.Text.text"],
             "procedures": [
@@ -715,10 +715,10 @@ struct WriterTests {
         #expect(before["line"] == .string("hey/matched"))
     }
 
-    @Test("a spelling is written back as the procedures it stood for")
+    @Test("a spelling is written back as the call it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given. `{ of: x, <Procedure>: y }` is a spelling, and what it means is a
-        // message. Writing keeps the meaning and drops the spelling, which is
+        // Given. `{ of: x, equal: y }` is a spelling, and what it means is a
+        // call. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
             "parameters": [["name": "procedure", "type": "String"]],
@@ -745,7 +745,7 @@ struct WriterTests {
             return
         }
 
-        // The procedure the spelling reached, written as the message it always was.
+        // The procedure the spelling reached, written as the call it always was.
         #expect(message["procedure"] == .string("Standard.Logic.equal"))
         #expect(message["of"] == nil)
         #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
@@ -792,10 +792,10 @@ struct WriterTests {
         #expect(held["ref"]?.referencePath == [.key("payload")])
     }
 
-    @Test("a notation that gave up a procedure cannot write what it said")
+    @Test("a notation that gave up a construct key cannot write what it said")
     func aDroppedKeyCannotBeWritten() throws {
-        // Given. The registry is what a notation *is*, so a type whose procedure it
-        // no longer registers is a type it can no longer write. Answering with
+        // Given. The registry is what a notation *is*, so a construct whose key
+        // it no longer registers is one it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
         let module = try loader.loadProcedure([
@@ -816,7 +816,7 @@ struct WriterTests {
             try narrowed.value(of: module)
         }
 
-        // And the same program through a notation that kept the procedure is fine
+        // And the same program through a notation that kept the key is fine
         #expect(throws: Never.self) {
             try sut.value(of: module)
         }

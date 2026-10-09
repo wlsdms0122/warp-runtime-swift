@@ -133,7 +133,7 @@ struct TypeNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
-                    ["name": "by", 
+                    ["name": "by",
                         "type": [
                             "procedure": [
                                 "bounds": ["T": "Comparable"],
@@ -156,7 +156,7 @@ struct TypeNotationTests {
         let sut = try loader.loadProcedure([
             "bounds": ["Element": "Comparable"],
             "parameters": [
-                ["name": "by", 
+                ["name": "by",
                     "type": [
                         "procedure": [
                             "parameters": ["some Element"],
