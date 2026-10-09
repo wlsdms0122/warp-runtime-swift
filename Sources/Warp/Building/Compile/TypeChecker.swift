@@ -32,7 +32,7 @@ struct TypeChecker {
     // a parameter read two ways is refused rather than folded, a bounded one
     // is judged against its bounds, and the declaration comes back with
     // the readings filled.
-    private enum Judgment {
+    private enum Instantiation {
         case fits(slots: [Slot], returns: LoweredType?)
         case refusal(String)
     }
@@ -726,7 +726,7 @@ struct TypeChecker {
         return nil
     }
 
-    private func judged(
+    private func instantiated(
         _ declared: Signature,
         over slots: [Slot],
         answering: LoweredType?,
@@ -735,7 +735,7 @@ struct TypeChecker {
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
         at place: Place
-    ) -> Judgment {
+    ) -> Instantiation {
         // A declaration with nothing to fill is read as the build lowered it.
         // Lowering it again per call site is the same answer paid for again,
         // and this is the site every call goes through.
@@ -3469,7 +3469,7 @@ struct TypeChecker {
         // wrote into each slot.
         let slots: [Slot]
 
-        switch judged(
+        switch instantiated(
             declared,
             over: context.slots(of: call.selector),
             answering: context.answer(of: call.selector),
