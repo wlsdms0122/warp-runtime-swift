@@ -336,7 +336,7 @@ struct TypeChecker {
             // parameter reaches, named for the path that reached it) fills with
             // nothing, which is `Any`. One rule, and the useful half comes for
             // free.
-            recording(only.symbol.declared, read?.asHeld ?? .any)
+            recording(only.symbol.declared, read ?? .any)
         }
     }
 

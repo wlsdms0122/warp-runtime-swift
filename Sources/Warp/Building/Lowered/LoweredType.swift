@@ -2372,13 +2372,11 @@ indirect enum LoweredType: Sendable, Equatable {
             throw ArgumentError("\(path()): declares Never, and nothing is ever that")
 
         // A declared record is nominal. A record arriving under this name, or
-        // an alias of it, is held to the declared fields and keeps it; a
-        // nameless one of exactly those fields takes the name, which only a
-        // value from outside or a cast can be, since the build names a record
-        // written where a declared one is read and refuses any other; one
-        // arriving under another name is refused, whatever its type. A
-        // declared name that is not a record type settles as the type it
-        // stands for.
+        // an alias of it, is held to the declared fields and keeps it; one
+        // under no name or another name is refused, whatever its fields,
+        // since a literal, a value from outside and a cast write the name
+        // before this reads it. A declared name that is not a record type
+        // settles as the type it stands for.
         case let .named(row):
             return try settlingNamed(value, row: row, at: path(), in: table)
 

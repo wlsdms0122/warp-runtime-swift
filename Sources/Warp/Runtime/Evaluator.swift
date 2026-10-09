@@ -140,13 +140,6 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let callee = linked[try row(sending.row, from: origin)]
 
-        guard callee.constness == .const else {
-            throw ExecutionError(
-                "'\(callee.rendered)' answers only by running, so it cannot be"
-                    + " read as data here"
-            )
-        }
-
         return try await answer(
             callee,
             with: try settled(callee, sending: sending, handing: values),
