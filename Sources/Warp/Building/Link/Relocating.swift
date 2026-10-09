@@ -115,8 +115,14 @@ final class Relocating {
     // What compiling left, read as this link's rows. Filling a call through a
     // contract reads the row the link found answering it, over the parameters
     // that row takes, so every row is made to stand here rather than as the
-    // walk reaches it.
-    convenience init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
+    // walk reaches it. `contractProcedures` are the procedures the contracts
+    // of `types` ask, read off it where the satisfaction was written into it.
+    convenience init(
+        _ assembled: Assembled,
+        types: TypeTable,
+        contractProcedures: [Name: LoweredContractProcedure],
+        supplied: Supplying
+    ) throws {
         let loweredTypes = types.loweredTypes
 
         self.init(
@@ -138,7 +144,7 @@ final class Relocating {
             owned: assembled.owned,
             concealed: assembled.concealed,
             typeNumbering: assembled.typeNumbering,
-            contractProcedures: LoweredContractProcedure.table(in: types),
+            contractProcedures: contractProcedures,
             closures: assembled.closures,
             loweredTypes: loweredTypes
         )
