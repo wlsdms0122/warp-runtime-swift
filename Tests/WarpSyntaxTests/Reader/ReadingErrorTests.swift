@@ -140,7 +140,7 @@ struct ReadingErrorTests {
     }
 
     @Test("a document refused for the list it does not write is refused about itself")
-    func aMissingManifestIsAboutTheDocument() throws {
+    func aMissingImportsListIsAboutTheDocument() throws {
         // Given. Nothing inside the document is wrong, so there is no step to
         // walk and the document alone is the whole address
         let fixture: Value = [

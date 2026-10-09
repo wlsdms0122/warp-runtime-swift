@@ -334,7 +334,7 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
-    // Hands an int to a procedure whose first parameter is declared string.
+    // Hands an int to a procedure whose first parameter is declared `String`.
     private struct MistypingEffect: Effect {
         typealias Parameters = NoParameters
 
@@ -361,7 +361,7 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
-    // Hands null to a procedure whose first parameter is declared string.
+    // Hands null to a procedure whose first parameter is declared `String`.
     private struct NullingEffect: Effect {
         typealias Parameters = NoParameters
 
@@ -952,7 +952,7 @@ struct ProcedureSendsTests {
     @Test("a procedure handing what the callee cannot take is refused at the boundary")
     func aMistypedArgumentIsRefused() async throws {
         // Given. `App.mistyping` hands an int to a procedure whose first
-        // parameter is declared string
+        // parameter is declared `String`
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,

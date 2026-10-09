@@ -126,7 +126,7 @@ struct NotationTests {
         // Given. Writing and reading are inverses, and a reading side with
         // spellings is a different far side from one without. Written bare
         // for a notation that recognises a condition by its subject key, these
-        // fields would come back a message. Under `record` they are a record's
+        // fields would come back a call. Under `record` they are a record's
         // fields whatever they are called.
         let module = try Self.conditional(on: .record([
             "of": .reference(path("word")),
@@ -181,7 +181,7 @@ struct NotationTests {
         let written = try Writer().value(of: module)
         let read = try sut.load(written)
 
-        // Then. The same record arrived, rather than a message
+        // Then. The same record arrived, rather than a call
         guard
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(condition, _, _) = block.body.statements.first?.expression,

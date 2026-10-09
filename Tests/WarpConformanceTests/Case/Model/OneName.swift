@@ -10,9 +10,7 @@ import Warp
 import WarpSyntax
 import WarpStandard
 
-// The names a procedure a case asks for may declare, in the order a
-// declaration's names stand in. A case cannot invent a place in someone else's
-// runner, so the places are fixed here and the spec says which they are.
+// The place a procedure a case asks for reads its one argument at, `first`.
 enum OneName: Int, ParameterSet {
     case first
 

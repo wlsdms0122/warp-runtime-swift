@@ -70,11 +70,10 @@ struct LoopTests {
         #expect(outputs["result"] == .int(6))
     }
 
-    @Test("a guard key on loop is refused at the load")
-    func aGuardKeyIsRefusedAtTheLoad() throws {
-        // When / Then. Repetition carries no budget of its own: an author
-        // bounds a loop with a counter and a procedure, and the host stops one
-        // by cancelling the run. The key is gone rather than ignored.
+    @Test("a key the loop does not name is refused at the load")
+    func anUnknownKeyIsRefusedAtTheLoad() throws {
+        // When / Then. A loop's keys are closed, so one it does not name is
+        // refused where it is written.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [
@@ -83,7 +82,7 @@ struct LoopTests {
                         "value": ["loop": [
                             "while": ["of": ["ref": "gate.index"], "notEqual": 3],
                             "body": [["let": "noop", "value": "again"]],
-                            "guard": 2
+                            "mystery": 2
                         ]
                     ]]
                 ]

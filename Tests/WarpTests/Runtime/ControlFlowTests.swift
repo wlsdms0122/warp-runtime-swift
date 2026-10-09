@@ -127,7 +127,7 @@ struct ControlFlowTests {
 
     @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
     func aLoopResultReadsTheBodysOwnDeclaration() async throws {
-        // Given. The entry holds `x` as a declared int box. The body declares
+        // Given. The entry holds `x` in a box declared `Int`. The body declares
         // its own `x`, a string, and the result reads that one: null where no
         // round ran, and the body's otherwise
         let loop = Warp.Expression.loop(

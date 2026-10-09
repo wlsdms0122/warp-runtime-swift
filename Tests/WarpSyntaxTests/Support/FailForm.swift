@@ -23,7 +23,7 @@ struct FailForm: ConstructForm {
     // MARK: - Public
     func expression(boundTo name: Name?) -> Warp.Expression {
         .call(
-            Call(selector: "test.fail", arguments: [.literal(.bool(recoverable))])
+            Call(selector: "Test.fail", arguments: [.literal(.bool(recoverable))])
         )
     }
 

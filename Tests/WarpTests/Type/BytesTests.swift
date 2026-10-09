@@ -11,10 +11,9 @@ import Testing
 import WarpStandard
 import WarpTestSupport
 
-// `bytes = Array<byte>`. Bytes are not a special material, they are a compact
-// spelling of an array of small whole numbers. The worth is the elements', the
-// collection vocabulary applies, and only the spelling differs. `1` and `1.0`,
-// one collection up.
+// Bytes are `Array<Int>` in a compact spelling, each element from 0 to 255.
+// The worth is the elements', the collection vocabulary applies, and only the
+// spelling differs, as between `1` and `1.0`.
 @Suite("Bytes")
 struct BytesTests {
     // MARK: - Property
@@ -59,11 +58,9 @@ struct BytesTests {
         }
     }
 
-    // `holdsEveryByte` says in one question what `settling` says one byte at a
-    // time, and two statements of one rule drift apart silently. This is the
-    // oracle that will not let them: for every type below, the predicate's
-    // answer is checked against what settling actually does to all 256 bytes,
-    // so a type added to one and forgotten by the other fails here.
+    // `holdsEveryByte` answers in one question what `settling` answers one byte
+    // at a time. For every type below, the predicate's answer is checked
+    // against what settling does to all 256 bytes.
     @Test("a byte settles as itself exactly where the type says it does")
     func aByteSettlesAsItselfExactlyWhereTheTypeSaysIt() throws {
         // Given. Every claim is in, so a bound is answered by what the

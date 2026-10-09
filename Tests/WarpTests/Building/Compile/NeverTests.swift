@@ -22,7 +22,7 @@ struct NeverTests {
     // MARK: - Test
     @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
-        // Given. `Standard.Control.abort` declares never, so the statement after it
+        // Given. `Standard.Control.abort` declares `Never`, so the statement after it
         // would never run, and a name written there would never bind
         let sut = try Module(
             procedures: [
@@ -239,7 +239,7 @@ struct NeverTests {
         // declines at the start runs no round and answers, whatever the rounds
         // would have done. So the result is not "after" the body the way a
         // plain block's is, and a body no run comes back from (here a procedure only
-        // the build knows declares never) leaves the loop answerable still. The
+        // the build knows declares `Never`) leaves the loop answerable still. The
         // reader refuses the leaves it can see; this is the type only the build
         // sees, and the run keeps it
         let loop = Warp.Expression.loop(
@@ -262,7 +262,7 @@ struct NeverTests {
     @Test("such a loop's name holds what the result reads")
     func aNeverBodiedLoopStillReadsAsItsResult() async throws {
         // Given. The result reads in what the entry left, and the reading says
-        // so: `kept` holds the result's string, and a slot that declared int
+        // so: `kept` holds the result's string, and a slot that declared `Int`
         // refuses it by that reading rather than by `Never`
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
