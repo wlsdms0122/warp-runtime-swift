@@ -44,6 +44,15 @@ struct NameGrammarTests {
         #expect(((try? Name(name)).map(NameGrammar.value.holds) ?? false) == holds)
     }
 
+    @Test("a contract's procedure is named by one identifier", arguments: [
+        ("describe", true), ("_x1", true), ("Int", true),
+        ("a.b", false), ("a b", false), ("café", false), ("", false)
+    ])
+    func aContractProcedureNameIsOneIdentifier(name: String, holds: Bool) {
+        // When / Then
+        #expect(((try? Name(name)).map(NameGrammar.contractProcedure.holds) ?? false) == holds)
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

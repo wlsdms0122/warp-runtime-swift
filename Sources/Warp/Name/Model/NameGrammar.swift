@@ -7,8 +7,8 @@
 
 import Foundation
 
-// Which names may be written where. A program writes a name in one of three
-// places, and each holds it to its own grammar:
+// Which names may be written where. Each place below holds a name to its own
+// grammar:
 //
 // - a type's name: a type or a contract a module declares, every mention of
 //   one in a type, a bound or a claim, and a record's name. Identifiers joined
@@ -20,6 +20,9 @@ import Foundation
 //   name, a loop's round, an attempt's failure and a record type's field. What
 //   a path reads back as one key, since a path is how each one is reached, and
 //   there a dot is a step.
+// - a contract's procedure's name: the key it is asked under. One identifier,
+//   since a call spells it after the contract's name and a dot, and a dot in
+//   it would make one spelling two contracts' procedures.
 //
 // No type's name and no type parameter's name is a word the language writes
 // itself: the names it gives its own types, the words a type's spelling
@@ -28,6 +31,7 @@ public enum NameGrammar: Sendable {
     case type
     case typeParameter
     case value
+    case contractProcedure
 
     // MARK: - Property
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
@@ -69,6 +73,9 @@ public enum NameGrammar: Sendable {
             return !name.spelling.contains { character in NameGrammar.pathPunctuation.contains(character) }
                 && !CharacterSet.whitespaces.contains(first)
                 && !CharacterSet.whitespaces.contains(last)
+
+        case .contractProcedure:
+            return name.isIdentifier
         }
     }
 
@@ -87,6 +94,10 @@ public enum NameGrammar: Sendable {
         case .value:
             return "'\(name)' is no name a path reads. A path is written with `.`, `[`, `]` and `?`,"
                 + " so a name holding one, or white space at either end, is never the one it reaches"
+
+        case .contractProcedure:
+            return "'\(name)' is no name of a contract's procedure. A call writes the contract's name, a dot"
+                + " and the procedure's, so the procedure is named by one identifier"
         }
     }
 

@@ -86,6 +86,8 @@ public struct Validator: Sendable {
             for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
                 let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 
+                try held(name, as: .contractProcedure, at: place)
+
                 // A bound is declared by the procedure whose call fills the
                 // name, and a contract's procedure is answered by declarations
                 // that each declare their own.
