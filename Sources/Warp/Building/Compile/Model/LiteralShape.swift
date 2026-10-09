@@ -19,13 +19,12 @@ enum LiteralShape: Sendable {
     // MARK: - Property
     // The literal as one type, for a slot that judges it whole and for a
     // call filling a type parameter from it. An empty list holds no element,
-    // so it is a list of `Never`, and the parts beside each other join part
-    // by part. An attempt's two ways are each a place of their own, so each
-    // is read as a name holds it before the two join.
+    // so it is a list of `Never`, and the parts beside each other join. An
+    // attempt's two ways meet as ways do.
     var folded: LoweredType {
         switch self {
         case let .list(items):
-            return .array(items.reduce(.never) { held, item in held.joinedPartByPart(item.folded) })
+            return .array(items.reduce(.never) { held, item in held.joined(item.folded) })
 
         case let .record(fields):
             return .record(fields.mapValues(\.folded))
@@ -34,7 +33,7 @@ enum LiteralShape: Sendable {
             return reading
 
         case let .either(attempted, rescued):
-            return attempted.folded.asHeld.joinedPartByPart(rescued.folded.asHeld)
+            return attempted.folded.meeting(rescued.folded)
         }
     }
 

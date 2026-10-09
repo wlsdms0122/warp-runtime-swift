@@ -139,11 +139,9 @@ struct Flow {
     // MARK: - Initializer
     // MARK: - Public
     // What a body that writes no `returns` hands its caller: its result and
-    // every `return`, each read as a name holds it, joined. Each way out is a
-    // place of its own and none of them declares a fraction, so a whole
-    // literal one of them answers is the Int it is before the ways meet.
+    // every `return`, each a way out, where they meet.
     func answer(resulting result: LoweredType) -> LoweredType {
-        answered.map(\.reading.asHeld).reduce(result.asHeld) { joined, answered in joined.joined(answered) }
+        answered.reduce(result.asHeld) { met, answered in met.meeting(answered.reading) }
     }
 
     // A write on the way that goes on.

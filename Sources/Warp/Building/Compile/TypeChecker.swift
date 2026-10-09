@@ -2754,22 +2754,21 @@ struct TypeChecker {
 
             flow.going = flow.going?.indefinite()
 
-            // Each way is a place of its own, so a whole literal one of them
-            // answers is the Int it is before the two ways meet, part by part.
-            let reading = attempted.reading.asHeld.joinedPartByPart(rescued.reading.asHeld)
+            // What the attempt answers is where its two ways meet.
+            let shape = LiteralShape.either(
+                LiteralShape(attempted.literalShape, reading: attempted.reading),
+                LiteralShape(rescued.literalShape, reading: rescued.reading)
+            )
 
             return Inspection(
                 rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
-                reading: reading,
+                reading: shape.folded,
                 // The failure is bound in the rescue alone. The body reads
                 // the names around the attempt.
                 flow: flow,
-                literalShape: .either(
-                    LiteralShape(attempted.literalShape, reading: attempted.reading),
-                    LiteralShape(rescued.literalShape, reading: rescued.reading)
-                )
+                literalShape: shape
             )
         }
     }

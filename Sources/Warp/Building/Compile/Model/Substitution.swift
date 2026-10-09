@@ -77,13 +77,12 @@ struct Substitution: Sendable {
         (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 
-    // A parameter read once more. Two readings join only where one rigidly
-    // takes the other: a whole literal and a fraction, and the same through
-    // lists, maps, `?` and fields. With the table, because a reading may
-    // stand on a row and the type that row holds. Rigidly, because a
-    // parameter read here is the calling body's own and nothing fills it.
-    // What holds both is `holdingBoth`, and a parameter read as `Any`
-    // anywhere is `Any` there.
+    // A parameter read once more, joined with what it is already read as by
+    // `join`: holding both, only where one rigidly takes the other (a whole
+    // literal and a fraction, and the same through lists, maps, `?` and
+    // fields), with the table, because a reading may stand on a row and the
+    // type that row holds; or part by part, as two readings of one place
+    // join. A parameter read as `Any` anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer
@@ -117,7 +116,7 @@ struct Substitution: Sendable {
             already.holdingBoth(given, in: table)
 
         case .partByPart:
-            already.joinedPartByPart(given)
+            already.joined(given)
         }
 
         // Two that do not join stay as they were read: the first is what the

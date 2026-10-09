@@ -590,9 +590,12 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Two readings of one slot. Where they disagree the slot holds neither,
-    // which is what `Any` says. A join that guessed would be a refusal an
-    // author cannot act on.
+    // Two readings of one slot, joined part by part: null beside a value is
+    // what may be null, two lists join by their elements and two maps by
+    // their entries, two records of the same fields field by field, and two
+    // procedures to a procedure. Where two parts still disagree the part
+    // holds neither, which is what `Any` says. A join that guessed would be a
+    // refusal an author cannot act on.
     //
     // A reading that leaves is not one of the two. It contributes no value, so
     // it cannot disagree with the reading that stays, and the slot holds what
@@ -646,39 +649,28 @@ indirect enum LoweredType: Sendable, Equatable {
 
         guard self != other else { return self }
 
-        // Two arrays join by their elements, so what a literal inside one
-        // joins to holds inside the list too.
-        if case let .array(myElement) = self, case let .array(theirElement) = other {
-            return .array(myElement.joined(theirElement))
-        }
-
-        return .any
-    }
-
-    // Two parts held side by side, as one type: joined as two readings join,
-    // and part by part where a reading's join gives up, lists by their
-    // elements and records of the same fields field by field, inside what
-    // may be null too. Records of other fields are `Any`, since no one
-    // record type holds both.
-    func joinedPartByPart(_ part: LoweredType) -> LoweredType {
-        switch (self, part) {
-        case let (.nullable(mine), _):
-            return mine.joinedPartByPart(part).admittingNull
-
-        case let (_, .nullable(theirs)):
-            return joinedPartByPart(theirs).admittingNull
-
+        switch (self, other) {
         case let (.array(mine), .array(theirs)):
-            return .array(mine.joinedPartByPart(theirs))
+            return .array(mine.joined(theirs))
+
+        case let (.dictionary(mine), .dictionary(theirs)):
+            return .dictionary(mine.joined(theirs))
 
         case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
             return .record(
-                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in field.joinedPartByPart(given) })
+                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in field.joined(given) })
             )
 
         default:
-            return joined(part)
+            return .any
         }
+    }
+
+    // Two ways that each answer, where they meet. Each way is a place of its
+    // own, so a whole literal one of them answers is the Int it is before
+    // the two join.
+    func meeting(_ way: LoweredType) -> LoweredType {
+        asHeld.joined(way.asHeld)
     }
 
     // The type a value read as this is an instance of, under the name a claim
