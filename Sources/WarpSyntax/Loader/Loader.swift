@@ -181,19 +181,10 @@ public struct Loader: Sendable {
     //
     // Which notation it is written in is the caller's to say, the same as it is
     // for a whole text. A caller holding a fragment of a document says nothing
-    // and gets the document's reading.
+    // and gets the document's reading. What the fragment is held to is the
+    // module's, where it is checked beside the module's own names.
     public func procedure(from value: Value, in notation: Notation = .canonical) throws -> Procedure {
-        let procedure = try read(
-            ProcedureReader.self,
-            from: value,
-            in: .assembled,
-            from: notation
-        )
-        .procedure
-
-        try reading { try Validator().validate(procedure) }
-
-        return procedure
+        try read(ProcedureReader.self, from: value, in: .assembled, from: notation).procedure
     }
 
     // A body read on its own, for a caller assembling a procedure rather than a

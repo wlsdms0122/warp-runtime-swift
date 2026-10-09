@@ -415,7 +415,11 @@ public struct TextEncoding {
                 case .recordClose:
                     opened.removeLast()
 
-                    settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                    do {
+                        settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                    } catch let refusal as ValueRefused {
+                        throw refused(refusal.message, at: at)
+                    }
 
                 case let .bare(spelling):
                     let key = try key(spelling, at: at)
@@ -475,11 +479,11 @@ public struct TextEncoding {
                     settled = .bytes(bytes)
 
                 // A bare token in front of a record is the record's name, the
-                // declared type the value settled to, where it is written as a
-                // type's name. Any other bare token is a scalar, the record
-                // after it the next value.
+                // declared type the value settled to, where it is no scalar's
+                // writing; what a record's name may be is the value's to hold.
+                // A scalar is a scalar, the record after it the next value.
                 case let .bare(bare):
-                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), NameGrammar.type.holds(name) {
+                    if tokens.first?.token == .recordOpen, !writesScalar(bare), let name = try? Name(bare) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: name))
@@ -523,11 +527,20 @@ public struct TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar. A point or an exponent, not a
     // reader's guess.
+    // Whether a bare token is written as a scalar: a keyword, or what starts
+    // as a number.
+    private func writesScalar(_ bare: String) -> Bool {
+        guard Name.scalarKeywords[bare] == nil else { return true }
+        guard let first = bare.first else { return false }
+
+        return first == "-" || first.isNumber
+    }
+
     private func scalar(from bare: String, at offset: Int) throws -> Value {
         if let scalar = Name.scalarKeywords[bare] { return scalar }
 
         do {
-            guard let first = bare.first, first == "-" || first.isNumber else {
+            guard writesScalar(bare) else {
                 throw refused("nothing is written \(bare)", at: offset)
             }
 

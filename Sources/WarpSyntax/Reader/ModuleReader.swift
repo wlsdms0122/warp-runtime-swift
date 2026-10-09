@@ -66,19 +66,13 @@ public struct ModuleReader: Decodable {
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
                     // The key is the type claiming, written as the document
-                    // spells it; the contracts it claims are names to read.
-                    let type = entry.key
+                    // spells it; the contracts it claims are a set of names,
+                    // and order and repeats are the one spelling's to hold.
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
-                    // Two contracts that read as one are one contract claimed
-                    // twice, however the text spelled them.
-                    let contracts = try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
-
-                    guard Set(contracts).count == contracts.count else {
-                        throw ReadingError("'\(type)' claims a contract twice under satisfies", at: steps)
-                    }
-
-                    claims[type] = Set(contracts)
+                    claims[entry.key] = Set(
+                        try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
+                    )
                 },
             constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),

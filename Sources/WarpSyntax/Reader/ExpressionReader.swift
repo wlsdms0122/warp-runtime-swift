@@ -88,18 +88,17 @@ public struct ExpressionReader: Decodable {
 
             // A form is keys the notation reserved, and a name under which a
             // value stands is not one of them. So a value the document named
-            // is read as the literal it spells, name included, for the
-            // `Validator` to refuse; reading it as a form would drop the name.
+            // is read as the literal it spells, name included, and a procedure
+            // as the value it is, for the `Validator` to refuse; reading
+            // either as a form would drop what it is refused for.
             case let .record(record) where record.name != nil:
+                return .literal(value)
+
+            case .procedure:
                 return .literal(value)
 
             case let .record(record):
                 return try read(record: record.asDictionary, at: steps, in: decoder)
-
-            // A closure reaches the language by being spelled, and spelling it
-            // is a form.
-            case .procedure:
-                throw ExpressionFormError("a document cannot contain a procedure value")
             }
         } catch let error as ExpressionFormError {
             throw ReadingError(error.message, at: steps)
