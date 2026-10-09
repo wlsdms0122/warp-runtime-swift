@@ -59,7 +59,7 @@ struct Compiler {
         // The variables that declared their type, by that type: a slot every
         // body of the document reads, which a call of the value one holds
         // leans on, and what each start settles into.
-        let declaredVariables = try declaredTypes(of: module, in: loweredTypes)
+        let declaredVariables = declaredTypes(of: module, in: loweredTypes)
 
         // The constants with what each reads as: what seeds the environment a
         // body is judged in, and what a body binds where it reads one at an
@@ -601,25 +601,9 @@ struct Compiler {
         }
     }
 
-    // The types a document's variables declare, lowered once. One naming a
-    // type no module in this link declares is refused at its variable.
-    private func declaredTypes(of module: Module, in table: LoweredTypeTable) throws -> [Name: LoweredType] {
-        var declared: [Name: LoweredType] = [:]
-
-        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
-            guard let holding = variable.declared?.lowered(in: table) else { continue }
-
-            if case let .undeclared(label, _) = holding {
-                throw BuildError(
-                    "declares type '\(label)', which no module in this link declares",
-                    at: .variable(name.spelling, in: .of(module))
-                )
-            }
-
-            declared[name] = holding
-        }
-
-        return declared
+    // The types a document's variables declare, lowered once.
+    private func declaredTypes(of module: Module, in table: LoweredTypeTable) -> [Name: LoweredType] {
+        module.variables.compactMapValues { variable in variable.declared?.lowered(in: table) }
     }
 
     // The order a module's constants settle in: what a constant reads comes
