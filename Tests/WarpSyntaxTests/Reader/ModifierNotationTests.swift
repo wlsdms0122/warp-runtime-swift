@@ -50,13 +50,28 @@ struct ModifierNotationTests {
             ])
         )
 
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
-        ])
+        // And the form reads back where the mark may stand: `inout` in front
+        // of a parameter, `var` on a declared type's field
+        switch mark {
+        case .inout:
+            let read = try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
+            ])
 
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
+            #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
+
+        case .variable:
+            let read = try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["result": 1]],
+                "types": ["Box": ["record": ["f": writtenForm]]]
+            ])
+
+            #expect(read.types["Box"] == .record(["f": form]))
+        }
     }
 
     @Test(

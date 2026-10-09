@@ -504,42 +504,36 @@ struct InPlaceTests {
     }
 
     @Test("inout is written on a parameter and nowhere else")
-    func inoutOutsideAParameterRefuses() async throws {
-        // Given. A declared type with an inout field
-        let sut = try Module(
-            imports: [],
-            types: ["Box": .record(["held": .inout(.int)])],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
+    func inoutOutsideAParameterRefuses() throws {
+        // When / Then. A declared type with an inout field
+        #expect {
+            try Module(
+                imports: [],
+                types: ["Box": .record(["held": .inout(.int)])],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+            )
         } throws: { error in
-            "\(error)".contains("only a parameter is handed a variable in place")
+            error is ValidationError && "\(error)".contains("only a parameter is handed a variable in place")
         }
     }
 
     @Test("var is written on a declared type's field and nowhere else")
-    func varOutsideADeclaredFieldRefuses() async throws {
-        // Given. A parameter typed var
-        let sut = try Module(
-            imports: [],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
+    func varOutsideADeclaredFieldRefuses() throws {
+        // When / Then. A parameter typed var
+        #expect {
+            try Module(
+                imports: [],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
         } throws: { error in
-            "\(error)".contains("only a field of a declared type is written through")
+            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
         }
     }
 

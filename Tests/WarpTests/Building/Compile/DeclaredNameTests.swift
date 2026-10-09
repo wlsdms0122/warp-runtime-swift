@@ -250,25 +250,22 @@ struct DeclaredNameTests {
     }
 
     @Test("a name declaring a type parameter is refused, because no call fills a name")
-    func aDeclaredTypeParameterIsRefused() async throws {
-        // Given
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
-                    ],
-                    result: reference("held")
-                )
-            ]
-        )
-
+    func aDeclaredTypeParameterIsRefused() throws {
         // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        body: [
+                            Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
+                        ],
+                        result: reference("held")
+                    )
+                ]
+            )
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes `some T`, and nothing here is filled by a call")
+            error is ValidationError && "\(error)".contains("writes `some T`, and nothing here is filled by a call")
         }
     }
 

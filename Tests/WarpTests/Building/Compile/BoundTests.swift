@@ -661,64 +661,58 @@ struct BoundTests {
         }
     }
 
-    @Test("a type parameter hidden in a declared type refuses at the build")
-    func aParameterInADeclaredTypeRefusesAtTheBuild() async throws {
-        // Given. A declared type has no call to fill a parameter, and a bound
+    @Test("a type parameter hidden in a declared type refuses at the load")
+    func aParameterInADeclaredTypeRefusesAtTheLoad() throws {
+        // When / Then. A declared type has no call to fill a parameter, and a bound
         // hidden behind the name would otherwise escape every judgment
-        let sut = try Module(
-            types: ["Weird": .parameter(name: "T", bounds: ["Sortable"])],
-            procedures: [
-                "keep": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "value", type: .named("Weird"))]
+        #expect {
+            try Module(
+                types: ["Weird": .parameter(name: "T", bounds: ["Sortable"])],
+                procedures: [
+                    "keep": Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "value", type: .named("Weird"))]
+                        ),
+                        body: [],
+                        result: reference("value")
                     ),
-                    body: [],
-                    result: reference("value")
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
         } throws: { error in
-            error is BuildError && "\(error)".contains("A type parameter lives in a signature")
+            error is ValidationError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 
     @Test("a parameter behind a procedure type in a declared type refuses too")
-    func aParameterInADeclaredProcedureTypeRefusesAtTheBuild() async throws {
-        // Given. A declared type is not a filling site however deep the
+    func aParameterInADeclaredProcedureTypeRefusesAtTheLoad() throws {
+        // When / Then. A declared type is not a filling site however deep the
         // parameter hides: nothing ever binds it, so the claim would go
         // unjudged everywhere
-        let sut = try Module(
-            types: [
-                "Callback": .procedure(ProcedureType(
-                    parameters: [.parameter(name: "T", bounds: ["Scalar"])]
-                ))
-            ],
-            contracts: Self.markers("Scalar"),
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
+        #expect {
+            try Module(
+                types: [
+                    "Callback": .procedure(ProcedureType(
+                        parameters: [.parameter(name: "T", bounds: ["Scalar"])]
+                    ))
+                ],
+                contracts: Self.markers("Scalar"),
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
         } throws: { error in
-            error is BuildError && "\(error)".contains("A type parameter lives in a signature")
+            error is ValidationError && "\(error)".contains("A type parameter lives in a signature")
         }
     }
 

@@ -281,16 +281,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // The refusal a cast earns for naming a type there is nothing to read. Nil
-    // where the type names one. Said here, once, because a cast's claim is
-    // judged in two places: the declaration scan that sees every cast in every
-    // module, and the walk that knows what the value reads as.
-    //
-    // Each of the three says its own, because a refusal carries its reason:
-    // telling an author that `T` names no type is false. A call names it,
-    // elsewhere. A type parameter anywhere in the claim is the third, since
-    // nothing in a body fills it and the run would settle what arrived against
-    // no type there.
+    // The refusal a cast earns for naming a type there is nothing to read, once
+    // its names are resolved. Nil where the type names one. Each of the two
+    // says its own, because a refusal carries its reason.
     var unreadableClaim: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
@@ -302,12 +295,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return "reads as \(rendered), which no value is."
                 + " A cast names the type a value turns out to have, and"
                 + " nothing arrives to have this one"
-        }
-
-        if isGeneric {
-            return "reads as \(rendered), whose type the call"
-                + " decides. A cast names a type here, and this one is named"
-                + " somewhere else"
         }
 
         return nil

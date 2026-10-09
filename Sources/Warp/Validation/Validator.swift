@@ -63,6 +63,10 @@ public struct Validator: Sendable {
                 scope: .procedure(bound: bound),
                 at: .variable(name.spelling, in: .of(module))
             )
+
+            if let declared = variable.declared {
+                try written(declared, in: .declaration, at: .variable(name.spelling, in: .of(module)))
+            }
         }
 
         // Every name the module spells in the type namespace: the types and
@@ -93,6 +97,20 @@ public struct Validator: Sendable {
                     + " dots, and the names the language gives its own types are the language's",
                 at: place
             )
+        }
+
+        for (name, type) in module.types.sorted(by: { one, other in one.key < other.key }) {
+            try written(type, in: .declaration, at: .type(name.spelling, in: .of(module)))
+        }
+
+        for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
+            for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
+                try validate(
+                    asked.signature,
+                    in: .contract,
+                    at: Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+                )
+            }
         }
 
         for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key }) {
@@ -179,6 +197,8 @@ public struct Validator: Sendable {
     ) throws {
         let parameters = Set(procedure.signature.names)
         let bound = constants.union(variables)
+
+        try validate(procedure.signature, in: .signature, at: place)
 
         for (position, parameter) in procedure.signature.names.enumerated() {
             try introduced(parameter, in: .procedure(bound: bound), at: place.part(.parameters).index(position))
@@ -281,6 +301,10 @@ public struct Validator: Sendable {
 
                 if binding.declared != nil, statement.expression.namesItsOwn {
                     throw ValidationError(Expression.declarationOnABoundName, at: here)
+                }
+
+                if let declared = binding.declared {
+                    try written(declared, in: .declaration, at: here)
                 }
 
                 switch binding {
@@ -410,7 +434,8 @@ public struct Validator: Sendable {
         // A cast names a type and reads a value as it. The type is the build's
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
-        case let .cast(value, _, optional):
+        case let .cast(value, type, optional):
+            try written(type, in: .cast, at: place)
             try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
             try validate(
                 value,
@@ -462,6 +487,8 @@ public struct Validator: Sendable {
                     at: inside
                 )
             }
+
+            try validate(procedure.signature, in: .signature, at: inside)
 
             // The same rule the top-level signature gets. A closure's parameter
             // is a name a body reads, wherever the signature sits.
@@ -746,6 +773,85 @@ public struct Validator: Sendable {
                     at: place
                 )
             }
+        }
+    }
+
+    // What a signature is held to wherever it is written: each parameter's
+    // type, in front of which `inout` may stand, and the answer's.
+    private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
+        for (position, parameter) in signature.parameters.enumerated() {
+            try written(parameter.declared.slotUnwrapped, in: context, at: place.part(.parameters).index(position))
+        }
+
+        if let returns = signature.returns {
+            try written(returns, in: context, at: place.part(.returns))
+        }
+    }
+
+    // A type held to where it is written: `inout` only in front of a
+    // parameter, `var` only on a field of what a declaration holds, a type
+    // parameter only where a call fills it, and `Self` only in a contract's
+    // procedures. What a name stands for is the build's to resolve, so a
+    // name is not walked into.
+    private func written(_ type: TypeExpression, in context: TypeContext, at place: Place) throws {
+        switch type {
+        case .any, .never, .null, .bool, .int, .double, .string, .named, .composition, .projection:
+            return
+
+        case .selfType:
+            guard context.takesSelf else {
+                throw ValidationError(
+                    "writes `Self`, which stands for the type that answers a contract"
+                        + " and is written in that contract's procedures alone",
+                    at: place
+                )
+            }
+
+        case .parameter:
+            guard context.takesTypeParameter else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and nothing here is"
+                        + " filled by a call. A type parameter lives in a signature",
+                    at: place
+                )
+            }
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner):
+            try written(inner, in: context, at: place)
+
+        case let .record(fields):
+            for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
+                try written(
+                    context.takesWritableFields ? field.fieldUnwrapped : field,
+                    in: context,
+                    at: place.part(.fields).key(name.spelling)
+                )
+            }
+
+        // A procedure type's parameters are slots, each of which may be
+        // handed in place.
+        case let .procedure(procedure, _, _):
+            guard let procedure else { return }
+
+            for (position, parameter) in procedure.parameters.enumerated() {
+                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+            }
+
+            try written(procedure.returns ?? .any, in: context, at: place)
+
+        case .inout:
+            throw ValidationError(
+                "writes `\(type.rendered)`, and only a parameter is handed a"
+                    + " variable in place. `inout` is written on a parameter's type",
+                at: place
+            )
+
+        case .variable:
+            throw ValidationError(
+                "writes `\(type.rendered)`, and only a field of a declared type"
+                    + " is written through. `var` is written on a field in `types`",
+                at: place
+            )
         }
     }
 
