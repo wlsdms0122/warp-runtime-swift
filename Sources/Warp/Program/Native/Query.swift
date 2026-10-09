@@ -16,20 +16,5 @@ import Foundation
 // the same as any other declaration, and the signature is what a call site is
 // checked against whichever way the body is written.
 public protocol Query: NativeProcedure {
-    // Checks arguments that are already constant, at the build. Type is the
-    // signature's business; this is for what a type cannot say, such as
-    // whether a string a host parses is well formed. An author typo surfaces
-    // before any run.
-    //
-    // Asked through the door the procedure reads its arguments through, so a procedure
-    // names a key here the way it names one when it answers. There is no run
-    // behind this one, so a procedure it was handed cannot be called.
-    func validate(_ question: Question<Self>) throws
-
     func evaluate(_ question: Question<Self>) async throws -> Value
-}
-
-public extension Query {
-    func validate(_ question: Question<Self>) throws {
-    }
 }

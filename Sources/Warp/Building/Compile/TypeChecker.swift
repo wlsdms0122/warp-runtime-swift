@@ -3502,33 +3502,6 @@ struct TypeChecker {
             writing: fulfillment,
             at: site.place
         )
-
-        // A procedure may judge its own constant arguments before any run. A type
-        // cannot say that a string a host parses is well formed, and the
-        // procedure can. The procedure's own keys name its
-        // parameters, so each constant is asked for under the name of the slot
-        // it stands at, through the same door the procedure reads an argument
-        // through when it answers.
-        func validate(_ query: some Query, given constants: [Name: Value]) throws {
-            try query.validate(Question(arguments: constants))
-        }
-
-        if case let .native(.query(query), _)? = context.declared(call.selector)?.implementation {
-            var constants: [Name: Value] = [:]
-
-            for (slot, argument) in zip(slots, call.arguments) {
-                constants[slot.name] = argument.constantValue
-            }
-
-            do {
-                try validate(query, given: constants)
-            } catch {
-                throw BuildError(
-                    "sending '\(call.selector)': \(error)",
-                    at: site.place.child(.arguments)
-                )
-            }
-        }
     }
 
     // A call hands exactly as many arguments as its callee takes, so another
