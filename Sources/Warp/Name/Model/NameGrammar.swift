@@ -71,8 +71,8 @@ public enum NameGrammar: Sendable {
             }
 
             return !name.spelling.contains { character in NameGrammar.pathPunctuation.contains(character) }
-                && !CharacterSet.whitespaces.contains(first)
-                && !CharacterSet.whitespaces.contains(last)
+                && !Path.whiteSpace.contains(first)
+                && !Path.whiteSpace.contains(last)
 
         case .contractProcedure:
             return name.isIdentifier

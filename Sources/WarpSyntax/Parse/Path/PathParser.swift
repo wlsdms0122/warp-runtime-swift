@@ -38,7 +38,7 @@ public struct PathParser: Sendable {
         func flushKey() throws -> Bool {
             // What the author wrote, kept whole. A refusal quotes their
             // spelling, not a peeled copy of it.
-            let written = buffer.trimmingCharacters(in: .whitespaces)
+            let written = buffer.trimmingCharacters(in: Path.whiteSpace)
             var key = written
 
             buffer = ""
@@ -50,7 +50,7 @@ public struct PathParser: Sendable {
             if key.hasSuffix("?") {
                 // Trimmed again, because the `?` may have held a space off the
                 // name's end. `b ?` names `b`, not `b `.
-                key = String(key.dropLast()).trimmingCharacters(in: .whitespaces)
+                key = String(key.dropLast()).trimmingCharacters(in: Path.whiteSpace)
                 next = true
             }
 
@@ -120,7 +120,7 @@ public struct PathParser: Sendable {
                     // A `?` carried to a bracket is the author's `?[`. The same
                     // mark `?.` puts on a name, on an index instead.
                     segments.append(try indexSegment(
-                        buffer.trimmingCharacters(in: .whitespaces),
+                        buffer.trimmingCharacters(in: Path.whiteSpace),
                         optional: optional
                     ))
                     optional = false
@@ -197,11 +197,11 @@ public struct PathParser: Sendable {
     // `[]` is an author mistake refused at the load, not carried into the model.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: Path.whiteSpace)
 
         if inner.hasPrefix("${"), inner.hasSuffix("}") {
             inner = String(inner.dropFirst(2).dropLast())
-                .trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: Path.whiteSpace)
         }
 
         if let literal = Int(inner) {

@@ -11,6 +11,11 @@ import Foundation
 // that reach into what it holds.
 public struct Path: Sendable, Equatable {
     // MARK: - Property
+    // What a path's segment is read without at either end: white space, a
+    // line break included. So a value's name with one at an end is no name a
+    // path reaches.
+    public static let whiteSpace = CharacterSet.whitespacesAndNewlines
+
     public private(set) var segments: [PathSegment]
 
     // The canonical textual form. Diagnostics and encoding share one spelling.
