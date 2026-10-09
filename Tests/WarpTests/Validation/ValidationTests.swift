@@ -514,7 +514,7 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'Any' is not a type a value is an instance of, and a claim is about one")
+                && "\(error)".contains("satisfies.Any: 'Any' names no type a document may declare")
         }
     }
 
@@ -537,6 +537,31 @@ struct ValidationTests {
         )
 
         #expect(sut.claims == ["Int": ["App.Described"]])
+    }
+
+    @Test("a name in the types namespace is held to one grammar wherever a module built in Swift spells it", arguments: [
+        ("imports", [:], TypeExpression.named("consuming Int")),
+        ("types.Int", ["Int": .string], .int),
+        ("imports", [:], .parameter(name: "T", bounds: ["Array<Int>"]))
+    ] as [(String, [Name: TypeExpression], TypeExpression)])
+    func aTypeNamespaceNameHoldsOneGrammar(place: String, types: [Name: TypeExpression], parameter: TypeExpression) throws {
+        // When / Then
+        #expect {
+            try Module(
+                types: types,
+                procedures: [
+                    "App.keep": Procedure(
+                        signature: Signature(parameters: [Parameter(name: "value", type: parameter)]),
+                        body: [],
+                        result: .literal(.int(1))
+                    ),
+                    entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("\(place): ")
+                && "\(error)".contains("names no type a document may declare")
+        }
     }
 
     @Test("a procedure is not data, so it cannot stand as a literal")

@@ -46,13 +46,20 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         Name.isIdentifier(spelling.utf8[...])
     }
 
-    // Whether this is spelled the way a declaration, a notation's prefix and a
-    // record's name all spell one: identifiers joined by dots, and not a
-    // scalar's keyword.
+    // Whether this is a name of the type namespace, the way a declared type,
+    // a contract, a notation's prefix and a record's name all spell one:
+    // identifiers joined by dots, not a scalar's keyword, and none of the
+    // names the language gives its own types.
     public var isDeclarable: Bool {
         let bytes = spelling.utf8
 
-        guard Name.scalarKeywords[spelling] == nil else { return false }
+        guard
+            Name.scalarKeywords[spelling] == nil,
+            TypeExpression.keywords[self] == nil,
+            TypeExpression.nominalTypes[self] == nil
+        else {
+            return false
+        }
 
         var end: String.UTF8View.Index? = bytes.endIndex
 

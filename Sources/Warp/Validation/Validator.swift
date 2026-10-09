@@ -65,35 +65,34 @@ public struct Validator: Sendable {
             )
         }
 
-        // A declared type's name is a record's name in every encoding, so it
-        // is held to the one grammar those encodings write bare.
-        for name in module.types.keys.sorted() where !name.isDeclarable {
-            throw ValidationError(
-                "'\(name)' is not a type's name. A type is named by identifiers joined by dots",
-                at: .type(name.spelling, in: .of(module))
-            )
+        // Every name the module spells in the type namespace: the types and
+        // contracts it declares, and every one it names in a type, a bound, a
+        // cast or a claim. A claim about a type the language names a value an
+        // instance of (`Int`, `Array`) names no declaration, and so is no
+        // mention.
+        let mentioned = module.references.compactMap { reference -> Name? in
+            guard case let .type(name) = reference else { return nil }
+
+            return name
         }
 
-        // A claim is about a type a value is an instance of, under its name,
-        // since the run picks what answers by the type the value is. `Any`
-        // and `Never` are types no value is an instance of by name, `Self`
-        // names a type only inside a contract's procedures, and a spelling
-        // that is no name, `Array<Int>` included, names no such type.
-        for name in module.claims.keys.sorted() where TypeExpression.nominalTypes[name] == nil {
-            if TypeExpression.keywords[name] != nil {
-                throw ValidationError(
-                    "'\(name)' is not a type a value is an instance of, and a claim is about one",
-                    at: .satisfies(name.spelling, in: .of(module))
-                )
+        for name in Set(module.types.keys).union(module.contracts.keys).union(mentioned).sorted()
+        where !name.isDeclarable {
+            let place: Place = if module.types[name] != nil {
+                .type(name.spelling, in: .of(module))
+            } else if module.contracts[name] != nil {
+                .contract(name.spelling, in: .of(module))
+            } else if module.claims[name] != nil {
+                .satisfies(name.spelling, in: .of(module))
+            } else {
+                Place([.part(.imports)], in: .of(module))
             }
 
-            guard name.isDeclarable else {
-                throw ValidationError(
-                    "'\(name)' is not a type's name. A claim names the type it is about, and a list or a"
-                        + " map is named bare, `Array` or `Dictionary`",
-                    at: .satisfies(name.spelling, in: .of(module))
-                )
-            }
+            throw ValidationError(
+                "'\(name)' names no type a document may declare. A type is named by identifiers joined by"
+                    + " dots, and the names the language gives its own types are the language's",
+                at: place
+            )
         }
 
         for (name, procedure) in module.procedures.sorted(by: { one, other in one.key < other.key }) {
