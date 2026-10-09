@@ -23,7 +23,7 @@ struct TypeNamespaceTests {
         try! Module(
             types: ["A.T": .record(["x": .int]), "A.S": .string],
             procedures: [
-                "a.make": Procedure(
+                "A.make": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("A.T")),
                     body: [],
@@ -35,11 +35,11 @@ struct TypeNamespaceTests {
         try! Module(
             types: ["B.U": .array(.named("A.T"))],
             procedures: [
-                "b.use": Procedure(
+                "B.use": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("B.U")),
                     body: [],
-                    result: .array([.call(Call(selector: "a.make"))])
+                    result: .array([.call(Call(selector: "A.make"))])
                 )
             ],
             identity: Identity([0x0b])
@@ -47,11 +47,11 @@ struct TypeNamespaceTests {
         try! Module(
             types: ["C.V": .record(["u": .named("B.U")])],
             procedures: [
-                "c.go": Procedure(
+                "C.go": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("C.V")),
                     body: [],
-                    result: .record(["u": .call(Call(selector: "b.use"))])
+                    result: .record(["u": .call(Call(selector: "B.use"))])
                 )
             ],
             identity: Identity([0x0c])

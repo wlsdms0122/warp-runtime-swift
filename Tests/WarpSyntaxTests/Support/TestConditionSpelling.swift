@@ -34,7 +34,7 @@ struct TestConditionSpelling: ExpressionSpelling {
         "startsWith": "Standard.Text.startsWith",
         "lessThan": "Standard.Comparable.lessThan",
         "greaterThan": "Standard.Math.greaterThan",
-        "longerThan": "extra.longerThan"
+        "longerThan": "Extra.longerThan"
     ]
 
     // MARK: - Initializer

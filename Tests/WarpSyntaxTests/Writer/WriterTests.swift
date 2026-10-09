@@ -313,7 +313,7 @@ struct WriterTests {
         ],
         // Loop, attempt
         [
-            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
+            "imports": ["Test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
@@ -602,7 +602,7 @@ struct WriterTests {
         // Given. The corpus above cannot answer this. Its notation names the
         // procedure in the document (`{ of: x, equal: y }`), so a key that survived
         // and a procedure that was written look the same on the way out. This one
-        // spells `holds` and reaches `example.holds`, and the key appears in a
+        // spells `holds` and reaches `Example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try loader.loadProcedure([
@@ -615,7 +615,7 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["example.holds"], from: Notation(spelling: OwnVocabularySpelling()))
+        ], importing: ["Example.holds"], from: Notation(spelling: OwnVocabularySpelling()))
 
         // When
         let written = try sut.value(of: module)

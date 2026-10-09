@@ -14,7 +14,7 @@ import Foundation
 // standard table owes.
 struct OwnVocabularySpelling: ExpressionSpelling {
     // MARK: - Property
-    let vocabulary: Set<Name> = ["example.holds"]
+    let vocabulary: Set<Name> = ["Example.holds"]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -25,7 +25,7 @@ struct OwnVocabularySpelling: ExpressionSpelling {
     func expression(from decoder: Decoder) throws -> Warp.Expression {
         .call(
             Call(
-                selector: "example.holds",
+                selector: "Example.holds",
                 arguments: [
                     try decoder.container(keyedBy: AnyCodingKey.self)
                         .decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: "holds"))

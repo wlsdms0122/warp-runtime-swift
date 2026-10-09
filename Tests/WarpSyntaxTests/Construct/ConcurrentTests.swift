@@ -109,7 +109,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "par"]]]
-        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "Test.fail"])
 
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.testing])
@@ -154,7 +154,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ]
-        ], importing: ["Standard.Concurrent.allKeyed", "test.fail"])
+        ], importing: ["Standard.Concurrent.allKeyed", "Test.fail"])
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
@@ -231,7 +231,7 @@ struct ConcurrentTests {
                 ]]
             ],
             "result": ["record": ["result": ["ref": "either"]]]
-        ], importing: ["test.fail", "Standard.Concurrent.first"])
+        ], importing: ["Test.fail", "Standard.Concurrent.first"])
 
         // When
         let outputs = try await run(sut, vocabulary: Module.standard + [.testing])

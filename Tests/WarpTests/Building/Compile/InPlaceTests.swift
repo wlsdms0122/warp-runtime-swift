@@ -215,7 +215,7 @@ struct InPlaceTests {
             )
         }
         #expect {
-            try Module(procedures: ["other.poke": Procedure(body: [write])])
+            try Module(procedures: ["Other.poke": Procedure(body: [write])])
         } throws: { error in
             error is ValidationError && "\(error)".contains("assigns 'App.total', which is not visible here")
         }
@@ -472,14 +472,14 @@ struct InPlaceTests {
         // Given. A body handed `all` whole hands `all.items` on to another
         // written body
         let sut = try Module(
-            imports: ["other.grow"],
+            imports: ["Other.grow"],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "all", type: .inout(.record(["items": .array(.int)])))]),
                     body: [
                         Statement(
-                            expression: .call(Call(selector: "other.grow", arguments: [reference("all", "items")]))
+                            expression: .call(Call(selector: "Other.grow", arguments: [reference("all", "items")]))
                         )
                     ],
                     result: .literal(.null)
@@ -489,7 +489,7 @@ struct InPlaceTests {
         let other = try Module(
             imports: [],
             procedures: [
-                "other.grow": Procedure(
+                "Other.grow": Procedure(
                     signature: Signature(parameters: [Parameter(name: "list", type: .inout(.array(.int)))]),
                     body: [],
                     result: .literal(.null)

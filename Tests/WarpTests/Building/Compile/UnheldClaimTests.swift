@@ -41,7 +41,7 @@ struct UnheldClaimTests {
         // Claims the pair and declares no witness at all.
         let broken = try Module(
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["other.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Other.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // Names both, and leans on neither: it never hands an Account to tell.
         let program = try Module(
@@ -176,7 +176,7 @@ struct UnheldClaimTests {
         )
         let claims = try Module(
             claims: ["Bank.Plain": ["App.Describable"]],
-            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
             procedures: [
@@ -244,7 +244,7 @@ struct UnheldClaimTests {
         )
         let claims = try Module(
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
             constants: [

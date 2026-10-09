@@ -59,7 +59,7 @@ struct SeparateCompilationTests {
                 "App.stray": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "nobody.declares"))
+                    result: .call(Call(selector: "Nobody.declares"))
                 )
             ]
         )
@@ -68,7 +68,7 @@ struct SeparateCompilationTests {
         await #expect {
             try await compiled([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("sends 'nobody.declares', which no module in this link declares")
+            error is BuildError && "\(error)".contains("sends 'Nobody.declares', which no module in this link declares")
         }
     }
 
@@ -96,14 +96,14 @@ struct SeparateCompilationTests {
         // table sorted by name alone would scatter both.
         let first = try Module(
             procedures: [
-                "a.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "c.three": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "A.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "C.three": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
             ]
         )
         let second = try Module(
             procedures: [
-                "b.two": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "d.four": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(4)))
+                "B.two": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
+                "D.four": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(4)))
             ]
         )
 
@@ -112,11 +112,11 @@ struct SeparateCompilationTests {
 
         // Then. Each document's rows are next to each other, and in name
         // order inside the run.
-        let ours = try #require(rows["a.one"])
+        let ours = try #require(rows["A.one"])
 
-        #expect(rows["c.three"] == ours + 1)
-        #expect(rows["b.two"] == ours + 2)
-        #expect(rows["d.four"] == ours + 3)
+        #expect(rows["C.three"] == ours + 1)
+        #expect(rows["B.two"] == ours + 2)
+        #expect(rows["D.four"] == ours + 3)
 
     }
 
@@ -126,32 +126,32 @@ struct SeparateCompilationTests {
         // variable, so it answers by the run's state rather than on its own,
         // and the two above reach it only through each other.
         let bottom = try Module(
-            variables: ["low.count": .literal(.int(0))],
+            variables: ["Low.count": .literal(.int(0))],
             procedures: [
-                "low.read": Procedure(
+                "Low.read": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("low.count")])
+                    result: .reference([.key("Low.count")])
                 )
             ]
         )
         let middle = try Module(
             procedures: [
-                "mid.ask": Procedure(
+                "Mid.ask": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "low.read"))
+                    result: .call(Call(selector: "Low.read"))
                 )
             ]
         )
         let top = try Module(
             procedures: [
-                "top.ask": Procedure(
+                "Top.ask": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "mid.ask"))
+                    result: .call(Call(selector: "Mid.ask"))
                 ),
-                "top.alone": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "Top.alone": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -165,10 +165,10 @@ struct SeparateCompilationTests {
 
         // Then. The whole chain answers by the run, and what reaches none of
         // it still answers on its own.
-        #expect(try constness(of: "low.read") == .unstated)
-        #expect(try constness(of: "mid.ask") == .unstated)
-        #expect(try constness(of: "top.ask") == .unstated)
-        #expect(try constness(of: "top.alone") == .const)
+        #expect(try constness(of: "Low.read") == .unstated)
+        #expect(try constness(of: "Mid.ask") == .unstated)
+        #expect(try constness(of: "Top.ask") == .unstated)
+        #expect(try constness(of: "Top.alone") == .const)
     }
 
     @Test("a constant runs a written procedure a document standing before it declared")
@@ -177,7 +177,7 @@ struct SeparateCompilationTests {
         // first's written procedure.
         let answering = try Module(
             procedures: [
-                "a.answer": Procedure(
+                "A.answer": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(7))
@@ -185,7 +185,7 @@ struct SeparateCompilationTests {
             ]
         )
         let asking = try Module(
-            constants: ["held": .call(Call(selector: "a.answer"))],
+            constants: ["held": .call(Call(selector: "A.answer"))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -370,15 +370,15 @@ struct SeparateCompilationTests {
 
         // Then. The call stands where the caller's imports put it, which is
         // not the row the graph gave the callee.
-        let number = try called(in: code(of: "b.asks", in: compiled))
+        let number = try called(in: code(of: "B.asks", in: compiled))
 
         #expect(number == 0)
-        #expect(try number != #require(Assembled(compiled).rows["a.answers"]))
+        #expect(try number != #require(Assembled(compiled).rows["A.answers"]))
 
         // And. The link answers with the row.
         let image = try builder.link(compiled, supplying: Supplying(Module.standard))
 
-        #expect(try called(in: code(of: "b.asks", in: image)) == image.rows["a.answers"])
+        #expect(try called(in: code(of: "B.asks", in: image)) == image.rows["A.answers"])
     }
 
     @Test("what a document lowers to does not move when the link grows")
@@ -397,10 +397,10 @@ struct SeparateCompilationTests {
         let beside = try await compiled([ahead] + sut + Module.standard)
 
         // Then. The rows moved and the number the body carries did not.
-        #expect(try Assembled(alone).rows["a.answers"] != Assembled(beside).rows["a.answers"])
+        #expect(try Assembled(alone).rows["A.answers"] != Assembled(beside).rows["A.answers"])
         #expect(
-            try called(in: code(of: "b.asks", in: alone))
-                == called(in: code(of: "b.asks", in: beside))
+            try called(in: code(of: "B.asks", in: alone))
+                == called(in: code(of: "B.asks", in: beside))
         )
     }
 
@@ -421,8 +421,8 @@ struct SeparateCompilationTests {
 
         // Then. The rows moved, and the block the document holds did not: the
         // same spellings in the same order, and its closures behind them.
-        #expect(try Assembled(alone).rows["b.asks"] != Assembled(beside).rows["b.asks"])
-        #expect(try block(holding: "b.asks", in: alone) == block(holding: "b.asks", in: beside))
+        #expect(try Assembled(alone).rows["B.asks"] != Assembled(beside).rows["B.asks"])
+        #expect(try block(holding: "B.asks", in: alone) == block(holding: "B.asks", in: beside))
     }
 
     @Test("a cast carries the number its own document gave the type")
@@ -517,7 +517,7 @@ struct SeparateCompilationTests {
         let answering = try Module(
             types: ["A.Held": .record(["count": .int])],
             procedures: [
-                "a.answer": Procedure(
+                "A.answer": Procedure(
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
@@ -534,7 +534,7 @@ struct SeparateCompilationTests {
             ]
         )
         let asking = try Module(
-            constants: ["held": .call(Call(selector: "a.answer"))],
+            constants: ["held": .call(Call(selector: "A.answer"))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -637,7 +637,7 @@ struct SeparateCompilationTests {
                 )
             ]
         )
-        let after = try Module(procedures: ["after.one": Procedure(body: [], result: .literal(.int(1)))])
+        let after = try Module(procedures: ["After.one": Procedure(body: [], result: .literal(.int(1)))])
 
         // When / Then
         await #expect(throws: Never.self) {
@@ -685,7 +685,7 @@ struct SeparateCompilationTests {
         let answering = try Module(
             types: ["A.Held": .record(["count": .int])],
             procedures: [
-                "a.first": Procedure(
+                "A.first": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .array(.int))]
                     ),
@@ -709,7 +709,7 @@ struct SeparateCompilationTests {
                     body: [
                         Statement(
                             binding: .constant("held"),
-                            expression: .call(Call(selector: "a.first", arguments: [reference("items")]))
+                            expression: .call(Call(selector: "A.first", arguments: [reference("items")]))
                         )
                     ],
                     result: .reference([.key("held"), .key("count")])
@@ -768,7 +768,7 @@ struct SeparateCompilationTests {
             ),
             claims: try Module(
                 claims: ["Bank.Account": ["App.Describable"]],
-                procedures: ["glue.nothing": Procedure(body: [], result: .literal(.null))]
+                procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
             ),
             program: try Module(
                 procedures: [
@@ -979,7 +979,7 @@ struct SeparateCompilationTests {
     // The number the call in a row's result carries.
     private func called(in body: LoweredBody) throws -> Int {
         guard case let .call(call)? = body.result else {
-            throw Unheld(description: "'b.asks' holds no call")
+            throw Unheld(description: "'B.asks' holds no call")
         }
 
         return call.procedure
@@ -990,17 +990,17 @@ struct SeparateCompilationTests {
         [
             try Module(
                 procedures: [
-                    "a.aaa": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0))),
-                    "a.answers": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "A.aaa": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0))),
+                    "A.answers": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
                 ]
             ),
             try Module(
                 procedures: [
-                    entryName: Procedure(access: .public, body: [], result: .call(Call(selector: "b.asks"))),
-                    "b.asks": Procedure(
+                    entryName: Procedure(access: .public, body: [], result: .call(Call(selector: "B.asks"))),
+                    "B.asks": Procedure(
                         signature: Signature(returns: .int),
                         body: [],
-                        result: .call(Call(selector: "a.answers"))
+                        result: .call(Call(selector: "A.answers"))
                     )
                 ]
             )
