@@ -776,6 +776,66 @@ struct BoundTests {
         }
     }
 
+    @Test("a claim refused for a bounded parameter names the bound", arguments: [
+        (
+            TypeExpression.array(.parameter(name: "T")),
+            TypeExpression.int,
+            "takes Array<some T: App.Marked> at 1 where the contract writes String"
+        ),
+        (
+            .parameter(name: "T"),
+            .parameter(name: "T"),
+            "answers some T: App.Marked where the contract writes Int"
+        )
+    ] as [(TypeExpression, TypeExpression, String)])
+    func aClaimRefusalNamesTheBound(takes: TypeExpression, answers: TypeExpression, refusal: String) async throws {
+        // Given. `Bank.Card.keep` answers `App.Kept.keep` with a type
+        // parameter its signature bounds by `App.Marked`, where the contract
+        // writes `String` and answers `Int`
+        let sut = try Module(
+            types: ["Bank.Card": .record(["last": .string])],
+            contracts: Self.markers("App.Marked").merging([
+                "App.Kept": [
+                    "keep": Signature(
+                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .string)],
+                        returns: .int
+                    )
+                ]
+            ]) { held, _ in held },
+            claims: ["Bank.Card": ["App.Kept"], "String": ["App.Marked"]],
+            procedures: [
+                "Bank.Card.keep": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .named("Bank.Card")), Parameter(name: "with", type: takes)],
+                        returns: answers,
+                        bounds: ["T": ["App.Marked"]]
+                    ),
+                    body: [],
+                    result: answers == .int ? .literal(.int(1)) : reference("with")
+                ),
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            binding: .constant("card"),
+                            expression: .cast(.record(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
+                        )
+                    ],
+                    result: .call(Call(selector: "App.Kept.keep", arguments: [reference("card"), .literal(.string("y"))]))
+                )
+            ]
+        )
+
+        // When / Then. The call leans on the claim, and the reason names the
+        // bound the declaration's signature holds `T` to
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains(refusal)
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // Contracts asking no procedures, so what answers one is what the

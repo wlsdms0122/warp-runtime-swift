@@ -399,12 +399,12 @@ struct ClaimChecker {
             where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                        + " asks, and takes \(given.parameters[0].declared.rendered) first, where a call"
+                        + " asks, and takes \(taken.rendered(in: loweredTypes)) first, where a call"
                         + " through the contract hands it any value of '\(type)'"
             }
 
             return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes \(given.parameters[position].declared.rendered)"
+                    + " '\(contract)' asks, and takes \(taken.rendered(in: loweredTypes))"
                     + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
         }
 
@@ -412,12 +412,15 @@ struct ClaimChecker {
             return nil
         }
 
-        let answered = (given.returns?.lowered(in: loweredTypes, bounds: given.bounds) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+        // What the declaration wrote is rendered as lowered, so a type
+        // parameter names the bound its signature holds it to.
+        let declared = given.returns?.lowered(in: loweredTypes, bounds: given.bounds)
+        let answered = (declared ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
             .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: loweredTypes))"
+                    + " asks, and answers \((declared ?? answered).rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
         }
 
