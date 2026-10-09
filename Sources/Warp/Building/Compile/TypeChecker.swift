@@ -416,7 +416,7 @@ struct TypeChecker {
         guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
                 "answers \(written.rendered(in: table)), and its"
-                    + " declaration promises \(returns)",
+                    + " declaration promises \(promised.rendered(in: table))",
                 at: place
             )
         }
