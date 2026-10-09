@@ -267,7 +267,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // The refusal a cast earns for naming a type there is nothing to read, once
     // its names are resolved. Nil where the type names one. Each of the two
     // says its own, because a refusal carries its reason.
-    var unreadableClaim: String? {
+    var unreadableCast: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
                 + " A cast names the type a value is read as, and `Any` is"

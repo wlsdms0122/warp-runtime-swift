@@ -186,7 +186,7 @@ struct DeclarationChecker {
     ) throws {
         try mentioned(in: named, at: place, resolve: table)
 
-        if let refusal = named.resolved(in: table).unreadableClaim {
+        if let refusal = named.resolved(in: table).unreadableCast {
             throw BuildError(refusal, at: place)
         }
     }
