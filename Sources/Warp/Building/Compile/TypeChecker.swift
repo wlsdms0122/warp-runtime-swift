@@ -1352,25 +1352,17 @@ struct TypeChecker {
 
     // What a call answers: the declaration's returns, filled from the operands
     // where the declaration is generic. One statement of the rule, whichever
-    // ask gathered the readings, and the operands are asked for lazily, so a
-    // non-generic call never pays for taking them.
+    // ask gathered the readings, and the filling is asked for lazily, so a
+    // non-generic call never pays for it.
     private func answered(
         by signature: Signature?,
-        over slots: [Slot],
         answering: LoweredType?,
-        readings sent: @autoclosure () throws -> [LoweredType],
-        in loweredTypes: LoweredTypeTable
-    ) rethrows -> LoweredType {
+        filling filled: @autoclosure () -> [Name: LoweredType]
+    ) -> LoweredType {
         guard let signature, let returns = answering else { return .any }
         guard signature.isGeneric else { return returns }
 
-        return returns.filling(
-            substitution(
-                over: slots,
-                readings: try sent(),
-                in: loweredTypes
-            ).readings
-        )
+        return returns.filling(filled())
     }
 
     // The segments a stopped walk leaves stand as written, and an index
@@ -2344,10 +2336,8 @@ struct TypeChecker {
                     rewritten: expression,
                     reading: answered(
                         by: signature,
-                        over: context.slots(of: call.selector),
                         answering: context.answer(of: call.selector),
-                        readings: readings,
-                        in: context.loweredTypes
+                        filling: substitution(over: slots, readings: readings, in: context.loweredTypes).readings
                     ),
                     flow: flow
                 )
@@ -2466,10 +2456,8 @@ struct TypeChecker {
 
             let reading = answered(
                 by: signature,
-                over: context.slots(of: call.selector),
                 answering: context.answer(of: call.selector),
-                readings: sent,
-                in: context.loweredTypes
+                filling: filled
             )
 
             if let judging = CallJudgement(
@@ -3561,9 +3549,10 @@ struct TypeChecker {
 
     // A call hands exactly as many arguments as its callee takes, so another
     // count is refused before any position is read. Every judgement of a
-    // call by position stands behind it: the shared one asks it at its own
-    // entrance, and a walk asks it where the call stands, ahead of what it
-    // reads in place there, so the count is what an author is told first.
+    // call by position stands behind it: the gate a gathered call passes
+    // asks it at its entrance, and a walk asks it where the call stands, ahead
+    // of what it reads in place there, so the count is what an author is told
+    // first.
     private func refuseCount(handing handed: Int, taking count: Int, as subject: String, at place: Place) throws {
         guard handed != count else { return }
 
@@ -3589,8 +3578,6 @@ struct TypeChecker {
         writing fulfillment: Fulfillment,
         at place: Place
     ) throws {
-        try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
-
         for (position, (type, reading)) in zip(types, readings).enumerated() {
             let at = place.child(.argument(position))
             let given = LiteralShape(shapes[position], reading: reading)
