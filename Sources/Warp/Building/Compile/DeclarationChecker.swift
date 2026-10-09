@@ -156,19 +156,7 @@ struct DeclarationChecker {
         in table: TypeTable
     ) throws {
         for (position, parameter) in signature.parameters.enumerated() {
-            let here = place.part(.parameters).index(position)
-
-            try mentioned(in: parameter.declared.slotUnwrapped, at: here, resolve: table)
-        }
-
-        // Two parameters under one name would be one name the body reads
-        // two ways.
-        for (position, parameter) in signature.parameters.enumerated()
-        where signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) {
-            throw BuildError(
-                "declares '\(parameter.name)' twice",
-                at: place.part(.parameters).index(position)
-            )
+            try mentioned(in: parameter.declared.slotUnwrapped, at: place.part(.parameters).index(position), resolve: table)
         }
 
         try mentioned(in: signature.returns ?? .any, at: place.part(.returns), resolve: table)

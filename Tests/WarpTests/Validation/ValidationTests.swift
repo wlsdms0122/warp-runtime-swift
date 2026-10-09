@@ -366,6 +366,24 @@ struct ValidationTests {
         }
     }
 
+    @Test("a parameter declared twice is refused where the module is made, however it was made")
+    func aParameterDeclaredTwiceIsRefused() throws {
+        // Given. Two parameters under one name would be one name the body
+        // reads two ways
+        let twice = Procedure(
+            signature: Signature(parameters: [Parameter(name: "x", type: .int), Parameter(name: "x", type: .string)]),
+            body: [],
+            result: .literal(.int(1))
+        )
+
+        // When / Then
+        #expect {
+            try Validator().validate(twice)
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("parameters[1]: declares 'x' twice")
+        }
+    }
+
     @Test("a reference must start with a name")
     func referenceMustHaveAHead() {
         // Given

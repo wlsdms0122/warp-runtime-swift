@@ -776,11 +776,19 @@ public struct Validator: Sendable {
         }
     }
 
-    // What a signature is held to wherever it is written: each parameter's
-    // type, in front of which `inout` may stand, and the answer's.
+    // What a signature is held to wherever it is written: one name to each
+    // parameter, since two under one name would be one name a body reads two
+    // ways, and each parameter's type, in front of which `inout` may stand,
+    // and the answer's.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
         for (position, parameter) in signature.parameters.enumerated() {
-            try written(parameter.declared.slotUnwrapped, in: context, at: place.part(.parameters).index(position))
+            let here = place.part(.parameters).index(position)
+
+            guard !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) else {
+                throw ValidationError("declares '\(parameter.name)' twice", at: here)
+            }
+
+            try written(parameter.declared.slotUnwrapped, in: context, at: here)
         }
 
         if let returns = signature.returns {
