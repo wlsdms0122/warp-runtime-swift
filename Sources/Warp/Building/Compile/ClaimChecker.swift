@@ -11,8 +11,8 @@ import Foundation
 // what they said. A contract is the procedures a value must have, and a document
 // says which types have them: the claim names a type and a contract, and the
 // declaration behind each procedure is the one named for the type and the procedure,
-// whose signature is the contract's with the first parameter taking the type
-// itself.
+// whose signature is the contract's with `Self` read as the type wherever it
+// stands.
 //
 // Read off the claims and not off the whole type table. A spelling that
 // happens to join a type's name to a contract's procedure is that document's procedure
@@ -200,8 +200,8 @@ struct ClaimChecker {
 
     // One claim held to what stands behind it: the two names declared, every
     // procedure the contract asks answered by a declaration named for the type and
-    // the procedure, and every one of those signatures the contract's with the
-    // first parameter taking the type itself.
+    // the procedure, and every one of those signatures the contract's with
+    // `Self` read as the type wherever it stands.
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],

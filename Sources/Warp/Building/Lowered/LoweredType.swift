@@ -258,8 +258,9 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a reading that went past a possible absence holds. Wrapping what
-    // already admits null would say the one fact twice.
+    // What a reading that went past a possible absence holds, and what `T?`
+    // reads as: `T` or null. Wrapping what already admits null would say the
+    // one fact twice, so `Null?` is `Null`.
     var admittingNull: LoweredType {
         switch self {
         case .any, .null, .nullable:
@@ -1451,7 +1452,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .inout(inner.filling(filled))
 
         case let .nullable(inner):
-            return .nullable(inner.filling(filled))
+            return inner.filling(filled).admittingNull
 
         default:
             return self

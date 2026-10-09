@@ -69,7 +69,7 @@ extension TypeExpression {
             return .inout(inner.lowered(in: table, bounds: bounds))
 
         case let .nullable(inner):
-            return .nullable(inner.lowered(in: table, bounds: bounds))
+            return inner.lowered(in: table, bounds: bounds).admittingNull
 
         // Types and contracts are two tables and no name is in both, so a
         // mention is looked for in each. A contract standing as a type is a
