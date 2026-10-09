@@ -554,13 +554,11 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // How two values stand to each other, for the kinds that order: numbers
-    // among themselves and strings among themselves. Nil is a pair with no
-    // order: mixed kinds, the kinds that do not order, and a fraction that is
-    // not a number, which orders with nothing. Every consumer of order
-    // (equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
-    // `min`/`max`) reads this one answer, so a whole beside a fraction is
-    // judged in exactly one place.
+    // How two values of one kind stand to each other, for the kinds that
+    // order: whole numbers, fractions and strings. Nil is a pair with no
+    // order: two of different kinds, a kind that does not order, and a
+    // fraction that is not a number, which orders with nothing. `lessThan`
+    // answers the language's own types by this.
     public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
         switch (left, right) {
         case let (.int(first), .int(second)):
@@ -575,18 +573,6 @@ public indirect enum Value: Sendable, Equatable {
                 ? .orderedSame
                 : first < second ? .orderedAscending : .orderedDescending
 
-        case let (.int(first), .double(second)):
-            return order(whole: first, fraction: second)
-
-        case let (.double(first), .int(second)):
-            return order(whole: second, fraction: first).map { order in
-                switch order {
-                case .orderedAscending: .orderedDescending
-                case .orderedDescending: .orderedAscending
-                case .orderedSame: .orderedSame
-                }
-            }
-
         case let (.string(first), .string(second)):
             return first == second
                 ? .orderedSame
@@ -598,13 +584,13 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The equality conditions test with. Strict except that worth unifies
-    // across spellings: int and double across numeric width, and bytes beside
-    // an array of what its elements are worth, applied recursively through
-    // arrays and records.
+    // across spellings: a whole number beside the fraction of the same worth,
+    // and bytes beside an array of what its elements are worth, applied
+    // recursively through arrays and records.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
-        case (.int, .double), (.double, .int):
-            return Value.order(self, other) == .orderedSame
+        case let (.int(whole), .double(fraction)), let (.double(fraction), .int(whole)):
+            return Value.sameWorth(whole: whole, fraction: fraction)
 
         // Bytes are an array of bytes in a compact spelling. `1` and `1.0`
         // again, one collection up: the worth is the elements', read through
@@ -796,30 +782,15 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // How a whole number stands against a fraction, exactly at every size.
-    // Converting the whole to binary64 rounds above 2^53, and worth must not
-    // depend on the rounding, so the fraction is taken apart instead: its whole
-    // part meets the int exactly, and only a tie reads what is left.
-    private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
-        guard !fraction.isNaN else { return nil }
+    // Whether a fraction is exactly a whole number's worth, judged without
+    // converting the whole number, which would round past 2^53. 0x1p63 is
+    // the edge of what a whole number can be, written exactly where
+    // `Double(Int.max)` would round past it; a fraction that is not a number
+    // or is infinite is the worth of none.
+    private static func sameWorth(whole integer: Int, fraction: Double) -> Bool {
+        guard fraction >= -0x1p63, fraction < 0x1p63, fraction.rounded(.down) == fraction else { return false }
 
-        // Past either end of what an int can be (0x1p63 is the int's own edge,
-        // written exactly where `Double(Int.max)` would round past it) the
-        // answer needs no digits, and infinity, which only a host can hand in,
-        // is answered by the same two lines.
-        guard fraction < 0x1p63 else { return .orderedAscending }
-        guard fraction >= -0x1p63 else { return .orderedDescending }
-
-        let floored = fraction.rounded(.down)
-        let settled = Int(floored)
-
-        guard integer == settled else {
-            return integer < settled ? .orderedAscending : .orderedDescending
-        }
-
-        // Equal whole parts: whatever the flooring dropped is what the
-        // fraction has over the int.
-        return fraction == floored ? .orderedSame : .orderedAscending
+        return Int(fraction) == integer
     }
 
     // These positions taken in order, and nil where one of them is not a

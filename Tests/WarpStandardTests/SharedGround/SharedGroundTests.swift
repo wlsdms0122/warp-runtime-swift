@@ -217,20 +217,25 @@ struct SharedGroundTests {
     @Test("a whole and a fraction meet exactly at every size")
     func wholeAndFractionMeetExactly() async throws {
         // Given. 2^53 + 1 rounds to 2^53 in binary64, so a judgement that
-        // converts would call two different worths the same. Worth does not
-        // follow the rounding, in any consumer of the one order.
+        // converts would call two different worths the same
         let above = Value.int(9007199254740993)
         let below = Value.double(9007199254740992.0)
 
         // When / Then
         #expect(!above.matches(below))
+        #expect(!below.matches(above))
         #expect(Value.int(9007199254740992).matches(below))
-        #expect(Value.order(above, below) == .orderedDescending)
-        #expect(Value.order(below, above) == .orderedAscending)
-        #expect(Value.order(.int(-2), .double(-2.5)) == .orderedDescending)
-        #expect(Value.order(.int(.max), .double(0x1p63)) == .orderedAscending)
-        #expect(Value.order(.int(.min), .double(-0x1p63)) == .orderedSame)
-        #expect(Value.order(.int(0), .double(.nan)) == nil)
+        #expect(!Value.int(-2).matches(.double(-2.5)))
+        #expect(!Value.int(.max).matches(.double(0x1p63)))
+        #expect(Value.int(.min).matches(.double(-0x1p63)))
+        #expect(!Value.int(0).matches(.double(.nan)))
+    }
+
+    @Test("a whole and a fraction have no order")
+    func wholeAndFractionHaveNoOrder() async throws {
+        // When / Then. Ordering compares two of one type
+        #expect(Value.order(.int(1), .double(2.5)) == nil)
+        #expect(Value.order(.double(2.5), .int(1)) == nil)
     }
 
     // MARK: - Public
