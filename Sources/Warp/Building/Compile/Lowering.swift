@@ -635,8 +635,8 @@ struct Lowering {
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
 
         // It stands as the call it wraps, which is what has a row to read.
-        case let .checked(read, _):
-            return standing(read, on: slots)
+        case let .checked(checked, _):
+            return standing(checked.operation, on: slots)
 
         case let .cast(_, type, optional):
             return optional ? nil : type
@@ -704,13 +704,13 @@ struct Lowering {
             // A selector naming a contract's procedure names no row. Which row
             // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            let lowered: Operation = if let asked = contractProcedures[call.selector] {
+            let lowered: CheckedCall = if let asked = contractProcedures[call.selector] {
                 .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
             } else {
                 .call(try lower(call, in: scope, on: context, at: place))
             }
 
-            guard case let .call(judging)? = context.judgements[place] else { return lowered }
+            guard case let .call(judging)? = context.judgements[place] else { return lowered.operation }
 
             return .checked(lowered, judging)
 
@@ -836,7 +836,7 @@ struct Lowering {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
-        let applied = Operation.apply(
+        let applied = CheckedCall.apply(
             try lower(callee, naming: nil, in: scope, on: context, at: place.child(.callee)),
             arguments: try arguments.enumerated().map { position, argument in
                 let here = place.child(.argument(position))
@@ -855,7 +855,7 @@ struct Lowering {
             }
         )
 
-        guard let judging else { return applied }
+        guard let judging else { return applied.operation }
 
         return .checked(applied, judging)
     }

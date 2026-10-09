@@ -120,5 +120,19 @@ struct CallOperation: Sendable {
     }
 
     // MARK: - Public
+    // The same call with every argument it writes rewritten.
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> CallOperation {
+        CallOperation(
+            procedure: procedure,
+            arguments: try arguments.map { argument in
+                try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
+            },
+            handed: handed
+        )
+    }
+
     // MARK: - Private
 }

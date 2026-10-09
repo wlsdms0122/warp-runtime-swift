@@ -365,8 +365,8 @@ struct Evaluator: Sendable {
                 in: loweredTypes
             )
 
-        case let .checked(read, judging):
-            return try await checked(read, judging: judging, in: &activation, at: trace)
+        case let .checked(checked, judging):
+            return try await self.checked(checked, judging: judging, in: &activation, at: trace)
 
         case let .call(call):
             return try await self.call(call, in: &activation, at: trace)
@@ -808,7 +808,7 @@ struct Evaluator: Sendable {
     // it as, which the call judges through the holds it makes. A call handing
     // nothing back is judged on its answer alone.
     private func checked(
-        _ read: Operation,
+        _ checked: CheckedCall,
         judging: CallJudgement,
         in activation: inout Activation,
         at trace: Trace
@@ -816,30 +816,23 @@ struct Evaluator: Sendable {
         let handedBack = judging.handedBack
         let answered: Value
 
-        if handedBack.isEmpty {
-            answered = try await evaluate(read, in: &activation, at: trace)
-        } else {
-            switch read {
-            case let .call(call):
-                answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
+        switch checked {
+        case let .call(call):
+            answered = try await self.call(call, judging: handedBack, in: &activation, at: trace)
 
-            case let .dispatch(dispatch):
-                let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
+        case let .dispatch(dispatch):
+            let (call, row, first) = try await picked(dispatch, in: &activation, at: trace)
 
-                answered = try await self.call(call, reaching: row, first: first, judging: handedBack, in: &activation, at: trace)
+            answered = try await self.call(call, reaching: row, first: first, judging: handedBack, in: &activation, at: trace)
 
-            case let .apply(callee, arguments):
-                answered = try await apply(
-                    callee,
-                    arguments: arguments,
-                    judging: handedBack,
-                    in: &activation,
-                    at: trace
-                )
-
-            default:
-                throw ExecutionError("a judgement where a call stands wraps what is no call")
-            }
+        case let .apply(callee, arguments):
+            answered = try await apply(
+                callee,
+                arguments: arguments,
+                judging: handedBack,
+                in: &activation,
+                at: trace
+            )
         }
 
         guard let against = judging.against else { return answered }

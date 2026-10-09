@@ -44,8 +44,8 @@ indirect enum Operation: Sendable {
     // read stands on the call inside, and a binding or a parameter that
     // declares a type judges the value where it lands. Each variable it handed
     // back in place is judged once the call is over, whether it answered or
-    // failed. The build makes one only around a call.
-    case checked(Operation, CallJudgement)
+    // failed.
+    case checked(CheckedCall, CallJudgement)
 
     case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
@@ -65,35 +65,6 @@ indirect enum Operation: Sendable {
     case leave(Leave.Reach, target: Name?, Operation?)
 
     // MARK: - Property
-    // The positions a call may hand a variable in place at, nil where this
-    // is no call. A call names them; a call through a contract or of a value
-    // hands a place wherever it wrote one, and the row or closure it reaches
-    // says which it takes in place. A call through a contract hands the
-    // first as what it read, so never that one.
-    var handingInPlace: [Int]? {
-        switch self {
-        case let .call(call):
-            return call.handed.map(\.position)
-
-        case let .dispatch(dispatch):
-            return dispatch.arguments.indices.compactMap { index in
-                guard case .reference = dispatch.arguments[index] else { return nil }
-
-                return index + 1
-            }
-
-        case let .apply(_, arguments):
-            return arguments.indices.compactMap { index in
-                guard case .reference = arguments[index] else { return nil }
-
-                return index
-            }
-
-        default:
-            return nil
-        }
-    }
-
     // MARK: - Initializer
     // MARK: - Public
     // Whether this reads any slot in the range, through a path's index
@@ -126,8 +97,11 @@ indirect enum Operation: Sendable {
                     return operation.walk(visit)
                 }
 
-        case let .cast(read, _, _), let .checked(read, _):
+        case let .cast(read, _, _):
             return read.walk(visit)
+
+        case let .checked(checked, _):
+            return checked.operation.walk(visit)
 
         case let .block(body):
             return body.walk(visit)
@@ -203,8 +177,8 @@ indirect enum Operation: Sendable {
                 optional: optional
             )
 
-        case let .checked(read, judgement):
-            inside = .checked(try read.rewritten(operation: operation, type: type), try judgement.rewritten(type: type))
+        case let .checked(checked, judgement):
+            inside = .checked(try checked.rewritten(operation: operation, type: type), try judgement.rewritten(type: type))
 
         case let .block(body):
             inside = .block(try body.rewritten(operation: operation, type: type))
@@ -234,30 +208,10 @@ indirect enum Operation: Sendable {
             )
 
         case let .call(call):
-            inside = .call(
-                CallOperation(
-                    procedure: call.procedure,
-                    arguments: try call.arguments.map { argument in
-                        try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
-                    },
-                    handed: call.handed
-                )
-            )
+            inside = .call(try call.rewritten(operation: operation, type: type))
 
-        // The calls beside a dispatch are the link's to lay out, so they are
-        // handed over as they stand for the relocation to answer.
         case let .dispatch(dispatch):
-            inside = .dispatch(
-                DispatchOperation(
-                    contract: dispatch.contract,
-                    procedure: dispatch.procedure,
-                    first: try dispatch.first.rewritten(operation: operation, type: type),
-                    arguments: try dispatch.arguments.map { argument in
-                        try argument.rewritten(operation: operation, type: type)
-                    },
-                    calls: dispatch.calls
-                )
-            )
+            inside = .dispatch(try dispatch.rewritten(operation: operation, type: type))
 
         case let .leave(reach, target, read):
             inside = .leave(reach, target: target, try read.map { read in try read.rewritten(operation: operation, type: type) })
