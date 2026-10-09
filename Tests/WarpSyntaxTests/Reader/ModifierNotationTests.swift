@@ -7,7 +7,7 @@
 
 import Foundation
 import Testing
-import Warp
+@testable import Warp
 @testable import WarpSyntax
 
 @Suite("The keywords a slot writes about itself")

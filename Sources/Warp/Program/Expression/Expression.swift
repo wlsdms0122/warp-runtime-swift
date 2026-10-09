@@ -175,10 +175,9 @@ public indirect enum Expression: Sendable {
     }
 
     // The value of an expression that needs no scope. Nil the moment any part
-    // must resolve at run time. Load-time gates (an atom validating its literal
-    // operand, the builder judging a constant argument) use this to judge what
-    // can be judged before any run.
-    public var constantValue: Value? {
+    // must resolve at run time. The build hands it to a procedure the host
+    // answers, which may judge the arguments a call writes as constants.
+    var constantValue: Value? {
         switch self {
         case let .literal(value):
             return value
