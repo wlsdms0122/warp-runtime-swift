@@ -100,14 +100,7 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let linked = try closure.answered()
 
-        return try await answer(
-            closure,
-            as: linked,
-            given: try linked.settle(outside: arguments),
-            holding: [],
-            judging: { _ in false },
-            at: trace
-        )
+        return try await answer(closure, as: linked, given: try linked.settle(outside: arguments), holding: [], at: trace)
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -464,24 +457,19 @@ struct Evaluator: Sendable {
 
         switch callee.implementation {
         case .native(.query, _):
-            // A variable handed in place is read as what it holds now and
-            // settled the way any argument is, since nothing here writes it.
-            var values = try await given(call.arguments, first: first, in: &activation, at: trace)
+            // A variable handed in place is read as what it holds now, since
+            // nothing here writes it.
+            var values = try await given(call, to: callee, first: first, in: &activation, at: trace)
 
             for handed in call.handed {
                 values[handed.position] = try activation.value(at: handed.address)
             }
 
-            return try await answer(callee, with: try settled(callee, given: values, judging: call.judged), at: trace)
+            return try await answer(callee, with: Settled(values: values), at: trace)
 
         case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = try settled(
-                callee,
-                given: try await given(call.arguments, first: first, in: &activation, at: trace),
-                holding: call.handed,
-                judging: call.judged
-            )
+            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
             guard handedBack.isEmpty else {
                 return try await judging(handedBack, through: holds) {
@@ -493,12 +481,7 @@ struct Evaluator: Sendable {
 
         case let .body(body, frame):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = try settled(
-                callee,
-                given: try await given(call.arguments, first: first, in: &activation, at: trace),
-                holding: call.handed,
-                judging: call.judged
-            )
+            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
             guard handedBack.isEmpty else {
                 return try await judging(handedBack, through: holds) {
@@ -587,8 +570,6 @@ struct Evaluator: Sendable {
         if handedBack.isEmpty {
             answered = try await answer(closure, as: linked, given: given, holding: holds, at: trace)
         } else {
-            // A closure taking by value what the call hands in place writes
-            // nothing back.
             let judged = holds.filter { position, _ in linked.slots[position].type.handsBackParameter }
 
             answered = try await self.judging(handedBack, through: judged) {
@@ -617,7 +598,6 @@ struct Evaluator: Sendable {
         as linked: Linked,
         given arguments: [Value?],
         holding holds: [(position: Int, handle: Handle)],
-        judging: @escaping (Int) -> Bool = { _ in true },
         at trace: Trace
     ) async throws -> Value {
         guard case let .body(body, frame) = linked.implementation else {
@@ -629,10 +609,12 @@ struct Evaluator: Sendable {
             throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        // A parameter handed in place takes a variable, and a call hands one
-        // only where the build read the callee's type. A procedure the host
-        // answers hands values to a closure it was handed, so a closure
-        // taking one from it is refused here, before its body runs.
+        try linked.refuseCount(arguments.count)
+
+        // A parameter handed in place takes a variable, and a call of a value
+        // hands one only where the build read the slot's procedure type, so a
+        // closure taking one where the slot wrote no parameters is refused
+        // here, before its body runs.
         for (position, slot) in linked.slots.enumerated()
         where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
             throw ExecutionError(
@@ -640,11 +622,9 @@ struct Evaluator: Sendable {
             )
         }
 
-        let settled = try linked.settle(
-            arguments,
-            skipping: { position in holds.contains { held in held.position == position } },
-            judging: judging
-        )
+        let settled = try linked.settle(arguments) { position in
+            holds.contains { held in held.position == position }
+        }
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -954,52 +934,40 @@ struct Evaluator: Sendable {
         throw ExecutionError("'\(spelling)' is sent to '\(first.nominal)'" + because)
     }
 
-    // The arguments as the row takes them, in parameter order: the
-    // signature's own boundary, over the order the row keeps, judging the
-    // positions the call names and handing the rest over as they are. A
-    // position handed in place is filled with a hold rather than a value, so
-    // the boundary leaves it to the hold. The values are born beside the row
-    // they were settled by, so nothing else pairs them.
-    private func settled(
-        _ callee: Linked,
-        given: [Value?],
-        holding handed: [CallOperation.Handed] = [],
-        judging judged: [Int]
-    ) throws -> Settled {
-        Settled(
-            values: try callee.settle(
-                given,
-                skipping: { position in handed.contains { handed in handed.position == position } },
-                judging: judged.contains
-            )
-        )
-    }
-
-    // Every argument a call wrote, in position order. A loop rather than a
-    // map, since reading one may run what produced it. A dispatch read the
-    // first to pick the row, so what it read stands there rather than a
-    // second reading of the same operand.
+    // Every argument a call wrote, in position order, each judged at the
+    // row's slot as soon as it is read where the call names its position, so
+    // an argument standing first refuses or fails before one after it is
+    // read. A loop rather than a map, since reading one may run what produced
+    // it. A dispatch read the first to pick the row, so what it read stands
+    // there rather than a second reading of the same operand. A position
+    // handed in place holds no value here, since its box is read through the
+    // hold. The values are born beside the row they were judged by, so
+    // nothing else pairs them.
     private func given(
-        _ arguments: [Operation?],
-        first: Value? = nil,
+        _ call: CallOperation,
+        to callee: Linked,
+        first: Value?,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> [Value?] {
+        try callee.refuseCount(call.arguments.count)
+
         var given: [Value?] = []
-        given.reserveCapacity(arguments.count)
+        given.reserveCapacity(call.arguments.count)
 
-        for (position, argument) in arguments.enumerated() {
+        for (position, argument) in call.arguments.enumerated() {
+            let read: Value
+
             if position == 0, let first {
-                given.append(first)
-                continue
-            }
-
-            guard let argument else {
+                read = first
+            } else if let argument {
+                read = try await evaluate(argument, in: &activation, at: trace)
+            } else {
                 given.append(nil)
                 continue
             }
 
-            given.append(try await evaluate(argument, in: &activation, at: trace))
+            given.append(call.judged.contains(position) ? try callee.judged(read, at: position) : read)
         }
 
         return given

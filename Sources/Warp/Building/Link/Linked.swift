@@ -237,13 +237,9 @@ public final class Linked: Sendable {
     // The boundary this row keeps, over arguments standing at their slot's
     // position, read by this row's own table: the slots' rows are numbered by
     // it and by nothing else. `skipping` names the positions a call fills
-    // another way, and `judging` the positions judged at their slot.
-    func settle(
-        _ given: [Value?],
-        skipping: (Int) -> Bool = { _ in false },
-        judging: (Int) -> Bool = { _ in true }
-    ) throws -> [Value?] {
-        try signature.settle(given, over: slots, skipping: skipping, judging: judging, as: "'\(rendered)'", in: table)
+    // another way.
+    func settle(_ given: [Value?], skipping: (Int) -> Bool) throws -> [Value?] {
+        try signature.settle(given, over: slots, skipping: skipping, as: "'\(rendered)'", in: table)
     }
 
     // How many arguments a call hands, against the slots this row keeps. A
@@ -253,6 +249,13 @@ public final class Linked: Sendable {
         guard count == slots.count else {
             throw ArgumentError("'\(rendered)' was given \(count) arguments, and it takes \(slots.count)")
         }
+    }
+
+    // An argument a call wrote, judged at the slot standing at its position,
+    // read by this row's own table: the slots' rows are numbered by it and by
+    // nothing else.
+    func judged(_ value: Value, at position: Int) throws -> Value {
+        try slots[position].checking(value, at: "input '\(slots[position].name)'", in: table)
     }
 
     // Arguments handed by position from outside the build: the door a host
