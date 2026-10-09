@@ -150,8 +150,8 @@ struct InferenceTests {
     func aLoopResultCarriesTheBodyNameItReads() async throws {
         // Given. A finished round's exit hands the result the body's own
         // declarations; the 0-round exit never bound them, and a name a scope
-        // does not hold reads as null. So `kept` holds int?, not an `Any` for
-        // a name the entry never saw, and not a plain int the 0-round run would
+        // does not hold reads as null. So `kept` holds `Int?`, not an `Any` for
+        // a name the entry never saw, and not a plain `Int` the 0-round run would
         // break
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
@@ -936,7 +936,7 @@ struct InferenceTests {
 
     @Test("repeating a cast is refused whichever way the type was spelled")
     func aRepeatedCastIsRefusedInlineToo() async throws {
-        // Given. `payload as? int` hands on `Int?`, and the sameness question is
+        // Given. `payload as? Int` hands on `Int?`, and the sameness question is
         // asked of what was handed on, so the repeat is refused however the
         // type is spelled
         let sut = try Module(
@@ -1979,7 +1979,7 @@ struct InferenceTests {
 
     @Test("a name on a call that never finishes is refused at the build")
     func refusingBodySaysNothingAboutItsAnswer() async throws {
-        // Given. `gives_up` declares never, so a name on its call promises a
+        // Given. `gives_up` declares `Never`, so a name on its call promises a
         // binding that cannot happen. The build refuses the name where the
         // signature is known, rather than inventing a type for the binding
         let sut = try Module(

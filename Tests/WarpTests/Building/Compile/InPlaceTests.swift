@@ -405,7 +405,7 @@ struct InPlaceTests {
 
     @Test("a write into an inout parameter has to fit the declared type")
     func writeIntoInoutParameterIsHeldToItsType() async throws {
-        // Given. The body writes a string into a parameter declared inout int
+        // Given. The body writes a string into a parameter declared `inout Int`
         let sut = try Module(
             imports: [],
             procedures: [
@@ -437,7 +437,7 @@ struct InPlaceTests {
 
     @Test("a path handed in place has to read as the declared type")
     func handedPathIsHeldToTheDeclaredType() async throws {
-        // Given. An int element is handed to a parameter declared inout string
+        // Given. An int element is handed to a parameter declared `inout String`
         let sut = try Module(
             imports: [],
             procedures: [

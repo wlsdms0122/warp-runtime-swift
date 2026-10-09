@@ -41,10 +41,10 @@ struct ValueNotationTests {
 
     @Test("bytes are written as the array they are, and come back as that array")
     func bytesAreWrittenAsTheArrayTheyAre() throws {
-        // Given / When. A Codable carrier has no compact spelling for bytes, and
-        // `bytes = Array<byte>` says what to write instead. It reads back as
-        // the array rather than as bytes, which is what this carrier does to
-        // `1.0` too. A spelling it cannot hold is a spelling it loses.
+        // Given / When. A Codable carrier has no compact spelling for bytes, so
+        // they are written as the `Array<Int>` they are. It reads back as the
+        // array rather than as bytes, which is what this carrier does to `1.0`
+        // too.
         let written = try JSONEncoder().encode(ValueWriter(.bytes([104, 105])))
 
         // Then

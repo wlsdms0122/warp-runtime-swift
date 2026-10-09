@@ -165,7 +165,7 @@ struct TypeNotationTests {
 
     @Test("a bound reaches the parameters a nested signature mentions")
     func aBoundReachesNestedMentions() throws {
-        // Given / When. `some Element` sits under array<…> and inside a
+        // Given / When. `some Element` sits under `Array<…>` and inside a
         // procedure type's own slot; both are this signature's mentions of one
         // name
         let sut = try loader.loadProcedure([
