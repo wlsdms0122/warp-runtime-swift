@@ -53,7 +53,7 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Whether the declaration writes a type parameter anywhere.
-    public var isGeneric: Bool { type.isGeneric }
+    var isGeneric: Bool { type.isGeneric }
 
     // Every type parameter this signature names. A nested procedure type's
     // parameters are named too: they are this signature's own slots, so

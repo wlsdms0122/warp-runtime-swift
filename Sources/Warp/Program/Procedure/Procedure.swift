@@ -65,7 +65,7 @@ public struct Procedure: Sendable {
     // MARK: - Public
     // The same declaration under another signature: what a closure's
     // signature reads as once it is completed or bounded.
-    public func with(signature: Signature) -> Procedure {
+    func with(signature: Signature) -> Procedure {
         Procedure(
             description: description,
             access: access,

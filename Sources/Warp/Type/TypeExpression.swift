@@ -167,7 +167,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declaration answering the claim takes whatever it is. A claim about
     // `Procedure` is the same about every procedure, whatever it takes and
     // answers.
-    public static let nominalTypes: [Name: TypeExpression] = [
+    static let nominalTypes: [Name: TypeExpression] = [
         TypeSpelling.null: .null,
         TypeSpelling.bool: .bool,
         TypeSpelling.int: .int,
@@ -379,7 +379,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     //
     // No `default`: a mark nobody thought about must be a compile error here
     // rather than an answer of "no mark".
-    public var slotUnwrapped: TypeExpression {
+    var slotUnwrapped: TypeExpression {
         switch self {
         case let .inout(inner):
             return inner
@@ -394,7 +394,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether a `?` on this says something new. It says nothing on what
     // already takes null, on `Never`, which no value is, and on a type
     // parameter, which stands for the whole type the call fills in.
-    public var takesQuestionMark: Bool {
+    var takesQuestionMark: Bool {
         switch self {
         case .any, .null, .never, .parameter, .nullable:
             return false
@@ -427,18 +427,18 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    public var isInout: Bool {
+    var isInout: Bool {
         if case .inout = self { return true }
         return false
     }
 
-    public var isVariable: Bool {
+    var isVariable: Bool {
         if case .variable = self { return true }
         return false
     }
 
     // The type a field holds, whether or not a path may write through it.
-    public var fieldUnwrapped: TypeExpression {
+    var fieldUnwrapped: TypeExpression {
         switch self {
         case let .variable(inner):
             return inner
@@ -454,19 +454,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // MARK: - Initializer
     // MARK: - Public
-    // What this type accepts, settled to the declared representation, or a
-    // refusal saying which part disagreed. `at` is the path into the value so
-    // the message names the field rather than the whole argument. A value
-    // handed here comes from outside, so it is fitted at this door the way
-    // it is at every other.
-    func settling(
-        _ value: Value,
-        at path: @autoclosure () -> String,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(in: types.loweredTypes).settling(outside: value, at: path(), in: types.loweredTypes)
-    }
-
     // The same type with every name it holds walked through to what that name
     // declares. At every depth, not only the outermost.
     func resolved(in types: TypeTable) -> TypeExpression {

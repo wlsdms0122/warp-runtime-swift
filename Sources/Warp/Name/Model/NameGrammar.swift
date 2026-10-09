@@ -85,7 +85,7 @@ public enum NameGrammar: Sendable {
 
     // Why a name written here is refused: one sentence to a grammar, whoever
     // wrote the name.
-    public func refusal(of name: Name) -> String {
+    func refusal(of name: Name) -> String {
         switch self {
         case .type:
             return "'\(name)' is no type's name. A type is named by identifiers joined by dots,"

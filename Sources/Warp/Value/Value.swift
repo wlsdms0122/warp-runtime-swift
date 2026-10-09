@@ -171,7 +171,7 @@ public indirect enum Value: Sendable, Equatable {
 
     // MARK: - Property
     // What is said wherever a value stands where a document can reach it.
-    public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
+    static let procedureIsNotData = "a procedure is not data, so it cannot stand"
         + " where a document reaches; a body a program carries is written as a closure"
 
     // Whether a procedure is anywhere in here, however deep.
@@ -188,7 +188,7 @@ public indirect enum Value: Sendable, Equatable {
     // one from a declared record it is written into, a door it comes through
     // or a cast, so a value that already carries one was named by none of
     // those.
-    public var holdsName: Bool {
+    var holdsName: Bool {
         switch self {
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return false

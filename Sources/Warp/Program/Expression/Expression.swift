@@ -200,7 +200,7 @@ public indirect enum Expression: Sendable {
     // chooses a way through a body, not a value, so it has nothing to give a
     // slot that holds an answer and nothing for a name to bind. What never
     // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
-    public var answersNothing: Bool {
+    var answersNothing: Bool {
         if case .conditional = self { return true }
 
         return false
@@ -209,7 +209,7 @@ public indirect enum Expression: Sendable {
     // Whether the construct decides what the statement's name holds: a loop's
     // round, an attempt's failure. The name is the construct's to bind, so what
     // it holds is not the author's to declare.
-    public var namesItsOwn: Bool {
+    var namesItsOwn: Bool {
         switch self {
         case .loop, .attempt:
             return true
@@ -234,14 +234,14 @@ public indirect enum Expression: Sendable {
     static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
     static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
     static let resultAfterWhatNeverFinishes = "follows a body that never finishes, and would never be reached"
-    public static let declarationOnABoundName =
+    static let declarationOnABoundName =
         "this construct binds the name. A loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
 
     // Whether a construct (a form that runs a body, or leaves) sits anywhere
     // in this expression read as data. A closure is data (the body it carries
     // is its own), so the walk does not enter it.
-    public var holdsConstruct: Bool {
+    var holdsConstruct: Bool {
         switch self {
         case .literal, .reference, .closure:
             return false
@@ -315,7 +315,7 @@ public indirect enum Expression: Sendable {
     // full program, symbols included. This is the symbol-free half of that
     // judgement, and what it buys is the stage: a document is refused at the
     // load.
-    public var alwaysLeaves: Bool {
+    var alwaysLeaves: Bool {
         switch self {
         case .leave:
             return true

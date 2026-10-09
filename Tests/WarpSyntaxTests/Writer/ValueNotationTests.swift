@@ -59,7 +59,7 @@ struct ValueNotationTests {
         // never spelled itself bytes: an `Array<Int>` slot hands on what it was
         // given, and what it was given may have been written `x"6869"`.
         #expect(
-            try TypeExpression.array(.int).settling(.bytes([104, 105]), at: "value")
+            try TypeExpression.array(.int).lowered(in: .empty).settling(outside: .bytes([104, 105]), at: "value", in: .empty)
                 == .bytes([104, 105])
         )
     }
