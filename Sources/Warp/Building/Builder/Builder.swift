@@ -402,7 +402,12 @@ public struct Builder: Sendable {
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let relocating = try Relocating(assembled, types: types, supplied: natives)
+        let relocating = try Relocating(
+            assembled,
+            types: types,
+            contractProcedures: lowered.contractProcedures,
+            supplied: natives
+        )
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
 

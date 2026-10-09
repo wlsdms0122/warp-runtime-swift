@@ -1035,14 +1035,15 @@ struct Lowering {
         }
 
         let callee = table[row]
+        let argumentPlaces = call.arguments.indices.map { position in place.child(.argument(position)) }
 
         return try CallOperation(
-            handing: try call.arguments.enumerated().map { position, written in
-                try argument(written, in: scope, on: context, at: place.child(.argument(position)))
+            handing: try zip(call.arguments, argumentPlaces).map { written, at in
+                try argument(written, in: scope, on: context, at: at)
             },
             to: callee,
             row: stands,
-            asItIs: { position in context.judgements.landsAsItIs(at: place.child(.argument(position))) },
+            asItIs: { position in context.judgements.landsAsItIs(at: argumentPlaces[position]) },
             in: loweredTypes,
             at: place
         )
