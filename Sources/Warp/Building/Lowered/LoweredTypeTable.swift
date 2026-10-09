@@ -162,17 +162,17 @@ final class LoweredTypeTable: Sendable {
         satisfying[name] != nil
     }
 
-    // One-sided the way every judgement before the run is: only what is
-    // provably outside is refused, and a reading nothing can be said about
-    // passes here and is judged again where the value arrives. `orNull` is
-    // a slot taking null as well: what arrives is null or answers.
+    // Whether a reading answers a contract, by what the documents claim
+    // about its type. A reading whose type the build does not know answers
+    // none until a cast says what it is. `orNull` is a slot taking null as
+    // well: what arrives is null or answers.
     func answering(contract name: Name, reading: LoweredType, orNull: Bool) -> Answering {
         answering(contract: name, reading: reading, rigid: false, orNull: orNull)
     }
 
-    // Whether a reading stands where a contract bounds a slot. One-sided as
-    // `answering` is, unless `rigid`: then nothing is judged where the value
-    // arrives, so a named type is held to what the documents say.
+    // Whether a reading stands where a contract bounds a slot. A claim this
+    // table cannot settle passes, for the link to settle, unless `rigid`:
+    // then a named type is held to what the documents standing so far say.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
         if case .settled(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
     }
@@ -348,8 +348,11 @@ final class LoweredTypeTable: Sendable {
         guard let reading = read(given, orNull: orNull) else { return .settled(true) }
 
         switch reading {
-        case .any, .projection, .never:
+        case .never:
             return .settled(true)
+
+        case .any, .projection:
+            return .settled(false)
 
         // A name that stands for no record answers as what it stands for,
         // since a value of it is an instance of that.
@@ -372,9 +375,8 @@ final class LoweredTypeTable: Sendable {
 
         // A reading of a type a value is an instance of answers as that type
         // does: by what the documents claim about it, so the type comes back
-        // and the asker writes it down. Where nothing is judged on arrival, or
-        // the table holds every claim there is, it is held to what the
-        // documents say.
+        // and the asker writes it down. Asked rigidly, or where the table
+        // holds every claim there is, it is held to what the documents say.
         default:
             guard let type = reading.nominal(in: self) else { return .settled(true) }
             guard !rigid, !settled else { return .settled(settles(contract: name, arrived: type) != false) }

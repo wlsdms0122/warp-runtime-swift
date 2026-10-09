@@ -73,10 +73,10 @@ struct BoundTests {
         }
     }
 
-    @Test("a value arriving through any is judged at the boundary")
-    func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
-        // Given. The parameter is declared `Any`, so the build reads nothing and
-        // the contract is judged where the value arrives
+    @Test("a value read as any stands where a contract call asks only through a cast")
+    func aValueReadAsAnyStandsAtAContractCallOnlyThroughACast() async throws {
+        // Given. The parameter is declared `Any`, so the build knows nothing
+        // the contract could be asked of
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -96,9 +96,9 @@ struct BoundTests {
 
         // When / Then
         await #expect {
-            try await run(sut, arguments: ["left": .bool(true)])
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("is sent to 'Bool', which answers no procedure of 'Standard.Comparable'")
+            error is BuildError && "\(error)".contains("'lhs' holds Any where some Self: Standard.Comparable is declared")
         }
     }
 
@@ -662,11 +662,10 @@ struct BoundTests {
         }
     }
 
-    @Test("min handed null first is held to the parameter it declares first")
-    func minHandedNullIsHeldToItsFirstParameter() async throws {
-        // Given. The first argument is a reference that reads null, and no
-        // document claims `Standard.Comparable` for `Null`, so the boundary
-        // refuses before the ordering procedure is asked anything
+    @Test("min handed a reading of any first refuses at the build")
+    func minHandedAReadingOfAnyRefuses() async throws {
+        // Given. The first argument is a reference read as `Any`, which stands
+        // where a bound is asked only through a cast
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -682,9 +681,9 @@ struct BoundTests {
 
         // When / Then
         await #expect {
-            try await run(sut, arguments: ["absent": .null])
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, and 'Null' does not answer every procedure 'Standard.Comparable' asks")
+            error is BuildError && "\(error)".contains("'lhs' holds Any where some T: Standard.Comparable is declared")
         }
     }
 

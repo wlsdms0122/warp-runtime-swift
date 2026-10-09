@@ -931,21 +931,16 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.nullable, .null):
             return true
 
-        // A value read as `Any` or along a path a call decides is of a type
-        // the build does not know, and one read as a composition of a type
-        // that answers its contracts and nothing more the build knows of, so
-        // it stands only where nothing is declared, where a call fills a
-        // type parameter, or where every contract asked is one it answers.
-        // A cast says what it is anywhere else.
+        // A value read as a composition is of a type that answers its
+        // contracts and nothing more the build knows of, so it stands where
+        // every contract asked is one it answers.
         case let (.composition(bounds), .composition(theirs)), let (.nullable(.composition(bounds)), .composition(theirs)):
             return Set(bounds).isSubset(of: theirs)
 
-        case (.composition, .any), (.composition, .projection), (.nullable(.composition), .any), (.nullable(.composition), .projection):
-            return false
-
         // A composition takes what answers each of its contracts, asked of
         // the table with the same rigidity and, where the slot takes null as
-        // well, knowing it does.
+        // well, knowing it does. A value read as `Any` or along a path a call
+        // decides answers none until a cast says what it is.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 

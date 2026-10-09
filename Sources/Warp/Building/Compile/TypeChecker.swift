@@ -705,8 +705,10 @@ struct TypeChecker {
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
+        // A parameter read as `Any` is read so by a join of parts that
+        // differ, each held to the bounds where it stands below.
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
-            for reading in substitution.everyReading(of: parameter) {
+            for reading in substitution.everyReading(of: parameter) where reading != .any {
                 for name in names.sorted() {
                     if let refusal = refusal(
                         of: reading,
@@ -766,20 +768,22 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        // A list or record literal handed where a bounded parameter stands is
-        // held to the bounds part by part, as one written into a slot
-        // declaring them is: its join may answer them while a part does not.
-        // Only what stands at such a parameter is asked here; `check` judges
-        // the rest against what filled it. Each part is asked as the call
-        // hands it on, a whole literal the filled slot reads as a fraction
-        // being that fraction.
-        for (position, written) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
-            let slot = slots[position]
-            let bounded = slot.type.boundedAlone
+        // What each argument hands where a bounded parameter stands is held
+        // to the bounds where it stands, a list or record literal part by
+        // part, as one written into a slot declaring them is: its join may
+        // answer them while a part does not, and a value read as `Any` there
+        // answers none until a cast says what it is. Only what stands at such
+        // a parameter is asked here; `check` judges the rest against what
+        // filled it. Each part is asked as the call hands it on, a whole
+        // literal the filled slot reads as a fraction being that fraction,
+        // and a variable handed in place as what it holds.
+        for (position, slot) in slots.enumerated() where sent.indices.contains(position) {
+            let bounded = slot.type.slotUnwrapped.boundedAlone
 
             guard bounded != .any else { continue }
 
-            let shape = written.written(into: slot.type.filling(substitution.readings), in: loweredTypes)
+            let shape = LiteralShape(shapes[position], reading: sent[position])
+                .written(into: slot.type.filling(substitution.readings), in: loweredTypes)
 
             guard shape.isHeld(by: bounded, inPlace: false, in: loweredTypes) else {
                 return .refusal(
