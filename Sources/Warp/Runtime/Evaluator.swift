@@ -164,16 +164,11 @@ struct Evaluator: Sendable {
 
     // A body run as a procedure: what it answers is caught here. The build
     // held every way out to what the body declares, so it is handed on as it
-    // came.
-    //
-    // Both halves are the frame, and neither works without the other, so there
-    // is one of these rather than one per way of reaching a body. A body is
-    // reached three ways, and each makes its frame in one place that ends
-    // here: a run starting, a written procedure being called, and a closure
-    // being invoked.
+    // came. A body is reached three ways, and each makes its frame in one
+    // place that ends here: a run starting, a written procedure being called,
+    // and a closure being invoked.
     private func answer(
         _ body: LoweredBody,
-        of callee: Linked,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -621,12 +616,7 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        return try await answer(
-            body,
-            of: linked,
-            in: &activation,
-            at: trace.appending(linked.hop)
-        )
+        return try await answer(body, in: &activation, at: trace.appending(linked.hop))
     }
 
     // A row answered with its arguments settled and nothing handed in place:
@@ -670,7 +660,7 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        return try await answer(body, of: callee, in: &activation, at: trace)
+        return try await answer(body, in: &activation, at: trace)
     }
 
     private func loop(

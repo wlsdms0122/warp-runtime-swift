@@ -147,13 +147,13 @@ struct ObjectWriter {
             return .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) })
 
         case .types:
-            return try keyed(compiled.types, type)
+            return keyed(compiled.types, type)
 
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
                     .array([
-                        try signature(asked.signature),
+                        signature(asked.signature),
                         constness(asked.constness),
                         isolation(asked.isolation),
                         failing(.these(asked.failing))
@@ -235,7 +235,7 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
-    private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
+    private func type(_ expression: TypeExpression) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
         switch expression {
@@ -261,30 +261,30 @@ struct ObjectWriter {
             return tagged(Tag.string)
 
         case let .array(element):
-            return tagged(Tag.array, try type(element))
+            return tagged(Tag.array, type(element))
 
         case let .dictionary(element):
-            return tagged(Tag.dictionary, try type(element))
+            return tagged(Tag.dictionary, type(element))
 
         case let .record(fields):
-            return tagged(Tag.record, try keyed(fields, type))
+            return tagged(Tag.record, keyed(fields, type))
 
         case let .procedure(written, constness, isolation):
             return tagged(
                 Tag.procedure,
-                try ObjectWriter.maybe(written, procedureType),
+                ObjectWriter.maybe(written, procedureType),
                 self.constness(constness),
                 self.isolation(isolation)
             )
 
         case let .variable(held):
-            return tagged(Tag.variable, try type(held))
+            return tagged(Tag.variable, type(held))
 
         case let .inout(held):
-            return tagged(Tag.`inout`, try type(held))
+            return tagged(Tag.`inout`, type(held))
 
         case let .nullable(held):
-            return tagged(Tag.nullable, try type(held))
+            return tagged(Tag.nullable, type(held))
 
         case let .named(spelling):
             return tagged(Tag.named, name(spelling))
@@ -324,26 +324,26 @@ struct ObjectWriter {
 
     // A procedure type is `[parameters, returns]`: the types it is applied
     // with, in position order, and what it answers or nothing.
-    private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
+    private func procedureType(_ type: ProcedureType) -> Value {
         .array([
-            .array(try type.parameters.map(self.type)),
-            try ObjectWriter.maybe(type.returns, self.type)
+            .array(type.parameters.map(self.type)),
+            ObjectWriter.maybe(type.returns, self.type)
         ])
     }
 
-    private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
+    private func signature(_ signature: Signature) -> Value {
         .array([
-            .array(try signature.parameters.map(parameter)),
-            try ObjectWriter.maybe(signature.returns, type),
+            .array(signature.parameters.map(parameter)),
+            ObjectWriter.maybe(signature.returns, type),
             keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) }
         ])
     }
 
     // A parameter taking anything writes no type, as its document does.
-    private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
+    private func parameter(_ parameter: Parameter) -> Value {
         .array([
             name(parameter.name),
-            try ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type),
+            ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type),
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -573,7 +573,7 @@ struct ObjectWriter {
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
         .array((spelled ? [name(row.label)] : []) + [
-            try signature(row.signature),
+            signature(row.signature),
             access(row.access),
             constness(row.constness),
             isolation(row.isolation),
