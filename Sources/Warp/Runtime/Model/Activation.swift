@@ -162,20 +162,6 @@ struct Activation: Sendable {
                         segment: segment
                     )
 
-                case let .found(.double(double)):
-                    switch IntNarrowing(double) {
-                    case let .int(index):
-                        read = indexed(current, at: index, walked: walked)
-
-                    case .notANumber, .fractional:
-                        return .unfit("index reference \(name()) is not a whole number")
-
-                    case .overflow:
-                        return .unfit(
-                            "index reference \(name()) indexes past the end of any array"
-                        )
-                    }
-
                 case let .found(value):
                     return .unfit(
                         "index reference \(name()) is \(value.type), expected Int or String"

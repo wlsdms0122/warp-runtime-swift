@@ -108,38 +108,26 @@ struct ReferenceLookupTests {
         await #expect(lookup([.key("items"), .indexRef([.key("index")])], in: sut) == .found(.int(2)))
     }
 
-    @Test("a fraction index reference misses by the fact it is")
-    func indexReferenceFractionNamesItsMiss() async throws {
-        // Given. A fraction with digits after the point, and a whole one no
-        // an int holds: two different facts, each named as itself
+    @Test("a fraction index reference is unfit")
+    func indexReferenceFractionIsUnfit() async throws {
+        // Given
         let folding = standard.folding([
             "items": .array([.int(1), .int(2)]),
-            "half": .double(1.5),
-            "far": .double(1e30)
+            "half": .double(1.0)
         ])
 
-        // When / Then
-        guard case let .unfit(halfway) = await lookup(
+        // When / Then. An index is an Int or a key, so a fraction is neither,
+        // whole or not
+        guard case let .unfit(reason) = await lookup(
             [.key("items"), .indexRef([.key("half")])],
             in: folding
         ) else {
-            Issue.record("expected unfit for a fractional index reference")
+            Issue.record("expected unfit for a fraction index reference")
 
             return
         }
 
-        #expect(halfway.contains("is not a whole number"))
-
-        guard case let .unfit(distant) = await lookup(
-            [.key("items"), .indexRef([.key("far")])],
-            in: folding
-        ) else {
-            Issue.record("expected unfit for an index reference past the Int")
-
-            return
-        }
-
-        #expect(distant.contains("indexes past the end of any array"))
+        #expect(reason.contains("expected Int or String"))
     }
 
     @Test("an index reference that names nothing is unfit, not null")

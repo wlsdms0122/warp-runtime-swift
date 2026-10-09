@@ -9,35 +9,13 @@ import Foundation
 import Testing
 @testable import Warp
 
-// The int-boundary judges in one place: every judge that meets a fraction or
-// a spelled number reads through these, so the edges are pinned here once
-// rather than rediscovered at each caller.
-@Suite("Int readings and spellings")
+// The spellings of a number: every judge that meets a spelled number reads
+// through these, so the edges are pinned here once.
+@Suite("Number spellings")
 struct IntSpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a fraction reads as the Int it is, and misses by the fact it is")
-    func readingNamesTheFact() {
-        // When / Then
-        #expect({ if case .int(42) = IntNarrowing(42.0) { true } else { false } }())
-        #expect({ if case .int(Int.min) = IntNarrowing(-0x1p63) { true } else { false } }())
-        #expect({ if case .int(0) = IntNarrowing(-0.0) { true } else { false } }())
-
-        // The int's upper edge: 2^63 itself is already past Int.max, and
-        // infinity is past every int, the same fact at its limit.
-        #expect({ if case .overflow = IntNarrowing(0x1p63) { true } else { false } }())
-        #expect({ if case .overflow = IntNarrowing(1e30) { true } else { false } }())
-        #expect({ if case .overflow = IntNarrowing(-1e30) { true } else { false } }())
-        #expect({ if case .overflow = IntNarrowing(.infinity) { true } else { false } }())
-        #expect({ if case .overflow = IntNarrowing(-.infinity) { true } else { false } }())
-
-        #expect({ if case .fractional = IntNarrowing(2.5) { true } else { false } }())
-        #expect({ if case .fractional = IntNarrowing(-0.25) { true } else { false } }())
-
-        #expect({ if case .notANumber = IntNarrowing(.nan) { true } else { false } }())
-    }
-
     @Test("a fraction's spelling follows the document's form rule")
     func fractionSpellingFollowsTheFormRule() {
         // When / Then. The point form inside -5 < k < 16, the exponent form
