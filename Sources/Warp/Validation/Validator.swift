@@ -72,7 +72,7 @@ public struct Validator: Sendable {
             )
 
             if let declared = variable.declared {
-                try written(declared, in: .declaration, at: .variable(name.spelling, in: .of(module)))
+                try written(declared, in: .value, at: .variable(name.spelling, in: .of(module)))
             }
         }
 
@@ -311,7 +311,7 @@ public struct Validator: Sendable {
                 }
 
                 if let declared = binding.declared {
-                    try written(declared, in: .declaration, at: here)
+                    try written(declared, in: .value, at: here)
                 }
 
                 switch binding {
@@ -442,7 +442,7 @@ public struct Validator: Sendable {
         // to resolve, so the check has only the value to walk, exactly as it
         // walks any other operand.
         case let .cast(value, type, optional):
-            try written(type, in: .cast, at: place)
+            try written(type, in: .value, at: place)
             try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
             try validate(
                 value,
@@ -804,7 +804,7 @@ public struct Validator: Sendable {
     }
 
     // A type held to where it is written: `inout` only in front of a
-    // parameter, `var` only on a field of what a declaration holds, a type
+    // parameter, `var` only on a field of a type declared in `types`, a type
     // parameter only where a call fills it, `Self` only in a contract's
     // procedures, and `?` only where it says something new. What a name
     // stands for is the build's to resolve, so a name is not walked into.

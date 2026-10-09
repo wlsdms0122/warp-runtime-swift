@@ -537,6 +537,37 @@ struct InPlaceTests {
         }
     }
 
+    @Test("var is not written on a field of a record a name or a module variable says it holds")
+    func varOnAHeldRecordFieldRefuses() throws {
+        // Given. A record type written inline declares no type, so it has no
+        // field a path writes through
+        let held = TypeExpression.record(["a": .variable(.int)])
+
+        // When / Then
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        body: [Statement(binding: .constant("x", declared: held), expression: .record(["a": .literal(.int(1))]))],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
+        }
+
+        #expect {
+            try Module(
+                variables: ["x": ModuleVariable(.record(["a": .literal(.int(1))]), declared: held)],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("variables.x.fields.a: writes `var Int`")
+        }
+    }
+
     @Test("a call of a value keeps a place where its type takes one in place and reads every other argument")
     func aCallOfAValueLowersWhatItHandsInPlace() async throws {
         // Given. Two variables handed to a value taking the first in place and
