@@ -132,8 +132,7 @@ struct ObjectMutantTests {
             return first
         }
 
-        // The clock came first. A mutant that does not finish is not a defect,
-        // because stopping work that runs away is the host's.
+        // The clock came first.
         guard let raced, let answer = raced else { return false }
 
         guard case let .failure(error) = answer else { return true }
