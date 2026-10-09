@@ -2337,12 +2337,14 @@ struct TypeChecker {
                 )
             }
 
+            let argumentPlaces = call.arguments.indices.map { position in place.child(.argument(position)) }
+
             // Every operand of this call: what a slot takes has nothing to do
             // with whether the operand written into it is read or run. Placed
             // one by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
-                try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
+                try held(argument, asOperand: argumentPlaces[position], given: context, when: ask)
             }
 
             // A selector this document cannot name is refused where the walk
@@ -2383,7 +2385,7 @@ struct TypeChecker {
                 let inner = try await inspected(
                     argument,
                     naming: nil,
-                    at: place.child(.argument(position)),
+                    at: argumentPlaces[position],
                     in: environment,
                     with: context,
                     ask: ask
@@ -2417,7 +2419,7 @@ struct TypeChecker {
                     "sending '\(call.selector)' with \(sent[position].rendered(in: context.loweredTypes)) at position"
                         + " \(position), where its slot reads \(taking[position].rendered(in: context.loweredTypes)):"
                         + " a type parameter the body does not fill takes only a value of it",
-                    at: place.child(.argument(position)),
+                    at: argumentPlaces[position],
                     when: ask
                 )
             }
@@ -2426,7 +2428,7 @@ struct TypeChecker {
             // reads it, and a record built there is built as the record the
             // slot reads.
             for (position, (argument, slot)) in zip(arguments, taking).enumerated() {
-                judgements.record(names: slot.naming(argument, at: place.child(.argument(position)), in: context.loweredTypes))
+                judgements.record(names: slot.naming(argument, at: argumentPlaces[position], in: context.loweredTypes))
             }
 
             let rewritten = Call(
@@ -2443,7 +2445,7 @@ struct TypeChecker {
 
                     judgements.record(
                         asItIs: slot.type.takesAsItIs(read, in: context.loweredTypes),
-                        at: place.child(.argument(position))
+                        at: argumentPlaces[position]
                     )
                 }
             }
