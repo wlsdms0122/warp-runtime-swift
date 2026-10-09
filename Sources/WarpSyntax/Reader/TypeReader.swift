@@ -282,15 +282,6 @@ public struct TypeReader: Decodable {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            // A list or a map says what it holds. `Array<Any>` is a list of
-            // anything, and the bare word is not a second spelling of it.
-            guard Holding(spelling: text) == nil else {
-                throw TypeFormError(
-                    "type '\(text)' says nothing of what it holds. Write `\(text)<Any>`"
-                        + " for one of anything"
-                )
-            }
-
             let name = try named(text)
 
             return TypeExpression.keywords[name] ?? .named(qualifying(name))

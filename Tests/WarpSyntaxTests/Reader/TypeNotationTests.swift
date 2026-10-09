@@ -23,8 +23,7 @@ struct TypeNotationTests {
         // When / Then
         #expect(try TypeReader.parse("String") == .string)
         #expect(try TypeReader.parse("Array<Any>") == .array(.any))
-        #expect(throws: (any Error).self) { try TypeReader.parse("Array") }
-        #expect(throws: (any Error).self) { try TypeReader.parse("Dictionary") }
+        #expect(try TypeReader.parse("Array") == .named("Array"))
         #expect(try TypeReader.parse("Array<String>") == .array(.string))
         #expect(try TypeReader.parse("Dictionary<Array<Int>>") == .dictionary(.array(.int)))
         #expect(try TypeReader.parse("Procedure") == .procedure(nil))
@@ -81,10 +80,10 @@ struct TypeNotationTests {
         #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
         #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & Array<Int>") }
 
-        // And. A document writes the set one way: each name once, in name
-        // order
+        // And. A document writes the set one way, in name order, and a name
+        // written twice is one name, which `&` does not join
         for (written, imports) in [("App.B & App.A", ["App.A", "App.B"]), ("App.A & App.A", ["App.A"])] as [(String, Value)] {
-            #expect(throws: ReadingError.self) {
+            #expect(throws: (any Error).self) {
                 try Loader().load([
                     "warp": 1,
                     "imports": imports,

@@ -205,10 +205,6 @@ public struct PathParser: Sendable {
         }
 
         if let literal = Int(inner) {
-            guard literal >= 0 else {
-                throw PathSyntaxError("index segment '[\(literal)]' is below zero, and a whole number below zero is no position")
-            }
-
             return .index(literal, optional: optional)
         }
 

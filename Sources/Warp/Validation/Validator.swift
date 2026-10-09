@@ -408,6 +408,7 @@ public struct Validator: Sendable {
                         throw ValidationError(refusal, at: named)
                     }
 
+                    try refuseBelowZero(in: path, at: named)
                     try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: named)
 
                     guard let head = path.head else {
@@ -833,6 +834,8 @@ public struct Validator: Sendable {
                 throw ValidationError(refusal, at: place)
             }
 
+            try refuseBelowZero(in: path, at: place)
+
             guard let head = path.head else {
                 throw ValidationError(
                     "reference { ref: \(path.rendered) } does not"
@@ -849,6 +852,17 @@ public struct Validator: Sendable {
                     at: place
                 )
             }
+        }
+    }
+
+    // A whole number written between the brackets is a position, and one
+    // below zero is no position.
+    private func refuseBelowZero(in path: Path, at place: Place) throws {
+        for case let .index(index, _) in path.segments where index < 0 {
+            throw ValidationError(
+                "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
+                at: place
+            )
         }
     }
 
@@ -911,10 +925,13 @@ public struct Validator: Sendable {
         case let .named(name):
             try held(name, as: .type, at: place)
 
+        // One contract is written by its name, so a composition joins two
+        // or more.
         case let .composition(names):
-            guard !names.isEmpty else {
+            guard names.count > 1 else {
                 throw ValidationError(
-                    "joins nothing with `&`, and a composition names the contracts a value answers",
+                    "joins \(names.count) with `&`, and `&` joins two contracts or more."
+                        + " One contract is written by its name",
                     at: place
                 )
             }

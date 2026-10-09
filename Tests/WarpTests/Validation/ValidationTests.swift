@@ -785,6 +785,38 @@ struct ValidationTests {
         }
     }
 
+    @Test("a composition joins two contracts or more, however the module was made", arguments: [
+        TypeExpression.composition([]), .composition(["App.A"])
+    ])
+    func aCompositionOfFewerThanTwoIsRefused(type: TypeExpression) throws {
+        // When / Then. One contract is written by its name
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("`&` joins two contracts or more")
+        }
+    }
+
+    @Test("an index below zero is no position, however the path was made")
+    func anIndexBelowZeroIsRefused() throws {
+        // Given
+        let items = Statement(binding: .variable("items"), expression: .array([.literal(.int(1))]))
+
+        // When / Then. A read and a write
+        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(-1)]))]))
+        #expect(!validates(body: [items, Statement(binding: .assignment([.key("items"), .index(-1)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
+    }
+
     @Test("a type read out of a body is no declaration anybody can write")
     func aProjectionIsRefusedWhereADeclarationGoes() throws {
         // When / Then. A declaration assembled in the host claiming what only
