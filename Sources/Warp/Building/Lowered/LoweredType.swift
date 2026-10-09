@@ -2385,12 +2385,10 @@ indirect enum LoweredType: Sendable, Equatable {
         return value
     }
 
-    // A scalar of the kind this declares, as it is. What a literal reads as
-    // takes the whole number the literal is.
+    // A scalar of the kind this declares, as it is.
     private func scalar(_ value: Value) -> Value? {
         switch (self, value) {
-        case (.null, .null), (.bool, .bool), (.int, .int), (.wholeLiteral, .int), (.double, .double),
-            (.string, .string):
+        case (.null, .null), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string):
             return value
 
         default:
