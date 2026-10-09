@@ -392,7 +392,7 @@ struct BinaryEncodingTests {
     }
 
     @Test("what a document cannot carry is refused on the way out")
-    func theUnwritableIsRefusedWhenWriting() {
+    func theUnwritableIsRefusedWhenWriting() async throws {
         // Given. The value model's edges, not this encoding's: these bytes
         // could be written, and the refusal is that no encoding may
         for value in [Value.double(.infinity), .double(.nan)] {
@@ -403,10 +403,10 @@ struct BinaryEncodingTests {
         }
 
         // And code is not data in any encoding
+        let procedure = try await procedureValue()
+
         #expect(throws: EncodingRefused.self) {
-            try BinaryEncoding().data(
-                from: .procedure(Closure.assembled())
-            )
+            try BinaryEncoding().data(from: procedure)
         }
     }
 

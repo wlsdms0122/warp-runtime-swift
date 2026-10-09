@@ -1,6 +1,6 @@
 //
 //  Closure+Assembled.swift
-//  WarpTestSupport
+//  WarpTests
 //
 //  Created by JSilver on 8/17/26.
 //
@@ -8,7 +8,7 @@
 import Foundation
 @testable import Warp
 
-public extension Closure {
+extension Closure {
     // A closure a caller assembles in Swift: no body a document spelled, no
     // captures, claiming nothing. What a slot that asks nothing takes.
     static func assembled(answering result: Value? = nil, in types: TypeTable = .empty) -> Closure {

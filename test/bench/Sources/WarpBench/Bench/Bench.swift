@@ -91,7 +91,7 @@ struct Bench {
         init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
             self.path = path
 
-            guard let path else {
+            guard path != nil else {
                 self.rows = nil
                 self.missing = nil
 
