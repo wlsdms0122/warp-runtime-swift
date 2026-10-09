@@ -7,11 +7,13 @@
 
 import Foundation
 
-// Checks that every name a procedure reads is one it can see, before it runs.
+// Checks a module against itself, before anything is resolved: what its text
+// answers alone. Every name a procedure reads is one it can see, every name in
+// the types namespace is one a document may declare, and every word a type
+// writes stands where it may.
 //
 // The walk is structural: a call's arguments are expressions whose insides
-// this reads, so validation never consults the procedure table. A document is
-// checked against itself, before anything is resolved.
+// this reads, so validation never consults the procedure table.
 public struct Validator: Sendable {
     // MARK: - Property
     // MARK: - Initializer
