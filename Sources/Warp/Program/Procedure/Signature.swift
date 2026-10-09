@@ -37,19 +37,19 @@ public struct Signature: Sendable, Equatable {
     // position order and the answer. No names, since a value is applied by
     // position and the names are the declaration's own.
     public var type: ProcedureType {
-        ProcedureType(parameters: parameters.map(\.declared), returns: returns)
+        ProcedureType(parameters: parameters.map(\.type), returns: returns)
     }
 
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {
-        Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
+        Set(parameters.compactMap { parameter in parameter.type.isInout ? nil : parameter.name })
     }
 
     // The first parameter handed in place, which only a call a body writes
     // can fill.
     var inPlace: Name? {
-        parameters.first { parameter in parameter.declared.isInout }?.name
+        parameters.first { parameter in parameter.type.isInout }?.name
     }
 
     // Whether the declaration writes a type parameter anywhere.
@@ -65,7 +65,7 @@ public struct Signature: Sendable, Equatable {
     // it answers and the contracts its bounds name.
     var mentions: Set<Name> {
         parameters.reduce(into: (returns?.mentions ?? []).union(bounds.values.joined())) { mentioned, parameter in
-            mentioned.formUnion(parameter.declared.mentions)
+            mentioned.formUnion(parameter.type.mentions)
         }
     }
 

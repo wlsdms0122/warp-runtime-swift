@@ -109,7 +109,7 @@ public struct Validator: Sendable {
                 // the declaration by the value standing there.
                 guard asked.signature.parameters.first?.type == .selfType else {
                     throw ValidationError(
-                        "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
+                        "takes \(asked.signature.parameters.first?.type.rendered ?? "nothing") first."
                             + " A contract's procedure takes `Self` first: the value it is"
                             + " answered about, of the type that answers it",
                         at: place.part(.parameters)
@@ -885,8 +885,8 @@ public struct Validator: Sendable {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
-            try marked(parameter.declared, at: here)
-            try written(parameter.declared.slotUnwrapped, in: context, at: here)
+            try marked(parameter.type, at: here)
+            try written(parameter.type.slotUnwrapped, in: context, at: here)
         }
 
         if let returns = signature.returns {

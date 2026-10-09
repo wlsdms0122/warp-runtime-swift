@@ -18,8 +18,6 @@ public struct Parameter: Sendable, Equatable {
     public let type: TypeExpression
     public let description: String?
 
-    public var declared: TypeExpression { type }
-
     // MARK: - Initializer
     public init(
         name: Name,

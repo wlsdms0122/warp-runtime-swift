@@ -2346,7 +2346,7 @@ struct TypeChecker {
                 // A closure literal written here, at any depth, is completed
                 // by the type it is written into.
                 let argument = signature.parameters.indices.contains(position)
-                    ? signature.parameters[position].declared.lowered(in: context.loweredTypes, bounds: signature.bounds)
+                    ? signature.parameters[position].type.lowered(in: context.loweredTypes, bounds: signature.bounds)
                         .completing(written, in: context.loweredTypes)
                     : written
                 let inner = try await inspected(
