@@ -93,7 +93,7 @@ struct SpellingTests {
         let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
         // When / Then. The guard is on the key, not on the form
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try sut.registering(LoopForm.self, as: "unless")
         }
     }
@@ -103,7 +103,7 @@ struct SpellingTests {
         // Given / When / Then. A tag is read as its expression under a
         // statement's `value` too, so a construct under one would take a
         // record or a reference for itself
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try ConstructRegistry.standard.removing("conditional").registering(ConditionalForm.self, as: Name(tag))
         }
     }

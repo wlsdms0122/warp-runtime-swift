@@ -54,10 +54,7 @@ public struct ConstructRegistry: Sendable {
             do {
                 try insert(form, as: try Name(written))
             } catch let refusal as NameRefused {
-                throw ValidationError(
-                    "construct key '\(written)' cannot be a name: \(refusal)",
-                    at: nil
-                )
+                throw ConstructRegistryError("construct key '\(written)' cannot be a name: \(refusal)")
             }
         }
     }
@@ -137,18 +134,15 @@ public struct ConstructRegistry: Sendable {
     // down.
     private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
-            // A registry is assembled by a host and not read out of a
-            // document, so there is no place in one to point at.
-            throw ValidationError("construct key '\(key)' is already registered", at: nil)
+            throw ConstructRegistryError("construct key '\(key)' is already registered")
         }
 
         // `value` is the key a statement writes what it runs under, so a
         // construct registered under it would never be reached.
         guard key != StatementReader.valueKey else {
-            throw ValidationError(
+            throw ConstructRegistryError(
                 "construct key '\(key)' is the key a statement writes its expression under,"
-                    + " and no construct sits under it",
-                at: nil
+                    + " and no construct sits under it"
             )
         }
 
@@ -156,9 +150,8 @@ public struct ConstructRegistry: Sendable {
         // `value` included, so a construct under a tag would take a record, a
         // reference or a call for itself.
         guard ExpressionTag(key) == nil else {
-            throw ValidationError(
-                "construct key '\(key)' is an expression's tag, and an expression is read under it",
-                at: nil
+            throw ConstructRegistryError(
+                "construct key '\(key)' is an expression's tag, and an expression is read under it"
             )
         }
 
