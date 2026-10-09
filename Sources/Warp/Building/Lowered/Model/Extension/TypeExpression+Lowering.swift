@@ -8,13 +8,13 @@
 import Foundation
 
 extension TypeExpression {
-    // This type as the run reads it, with every name resolved to its row. A
-    // name nothing declares, a bound naming no contract and `Self` outside a
-    // contract stand for no type, and a name for `Never` stands for the type
-    // no value is, so each lowers to `Never`. A build refuses every such mention before it reads a lowering,
-    // and a table a host builds is held to the same judge. `bounds` are what the
-    // signature this type is written in holds each type parameter to, by its
-    // name.
+    // This type as the run reads it, with every declared name resolved: a
+    // record to its row, and an alias to what it stands for. A name nothing
+    // declares, a bound naming no contract and `Self` outside a contract
+    // stand for no type, so each lowers to `Never`; a build refuses every
+    // such mention before it reads a lowering, and a table a host builds is
+    // held to the same judge. `bounds` are what the signature this type is
+    // written in holds each type parameter to, by its name.
     func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>] = [:]) -> LoweredType {
         switch self {
         case .any:
@@ -76,7 +76,7 @@ extension TypeExpression {
         // value of whatever answers it.
         case let .named(name):
             if let row = table.row(named: name) {
-                return table.neverRows.contains(row) ? .never : .named(row)
+                return table.mention(of: row)
             }
 
             guard table.declaresContract(name) else { return .never }

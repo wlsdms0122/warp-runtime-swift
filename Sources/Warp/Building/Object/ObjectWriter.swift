@@ -577,7 +577,6 @@ struct ObjectWriter {
             constness(row.constness),
             isolation(row.isolation),
             failing(row.failing),
-            .bool(row.handsBackAsDeclared),
             try implementation(row.implementation)
         ])
     }
@@ -627,14 +626,14 @@ struct ObjectWriter {
         typealias Tag = ObjectLayout.BindingTag
 
         switch binding {
-        case let .bind(slot, settling):
-            return tagged(Tag.bind, .int(slot), ObjectWriter.maybe(settling, lowered))
+        case let .bind(slot):
+            return tagged(Tag.bind, .int(slot))
 
-        case let .declare(slot, settling):
-            return tagged(Tag.declare, .int(slot), ObjectWriter.maybe(settling, lowered))
+        case let .declare(slot):
+            return tagged(Tag.declare, .int(slot))
 
-        case let .assign(address, settling):
-            return tagged(Tag.assign, self.address(address), ObjectWriter.maybe(settling, lowered))
+        case let .assign(address):
+            return tagged(Tag.assign, self.address(address))
         }
     }
 
@@ -692,14 +691,6 @@ struct ObjectWriter {
 
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
-
-        case let .checked(checked, judging):
-            return tagged(
-                Tag.checked,
-                try self.operation(checked.operation),
-                ObjectWriter.maybe(judging.against, lowered),
-                .array(judging.handedBack.map { back in .array([.int(back.position), lowered(back.against)]) })
-            )
 
         case let .block(body):
             return tagged(Tag.block, try self.body(body))
@@ -759,8 +750,7 @@ struct ObjectWriter {
             }),
             .array(call.handed.map { handed in
                 .array([.int(handed.position), address(handed.address)])
-            }),
-            .array(call.judged.map { position in .int(position) })
+            })
         ])
     }
 

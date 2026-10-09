@@ -396,7 +396,6 @@ struct ObjectClosureTests {
                 constness: row.constness,
                 isolation: row.isolation,
                 failing: row.failing,
-                handsBackAsDeclared: false,
                 judging: .body(
                     LoweredBody(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [])),
                     frame

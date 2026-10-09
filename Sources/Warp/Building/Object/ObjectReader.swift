@@ -717,7 +717,6 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            handsBackAsDeclared: try cursor.field().flag(),
             judging: try implementation(cursor.next())
         )
 
@@ -808,9 +807,9 @@ struct ObjectReader {
         let read: Instruction.Binding
 
         switch ObjectLayout.BindingTag(rawValue: try cursor.field().integer()) {
-        case .bind: read = .bind(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .declare: read = .declare(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .assign: read = .assign(try address(cursor.next()), settling: try cursor.field().maybe(lowered))
+        case .bind: read = .bind(try cursor.field().count())
+        case .declare: read = .declare(try cursor.field().count())
+        case .assign: read = .assign(try address(cursor.next()))
         case nil: throw ObjectRefused("'binding' binds in a way this reads none of")
         }
 
@@ -885,29 +884,6 @@ struct ObjectReader {
                 optional: try cursor.field().flag()
             )
 
-        case .checked:
-            let judged = try checkedCall(cursor.next())
-            let against = try cursor.field().maybe(lowered)
-            let handedBack = try Field(cursor.next(), of: "handed back").list { written in
-                var back = try FieldCursor(written, of: "handed back")
-                let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
-
-                try back.end()
-
-                return taken
-            }
-            let positions = handedBack.map(\.position)
-
-            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }) else {
-                throw ObjectRefused("what a call hands back in place stands out of position order")
-            }
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
-                throw ObjectRefused("a judgement where a call stands judges nothing")
-            }
-
-            read = .checked(judged, judging)
-
         case .block: read = .block(try body(cursor.next()))
         case .conditional:
             read = .conditional(
@@ -976,30 +952,6 @@ struct ObjectReader {
         return read
     }
 
-    // What a judgement where a call stands judges: a call, of any of the
-    // three kinds.
-    private func checkedCall(_ value: Value) throws -> CheckedCall {
-        var cursor = try FieldCursor(value, of: "call")
-        let read: CheckedCall
-
-        switch ObjectLayout.OperationTag(rawValue: try cursor.field().integer()) {
-        case .call: read = .call(try callOperation(cursor.next()))
-        case .dispatch: read = .dispatch(try dispatchOperation(cursor.next()))
-        case .apply:
-            read = .apply(
-                try operation(cursor.next()),
-                arguments: try Field(cursor.next(), of: "arguments").list(argument)
-            )
-
-        default:
-            throw ObjectRefused("'call' is made in a way this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
     private func callOperation(_ value: Value) throws -> CallOperation {
         var cursor = try FieldCursor(value, of: "call")
         let read = try CallOperation(
@@ -1007,7 +959,7 @@ struct ObjectReader {
             arguments: try Field(cursor.next(), of: "arguments").list { written in
                 try Field(written, of: "argument").maybe(operation)
             },
-            judging: try Field(cursor.next(), of: "handed").list { written in
+            handing: try Field(cursor.next(), of: "handed").list { written in
                 var held = try FieldCursor(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.field().count(),
@@ -1017,8 +969,7 @@ struct ObjectReader {
                 try held.end()
 
                 return taken
-            },
-            judged: try Field(cursor.next(), of: "judged").list { written in try Field(written, of: "judged").count() }
+            }
         )
 
         try cursor.end()

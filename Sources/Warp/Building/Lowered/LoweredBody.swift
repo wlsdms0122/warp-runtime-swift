@@ -22,7 +22,7 @@ struct LoweredBody: Sendable {
         func reads(_ slots: Range<Int>) -> Bool {
             switch self {
             case let .instruction(instruction):
-                guard case let .assign(address, _)? = instruction.binding else { return false }
+                guard case let .assign(address)? = instruction.binding else { return false }
 
                 return address.reads(slots)
 
@@ -43,7 +43,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     return dispatch.arguments.contains { argument in argument.reads(slots) }
 
-                case .literal, .array, .record, .cast, .checked, .block, .conditional, .loop, .attempt, .leave:
+                case .literal, .array, .record, .cast, .block, .conditional, .loop, .attempt, .leave:
                     return false
                 }
             }
@@ -54,10 +54,10 @@ struct LoweredBody: Sendable {
             switch self {
             case let .instruction(instruction):
                 switch instruction.binding {
-                case let .bind(slot, _)?, let .declare(slot, _)?:
+                case let .bind(slot)?, let .declare(slot)?:
                     standing.stand(on: slot)
 
-                case let .assign(address, _)?:
+                case let .assign(address)?:
                     address.stand(in: &standing)
 
                 case nil:
@@ -92,7 +92,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     dispatch.arguments.forEach { argument in argument.stand(in: &standing) }
 
-                case .literal, .array, .record, .cast, .checked, .block, .conditional, .leave:
+                case .literal, .array, .record, .cast, .block, .conditional, .leave:
                     break
                 }
             }

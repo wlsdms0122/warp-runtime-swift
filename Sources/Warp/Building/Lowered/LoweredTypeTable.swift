@@ -7,14 +7,14 @@
 
 import Foundation
 
-// The declared types as the run reads them: by row. A declared name survives
-// into the run as a row rather than being expanded, so a self-naming type is
-// a type and not a regress, and a row is read by number. The spellings ride
-// along for a refusal and for a record's name, and the one lookup by spelling
-// left is a record that arrived under an alias, which is resolved once and
-// then carries the canonical spelling. A class, so a judgement that recurses
-// passes one reference down rather than a copy of every array the table
-// holds.
+// The declared types as the run reads them: by row. A declared record
+// survives into the run as a row rather than being expanded, since it is
+// nominal and may name itself, and a row is read by number. An alias is a
+// spelling: a mention of it lowers to what it stands for, so no judgement
+// meets one, and a row a type stands on is always a record's. The
+// spellings ride along for a refusal and for a record's name. A class, so a judgement that
+// recurses passes one reference down rather than a copy of every array the
+// table holds.
 final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,
@@ -58,21 +58,6 @@ final class LoweredTypeTable: Sendable {
     // one; a table a caller assembled is a place of its own.
     let linkage: Linkage
 
-    // The row of the record a row names: the last declared name on the way
-    // to a record type, so an alias of a declared record is that record
-    // and not a second type. Nil where a row stands for no record.
-    let recordRows: [Int?]
-
-    // The rows that name themselves through a chain of names, and so stand
-    // for no type. The lowering is where that is worked out, so it is what
-    // says so.
-    let cycling: [Int]
-
-    // The rows a chain of names takes to `Never`, a cycle's among them. No
-    // value is one under any name, so a mention of one lowers to `Never`
-    // and every judge reads one fact.
-    let neverRows: Set<Int>
-
     // Which types satisfy each declared contract, by the contract's own
     // spelling. Which types those are is no type the table lowers: what puts
     // a type under a contract is a document's claim, held to the declarations
@@ -102,7 +87,6 @@ final class LoweredTypeTable: Sendable {
     static let empty = LoweredTypeTable(
         loweredTypes: [],
         labels: [],
-        recordRows: [],
         of: Linkage()
     )
 
@@ -110,9 +94,6 @@ final class LoweredTypeTable: Sendable {
     init(
         loweredTypes: [LoweredType],
         labels: [Name],
-        recordRows: [Int?],
-        cycling: [Int] = [],
-        neverRows: Set<Int> = [],
         satisfying: [Name: Set<Name>] = [:],
         settled: Bool = true,
         unsettled: Fulfillment? = nil,
@@ -120,9 +101,6 @@ final class LoweredTypeTable: Sendable {
     ) {
         self.loweredTypes = loweredTypes
         self.labels = labels
-        self.recordRows = recordRows
-        self.cycling = cycling
-        self.neverRows = neverRows
         self.satisfying = satisfying
         self.settled = settled
         self.unsettled = unsettled
@@ -136,6 +114,38 @@ final class LoweredTypeTable: Sendable {
     // alias; the run reads rows by number otherwise.
     func row(named name: Name) -> Int? {
         rows[name]
+    }
+
+    // The record a value under this name is a value of: the record it
+    // declares, or the one an alias of a record stands for. Nil where the
+    // name declares no record.
+    func record(named name: Name) -> Int? {
+        guard let row = row(named: name) else { return nil }
+
+        switch loweredTypes[row] {
+        case .record:
+            return row
+
+        case let .named(record):
+            return record
+
+        default:
+            return nil
+        }
+    }
+
+    // Whether a row is a declared record's.
+    func declaresRecord(_ row: Int) -> Bool {
+        if case .record = loweredTypes[row] { true } else { false }
+    }
+
+    // What a mention of a row lowers to: the row, where it is a record's,
+    // and what the alias stands for otherwise. A table whose rows are not
+    // lowered yet keeps every mention a row.
+    func mention(of row: Int) -> LoweredType {
+        guard loweredTypes.indices.contains(row), !declaresRecord(row) else { return .named(row) }
+
+        return loweredTypes[row]
     }
 
     // Whether a type answers every procedure a contract asks, by what the
@@ -155,29 +165,19 @@ final class LoweredTypeTable: Sendable {
         satisfying[name] != nil
     }
 
-    // One-sided the way every judgement before the run is: only what is
-    // provably outside is refused, and a reading nothing can be said about
-    // passes here and is judged again where the value arrives. `orNull` is
-    // a slot taking null as well: what arrives is null or answers.
+    // Whether a reading answers a contract, by what the documents claim
+    // about its type. A reading whose type the build does not know answers
+    // none until a cast says what it is. `orNull` is a slot taking null as
+    // well: what arrives is null or answers.
     func answering(contract name: Name, reading: LoweredType, orNull: Bool) -> Answering {
         answering(contract: name, reading: reading, rigid: false, orNull: orNull)
     }
 
-    // Whether a reading stands where a contract bounds a slot. One-sided as
-    // `answering` is, unless `rigid`: then nothing is judged where the value
-    // arrives, so a named type is held to what the documents say.
+    // Whether a reading stands where a contract bounds a slot. A claim this
+    // table cannot settle passes, for the link to settle, unless `rigid`:
+    // then a named type is held to what the documents standing so far say.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
         if case .settled(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
-    }
-
-    // The record a type names through the row it stands on, or nil where it
-    // names none. An alias names what it stands for, so `App.A?` and an alias
-    // of it name `App.A` alike. The one reading of `recordRows` for a type
-    // that is not itself a row.
-    func record(of type: LoweredType) -> Int? {
-        guard let row = type.row else { return nil }
-
-        return recordRows[row] ?? record(of: loweredTypes[row])
     }
 
     // The declarations as the run reads them. A link says which order its rows
@@ -187,10 +187,7 @@ final class LoweredTypeTable: Sendable {
     // A run that stands where its document does is a run a later document
     // cannot move, which is what lets a document already lowered keep the
     // numbers it was lowered with. Either way a row is a row of one table and
-    // nothing a link concludes reads one to decide what to say. A name that
-    // names itself through a chain of names stands for no type and lowers to
-    // `Never`, so a chain of names is always finite; `cycling` keeps which
-    // ones did, for the build to refuse.
+    // nothing a link concludes reads one to decide what to say.
     static func lowering(
         _ types: [Name: TypeExpression],
         satisfying: [Name: Set<Name>] = [:],
@@ -199,84 +196,71 @@ final class LoweredTypeTable: Sendable {
         standing: [Name]? = nil,
         of linkage: Linkage
     ) -> LoweredTypeTable {
-        // A table of its own even where nothing is declared: a body carried
-        // out of such a link holds rows a shared table would let be read
-        // elsewhere.
-        guard !types.isEmpty else {
-            return LoweredTypeTable(
-                loweredTypes: [],
-                labels: [],
-                recordRows: [],
-                satisfying: satisfying,
-                settled: settled,
-                unsettled: unsettled,
-                of: linkage
-            )
-        }
-
         let labels = standing ?? types.keys.sorted()
 
-        // The index first, so a declaration naming another lowers against
-        // rows that already exist whichever is declared first. The contracts
-        // stand in it too: a field naming one is a slot the contract fills.
-        let index = LoweredTypeTable(
-            loweredTypes: [],
-            labels: labels,
-            recordRows: [],
-            satisfying: satisfying,
-            of: linkage
-        )
+        // The index first, every mention kept as a row, so a declaration
+        // naming another lowers against rows that already exist whichever is
+        // declared first. The contracts stand in it too: a field naming one
+        // is a slot the contract fills.
+        let index = LoweredTypeTable(loweredTypes: [], labels: labels, satisfying: satisfying, of: linkage)
 
         var loweredTypes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
 
-        // Whether a row's chain of names comes back on itself, a `?` on the
-        // way included.
+        let records = Set(loweredTypes.indices.filter { row in
+            if case .record = loweredTypes[row] { true } else { false }
+        })
+
+        // Whether an alias comes back to itself through the aliases it
+        // mentions, at any depth. A record on the way is a row of its own,
+        // so the walk stops there.
         func comesBack(from start: Int) -> Bool {
-            var row = start
-            var walked: [Int] = [start]
+            var walked: Set<Int> = []
+            var waiting = [start]
 
-            while let next = loweredTypes[row].row {
-                guard !walked.contains(next) else { return true }
+            while let row = waiting.popLast() {
+                var mentioned: Set<Int> = []
 
-                walked.append(next)
-                row = next
+                loweredTypes[row].standing(into: &mentioned)
+
+                for next in mentioned.subtracting(records) {
+                    guard next != start else { return true }
+
+                    if walked.insert(next).inserted {
+                        waiting.append(next)
+                    }
+                }
             }
 
             return false
         }
 
-        // Marked before any is replaced, so each row in a cycle is named
-        // as itself rather than as whichever the replacement reached first.
-        let cycling = loweredTypes.indices.filter { row in comesBack(from: row) }
-
-        for row in cycling {
+        // Such an alias spells no type, which the load refuses; one an object
+        // carries stands for no type here, so the expansion below is finite.
+        // Marked before any is replaced, so each is found as itself.
+        for row in loweredTypes.indices.filter({ row in !records.contains(row) && comesBack(from: row) }) {
             loweredTypes[row] = .never
         }
 
-        // The last row on the way from each row along names alone, since a
-        // name for what may be null is no name for what it holds. Every chain
-        // is finite by now. The record a row names is the one it ends at.
-        let ends = loweredTypes.indices.map { start -> Int in
-            var row = start
+        // Every other alias is what it stands for, worked out once each.
+        var expanded: [Int: LoweredType] = [:]
 
-            while case let .named(next) = loweredTypes[row] {
-                row = next
-            }
+        func mention(of row: Int) -> LoweredType {
+            guard !records.contains(row) else { return .named(row) }
 
-            return row
+            if let known = expanded[row] { return known }
+
+            let expansion = loweredTypes[row].replacingRows(by: mention)
+
+            expanded[row] = expansion
+
+            return expansion
         }
-        let recordRows = ends.map { end -> Int? in
-            guard case .record = loweredTypes[end] else { return nil }
 
-            return end
-        }
+        loweredTypes = loweredTypes.map { type in type.replacingRows(by: mention) }
 
         return LoweredTypeTable(
             loweredTypes: loweredTypes,
             labels: labels,
-            recordRows: recordRows,
-            cycling: cycling,
-            neverRows: Set(ends.indices.filter { row in loweredTypes[ends[row]] == .never }),
             satisfying: satisfying,
             settled: settled,
             unsettled: unsettled,
@@ -302,9 +286,6 @@ final class LoweredTypeTable: Sendable {
         case let .nullable(inner):
             return besidesNull(inner)
 
-        case let .named(row) where reading.declaresNull(in: self):
-            return besidesNull(loweredTypes[row])
-
         default:
             return reading
         }
@@ -319,13 +300,11 @@ final class LoweredTypeTable: Sendable {
         guard let reading = read(given, orNull: orNull) else { return .settled(true) }
 
         switch reading {
-        case .any, .projection, .never:
+        case .never:
             return .settled(true)
 
-        // A name that stands for no record answers as what it stands for,
-        // since a value of it is an instance of that.
-        case let .named(row) where recordRows[row] == nil:
-            return answering(contract: name, reading: loweredTypes[row], rigid: rigid, orNull: orNull)
+        case .any, .projection:
+            return .settled(false)
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of, so one bounded by the contract
@@ -343,9 +322,8 @@ final class LoweredTypeTable: Sendable {
 
         // A reading of a type a value is an instance of answers as that type
         // does: by what the documents claim about it, so the type comes back
-        // and the asker writes it down. Where nothing is judged on arrival, or
-        // the table holds every claim there is, it is held to what the
-        // documents say.
+        // and the asker writes it down. Asked rigidly, or where the table
+        // holds every claim there is, it is held to what the documents say.
         default:
             guard let type = reading.nominal(in: self) else { return .settled(true) }
             guard !rigid, !settled else { return .settled(settles(contract: name, arrived: type) != false) }

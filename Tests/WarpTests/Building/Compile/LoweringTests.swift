@@ -178,7 +178,7 @@ struct LoweringTests {
 
         guard
             case let .body(body, frame) = image["entry"]!.implementation,
-            case let .bind(slot, settling)? = body.instructions.first?.binding,
+            case let .bind(slot)? = body.instructions.first?.binding,
             case let .literal(value) = body.instructions.first!.code
         else {
             Issue.record("the constant was not bound")
@@ -187,7 +187,6 @@ struct LoweringTests {
         }
 
         #expect(frame.names[slot] == "digits")
-        #expect(settling == nil)
         #expect(value == .dictionary(["0": .int(0), "1": .int(1)]))
     }
 

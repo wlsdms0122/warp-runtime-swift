@@ -42,8 +42,8 @@ public struct TypeTable: Sendable {
     // A table a caller assembled: declarations and not a link, so no row
     // made by one is at home in it. They are held to what a document
     // declaring them is held to, by the same judges, so a name nothing
-    // declares and a name that only names names are refused here, in the
-    // words a build refuses them in.
+    // declares and a name that is no record and comes back to itself are
+    // refused here, in the words a document is refused in.
     public init(
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]

@@ -22,7 +22,6 @@ struct LoweredBodyWalkTests {
         case closure
         case apply
         case cast
-        case checked
         case block
         case conditional
         case loop
@@ -42,7 +41,6 @@ struct LoweredBodyWalkTests {
             case .closure: self = .closure
             case .apply: self = .apply
             case .cast: self = .cast
-            case .checked: self = .checked
             case .block: self = .block
             case .conditional: self = .conditional
             case .loop: self = .loop
@@ -74,9 +72,6 @@ struct LoweredBodyWalkTests {
             case .cast:
                 return [.cast(leaf, as: .int, optional: false)]
 
-            case .checked:
-                return [.checked(.apply(leaf, arguments: []), try #require(CallJudgement(against: .int, handedBack: [])))]
-
             case .block:
                 return [.block(body)]
 
@@ -90,7 +85,7 @@ struct LoweredBodyWalkTests {
                 return [.attempt(body, rescue: empty, failure: 0)]
 
             case .call:
-                return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: [], judged: []))]
+                return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: []))]
 
             case .dispatch:
                 return [
@@ -221,7 +216,7 @@ struct LoweredBodyWalkTests {
     func anInstructionIsANode() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .assign(address, settling: nil), code: leaf, label: "write")],
+            instructions: [Instruction(binding: .assign(address), code: leaf, label: "write")],
             result: nil
         )
         var instructions = 0
@@ -268,7 +263,7 @@ struct LoweredBodyWalkTests {
     @Test("the calls beside a dispatch are neither walked nor rewritten")
     func aDispatchsCallsAreTheLinks() {
         // Given
-        let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [], judged: [])
+        let beside = CallOperation(procedure: 5, arguments: [leaf], handed: [])
         let sut = Warp.Operation.dispatch(
             DispatchOperation(contract: "c", procedure: "p", first: .literal(.null), arguments: [], calls: ["t": beside])
         )
@@ -297,11 +292,11 @@ struct LoweredBodyWalkTests {
         }
     }
 
-    @Test("a rewrite hands a cast's type and a binding's settling to the type door")
+    @Test("a rewrite hands a cast's type to the type door")
     func aRewriteHandsTypesOver() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .bind(0, settling: .int), code: .cast(leaf, as: .string, optional: false), label: "cast")],
+            instructions: [Instruction(binding: .bind(0), code: .cast(leaf, as: .string, optional: false), label: "cast")],
             result: nil
         )
         var types: [LoweredType] = []
@@ -314,7 +309,7 @@ struct LoweredBodyWalkTests {
         })
 
         // Then
-        #expect(types.count == 2 && types.contains(.string) && types.contains(.int))
+        #expect(types == [.string])
     }
 
     // MARK: - Public

@@ -24,17 +24,19 @@ struct TypeTableTests {
         }
     }
 
-    @Test("a table whose names only name names refuses as a document declaring them does")
+    @Test("a table whose names come back to themselves refuses as a document declaring them does")
     func aCycleOfNamesRefuses() {
-        // When / Then. Through `?` as well, and a chain that ends stands
+        // When / Then. Through `?` and a structure as well, and a chain that
+        // ends stands
         for types: [Name: TypeExpression] in [
             ["App.A": .named("App.B"), "App.B": .named("App.A"), "App.C": .int],
-            ["App.M": .nullable(.named("App.M"))]
+            ["App.M": .nullable(.named("App.M"))],
+            ["App.L": .dictionary(.named("App.L"))]
         ] {
             #expect {
                 try TypeTable(types: types)
             } throws: { error in
-                "\(error)".contains("reaches itself through nothing but names")
+                "\(error)".contains("names itself through what it stands for")
             }
         }
         #expect(throws: Never.self) {

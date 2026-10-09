@@ -191,7 +191,7 @@ struct Lowering {
             guard !constantBindings.isEmpty else { return body }
 
             let bindings = constantBindings.map { slot, value in
-                Instruction(binding: .bind(slot, settling: nil), code: .literal(value), label: names[slot].spelling)
+                Instruction(binding: .bind(slot), code: .literal(value), label: names[slot].spelling)
             }
 
             return LoweredBody(instructions: bindings + body.instructions, result: body.result)
@@ -392,12 +392,6 @@ struct Lowering {
         table[row] = Linked(declared, implementation: .body(slots.binding(body), slots.frame))
     }
 
-    // A lowered row with what its document settled it proves of what it
-    // hands back.
-    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
-        table[row] = Linked(table[row], implementation: table[row].implementation, handsBackAsDeclared: handsBackAsDeclared)
-    }
-
     // A document's own declarations by row, as they were held.
     func own(_ origin: Int) -> [Name: Int] {
         documents[origin].owned
@@ -551,38 +545,33 @@ struct Lowering {
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
             let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
-            let asItIs = context.judgements.landsAsItIs(at: here)
             let binding: Instruction.Binding?
 
             switch statement.binding {
-            // A name that says what it holds settles to it, so what stands in
-            // the slot is the declared type. One that says nothing holds what
-            // the code it was given stands as. What the build proved a value
-            // of the type as it stands is not judged again.
+            // A name that says what it holds holds the declared type, which
+            // the build held what it is given to. One that says nothing holds
+            // what the code it was given stands as.
             case let .constant(name, declared)?:
                 let slot = context.slots.allocate(name)
                 let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
                 context.slots.hold(slot, holding ?? standing(code, on: context.slots))
-                binding = .bind(slot, settling: asItIs ? nil : holding)
+                binding = .bind(slot)
 
-            // A box that said what it holds is settled to it by its
-            // declaration and by every write, so what stands in it is that
-            // type. One that said nothing is retyped by each write.
+            // A box that said what it holds holds that type through its
+            // declaration and every write, which the build held to it. One
+            // that said nothing is retyped by each write.
             case let .variable(name, declared)?:
                 let slot = context.slots.allocate(name)
                 let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
                 context.slots.hold(slot, holding)
-                binding = .declare(slot, settling: asItIs ? nil : holding)
+                binding = .declare(slot)
 
-            // A write settles to what the check held it to, so a box that
-            // said what it holds holds it after a write as it did after its
-            // declaration.
+            // A write lands as the build held it, so a box that said what it
+            // holds holds it after a write as it did after its declaration.
             case let .assignment(path)?:
-                let address = try lower(path, in: scope, on: context.slots, at: here)
-                let settling = context.judgements.settling(writeAt: here)?.slotUnwrapped
-                binding = .assign(address, settling: asItIs ? nil : settling)
+                binding = .assign(try lower(path, in: scope, on: context.slots, at: here))
 
             case nil:
                 binding = nil
@@ -633,10 +622,6 @@ struct Lowering {
         // by the row that number stands for here.
         case let .call(call):
             return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
-
-        // It stands as the call it wraps, which is what has a row to read.
-        case let .checked(checked, _):
-            return standing(checked.operation, on: slots)
 
         case let .cast(_, type, optional):
             return optional ? nil : type
@@ -704,15 +689,11 @@ struct Lowering {
             // A selector naming a contract's procedure names no row. Which row
             // answers is the first argument's, so every one the build found is
             // lowered here and the run picks by the name it reads.
-            let lowered: CheckedCall = if let asked = contractProcedures[call.selector] {
-                .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
-            } else {
-                .call(try lower(call, in: scope, on: context, at: place))
+            if let asked = contractProcedures[call.selector] {
+                return .dispatch(try lower(call, through: asked, in: scope, on: context, at: place))
             }
 
-            guard case let .call(judging)? = context.judgements[place] else { return lowered.operation }
-
-            return .checked(lowered, judging)
+            return .call(try lower(call, in: scope, on: context, at: place))
 
         case let .leave(leave):
             return try lower(leave: leave, in: scope, on: context, at: place)
@@ -803,7 +784,6 @@ struct Lowering {
                 constness: constness,
                 isolation: isolation,
                 failing: failing,
-                handsBackAsDeclared: false,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),
@@ -832,11 +812,11 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, judging)? = context.judgements[place] else {
+        guard case let .apply(handed)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
-        let applied = CheckedCall.apply(
+        return .apply(
             try lower(callee, naming: nil, in: scope, on: context, at: place.child(.callee)),
             arguments: try arguments.enumerated().map { position, argument in
                 let here = place.child(.argument(position))
@@ -854,10 +834,6 @@ struct Lowering {
                 return .reference(address)
             }
         )
-
-        guard let judging else { return applied.operation }
-
-        return .checked(applied, judging)
     }
 
     private mutating func lower(
@@ -1043,7 +1019,6 @@ struct Lowering {
             },
             to: callee,
             row: stands,
-            asItIs: { position in context.judgements.landsAsItIs(at: argumentPlaces[position]) },
             in: loweredTypes,
             at: place
         )
@@ -1129,7 +1104,7 @@ struct Lowering {
         in place: [Int: Int],
         of label: Name
     ) throws -> LoweredType {
-        try type.renumbered { number in
+        try type.replacingRows { number in
             guard let stands = place[number] else {
                 throw BuildError.unjudged(
                     "type \'\(loweredTypes.labels[number])\', which its document never numbered",
@@ -1137,7 +1112,7 @@ struct Lowering {
                 )
             }
 
-            return stands
+            return .named(stands)
         }
     }
 

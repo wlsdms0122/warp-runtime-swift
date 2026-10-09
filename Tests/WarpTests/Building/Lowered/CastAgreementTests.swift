@@ -139,8 +139,8 @@ struct CastAgreementTests {
             let one = one.lowered(in: table, bounds: bounds)
             let other = other.lowered(in: table, bounds: bounds)
 
-            return (table.record(of: one) != nil && other.isNamelessStructure(in: table))
-                || (table.record(of: other) != nil && one.isNamelessStructure(in: table))
+            return (one.row != nil && other.isNamelessStructure)
+                || (other.row != nil && one.isNamelessStructure)
         }
 
         // When / Then

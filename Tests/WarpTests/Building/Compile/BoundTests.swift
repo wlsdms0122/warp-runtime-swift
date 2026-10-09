@@ -73,10 +73,10 @@ struct BoundTests {
         }
     }
 
-    @Test("a value arriving through any is judged at the boundary")
-    func aValueArrivingThroughAnyIsJudgedAtTheBoundary() async throws {
-        // Given. The parameter is declared `Any`, so the build reads nothing and
-        // the contract is judged where the value arrives
+    @Test("a value read as any stands where a contract call asks only through a cast")
+    func aValueReadAsAnyStandsAtAContractCallOnlyThroughACast() async throws {
+        // Given. The parameter is declared `Any`, so the build knows nothing
+        // the contract could be asked of
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -96,9 +96,9 @@ struct BoundTests {
 
         // When / Then
         await #expect {
-            try await run(sut, arguments: ["left": .bool(true)])
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("is sent to 'Bool', which answers no procedure of 'Standard.Comparable'")
+            error is BuildError && "\(error)".contains("'Self' is read as Any, which does not answer every procedure 'Standard.Comparable' asks")
         }
     }
 
@@ -474,7 +474,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which holds App.Marked where App.Pick is declared")
+            error is BuildError && "\(error)".contains("which holds App.Marked where Procedure<(Int) -> Int> is declared")
         }
     }
 
@@ -552,33 +552,32 @@ struct BoundTests {
         }
     }
 
-    @Test("a name that reaches only names refuses at the build")
-    func aNameOnlyCycleRefusesAtTheBuild() async throws {
-        // Given. A type may name itself through a type, and a name that only
-        // names names never becomes one
+    @Test("a name that is no record and comes back to itself refuses at the load")
+    func aNameComingBackRefusesAtTheLoad() async throws {
+        // Given. A record may name itself, and a name that is no record
+        // spells no type where it reaches itself, through names or a structure
         let cycles: [[Name: TypeExpression]] = [
             ["Loop": .named("Loop")],
-            ["A": .named("B"), "B": .named("A")]
+            ["A": .named("B"), "B": .named("A")],
+            ["List": .array(.named("List"))]
         ]
 
         for types in cycles {
-            let sut = try Module(
-                types: types,
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
-
             // When / Then
-            await #expect {
-                try await builder.build([sut] + Module.standard)
+            #expect {
+                try Module(
+                    types: types,
+                    procedures: [
+                        entryName: Procedure(
+                            access: .public,
+                            signature: Signature(),
+                            body: [],
+                            result: .literal(.int(1))
+                        )
+                    ]
+                )
             } throws: { error in
-                error is BuildError && "\(error)".contains("through nothing but names")
+                error is ValidationError && "\(error)".contains("names itself through what it stands for")
             }
         }
 
@@ -662,11 +661,10 @@ struct BoundTests {
         }
     }
 
-    @Test("min handed null first is held to the parameter it declares first")
-    func minHandedNullIsHeldToItsFirstParameter() async throws {
-        // Given. The first argument is a reference that reads null, and no
-        // document claims `Standard.Comparable` for `Null`, so the boundary
-        // refuses before the ordering procedure is asked anything
+    @Test("min handed a reading of any first refuses at the build")
+    func minHandedAReadingOfAnyRefuses() async throws {
+        // Given. The first argument is a reference read as `Any`, which stands
+        // where a bound is asked only through a cast
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -682,9 +680,9 @@ struct BoundTests {
 
         // When / Then
         await #expect {
-            try await run(sut, arguments: ["absent": .null])
+            try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("input 'lhs': expected some T: Standard.Comparable, and 'Null' does not answer every procedure 'Standard.Comparable' asks")
+            error is BuildError && "\(error)".contains("'T' is read as Any, which does not answer every procedure 'Standard.Comparable' asks")
         }
     }
 

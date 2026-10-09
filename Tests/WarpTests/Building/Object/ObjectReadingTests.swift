@@ -94,7 +94,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
@@ -104,7 +104,7 @@ struct ObjectReadingTests {
 
         frame[0] = .int(-1)
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -223,7 +223,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .int(size) = frame[0], size > 0,
             case let .array(parameters) = frame[1], parameters.isEmpty
@@ -236,7 +236,7 @@ struct ObjectReadingTests {
         frame[0] = .int(0)
         frame[4] = .array([])
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -317,7 +317,7 @@ struct ObjectReadingTests {
         // When / Then
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .array(names) = frame[4],
             !names.isEmpty
@@ -329,7 +329,7 @@ struct ObjectReadingTests {
 
         frame[4] = .array(names.dropLast())
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -364,7 +364,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
@@ -381,7 +381,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -474,7 +474,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(literal) = result[0],
@@ -494,7 +494,7 @@ struct ObjectReadingTests {
         result[0] = .array(literal)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -542,7 +542,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
@@ -559,7 +559,7 @@ struct ObjectReadingTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -993,7 +993,7 @@ struct ObjectReadingTests {
             case var .dictionary(parts) = try mine.object(),
             case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(sending) = implementation[1],
             case var .array(send) = sending[0]
         else {
@@ -1005,7 +1005,7 @@ struct ObjectReadingTests {
         change(&send)
         sending[0] = .array(send)
         implementation[1] = .array(sending)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 

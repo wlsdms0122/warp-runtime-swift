@@ -9,31 +9,11 @@ import Foundation
 
 // What the type check judged at each place that lowering reads back, by the
 // place it stands at. The type check writes it beside the calls it gathers,
-// reads it over a body for the hand-back proof, and lowering reads it where it
-// lowers what stands there. A place stands for one expression, so it holds one
+// and lowering reads it where it lowers what stands there. A place stands for one expression, so it holds one
 // judgement.
 struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
-
-    // Whether a reading of a type parameter of the body may hold what is
-    // not a value of it somewhere here, which the hand-back proof reads as
-    // proving nothing.
-    private(set) var loosened = false
-
-    // What a write settles to, by the statement that writes it: the type the
-    // check held the write to, which is what the path reaches in a box held
-    // to a type (one that declared it, one a closure captured or a call
-    // handed in place, a module variable) and what a path reaches in a box
-    // that declared nothing. A whole write into such a box retypes it and
-    // settles to nothing.
-    private(set) var writes: [Place: LoweredType] = [:]
-
-    // Whether what lands at a place, what a statement binds or writes or
-    // what a call hands to a declaration's slot, is, by what the build read,
-    // a value of the type it lands in as it stands, so the run has nothing
-    // to judge there. A place walked again holds what its last walk read.
-    private(set) var asItIs: [Place: Bool] = [:]
 
     // The name a record built at a place takes: one written where a declared
     // record is read is built as that record.
@@ -50,29 +30,11 @@ struct JudgementTable: Sendable {
         judgements[place]
     }
 
-    // What the write at this statement settles to, or nil where the check
-    // held it to nothing lowering reads.
-    func settling(writeAt place: Place) -> LoweredType? {
-        writes[place]
-    }
-
     // What the type check judged at this place.
     mutating func record(_ judgement: Judgement, at place: Place) {
         assert(judgements[place] == nil, "one place stands for one expression")
 
         judgements[place] = judgement
-    }
-
-    // What the write at this statement settles to. A statement walked again
-    // holds the type it was last held to.
-    mutating func record(write settling: LoweredType, at place: Place) {
-        writes[place] = settling
-    }
-
-    // Whether the run has nothing to judge where what stands at this place
-    // lands.
-    func landsAsItIs(at place: Place) -> Bool {
-        asItIs[place] == true
     }
 
     // The name the record built at this place takes, or nil where it is
@@ -81,23 +43,11 @@ struct JudgementTable: Sendable {
         names[place]
     }
 
-    // Whether what lands at this place needs no judging there. A place
-    // walked again holds what its last walk read.
-    mutating func record(asItIs: Bool, at place: Place) {
-        self.asItIs[place] = asItIs
-    }
-
     // The names records built at these places take.
     mutating func record(names: [Place: Name]) {
         guard !names.isEmpty else { return }
 
         self.names.merge(names) { _, theirs in theirs }
-    }
-
-    // A reading of a type parameter here may hold what is not a value of
-    // it.
-    mutating func loosen() {
-        loosened = true
     }
 
     // The other's entries beside this table's own, the other's standing
@@ -108,11 +58,7 @@ struct JudgementTable: Sendable {
 
             return theirs
         }
-        Self.absorb(other.writes, into: &writes) { _, theirs in theirs }
-        Self.absorb(other.asItIs, into: &asItIs) { _, theirs in theirs }
         Self.absorb(other.names, into: &names) { _, theirs in theirs }
-
-        loosened = loosened || other.loosened
     }
 
     // This table with the others' entries beside its own, for a construct

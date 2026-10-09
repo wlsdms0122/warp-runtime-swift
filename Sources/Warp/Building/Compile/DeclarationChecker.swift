@@ -39,24 +39,6 @@ struct DeclarationChecker {
             of: linkage
         )
 
-        // A name that reaches a type may name itself along the way: `Tree`
-        // holding `Array<Tree>` is a type. A name that reaches only names
-        // never becomes one, and the lowering says which do, so the refusal
-        // reads the lowering rather than walking the names a second way.
-        // Refused first, so every walk below through `named` is finite.
-        // In name order rather than the rows', so which of two names that
-        // name themselves is reported does not follow how the documents were
-        // handed over.
-        for label in table.loweredTypes.cycling.map({ row in table.loweredTypes.labels[row] }).sorted() {
-            guard let declaration = declared[label] else { continue }
-
-            throw BuildError(
-                "reaches itself through nothing but names, and a name"
-                    + " that only names names never reaches a type",
-                at: declaration.place
-            )
-        }
-
         // The table is walked whole rather than per module: it arrives
         // carrying where each name was written, and asking a module again
         // would be spelling that a second way.

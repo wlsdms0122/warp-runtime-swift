@@ -224,7 +224,6 @@ enum ObjectLayout {
         case call
         case dispatch
         case leave
-        case checked
     }
 
     enum ArgumentTag: Int {

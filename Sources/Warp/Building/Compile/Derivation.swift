@@ -288,28 +288,6 @@ struct Derivation {
         }
     }
 
-    // Which of a document's declarations hand back as they declare. Each whose
-    // own body holds starts held and is let go where it leans on one of
-    // the document's that does not, until nothing more is let go: the
-    // greatest such set, so a declaration leaning on itself, or two on each
-    // other, keep what nothing else took away. A name nothing proved is let
-    // go by whatever leans on it.
-    func handsBackAsDeclared(_ proofs: [Name: HandBackProof]) -> Set<Name> {
-        var leanings: [Name: Set<Name>] = [:]
-
-        for case let (name, .holds(leaning)) in proofs {
-            leanings[name] = leaning
-        }
-
-        var proven = Set(leanings.keys)
-
-        while let fallen = leanings.first(where: { name, leaning in proven.contains(name) && !leaning.isSubset(of: proven) })?.key {
-            proven.remove(fallen)
-        }
-
-        return proven
-    }
-
     // MARK: - Private
     // Every body starts holding the fact and is struck when something it
     // reaches does not, until nothing more is struck. Only what this call was

@@ -180,10 +180,10 @@ enum ObjectCoverageFixture {
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
     static let everyOperation = LoweredBody(
         instructions: [
-            Instruction(binding: .bind(0, settling: .int), code: .literal(.int(1)), label: "bind"),
-            Instruction(binding: .declare(1, settling: nil), code: .literal(.string("s")), label: "declare"),
+            Instruction(binding: .bind(0), code: .literal(.int(1)), label: "bind"),
+            Instruction(binding: .declare(1), code: .literal(.string("s")), label: "declare"),
             Instruction(
-                binding: .assign(Address(slot: 2, steps: everyStep), settling: .bool),
+                binding: .assign(Address(slot: 2, steps: everyStep)),
                 code: .local(Address(slot: 3, steps: [])),
                 label: "assign"
             ),
@@ -202,20 +202,6 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(
-                binding: nil,
-                code: .checked(
-                    .apply(
-                        .local(Address(slot: 6, steps: [])),
-                        arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
-                    ),
-                    CallJudgement(
-                        against: .int,
-                        handedBack: [HandedBack(position: 1, against: .string)]
-                    )!
-                ),
-                label: "checked"
-            ),
             Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
@@ -274,8 +260,7 @@ enum ObjectCoverageFixture {
     static let callOperation = CallOperation(
         procedure: 0,
         arguments: [.literal(.int(12)), .literal(.int(13)), nil],
-        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))],
-        judged: [1]
+        handed: [CallOperation.Handed(position: 2, address: Address(slot: 5, steps: []))]
     )
 
     static let dispatchOperation = DispatchOperation(
@@ -300,7 +285,6 @@ enum ObjectCoverageFixture {
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
-            handsBackAsDeclared: false,
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -316,7 +300,6 @@ enum ObjectCoverageFixture {
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            handsBackAsDeclared: false,
             judging: body
                 ? .body(
                     everyOperation,

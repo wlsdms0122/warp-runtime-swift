@@ -35,19 +35,6 @@ indirect enum Operation: Sendable {
 
     case cast(Operation, as: LoweredType, optional: Bool)
 
-    // A call's answer judged against what the call reads it as, where the
-    // callee declares a wider one: a type parameter the call filled, the
-    // `returns` a value's slot wrote where the closure reached does not prove
-    // it by its own, a contract's answer. Refused at the run
-    // the way a value arriving at a parameter is. An answer of the type the
-    // call reads is handed on as it came, which is what lets a tie answer the
-    // side that arrived. Nothing after it stands on this type's shape: a field
-    // read stands on the call inside, and a binding or a parameter that
-    // declares a type judges the value where it lands. Each variable it handed
-    // back in place is judged once the call is over, whether it answered or
-    // failed.
-    case checked(CheckedCall, CallJudgement)
-
     case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
 
@@ -100,9 +87,6 @@ indirect enum Operation: Sendable {
 
         case let .cast(read, _, _):
             return read.walk(visit)
-
-        case let .checked(checked, _):
-            return checked.operation.walk(visit)
 
         case let .block(body):
             return body.walk(visit)
@@ -177,9 +161,6 @@ indirect enum Operation: Sendable {
                 as: try type(cast),
                 optional: optional
             )
-
-        case let .checked(checked, judgement):
-            inside = .checked(try checked.rewritten(operation: operation, type: type), try judgement.rewritten(type: type))
 
         case let .block(body):
             inside = .block(try body.rewritten(operation: operation, type: type))

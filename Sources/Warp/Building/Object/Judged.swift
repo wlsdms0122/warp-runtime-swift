@@ -45,11 +45,6 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // Whether what it hands back, its answer and every variable handed to it
-    // in place, is at every type parameter that parameter: what a call need
-    // not judge again.
-    let handsBackAsDeclared: Bool
-
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -63,7 +58,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        handsBackAsDeclared: Bool,
         implementation: Implementation
     ) {
         self.label = label
@@ -72,7 +66,6 @@ struct Judged: Sendable {
         self.constness = constness
         self.isolation = isolation
         self.failing = failing
-        self.handsBackAsDeclared = handsBackAsDeclared
         self.implementation = implementation
     }
 
@@ -85,7 +78,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        handsBackAsDeclared: Bool,
         judging implementation: Implementation
     ) throws {
         try Self.judge(implementation, against: signature)
@@ -97,7 +89,6 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation
         )
     }
@@ -129,7 +120,6 @@ struct Judged: Sendable {
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
-        self.handsBackAsDeclared = row.handsBackAsDeclared
         self.implementation = implementation
     }
 
@@ -376,7 +366,6 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation,
             foldable: foldable,
             closure: closure,
