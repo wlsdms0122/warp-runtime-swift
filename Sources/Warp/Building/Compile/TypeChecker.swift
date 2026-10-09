@@ -390,10 +390,7 @@ struct TypeChecker {
             ask: .probing
         )
 
-        // Each way out is a place of its own, and none of them declares a
-        // fraction, so a whole literal one of them answers is the Int it is
-        // before the ways meet.
-        return walked.flow.answered.map(\.reading.asHeld).reduce(walked.reading.asHeld) { joined, answered in joined.joined(answered) }
+        return walked.flow.answer(resulting: walked.reading)
     }
 
     // One answer, held to the `returns`. The refusal stands where the author
@@ -1951,9 +1948,7 @@ struct TypeChecker {
             // does. The answer is written into its signature, so the run
             // reads the closure as the build did.
             if procedure.signature.returns == nil {
-                let answered = inner.flow.answered.map(\.reading.asHeld).reduce(inner.reading.asHeld) { joined, answered in
-                    joined.joined(answered)
-                }
+                let answered = inner.flow.answer(resulting: inner.reading)
 
                 procedure = procedure.with(
                     signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
