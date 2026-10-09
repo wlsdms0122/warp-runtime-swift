@@ -193,7 +193,7 @@ struct CastAgreementTests {
 
     // MARK: - Public
     // MARK: - Private
-    // Asked of the lowered types, which is where the judgment lives. What a
+    // Asked of the lowered types, which is where the judgement lives. What a
     // document writes reaches it by lowering.
     private func couldBothHold(_ mine: TypeExpression, _ theirs: TypeExpression) -> Bool {
         mine.lowered(in: types.loweredTypes, bounds: bounds)

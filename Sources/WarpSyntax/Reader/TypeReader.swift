@@ -94,11 +94,18 @@ public struct TypeReader: Decodable {
         // MARK: - Private
     }
 
+    // Where a procedure type's head is written: as a type's name, `Procedure`,
+    // or as the key of the form that carries its signature, `procedure`.
+    enum ProcedureHead {
+        case name
+        case key
+    }
+
     // MARK: - Property
     public let type: TypeExpression
 
     // The one key a record type is written under.
-    public static let recordKey: Name = "record"
+    static let recordKey: Name = "record"
 
     // What a type that is neither a spelling nor a form is refused with.
     private static let unread = "a type is a name like `String`, `Array<String>` or"
@@ -263,7 +270,7 @@ public struct TypeReader: Decodable {
     // reading itself rather than of a list beside it, because a list and a
     // parser drift and what they disagree about is a document one of them
     // writes and the other refuses.
-    public static func readsAsAProcedure(_ key: Name) -> Bool {
+    static func readsAsAProcedure(_ key: Name) -> Bool {
         procedureKeywords(of: key.spelling) != nil
     }
 
@@ -293,16 +300,9 @@ public struct TypeReader: Decodable {
         return (mark, constness, isolation)
     }
 
-    // Where a procedure type's head is written: as a type's name, `Procedure`,
-    // or as the key of the form that carries its signature, `procedure`.
-    public enum ProcedureHead {
-        case name
-        case key
-    }
-
     // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before the head.
-    public static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
+    static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
         [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
             .compactMap { part in part }
             .joined(separator: " ")

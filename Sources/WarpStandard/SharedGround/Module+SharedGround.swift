@@ -1,5 +1,5 @@
 //
-//  Module+Foundation.swift
+//  Module+SharedGround.swift
 //  WarpStandard
 //
 //  Created by JSilver on 8/23/26.
@@ -14,7 +14,7 @@ public extension Module {
     // what a number, an ordering and a count are for `Int`, `Double`,
     // `String`, `Array` and `Dictionary`. A document calling a contract's
     // procedure stands behind this one, so what answers stands before it.
-    static let foundation: [Module] = [
+    static let sharedGround: [Module] = [
         Module(
             unchecked: Draft(
                 description: "The shared ground: what counts as a number, what orders, and what has a count.",
@@ -22,7 +22,7 @@ public extension Module {
                     // What arithmetic is asked of: two of one kind, answered in
                     // that kind, and a quotient that is a fraction whatever the
                     // kind.
-                    Contracts.numeric: [
+                    ContractSpelling.numeric: [
                         "plus": .operation(answering: .selfType),
                         "minus": .operation(answering: .selfType),
                         "times": .operation(answering: .selfType),
@@ -30,11 +30,11 @@ public extension Module {
                         "dividedBy": .operation(answering: .double)
                     ],
                     // What orders two of one kind.
-                    Contracts.comparable: [
+                    ContractSpelling.comparable: [
                         "lessThan": .operation(answering: .bool)
                     ],
                     // What has a count.
-                    Contracts.collection: [
+                    ContractSpelling.collection: [
                         "count": ContractProcedure(
                             signature: Signature(parameters: [Parameter(name: "collection", type: .selfType)], returns: .int),
                             constness: .const,
@@ -76,7 +76,7 @@ public extension Module {
     }
 
     // The contracts this module declares, by the names a claim writes.
-    private enum Contracts {
+    private enum ContractSpelling {
         static let numeric: Name = "Standard.Numeric"
         static let comparable: Name = "Standard.Comparable"
         static let collection: Name = "Standard.Collection"
@@ -105,16 +105,16 @@ public extension Module {
     // the kind, answering the kind, and a quotient answering a fraction.
     private static func arithmetic(of type: Name, as kind: TypeExpression) -> [Witness] {
         [
-            Witness(type, answering: Contracts.numeric, "plus") { spelling in
+            Witness(type, answering: ContractSpelling.numeric, "plus") { spelling in
                 .witness(PlusQuery(answering: spelling), taking: kind, returns: kind, description: "The sum.")
             },
-            Witness(type, answering: Contracts.numeric, "minus") { spelling in
+            Witness(type, answering: ContractSpelling.numeric, "minus") { spelling in
                 .witness(MinusQuery(answering: spelling), taking: kind, returns: kind, description: "The difference.")
             },
-            Witness(type, answering: Contracts.numeric, "times") { spelling in
+            Witness(type, answering: ContractSpelling.numeric, "times") { spelling in
                 .witness(TimesQuery(answering: spelling), taking: kind, returns: kind, description: "The product.")
             },
-            Witness(type, answering: Contracts.numeric, "remainder") { spelling in
+            Witness(type, answering: ContractSpelling.numeric, "remainder") { spelling in
                 .witness(
                     RemainderQuery(answering: spelling),
                     taking: kind,
@@ -122,7 +122,7 @@ public extension Module {
                     description: "What is left of a division truncated toward zero."
                 )
             },
-            Witness(type, answering: Contracts.numeric, "dividedBy") { spelling in
+            Witness(type, answering: ContractSpelling.numeric, "dividedBy") { spelling in
                 .witness(
                     DividedByQuery(answering: spelling),
                     taking: kind,
@@ -135,7 +135,7 @@ public extension Module {
 
     // What `Standard.Comparable` asks, answered for one kind that orders.
     private static func ordering(of type: Name, as kind: TypeExpression) -> Witness {
-        Witness(type, answering: Contracts.comparable, "lessThan") { spelling in
+        Witness(type, answering: ContractSpelling.comparable, "lessThan") { spelling in
             .witness(LessThanQuery(answering: spelling), taking: kind, returns: .bool, description: "Whether one orders before the other.")
         }
     }
@@ -145,7 +145,7 @@ public extension Module {
     // a record's fields included, and the characters of text as a person
     // reads them.
     private static func counting(of type: Name, as kind: TypeExpression) -> Witness {
-        Witness(type, answering: Contracts.collection, "count") { spelling in
+        Witness(type, answering: ContractSpelling.collection, "count") { spelling in
             .witness(CountQuery(answering: spelling), taking: kind, returns: .int, description: "How many.")
         }
     }

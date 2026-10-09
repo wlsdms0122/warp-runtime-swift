@@ -354,7 +354,7 @@ public struct ExpressionReader: Decodable {
         case let other?:
             throw ExpressionFormError(
                 "{ format: } `with` takes a record of bindings,"
-                    + " got \(other.type)"
+                    + " got \(other.nominal)"
             )
         }
 

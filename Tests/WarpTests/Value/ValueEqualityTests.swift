@@ -47,7 +47,7 @@ struct ValueEqualityTests {
 
         // Then
         #expect(sut != sut)
-        #expect(sut.type == .procedure)
+        #expect(sut.nominal == TypeSpelling.procedure)
     }
 
     // MARK: - Public

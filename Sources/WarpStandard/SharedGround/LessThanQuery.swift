@@ -51,7 +51,7 @@ struct LessThanQuery: Query {
         // claims the opposite comparison would say something, and it would not.
         guard let order = Value.order(lhs, rhs) else {
             throw ExecutionError(
-                "\(procedure) asks \(lhs.type) and \(rhs.type), which have no order"
+                "\(procedure) asks \(lhs.nominal) and \(rhs.nominal), which have no order"
             )
         }
 

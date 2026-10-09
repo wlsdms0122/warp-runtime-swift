@@ -9,7 +9,7 @@ import Foundation
 
 // FIPS 180-4, written out here.
 //
-// Everything below is the published algorithm. The only judgment in it is the
+// Everything below is the published algorithm. The only judgement in it is the
 // choice of algorithm, which the specification names.
 struct SHA256 {
     // MARK: - Property

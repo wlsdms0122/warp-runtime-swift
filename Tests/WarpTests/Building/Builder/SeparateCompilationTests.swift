@@ -51,7 +51,7 @@ struct SeparateCompilationTests {
     }
 
     @Test("what a document says holds whichever entry a host names")
-    func judgmentDoesNotDependOnTheEntry() async throws {
+    func judgementDoesNotDependOnTheEntry() async throws {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [

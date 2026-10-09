@@ -269,7 +269,7 @@ public indirect enum Expression: Sendable {
     // normally, so neither counts; a call is judged at the build, where its
     // signature is known. The build's type walk reads the same fact over the
     // full program, symbols included. This is the symbol-free half of that
-    // judgment, and what it buys is the stage: a document is refused at the
+    // judgement, and what it buys is the stage: a document is refused at the
     // load.
     public var alwaysLeaves: Bool {
         switch self {

@@ -145,7 +145,7 @@ struct LoweredTypeTests {
         #expect(table.recordRows[whole] == nil)
     }
 
-    @Test("a projection lowers to itself, and every judgment answers it as Any")
+    @Test("a projection lowers to itself, and every judgement answers it as Any")
     func aProjectionLowersToItself() throws {
         // Given. Nothing is known of what a projection holds, so it takes
         // anything, and a slot of a type takes it only through a cast
@@ -326,10 +326,10 @@ struct LoweredTypeTests {
         }
     }
 
-    @Test("a judgment says the rule, rather than naming a link nobody named")
-    func aJudgmentWithNoLinkSaysTheRule() async throws {
+    @Test("a judgement says the rule, rather than naming a link nobody named")
+    func aJudgementWithNoLinkSaysTheRule() async throws {
         // Given. A closure out of a run, judged with no declarations behind
-        // the judgment. Which link this one came from is not knowable where
+        // the judgement. Which link this one came from is not knowable where
         // it is met, so naming one would be inventing it.
         let maker = try Module(
             procedures: [

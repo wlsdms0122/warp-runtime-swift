@@ -127,7 +127,7 @@ struct ClaimChecker {
 
         // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
-        // into, so what a call reaches and what a judgment reads are one
+        // into, so what a call reaches and what a judgement reads are one
         // reading rather than two.
         let contractProcedures = LoweredContractProcedure.table(in: table)
 

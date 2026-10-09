@@ -11,8 +11,8 @@ import Testing
 // The specification names its own cases: each page ends with the cases that
 // measure it, so a reader who has a rule has the case beside it.
 //
-// Which page a case belongs under is a judgment nothing derives. What is not a
-// judgment is whether the naming is whole, and that is what this asks: a name
+// Which page a case belongs under is a judgement nothing derives. What is not a
+// judgement is whether the naming is whole, and that is what this asks: a name
 // no file answers, a case no page names, and a case two pages claim are each a
 // listing that has drifted from the folder it describes.
 @Suite("The specification names its cases")

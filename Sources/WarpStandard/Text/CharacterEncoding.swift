@@ -44,7 +44,7 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
 
     // MARK: - Private
     // Validated by the standard library's own UTF-8, not a platform string
-    // bridge: which bytes are text is this language's judgment, and it must
+    // bridge: which bytes are text is this language's judgement, and it must
     // land the same on every host.
     private func utf8Text(of bytes: [UInt8]) -> String? {
         var text = ""

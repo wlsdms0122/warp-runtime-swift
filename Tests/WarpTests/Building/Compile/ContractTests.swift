@@ -107,7 +107,7 @@ struct ContractTests {
     }
 
     @Test("a procedure sent through a contract is judged against what the contract said")
-    func theContractOwnsTheJudgment() async throws {
+    func theContractOwnsTheJudgement() async throws {
         // Given. The contract says `describe` answers a string and takes
         // nothing but the value it is sent through, so a call handing it
         // something more refuses
