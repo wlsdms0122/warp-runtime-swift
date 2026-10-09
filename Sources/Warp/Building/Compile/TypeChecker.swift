@@ -2769,12 +2769,7 @@ struct TypeChecker {
 
         if body.reading == .never {
             if block.result != nil {
-                try refuse(
-                    "never finishes before it, and nothing"
-                        + " written after it would ever run",
-                    at: place.child(.result),
-                    when: ask
-                )
+                try refuse(Expression.resultAfterWhatNeverFinishes, at: place.child(.result), when: ask)
             }
 
             tail = nil
@@ -2894,12 +2889,7 @@ struct TypeChecker {
                     // The leaving statement, not what follows it: what an
                     // author has to change is the one that ends the body, and
                     // the load says the same thing from the same place.
-                    try refuse(
-                        "every way through this statement leaves, and what"
-                            + " follows it here would never run",
-                        at: here,
-                        when: ask
-                    )
+                    try refuse(Expression.afterWhatNeverFinishes, at: here, when: ask)
                 }
 
                 // Judging refused anything after this statement above, so
@@ -3060,12 +3050,7 @@ struct TypeChecker {
     // statement that ends the body, so the two facts cannot part. The load
     // refuses the leaves it can see, and the build the calls only it can see.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
-        try refuse(
-            "never finishes,"
-                + " so it binds nothing and takes no name",
-            at: place,
-            when: ask
-        )
+        try refuse(Expression.nameOnWhatNeverFinishes, at: place, when: ask)
     }
 
     // The environment a loop's insides read: the enclosing names plus the

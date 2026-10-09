@@ -246,7 +246,7 @@ struct NeverTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("never finishes before it")
+            "\(error)".contains("follows a body that never finishes")
         }
     }
 

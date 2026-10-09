@@ -450,7 +450,7 @@ struct LeaveTests {
             ])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("block.result: nothing runs after leaving")
+                && "\(error)".contains("block.result: follows a body that never finishes")
         }
     }
 

@@ -358,12 +358,7 @@ public struct Validator: Sendable {
 
             if let binding = statement.binding {
                 if statement.expression.alwaysLeaves {
-                    throw ValidationError(
-                        "every way through this statement"
-                            + " leaves, so its name could never bind. It takes"
-                            + " no name",
-                        at: here
-                    )
+                    throw ValidationError(Expression.nameOnWhatNeverFinishes, at: here)
                 }
 
                 if statement.expression.answersNothing {
@@ -431,12 +426,7 @@ public struct Validator: Sendable {
             }
 
             if statement.expression.alwaysLeaves, position != body.statements.count - 1 {
-                throw ValidationError(
-                    "every way through this"
-                        + " statement leaves, and what follows it here"
-                        + " would never run",
-                    at: here
-                )
+                throw ValidationError(Expression.afterWhatNeverFinishes, at: here)
             }
 
             try validate(
@@ -760,11 +750,7 @@ public struct Validator: Sendable {
             // The result runs after the body, so it is "after" the same way a
             // trailing statement is. A body that left never reaches it.
             if block.body.alwaysLeaves {
-                throw ValidationError(
-                    "nothing runs after leaving,"
-                        + " and this result would never be reached",
-                    at: place.child(.result)
-                )
+                throw ValidationError(Expression.resultAfterWhatNeverFinishes, at: place.child(.result))
             }
 
             try held(result, asValueAt: place.child(.result))

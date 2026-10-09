@@ -229,6 +229,11 @@ public indirect enum Expression: Sendable {
         "calls a value, and which procedure that is, is the run's"
             + " answer, so an operand cannot be read without running"
             + " it. A statement calls it and the operand reads its name"
+    // What never finishes, said once for the load, which sees a leave, and
+    // the build, which sees a call answering `Never`.
+    static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
+    static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
+    static let resultAfterWhatNeverFinishes = "follows a body that never finishes, and would never be reached"
     public static let declarationOnABoundName =
         "this construct binds the name. A loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
