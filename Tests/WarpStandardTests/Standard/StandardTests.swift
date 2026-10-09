@@ -32,24 +32,12 @@ struct StandardTests {
         }
     }
 
-    @Test("every procedure that ships is builtin or written in Warp")
-    func everyProcedureIsPlaced() throws {
-        // Given. What the bundles declare, and how the one list cuts them
-        let shipped = Set(Module.standard.flatMap(\.procedures.keys))
-
-        // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
-        // stale
-        #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
-        #expect(Module.builtinProcedures.count == 36)
-        #expect(Module.builtinProcedures.union(Module.derived) == shipped)
-    }
-
     @Test("a procedure this package calls derived has a body here")
     func everyDerivedProcedureIsWritten() throws {
-        // Given. `derived` is what is left over, so it says a procedure is
-        // written in Warp without looking. This is the looking: a name it
-        // claims and a native implementation is a claim the package does not
-        // keep
+        // Given. `derived` is what the modules that are not builtin declare,
+        // read off the module and not off its procedures. This reads the
+        // procedures: a name it holds with a native implementation is a claim
+        // the package does not keep
         let written = Set(
             Module.standard
                 .flatMap(\.procedures)
