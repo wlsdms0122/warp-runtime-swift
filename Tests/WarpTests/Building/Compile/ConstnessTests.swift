@@ -385,27 +385,6 @@ struct ConstnessTests {
         }
     }
 
-    @Test("a variable's starting value is read rather than run")
-    func aVariableStartingFromAConstructIsRefused() async throws {
-        // Given. A module variable written from a construct. A construct runs
-        // a body, and the build settles a starting value by reading it.
-        let handed = try Module(
-            variables: ["standing": .conditional(
-                .literal(.bool(true)),
-                then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
-                else: nil
-            )],
-            procedures: [entryName: Procedure(access: .public, body: [], result: reference("standing"))]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([handed] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("a construct runs a body, and a call's operand is data")
-        }
-    }
-
     @Test("what answers without running is worked out at the build, not declared")
     func constnessIsABuildFact() async throws {
         // Given

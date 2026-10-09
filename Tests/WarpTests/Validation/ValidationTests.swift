@@ -242,78 +242,64 @@ struct ValidationTests {
         #expect(error?.message.contains("nowhere") == true)
     }
 
-    @Test("a construct in a call's operand is refused at the check")
-    func aConstructInACallOperandIsRefused() {
-        // Given. A document cannot even write one there, and the run would
-        // refuse it; a program assembled directly meets the same rule before
-        // anything runs. The body a procedure is to run travels as a closure.
-        let arm: Body = [Statement(binding: .constant("kept"), expression: .literal(.int(1)))]
-        let sut: Body = [
-            Statement(binding: .constant("said"), expression: .call(
-                Call(selector: "App.shout", arguments: [.conditional(.literal(.bool(true)), then: arm, else: nil)])
-            ))
+    @Test("a construct is written only as a statement's value, and refused wherever a value is wanted")
+    func aConstructWhereAValueIsWantedIsRefused() throws {
+        // Given. No document writes one there; a module made in Swift meets
+        // the same rule where it is made. Each place below wants a value
+        let construct = Warp.Expression.block(Block(body: [], result: .literal(.int(1))))
+        let places: [(Body, String)] = [
+            ([Statement(expression: .call(Call(selector: "App.f", arguments: [construct])))], "body[0].call.arguments[0]"),
+            ([Statement(expression: .apply(.closure(Procedure(body: [])), arguments: [.array([construct])]))], "body[0].call.arguments[0]"),
+            ([Statement(expression: .conditional(construct, then: [], else: nil))], "body[0].conditional.condition"),
+            ([Statement(expression: .loop(while: construct, body: Block(body: [])))], "body[0].loop.condition"),
+            ([Statement(binding: .constant("list"), expression: .array([construct]))], "body.list[0].array[0]"),
+            ([Statement(binding: .constant("pair"), expression: .record(["a": construct]))], "body.pair[0].record.fields.a"),
+            ([Statement(binding: .constant("read"), expression: .cast(construct, as: .int, optional: false))], "body.read[0].cast.subject"),
+            ([Statement(binding: .constant("held"), expression: .block(Block(body: [], result: construct)))], "body.held[0].block.result"),
+            ([Statement(expression: .leave(Leave(reach: .procedure, value: construct)))], "body[0].leave")
         ]
 
-        // When / Then. Bare, and held inside a value type alike
-        #expect(!validates(body: sut))
-        #expect(
-            !validates(body: [
-                Statement(binding: .constant("said"), expression: .apply(
-                        .closure(Procedure(body: [])),
-                        arguments: [
-                            .array([
-                                .conditional(.literal(.bool(true)), then: arm, else: nil)
-                            ])
-                        ]
-                    )
-                )
-            ])
-        )
+        for (body, place) in places {
+            // When
+            let error = #expect(throws: ValidationError.self) {
+                try Validator().validate(Procedure(body: body))
+            }
+
+            // Then
+            #expect(error?.message == Expression.constructWhereAValueIsWanted)
+            #expect(error?.place?.rendered == "procedure.\(place)")
+        }
+
+        // And a constant's and a variable's start, which a module holds
+        #expect(throws: ValidationError.self) { try Module(constants: ["c": construct], procedures: [:]) }
+        #expect(throws: ValidationError.self) { try Module(variables: ["v": construct], procedures: [:]) }
     }
 
-    @Test("a construct in a condition is refused at the check")
-    func aConstructInAConditionIsRefused() {
-        // Given. The run reads a condition rather than runs it, the same fact an operand has,
-        // so the same rule refuses a construct there
-        let construct = Warp.Expression.block(Block(body: [], result: .literal(.bool(true))))
+    @Test("a value call is refused in an operand, a constant and a variable's start")
+    func aValueCallInAnOperandIsRefused() throws {
+        // Given. Which procedure a value is, is the run's answer, and the text
+        // alone shows the call
+        let called = Warp.Expression.apply(reference("f"), arguments: [])
+        let read = Statement(binding: .constant("f"), expression: .closure(Procedure(body: [], result: .literal(.int(1)))))
 
-        // When / Then. A conditional's condition, and a loop's
-        #expect(
-            !validates(body: [
-                Statement(expression: .conditional(construct, then: [], else: nil))
-            ])
-        )
-        #expect(
-            !validates(body: [
-                Statement(
-                    expression: .loop(
-                        while: construct,
-                        body: Block(body: [], result: nil)
-                    )
-                )
-            ])
-        )
-    }
-
-    @Test("a conditional where a value is wanted is refused at the check")
-    func aBranchWhereAValueIsWantedIsRefused() {
-        // Given. A conditional answers nothing, so a slot that exists to hold an
-        // answer has nothing to take from one; refused for that reason rather
-        // than as a null that fails to fit downstream
-        let conditional = Warp.Expression.conditional(
-            .literal(.bool(true)),
-            then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
-            else: nil
-        )
-
-        // When / Then. A result slot, an array element, a record field
-        #expect(
-            !validates(
-                body: [Statement(binding: .constant("blocked"), expression: .block(Block(body: [], result: conditional)))]
+        // When / Then. A call's operand, a condition, and a value call held
+        // inside a list an operand holds
+        #expect(!validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [called])))]))
+        #expect(!validates(body: [read, Statement(expression: .conditional(called, then: [], else: nil))]))
+        #expect(!validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [.array([called])])))]))
+        #expect(throws: ValidationError.self) {
+            try Module(constants: ["f": .closure(Procedure(body: [])), "c": .apply(reference("f"), arguments: [])], procedures: [:])
+        }
+        #expect(throws: ValidationError.self) {
+            try Module(
+                constants: ["f": .closure(Procedure(body: []))],
+                variables: ["v": .apply(reference("f"), arguments: [])],
+                procedures: [:]
             )
-        )
-        #expect(!validates(body: [Statement(binding: .constant("list"), expression: .array([conditional]))]))
-        #expect(!validates(body: [Statement(binding: .constant("pair"), expression: .record(["a": conditional]))]))
+        }
+
+        // And written as a statement it stands
+        #expect(validates(body: [read, Statement(binding: .constant("one"), expression: called)]))
     }
 
     @Test("a name is visible only after the statement that introduced it")

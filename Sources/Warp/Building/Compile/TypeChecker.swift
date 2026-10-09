@@ -143,13 +143,6 @@ struct TypeChecker {
         case refused(String)
     }
 
-    // What makes an expression something the run runs rather than reads.
-    private enum RunReason {
-        case calling(Name)
-        case applying
-        case construct
-    }
-
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
@@ -1255,19 +1248,19 @@ struct TypeChecker {
         return .reaches(current)
     }
 
-    // What an operand or a condition answers only by running, if anything. An
-    // operand is data: the run reads it rather than running it, so what it may
-    // hold is a literal, a name, a record, a cast and a call whose declaration
-    // answers without running. Anything else is found here rather than at the
-    // run.
+    // The declaration an operand or a condition calls that answers only by
+    // running, if any. An operand is data: the run reads it rather than
+    // running it, so a call in it reaches a declaration that answers without
+    // running. A value call and a construct in one are the load's to refuse,
+    // since the text alone says where they stand.
     //
     // The module variables constness strikes a body for reading are not struck
     // here. Reading one is what reading a name is; what it costs a body is the
     // promise of answering the same thing twice, and an operand makes no such
     // promise.
-    private func runs(in expression: Expression, given context: TypingContext) -> RunReason? {
+    private func runs(in expression: Expression, given context: TypingContext) -> Name? {
         switch expression {
-        case .literal, .reference, .closure:
+        case .literal, .reference, .closure, .apply, .block, .conditional, .loop, .attempt, .leave:
             return nil
 
         case let .cast(value, _, _):
@@ -1291,15 +1284,7 @@ struct TypeChecker {
                     .compactMap { argument in runs(in: argument, given: context) }.first
             }
 
-            return .calling(call.selector)
-
-        // Which procedure a value is, is the run's answer, so nothing here says
-        // whether calling it runs.
-        case .apply:
-            return .applying
-
-        case .block, .conditional, .loop, .attempt, .leave:
-            return .construct
+            return call.selector
         }
     }
 
@@ -1498,31 +1483,15 @@ struct TypeChecker {
         given context: TypingContext,
         when ask: Ask
     ) throws {
-        switch runs(in: expression, given: context) {
-        case nil:
-            return
+        guard let selector = runs(in: expression, given: context) else { return }
 
-        case let .calling(selector)?:
-            try refuse(
-                "reads '\(selector)', which answers only by running, and an"
-                    + " operand is read rather than run. A procedure that runs"
-                    + " is called by a statement, whose name the operand reads",
-                at: place,
-                when: ask
-            )
-
-        case .applying?:
-            try refuse(
-                "calls a value, and which procedure that is, is the run's"
-                    + " answer, so an operand cannot be read without running"
-                    + " it. A statement calls it and the operand reads its name",
-                at: place,
-                when: ask
-            )
-
-        case .construct?:
-            try refuse(Expression.constructInOperand, at: place, when: ask)
-        }
+        try refuse(
+            "reads '\(selector)', which answers only by running, and an"
+                + " operand is read rather than run. A procedure that runs"
+                + " is called by a statement, whose name the operand reads",
+            at: place,
+            when: ask
+        )
     }
 
     // A condition chooses a way through a body, so what it reads has to be a

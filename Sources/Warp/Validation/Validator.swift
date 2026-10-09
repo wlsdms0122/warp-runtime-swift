@@ -36,6 +36,7 @@ public struct Validator: Sendable {
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
+            try held(expression, asOperand: .constant(name.spelling, in: .of(module)))
 
             try validate(
                 expression,
@@ -61,6 +62,7 @@ public struct Validator: Sendable {
                 )
             }
 
+            try held(variable.start, asOperand: .variable(name.spelling, in: .of(module)))
             try validate(
                 variable.start,
                 naming: nil,
@@ -445,7 +447,7 @@ public struct Validator: Sendable {
             for (position, element) in array.enumerated() {
                 let here = place.child(.element(position))
 
-                try refuseAnswerless(element, at: here)
+                try held(element, asValueAt: here)
                 try validate(element, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
@@ -453,7 +455,7 @@ public struct Validator: Sendable {
             for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.child(.field(name))
 
-                try refuseAnswerless(field, at: here)
+                try held(field, asValueAt: here)
                 try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
@@ -462,7 +464,7 @@ public struct Validator: Sendable {
         // walks any other operand.
         case let .cast(value, type, optional):
             try written(type, in: .value, at: place)
-            try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
+            try held(value, asValueAt: place.child(.subject(optional: optional)))
             try validate(
                 value,
                 naming: nil,
@@ -475,14 +477,13 @@ public struct Validator: Sendable {
         case let .leave(leave):
             try validate(leave, in: scope, at: place)
 
-            // What a `return` carries is an operand like any other. A name it
-            // reads has to be visible where it was written, and a construct
-            // that answers nothing has nothing to hand back. Only `return`
+            // What a `return` carries is a value like any other. A name it
+            // reads has to be visible where it was written. Only `return`
             // reaches here with one: the check above refuses a value on the two
             // that end a loop.
             guard let value = leave.value else { return }
 
-            try refuseAnswerless(value, at: place.child(.held))
+            try held(value, asValueAt: place.child(.held))
             try validate(
                 value,
                 naming: nil,
@@ -533,7 +534,7 @@ public struct Validator: Sendable {
             )
 
         case let .apply(callee, arguments):
-            try refuseConstruct(callee, at: place.child(.callee))
+            try held(callee, asOperand: place.child(.callee))
             try validate(
                 callee,
                 naming: nil,
@@ -546,7 +547,7 @@ public struct Validator: Sendable {
             for (position, argument) in arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try refuseConstruct(argument, at: here)
+                try held(argument, asOperand: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -561,10 +562,7 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(
-                condition,
-                at: place.child(.condition(of: .conditional))
-            )
+            try held(condition, asOperand: place.child(.condition(of: .conditional)))
             try validate(
                 condition,
                 naming: nil,
@@ -597,7 +595,7 @@ public struct Validator: Sendable {
             let round = name
             let inner = visible.union(round.map { round in [round] } ?? [])
 
-            try refuseConstructCondition(condition, at: place.child(.condition(of: .loop)))
+            try held(condition, asOperand: place.child(.condition(of: .loop)))
             try validate(
                 condition,
                 naming: nil,
@@ -645,7 +643,7 @@ public struct Validator: Sendable {
             for (position, argument) in call.arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try refuseConstruct(argument, at: here)
+                try held(argument, asOperand: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -658,31 +656,24 @@ public struct Validator: Sendable {
         }
     }
 
-    // A construct that answers nothing (a conditional) has nothing to give a
-    // slot that exists to hold an answer. Refused for that reason wherever one
-    // asks, rather than as a null that fails to fit downstream.
-    private func refuseAnswerless(_ expression: Expression, at place: Place) throws {
-        guard expression.answersNothing else { return }
-
-        throw ValidationError(
-            "this construct answers nothing, so it cannot"
-                + " stand where a value is wanted",
-            at: place
-        )
+    // A construct runs a body, so it stands as a statement's value and nowhere
+    // a value is wanted: an operand, an element, a field, what a cast reads,
+    // what `return` carries and a block's result.
+    private func held(_ expression: Expression, asValueAt place: Place) throws {
+        guard !expression.holdsConstruct else {
+            throw ValidationError(Expression.constructWhereAValueIsWanted, at: place)
+        }
     }
 
-    // A call's operand is data the run reads rather than runs, so it holds no construct.
-    private func refuseConstruct(_ expression: Expression, at place: Place) throws {
-        guard expression.holdsConstruct else { return }
+    // An operand is data the run reads rather than runs: a call's and a value
+    // call's operands, a condition, a constant and a variable's start. Which
+    // procedure a value is, is the run's answer, so calling one is running.
+    private func held(_ expression: Expression, asOperand place: Place) throws {
+        try held(expression, asValueAt: place)
 
-        throw ValidationError(Expression.constructInOperand, at: place)
-    }
-
-    // A condition is data by the same fact, refused with its own sentence because the fix differs.
-    private func refuseConstructCondition(_ expression: Expression, at place: Place) throws {
-        guard expression.holdsConstruct else { return }
-
-        throw ValidationError(Expression.constructInCondition, at: place)
+        guard !expression.callsValue else {
+            throw ValidationError(Expression.valueCallInOperand, at: place)
+        }
     }
 
     private func validate(
@@ -711,11 +702,7 @@ public struct Validator: Sendable {
                 )
             }
 
-            // A conditional answers nothing, so a result slot (a place that
-            // exists to hold an answer) has nothing to take from one. Refused
-            // for that reason, rather than as a type that fails to fit
-            // downstream.
-            try refuseAnswerless(result, at: place.child(.result))
+            try held(result, asValueAt: place.child(.result))
 
             try validate(
                 result,

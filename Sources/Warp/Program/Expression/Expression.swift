@@ -219,18 +219,19 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The load and the build both refuse a
-    // construct in an operand, with `constructInOperand`.
-    public static let constructInOperand =
-        "a construct runs a body, and a call's operand is data."
-            + " A body a procedure is to run travels as a closure"
+    // Sentences the load refuses with, stated beside the predicates that
+    // decide them.
+    static let constructWhereAValueIsWanted =
+        "a construct runs a body, and is written only as a statement's value."
+            + " A statement before this one runs the body and its name is read here,"
+            + " or a closure carries the body"
+    static let valueCallInOperand =
+        "calls a value, and which procedure that is, is the run's"
+            + " answer, so an operand cannot be read without running"
+            + " it. A statement calls it and the operand reads its name"
     public static let declarationOnABoundName =
         "this construct binds the name. A loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
-    public static let constructInCondition =
-        "a construct runs a body, and a condition is data."
-            + " What a body decides reaches a condition through a procedure"
 
     // Whether a construct (a form that runs a body, or leaves) sits anywhere
     // in this expression read as data. A closure is data (the body it carries
@@ -260,6 +261,31 @@ public indirect enum Expression: Sendable {
 
         case .block, .conditional, .loop, .attempt, .leave:
             return true
+        }
+    }
+
+    // Whether a value call sits anywhere in this expression read as data. A
+    // closure is data, so the walk does not enter it, and a construct is
+    // `holdsConstruct`'s to say.
+    var callsValue: Bool {
+        switch self {
+        case .literal, .reference, .closure, .block, .conditional, .loop, .attempt, .leave:
+            return false
+
+        case let .array(array):
+            return array.contains { element in element.callsValue }
+
+        case let .record(record):
+            return record.values.contains { field in field.callsValue }
+
+        case .apply:
+            return true
+
+        case let .call(call):
+            return call.arguments.contains { argument in argument.callsValue }
+
+        case let .cast(value, _, _):
+            return value.callsValue
         }
     }
 
