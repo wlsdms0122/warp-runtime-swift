@@ -29,11 +29,9 @@ struct Scope: Sendable {
     // spelling.
     let parameters: Set<Name>
 
-    // A procedure's own body: no loop yet.
-    static let procedure = Scope(rounds: [], bound: [], parameters: [])
-
     // MARK: - Initializer
     // MARK: - Public
+    // A procedure's own body: no loop yet.
     static func procedure(bound: Set<Name>, parameters: Set<Name> = []) -> Scope {
         Scope(rounds: [], bound: bound, parameters: parameters)
     }
