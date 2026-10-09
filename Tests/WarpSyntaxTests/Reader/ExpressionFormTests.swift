@@ -56,8 +56,9 @@ struct ExpressionFormTests {
 
     @Test("a bytes value decodes as a bytes literal, and numbers stay numbers")
     func bytesDecodeAsBytes() throws {
-        // Given / When. The one binary kind crosses the Value bridge whole; an
-        // array of small numbers next to it must stay an array of numbers
+        // Given / When. Bytes, the one binary spelling, cross the Value
+        // bridge whole; an array of small numbers next to it stays an array of
+        // numbers
         let bytes = try loader.expression(from: .bytes([0x6A, 0x73]))
         let numbers = try loader.expression(from: .array([.int(1), .int(2)]))
 

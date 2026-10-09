@@ -25,7 +25,7 @@ public struct Interpolation: Sendable, Equatable {
     static let withKey: Name = "with"
     public static let keys: Set<Name> = [formatKey, withKey]
 
-    // What every piece is asked, so that a value of any kind arrives as text.
+    // What every piece is asked, so that a value of any type arrives as text.
     public let read: Name
 
     // What puts the pieces together, handed the pieces and the empty text

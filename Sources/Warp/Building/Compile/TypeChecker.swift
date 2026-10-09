@@ -1667,7 +1667,7 @@ struct TypeChecker {
             }
 
             // A literal element read beside fractions is the fraction it
-            // names, since the list holds one kind.
+            // names, since the list holds one type.
             if let element, ask.rewrites {
                 rewritten = rewritten.map { item in element.written(item, in: context.loweredTypes) }
             }

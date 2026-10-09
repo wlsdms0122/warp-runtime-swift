@@ -1844,7 +1844,7 @@ enum Library {
                   bounds {
                     T "Standard.Comparable"
                   }
-                  description "The larger of two of a kind, by the one order."
+                  description "The larger of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"
@@ -1894,7 +1894,7 @@ enum Library {
                   bounds {
                     T "Standard.Comparable"
                   }
-                  description "The smaller of two of a kind, by the one order."
+                  description "The smaller of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"
