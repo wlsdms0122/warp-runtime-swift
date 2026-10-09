@@ -3559,11 +3559,10 @@ struct TypeChecker {
     // judgement a call to a declaration and a call of a value share. The
     // count; every composition a position mentions, held to its bounds, with
     // what leans on a claim this table cannot settle written down for the
-    // link; a constant, settled through the gate the run would hold it to;
-    // and what each position takes. What an argument holds is read from the
-    // body it was written in, so a name bound to a call carries that call's
-    // declared answer. A declaration's slots name each position; a value's
-    // type writes the positions alone.
+    // link; and what each position takes. What an argument holds is read
+    // from the body it was written in, so a name bound to a call carries that
+    // call's declared answer. A declaration's slots name each position; a
+    // value's type writes the positions alone.
     private func check(
         _ arguments: [Expression],
         reading readings: [LoweredType],
@@ -3577,7 +3576,7 @@ struct TypeChecker {
     ) throws {
         try refuseCount(handing: arguments.count, taking: types.count, as: subject, at: place)
 
-        for (position, (type, (argument, reading))) in zip(types, zip(arguments, readings)).enumerated() {
+        for (position, (type, reading)) in zip(types, readings).enumerated() {
             let at = place.child(.argument(position))
             let given = LiteralShape(shapes[position], reading: reading)
             let slot = slots?[position]
@@ -3595,20 +3594,6 @@ struct TypeChecker {
                 at: place
             ) {
                 throw BuildError("\(subject): \(refusal)", at: at)
-            }
-
-            // A constant is checked as the slot holds it, a record built there
-            // under the name the slot reads.
-            if let constant = argument.constantValue.map({ constant in type.written(constant, in: loweredTypes) }) {
-                do {
-                    if let slot {
-                        _ = try slot.checking(constant, at: "input '\(slot.name)'", in: loweredTypes)
-                    } else {
-                        _ = try type.slotUnwrapped.settling(constant, at: named, in: loweredTypes)
-                    }
-                } catch {
-                    throw BuildError("\(subject): \(error)", at: at)
-                }
             }
 
             guard given.isHeld(by: type, inPlace: false, in: loweredTypes) else {

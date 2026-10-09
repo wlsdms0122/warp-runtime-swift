@@ -182,7 +182,7 @@ struct ContractTests {
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(mistyped?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
+        #expect(mistyped?.message == "sending 'App.Sized.size' with n, which holds String where Int is declared")
         #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
