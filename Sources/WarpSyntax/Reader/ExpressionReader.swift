@@ -178,15 +178,14 @@ public struct ExpressionReader: Decodable {
         at steps: [Place.Step],
         in decoder: Decoder
     ) throws -> Warp.Expression {
-        // A named record is data written as itself, so the name has no place
-        // under the tag: kept, it would be a second spelling of that data, and
-        // dropped, a name the text wrote that nothing reads.
+        // A named record is data written as itself, so it reads as the literal
+        // it writes, and the load holds a literal to writing no record's name.
         if case let .record(named) = written, named.name != nil {
-            throw ExpressionFormError("{ record: } takes a mapping of its fields, and no name")
+            return .literal(written)
         }
 
         guard let record = written.asDictionary else {
-            throw ExpressionFormError("{ record: } takes a mapping of its fields, and no name")
+            throw ExpressionFormError("{ record: } takes a mapping of its fields")
         }
 
         return try fields(in: record, at: steps, in: decoder)
