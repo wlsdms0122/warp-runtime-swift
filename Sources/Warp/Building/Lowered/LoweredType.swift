@@ -10,7 +10,7 @@ import Foundation
 // A type as the run reads it: the declaration's type with every name the
 // build resolved written in as a row of the lowered type table. What a document
 // spells stays `TypeExpression`; this is the build's product, the way `Operation`
-// is the product of an `Expression`. Every judgment over a value or a
+// is the product of an `Expression`. Every judgement over a value or a
 // reading lives here, and the document's type reaches it by lowering.
 indirect enum LoweredType: Sendable, Equatable {
     case any
@@ -64,7 +64,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // The type a walk reached by taking a path through one a call decides.
     // The root is the type parameter's spelling and the path is what was
     // walked from it, so two walks landing on one field land on one type.
-    // Nothing is proven about what it holds, so every judgment answers it the
+    // Nothing is proven about what it holds, so every judgement answers it the
     // way it answers `Any`; it stands apart for the walk's own naming.
     case projection(of: Name, path: Path)
 
@@ -208,7 +208,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a judgment sees. A projection says a path was taken through a type
+    // What a judgement sees. A projection says a path was taken through a type
     // the call decides, which proves nothing about what it holds, and that is
     // what `Any` says.
     var judged: LoweredType {
@@ -1535,7 +1535,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a cast does, said once. The judgment is `settling`'s; what this
+    // What a cast does, said once. The judgement is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {

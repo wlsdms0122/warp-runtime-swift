@@ -12,7 +12,7 @@ import Foundation
 // a type and not a regress, and a row is read by number. The spellings ride
 // along for a refusal and for a record's name, and the one lookup by spelling
 // left is a record that arrived under an alias, which is resolved once and
-// then carries the canonical spelling. A class, so a judgment that recurses
+// then carries the canonical spelling. A class, so a judgement that recurses
 // passes one reference down rather than a copy of every array the table
 // holds.
 final class LoweredTypeTable: Sendable {
@@ -92,7 +92,7 @@ final class LoweredTypeTable: Sendable {
 
     private let rows: [Name: Int]
 
-    // A table declaring nothing, for a judgment asked with no declarations
+    // A table declaring nothing, for a judgement asked with no declarations
     // behind it. It belongs to no link, so no row belongs to it.
     static let empty = LoweredTypeTable(
         loweredTypes: [],
@@ -148,7 +148,7 @@ final class LoweredTypeTable: Sendable {
         satisfying[name] != nil
     }
 
-    // One-sided the way every judgment before the run is: only what is
+    // One-sided the way every judgement before the run is: only what is
     // provably outside is refused, and a reading nothing can be said about
     // passes here and is judged again where the value arrives. `orNull` is
     // a slot taking null as well: what arrives is null or answers.

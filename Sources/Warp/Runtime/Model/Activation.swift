@@ -97,7 +97,7 @@ struct Activation: Sendable {
 
     // MARK: - Private
     // A dot reads a name and nothing else, and the build judged every one and
-    // wrote the judgment into the step. What may genuinely be absent, a missing
+    // wrote the judgement into the step. What may genuinely be absent, a missing
     // entry or a null on the way, is read as null only where the author spelled
     // `?.`, and refused everywhere else.
     private func lookup(_ address: Address) -> Walk {

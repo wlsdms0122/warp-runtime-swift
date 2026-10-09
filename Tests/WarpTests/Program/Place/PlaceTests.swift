@@ -583,7 +583,7 @@ struct PlaceTests {
     @Test("a name written as a type in one document and a contract in another")
     func aNameThatIsBothIsPlacedAtTheContract() async throws {
         // Given. The two tables held against each other, which is the one
-        // judgment that reads both tables. The contract is what the walk is
+        // judgement that reads both tables. The contract is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
         let type = try Module(types: ["Pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
 

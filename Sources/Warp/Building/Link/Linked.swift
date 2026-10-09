@@ -91,7 +91,7 @@ public final class Linked: Sendable {
 
     static let unreadable = "got a procedure a row of this link cannot read."
         + " One is read where the link that made it is being read, which"
-        + " for a judgment is the image's own types"
+        + " for a judgement is the image's own types"
 
     // The same row as a fold reads it: what a host brought answers with the
     // refusal it earns there, and everything else answers as it is.

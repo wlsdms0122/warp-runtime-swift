@@ -694,7 +694,7 @@ struct TypeChecker {
         return context.declared(selector)?.handsBackAsDeclared == true
     }
 
-    // The one bounds judgment a call is held to, over the whole signature.
+    // The one bounds judgement a call is held to, over the whole signature.
     // Answers the refusal, or nil where every bounded parameter's readings
     // answer each of its bounds. That a named bound is declared is the
     // declaration's own fact, held where it is declared.
@@ -2104,7 +2104,7 @@ struct TypeChecker {
                 ask: ask
             )
 
-            // Read once, and every judgment below asks this reading: whether
+            // Read once, and every judgement below asks this reading: whether
             // it could be called, what it takes and what it answers.
             let callee = called.reading.slotUnwrapped.resolved(in: context.loweredTypes)
             let answers: LoweredType
@@ -3463,7 +3463,7 @@ struct TypeChecker {
 
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
-        // refuse whatever arrived. The judgment (a parameter read two ways has
+        // refuse whatever arrived. The judgement (a parameter read two ways has
         // no answer, a bounded one takes only what answers its bounds) is
         // the one every call surface shares, so this only gathers what the call
         // wrote into each slot.

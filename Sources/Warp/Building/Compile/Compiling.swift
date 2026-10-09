@@ -41,7 +41,7 @@ struct Compiling {
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
 
-    // Every judgment the compile asks and every row it builds reads the table
+    // Every judgement the compile asks and every row it builds reads the table
     // the run will read.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 

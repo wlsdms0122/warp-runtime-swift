@@ -216,7 +216,7 @@ struct FoundationTests {
 
     @Test("a whole and a fraction meet exactly at every size")
     func wholeAndFractionMeetExactly() async throws {
-        // Given. 2^53 + 1 rounds to 2^53 in binary64, so a judgment that
+        // Given. 2^53 + 1 rounds to 2^53 in binary64, so a judgement that
         // converts would call two different worths the same. Worth does not
         // follow the rounding, in any consumer of the one order.
         let above = Value.int(9007199254740993)

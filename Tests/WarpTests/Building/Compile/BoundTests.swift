@@ -105,7 +105,7 @@ struct BoundTests {
     @Test("a module declares a contract of its own and the bound holds")
     func aModuleDeclaresAContractOfItsOwn() async throws {
         // Given. What answers the contract is what the claims say, so a
-        // signature writes the name and the same judgment Standard's
+        // signature writes the name and the same judgement Standard's
         // procedures get is this one's
         let sut = try Module(
             contracts: Self.markers("Scalar"),
@@ -654,7 +654,7 @@ struct BoundTests {
         }
     }
 
-    @Test("a closure's signature is held to the same judgment as a declaration")
+    @Test("a closure's signature is held to the same judgement as a declaration")
     func aClosureSignatureIsJudgedAtTheBuild() async throws {
         // Given. Unreached code still has to compile, and a signature written
         // inline is a declaration however deep a body buries it

@@ -21,7 +21,7 @@ public struct TypeTable: Sendable {
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every
-    // judgment this table answers is asked of the lowered one.
+    // judgement this table answers is asked of the lowered one.
     let loweredTypes: LoweredTypeTable
 
     // The link these rows are numbered against, kept so the table can be
@@ -34,7 +34,7 @@ public struct TypeTable: Sendable {
     // body already holds.
     private let standing: [Name]?
 
-    // A table declaring nothing, for a judgment asked with no declarations
+    // A table declaring nothing, for a judgement asked with no declarations
     // behind it.
     public static let empty = TypeTable(types: [:], of: Linkage())
 

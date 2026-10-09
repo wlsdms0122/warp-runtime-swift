@@ -1,5 +1,5 @@
 //
-//  IndexReferenceJudgmentTests.swift
+//  IndexReferenceJudgementTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 8/23/26.
@@ -13,7 +13,7 @@ import WarpTestSupport
 // The dot judged behind an index reference. The walk continues through `[i]`
 // the way it does through `[0]`, so nothing after one escapes the build.
 @Suite("The dot judged behind an index reference")
-struct IndexReferenceJudgmentTests {
+struct IndexReferenceJudgementTests {
     // MARK: - Property
     private let builder = Builder()
 

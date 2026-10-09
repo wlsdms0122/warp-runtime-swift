@@ -38,7 +38,7 @@ struct TypingContext: Sendable {
     let answers: [Int: LoweredType]
 
     // The same declarations as the run reads them, lowered once. Every
-    // judgment the walk asks goes here, so the walk and the run judge by one
+    // judgement the walk asks goes here, so the walk and the run judge by one
     // table and by one language.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
