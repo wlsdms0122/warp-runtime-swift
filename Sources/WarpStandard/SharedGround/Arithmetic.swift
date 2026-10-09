@@ -81,7 +81,7 @@ struct Arithmetic: Sendable {
         case .dividedBy:
             return .double(try real(Double(left), Double(right)))
 
-        // A remainder is smaller in size than its divisor, so it always fits the int.
+        // A remainder is smaller in size than its divisor, so it always fits an `Int`.
         // The one divisor that trips the hardware's division (`Int.min % -1`)
         // still has the answer 0, so it is answered directly.
         case .remainder:

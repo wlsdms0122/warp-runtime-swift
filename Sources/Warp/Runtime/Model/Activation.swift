@@ -220,7 +220,7 @@ struct Activation: Sendable {
     // defect, not absence: the array is there and says how long it is.
     private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
         guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected array")
+            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected an Array")
         }
 
         guard index >= 0, index < elements.count else {

@@ -10,15 +10,14 @@ import Warp
 
 // How a notation writes an expression specially, for a notation that writes
 // one. In a document a value slot holds an expression: a literal, a reference,
-// a message, a cast, a closure, a record or an array of these, and nothing
-// more is said about it. Everything else a slot has ever looked like is a
-// notation's: the record of an operator key and its subject, which keys count
+// a call, a cast, a closure, a record or an array of these, and nothing more
+// is said about it. Everything else a slot is written as is a notation's: the record of an operator key and its subject, which keys count
 // as operators, whether one takes its expression directly, which procedure
 // each reaches, and which side of the send the subject lands on. None of that
 // is in this package, and this is the hole where it goes.
 //
 // A spelling is read wherever an expression is: a condition under `when`, an
-// operand of a message, an element of an array. So a reader here can lower a
+// operand of a call, an element of an array. So a reader here can lower a
 // spelling it was never told about by name, and a document, read with no
 // notation at all, has nothing to lower.
 //

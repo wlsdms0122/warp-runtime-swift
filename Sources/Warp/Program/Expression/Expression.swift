@@ -233,7 +233,7 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and a condition is data."
             + " What a body decides reaches a condition through a procedure"
 
-    // Whether a construct (a type that runs a body, or leaves) sits anywhere
+    // Whether a construct (a form that runs a body, or leaves) sits anywhere
     // in this expression read as data. A closure is data (the body it carries
     // is its own), so the walk does not enter it.
     public var holdsConstruct: Bool {

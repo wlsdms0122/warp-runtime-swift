@@ -18,11 +18,9 @@ import Warp
 // same, but neither can hand what it built to anything running elsewhere unless
 // the result can be written down.
 //
-// Only the types that stand one to one with the language are written. Nothing
-// here reaches for a spelling (no `is`, no template, no `abort`) because a
-// spelling is a claim about what the reading side implements, and the point of
-// writing plainly is to make that claim as small as it can be. A program that
-// arrived spelled is written back unspelled, and it means the same thing.
+// Only the types that stand one to one with the language are written, so a
+// program that arrived spelled is written back unspelled, and it means the
+// same thing.
 public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry

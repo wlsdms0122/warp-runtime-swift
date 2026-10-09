@@ -335,7 +335,7 @@ struct ValueDecoder: Decoder {
         // still answered by `decode` below, which holds bytes to their own
         // spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.nominal)", at: steps)
+            throw ReadingError("expected an Array, found \(value.nominal)", at: steps)
         }
 
         return UnkeyedContainer(
@@ -372,7 +372,7 @@ struct ValueDecoder: Decoder {
     // Every element, read where it stands.
     func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.nominal)", at: steps)
+            throw ReadingError("expected an Array, found \(value.nominal)", at: steps)
         }
 
         return try elements.enumerated().map { index, element in
@@ -417,7 +417,7 @@ struct ValueDecoder: Decoder {
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         if type == Data.self {
             guard case let .bytes(bytes) = value, let data = Data(bytes) as? T else {
-                throw ReadingError("expected \(type), found \(value.nominal)", at: steps)
+                throw ReadingError("expected bytes, found \(value.nominal)", at: steps)
             }
 
             return data

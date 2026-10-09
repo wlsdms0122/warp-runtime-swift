@@ -44,16 +44,16 @@ struct TypeChecker {
         case refused(String)
     }
 
-    // The two asks the one walk answers. Judging is the compile's own pass (every
-    // dot judged, every constant-headed path folded, every call gathered, every
-    // refusal thrown) and it happens
-    // once per site. Probing answers the type and flow questions alone and
-    // refuses nothing (what cannot be read is `Any`) because its askers read a
-    // body out of place or more than once: an operand typed where it stands, a
-    // round re-read until its writes settle, where a refusal would be transient
-    // or repeated. One walk under two asks, so the rules cannot drift a copy at
-    // a time, and so a body is read once, where a walk per question would
-    // compound arm by arm into an exponential reading of nothing new.
+    // The two asks the one walk answers. Judging is the compile's own pass
+    // (every dot judged, every constant-headed path folded, every call
+    // gathered, every refusal thrown) and it happens once per site. Probing
+    // answers the type and flow questions alone and refuses nothing (what
+    // cannot be read is `Any`) because its askers read a body out of place or
+    // more than once: an operand typed where it stands, a round re-read until
+    // its writes settle, where a refusal would be transient or repeated. One
+    // walk under two asks, so the rules cannot drift a copy at a time, and so a
+    // body is read once, where a walk per question would compound arm by arm
+    // into an exponential reading of nothing new.
     private enum Ask {
         // Judging carries what folds a constant-headed path, where there is
         // one, where it writes down the pairs its calls lean on, and what the
@@ -83,6 +83,8 @@ struct TypeChecker {
             return answering
         }
 
+        // MARK: - Initializer
+        // MARK: - Public
         // The same ask for a body that declares it answers `type`.
         func answering(_ type: LoweredType?) -> Ask {
             guard case let .judging(folding, writing, _) = self else { return self }
@@ -90,8 +92,6 @@ struct TypeChecker {
             return .judging(folding: folding, writing: writing, answering: type)
         }
 
-        // MARK: - Initializer
-        // MARK: - Public
         // MARK: - Private
     }
 
@@ -871,7 +871,7 @@ struct TypeChecker {
     //
     // A field the type does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
-    // overrule a proof. What may genuinely be absent at run (a `dictionary`
+    // overrule a proof. What may genuinely be absent at run (a `Dictionary`
     // entry, a nullable's null) is where `?.` speaks: the plain spelling is
     // refused there, and the optional one answers null and makes the whole
     // path's reading nullable.
@@ -1440,12 +1440,12 @@ struct TypeChecker {
         do {
             settled = try await folding.read(inner, at: place)
         } catch {
-            throw BuildError("reading constant \'\(head)\': \(error)", at: place)
+            throw BuildError("reading constant '\(head)': \(error)", at: place)
         }
 
         // The mark rides the fold: which element or entry is read settles
         // now, whether the list or the map is there to be read stays the
-        // run\'s question. A key is a name, so text that is not one names no
+        // run's question. A key is a name, so text that is not one names no
         // entry.
         switch settled {
         case let .int(index):
@@ -1724,8 +1724,7 @@ struct TypeChecker {
         //
         // A claim the types already prove is refused, for the reason a needless
         // `?.` is: the mark of a doubt where no doubt is left says nothing, and
-        // a spelling that says nothing is a reading gone wrong. `as: Any` lands
-        // here too, and rightly. Every reading fits it.
+        // a spelling that says nothing is a reading gone wrong.
         case let .cast(value, type, optional):
             let inner = try await inspected(
                 value,

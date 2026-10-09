@@ -30,10 +30,7 @@ enum SlotMark: String, CaseIterable, Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.
-    //
-    // No `default`: a type nobody thought about has to be a compile error here
-    // rather than an answer of "unmarked", which is the answer every reading of
-    // a marked slot would then get.
+    // Every case is named, so a new one is a compile error here.
     static func marked(_ type: TypeExpression) -> SlotMark? {
         switch type {
         case .variable:

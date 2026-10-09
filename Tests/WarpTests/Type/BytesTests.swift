@@ -169,7 +169,7 @@ struct BytesTests {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
             "\(error)".contains("input 'data'[0]: expected String, got Int")
-                && !"\(error)".contains("expected array")
+                && !"\(error)".contains("expected an Array")
         }
     }
 

@@ -11,8 +11,8 @@ import Foundation
 // table, the types the link declared, and what each document's variables
 // start out holding. A closure literal's row is held by the code that makes
 // the closure. Only `Builder` makes one, so holding a value of this type is
-// the evidence that linking happened. An image is made per link and not kept: its rows mean
-// something within that link alone.
+// the evidence that linking happened. An image is made per link and not kept:
+// its rows mean something within that link alone.
 public struct Image: Sendable {
     // MARK: - Property
     public let linked: [Linked]

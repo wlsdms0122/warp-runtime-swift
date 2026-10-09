@@ -7,9 +7,8 @@
 
 import Foundation
 
-// What a call is checked against, in both directions. What it takes and what
-// comes back. Declaring only the inward half would stop the judgement this
-// language makes before running at the boundary it is easiest to make it at.
+// What a call is checked against, in both directions: what it takes and what
+// comes back.
 public struct Signature: Sendable, Equatable {
     // MARK: - Property
     // What the declaration takes, in the order it wrote them. The order is the

@@ -21,8 +21,8 @@ public struct Parameter: Sendable, Equatable {
     public let type: TypeExpression?
     public let description: String?
 
-    // What this reads as where a type is needed regardless. An undeclared
-    // parameter accepts what it is handed, which is what `Any` says.
+    // What this reads as where a type is needed regardless. A parameter
+    // declaring no type accepts what it is handed, which is what `Any` says.
     public var declared: TypeExpression { type ?? .any }
 
     // MARK: - Initializer

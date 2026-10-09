@@ -202,7 +202,6 @@ struct TypeWriter {
         }
     }
 
-
     // One fact (only a type with a spelling of its own composes) said with the
     // place the author wrote, so the refusal points at their text.
     private func spelt(_ type: TypeExpression, at context: String) throws -> String {

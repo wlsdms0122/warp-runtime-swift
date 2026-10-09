@@ -691,7 +691,6 @@ struct ObjectReader {
         return read
     }
 
-
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")
         let held = try layout(cursor.next())

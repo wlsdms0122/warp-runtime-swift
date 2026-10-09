@@ -11,8 +11,8 @@ import Foundation
 // laid down one at a time.
 //
 // A document reaches outside itself through the procedures it calls and the
-// types its signatures name, which is what `Module.references` already holds: every
-// procedure and type it names and does not declare. So what a document was
+// types it names and does not declare, which is what `Module.references`
+// holds. So what a document was
 // compiled against is read off the document rather than tracked through the
 // compile.
 //

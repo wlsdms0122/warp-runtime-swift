@@ -12,7 +12,7 @@ import Warp
 // says which construct keys it offers.
 //
 // A spelling stands in for something the language already has: a condition
-// written as an operator is a message, and so is a template. So a document has
+// written as an operator is a call, and so is a template. So a document has
 // two layers, and this is the switch between them. A notation brings its own
 // spellings, and the canonical one brings none, which leaves a document writing
 // the types themselves.

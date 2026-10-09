@@ -7,8 +7,11 @@
 
 import Foundation
 
-// What the compile refuses about a declaration on its own: a type mention that
-// resolves to nothing, and a parameter no call could fit.
+// What the compile refuses about declarations once their names resolve: a
+// name reaching only names, a mention no module in the link declares, a bound
+// or a composition naming what is no contract, a `?` behind a name where it
+// says nothing, a cast naming nothing to read, and a parameter a procedure the
+// host answers could never call.
 struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer

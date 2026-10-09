@@ -73,8 +73,8 @@ public struct Invocation<P: NativeProcedure>: Sendable {
 
     // Writes a value through the hold a parameter was handed. A native procedure
     // declaring a parameter `inout` answers into the caller's variable this
-    // way, and a procedure writing an argument that is not a path is a procedure the
-    // link should have refused.
+    // way. A link hands such a parameter a path, so one that was handed none
+    // is refused here.
     public func write(_ key: P.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
             throw ExecutionError(

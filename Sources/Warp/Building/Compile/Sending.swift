@@ -24,10 +24,6 @@ import Foundation
 // another body could touch at the same time, and neither is that. A procedure
 // making either claim while sending something that breaks it is refused. So is
 // a send reaching a parameter handed in place, since a send hands values.
-//
-// What it may fail with is not one of them. A procedure the host answers may
-// catch a failure of what it sends, so one declaring it fails nothing while
-// sending something that fails describes itself and contradicts nothing.
 struct Sending {
     // MARK: - Property
     private let numbering: Numbering
