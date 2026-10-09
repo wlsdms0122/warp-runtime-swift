@@ -414,6 +414,20 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
+    // Whether a `?` on this says something new. It says nothing on what
+    // already takes null, on `Never`, which no value is, and on a type
+    // parameter, which stands for the whole type the call fills in.
+    public var takesQuestionMark: Bool {
+        switch self {
+        case .any, .null, .never, .parameter, .nullable:
+            return false
+
+        case .bool, .int, .double, .string, .array, .dictionary, .record, .procedure, .variable,
+            .inout, .named, .projection, .composition, .selfType:
+            return true
+        }
+    }
+
     public var isInout: Bool {
         if case .inout = self { return true }
         return false

@@ -790,9 +790,9 @@ public struct Validator: Sendable {
 
     // A type held to where it is written: `inout` only in front of a
     // parameter, `var` only on a field of what a declaration holds, a type
-    // parameter only where a call fills it, and `Self` only in a contract's
-    // procedures. What a name stands for is the build's to resolve, so a
-    // name is not walked into.
+    // parameter only where a call fills it, `Self` only in a contract's
+    // procedures, and `?` only where it says something new. What a name
+    // stands for is the build's to resolve, so a name is not walked into.
     private func written(_ type: TypeExpression, in context: TypeContext, at place: Place) throws {
         switch type {
         case .any, .never, .null, .bool, .int, .double, .string, .named, .composition, .projection:
@@ -816,7 +816,15 @@ public struct Validator: Sendable {
                 )
             }
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner):
+        case let .array(inner), let .dictionary(inner):
+            try written(inner, in: context, at: place)
+
+        // What a `?` wraps behind a name is the build's, where names resolve.
+        case let .nullable(inner):
+            guard inner.takesQuestionMark else {
+                throw ValidationError("writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)", at: place)
+            }
+
             try written(inner, in: context, at: place)
 
         case let .record(fields):

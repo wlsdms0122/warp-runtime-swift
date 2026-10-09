@@ -283,11 +283,9 @@ struct DeclarationChecker {
         case let .array(inner), let .dictionary(inner), let .inout(inner), let .variable(inner):
             try mentioned(in: inner, at: place, resolve: table)
 
-        // The reader refuses a `?` that says nothing new, but the reader sees
-        // spellings, and a name may hide one of the refused types behind it.
-        // The rule is the model's, so it is held here too, where names resolve:
-        // whatever surface wrote the type, `?` wraps only what does not already
-        // answer the null question.
+        // The load held a `?` to saying something new on what it wraps as
+        // written. A name may stand for what it says nothing on, and that is
+        // known here, where names resolve.
         case let .nullable(inner):
             var resolved = inner
 
@@ -295,8 +293,7 @@ struct DeclarationChecker {
                 resolved = underneath
             }
 
-            switch resolved {
-            case .any, .null, .never, .parameter, .nullable:
+            if case .named = inner, !resolved.takesQuestionMark {
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which"
                         + " stands for `\(resolved.rendered)`. A `?` says"
@@ -304,9 +301,6 @@ struct DeclarationChecker {
                         + " `\(resolved.rendered)?` is refused by",
                     at: place
                 )
-
-            default:
-                break
             }
 
             try mentioned(in: inner, at: place, resolve: table)

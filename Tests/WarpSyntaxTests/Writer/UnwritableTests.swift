@@ -57,8 +57,8 @@ struct UnwritableTests {
 
     @Test("a declared type named like a built-in has no document")
     func aTypeNamedLikeABuiltinIsRefused() {
-        // When / Then. Nothing stops a module declaring a type called `Int`; a
-        // document just reads the name it knows as the type it knows
+        // When / Then. A document reads the name it knows as the type it
+        // knows
         #expect(throws: WritingError.self) {
             try sut.value(of: TypeExpression.named("Int"))
         }
@@ -72,9 +72,6 @@ struct UnwritableTests {
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
             TypeExpression.nullable(.composition(["App.A", "App.B"])),
-            .nullable(.nullable(.int)),
-            .nullable(.any),
-            .nullable(.parameter(name: "T")),
             .nullable(.variable(.int)),
             .composition(["Foo", "Int"]),
             .composition(["Foo", "Array<Int>"]),

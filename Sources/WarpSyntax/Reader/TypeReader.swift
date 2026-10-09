@@ -189,36 +189,7 @@ public struct TypeReader: Decodable {
         }
 
         if text.hasSuffix("?") {
-            let inner = try parse(String(text.dropLast()), qualifying: qualifying)
-
-            switch inner {
-            // What already admits null gains nothing from saying so again,
-            // and a spelling that says one thing twice reads as two things.
-            case .nullable:
-                throw TypeFormError("type '\(text)' writes `?` twice. Once says it")
-
-            case .null, .any:
-                throw TypeFormError(
-                    "type '\(text)' writes `?` on what already admits null"
-                )
-
-            case .never:
-                throw TypeFormError(
-                    "type '\(text)' writes `?` on Never, which no value is"
-                )
-
-            // A type parameter stands for what the call puts there, and what
-            // the call puts there is a type of its own. Nullability rides on
-            // the filling, not on the mention.
-            case .parameter:
-                throw TypeFormError(
-                    "type '\(text)' writes `?` on a type parameter. A"
-                        + " parameter stands for the whole type the call fills in"
-                )
-
-            default:
-                return .nullable(inner)
-            }
+            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
         }
 
         // Constness is a keyword in front rather than an argument, because it says
