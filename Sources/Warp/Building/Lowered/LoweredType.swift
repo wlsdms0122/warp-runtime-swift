@@ -390,7 +390,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner), let .variable(inner):
             return inner.isNamelessStructure(in: table)
 
-        case let .named(row) where table.recordRows[row] == nil && !table.cycling.contains(row):
+        case let .named(row) where table.recordRows[row] == nil:
             return table.loweredTypes[row].isNamelessStructure(in: table)
 
         default:
