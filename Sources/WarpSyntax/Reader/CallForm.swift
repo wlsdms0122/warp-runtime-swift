@@ -16,17 +16,17 @@ import Warp
 // A call names a declaration, never a document: which module declared it is
 // the build's to resolve. A body a procedure is to run travels as a closure
 // argument, like any other value.
-public struct CallForm: Decodable, Sendable {
+struct CallForm: Decodable, Sendable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case procedure
         case arguments
     }
 
     // MARK: - Property
-    public let expression: Warp.Expression
+    let expression: Warp.Expression
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "call")
 
         let container = try decoder.container(keyedBy: CodingKeys.self)

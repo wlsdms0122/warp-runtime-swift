@@ -73,9 +73,9 @@ struct NeverTests {
     func aLoopResultReadsAtTheExits() async throws {
         // Given. The run may take any exit: a condition that declines at the
         // start answers before a single round wrote anything. So the result
-        // reads in the settled join of the exits (`x` holds int or string, not
-        // the one a finished round would prove), so a cast to the int the
-        // 0-round value is stands, where a reading of the round's string would
+        // reads in the settled join of the exits (`x` holds Int or String, not
+        // the one a finished round would prove), so a cast to the Int the
+        // 0-round value is stands, where a reading of the round's String would
         // make it a cast no value could satisfy
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
@@ -110,80 +110,6 @@ struct NeverTests {
 
         // When / Then. Builds, and the run answers the 0-round value
         #expect(try await run([sut]) == .int(1))
-    }
-
-    @Test("a loop result's writes reach the names after the loop")
-    func aLoopResultsWritesReachTheNamesAfter() async throws {
-        // Given. The result runs on every exit, a 0-round run included, so a
-        // write it makes lands whatever the rounds did: `y` after the loop may
-        // hold what the result wrote, and a slot that fits that value is not
-        // refused on the entry type's account
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [Statement(expression: aborting(literal("stops")))],
-                result: .block(
-                    Block(
-                        body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
-                        ],
-                        result: reference("y")
-                    )
-                )
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("y")])]
-                        )))
-                    ],
-                    result: reference("y")
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Builds, and the run answers what the result wrote
-        #expect(try await run([sut]) == .string("s"))
-
-        // And the write is definite (every exit made it) so `y` reads as
-        // exactly what the result wrote, and an `Int` slot refuses it
-        let refusing = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("y")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        await #expect {
-            try await Builder().build([refusing] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("holds String")
-        }
     }
 
     @Test("a body that ends by leaving still carries its folded constant")
@@ -320,7 +246,7 @@ struct NeverTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("never finishes before it")
+            "\(error)".contains("follows a body that never finishes")
         }
     }
 

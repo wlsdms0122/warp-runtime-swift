@@ -13,8 +13,8 @@ import Warp
 // one surface that says which key builds which.
 //
 // A form is asked for its expression with the name the statement it stands in
-// introduces, because two constructs bind that name inside their body: `loop`
-// binds the round, `attempt` binds the failure. A `set` introduces none.
+// introduces, for a form that binds that name inside what it spells. A `set`
+// introduces none.
 public protocol ConstructForm: Sendable, Decodable {
     // The spelling this form proposes. `ConstructRegistry` may register it
     // under another, so a form never learns which key actually reached it. A

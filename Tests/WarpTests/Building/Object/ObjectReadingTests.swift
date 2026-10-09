@@ -456,16 +456,16 @@ struct ObjectReadingTests {
 
     @Test("is refused where a record value's fields stand out of order")
     func aRecordOutOfOrder() async throws {
-        // Given. A real object whose body answers a dictionary literal, which
-        // it writes as a record with no name, its fields turned around. A
-        // reading that sorted them would read two writings as one object.
+        // Given. A real object whose body answers a record literal, which it
+        // writes as a record with no name, its fields turned around. A reading
+        // that sorted them would read two writings as one object.
         let sut = try Module(
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .literal(.dictionary(["a": .int(1), "b": .int(2)]))
+                    result: .literal(.record(Record(name: nil, ["a": .int(1), "b": .int(2)])))
                 )
             ]
         )
@@ -483,7 +483,7 @@ struct ObjectReadingTests {
             case let .array(values) = value[3],
             names.count == 2
         else {
-            Issue.record("an object writes a literal dictionary as a record's names and values")
+            Issue.record("an object writes a record literal as its names and values")
 
             return
         }
@@ -517,23 +517,26 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
-                    body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
-                    result: .loop(
-                        while: .call(Call(
-                            selector: "Standard.Comparable.lessThan",
-                            arguments: [reference("n"), .literal(.int(2))]
-                        )),
-                        body: Block(
-                            body: [
-                                Statement(
-                                    binding: .assignment([.key("n")]),
-                                    expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
-                                ),
-                                Statement(binding: .constant("k"), expression: reference("n"))
-                            ],
-                            result: reference("k")
-                        )
-                    )
+                    body: [
+                        Statement(binding: .variable("n"), expression: .literal(.int(0))),
+                        Statement(expression: .loop(
+                            while: .call(Call(
+                                selector: "Standard.Comparable.lessThan",
+                                arguments: [reference("n"), .literal(.int(2))]
+                            )),
+                            body: Block(
+                                body: [
+                                    Statement(
+                                        binding: .assignment([.key("n")]),
+                                        expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                    ),
+                                    Statement(binding: .constant("k"), expression: reference("n"))
+                                ],
+                                result: reference("k")
+                            )
+                        ))
+                    ],
+                    result: reference("n")
                 )
             ]
         )
@@ -544,8 +547,9 @@ struct ObjectReadingTests {
             case var .array(row) = table[0],
             case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
+            case var .array(instructions) = body[0],
+            case var .array(instruction) = instructions[1],
+            case var .array(operation) = instruction[1],
             case .int(9) = operation[0],
             case let .array(keeps) = operation[4],
             keeps.count == 1
@@ -556,8 +560,9 @@ struct ObjectReadingTests {
         }
 
         operation[4] = .array([.array([.int(9999), .int(9999)])])
-        result[0] = .array(operation)
-        body[1] = .array(result)
+        instruction[1] = .array(operation)
+        instructions[1] = .array(instruction)
+        body[0] = .array(instructions)
         implementation[1] = .array(body)
         row[6] = .array(implementation)
         table[0] = .array(row)

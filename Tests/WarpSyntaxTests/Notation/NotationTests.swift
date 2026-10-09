@@ -253,7 +253,7 @@ struct NotationTests {
         // written inside the cast, so the same document is a cast in every
         // notation rather than a send in some.
         let written: Value = [
-            "parameters": [["name": "flag", "type": "Any"]],
+            "parameters": [["name": "flag"]],
             "body": [
                 [
                     "value": ["conditional": [

@@ -578,7 +578,7 @@ struct Bench {
                 + " \(buildSamples)",
             noting: [
                 "`alone` is the documents compiled one at a time rather than together."
-                    + " `spread` is one document's share of that plus the link, which is"
+                    + " `floor` is one document's share of that plus the link, which is"
                     + " what the row costs on as many cores as it has documents and"
                     + " nothing charged for handing them out; `x` is `build` over it."
             ]

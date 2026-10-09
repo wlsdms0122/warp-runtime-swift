@@ -31,7 +31,7 @@ struct DeclarerTable {
     // MARK: - Public
     // One document laid down, under what it turned out to be.
     mutating func lay(_ document: Compiled) {
-        hold(document.declares, as: document.fingerprint)
+        hold(document.supplies, as: document.fingerprint)
     }
 
     // What this document was compiled against, or nothing where one of the

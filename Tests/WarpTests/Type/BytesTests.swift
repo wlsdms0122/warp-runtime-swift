@@ -176,7 +176,7 @@ struct BytesTests {
     @Test("a walk over bytes reads the ordinary Int each byte is")
     func aWalkOverBytesReadsInts() async throws {
         // Given. Bytes count and index the way an array does, so the loop that
-        // walks one reads each byte as the ordinary int it is
+        // walks one reads each byte as the ordinary Int it is
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

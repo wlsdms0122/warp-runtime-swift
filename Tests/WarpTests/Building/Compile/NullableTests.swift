@@ -22,6 +22,7 @@ struct NullableTests {
     func aNullableReadingIsRefusedAtACall() async throws {
         // Given. The `?.` path answers `Int?`, and the callee declares `Int`
         let sut = try Module(
+            types: ["App.Task": .record(["size": .int])],
             procedures: [
                 "half": Procedure(
                     signature: Signature(
@@ -35,7 +36,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
+                            Parameter(name: "task", type: .nullable(.named("App.Task")))
                         ]
                     ),
                     body: [
@@ -59,12 +60,13 @@ struct NullableTests {
         // Given. The record may be null, so `?.` is the only spelling that
         // builds; what it answers is the field or null
         let sut = try Module(
+            types: ["App.Task": .record(["size": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .nullable(.record(["size": .int])))
+                            Parameter(name: "task", type: .nullable(.named("App.Task")))
                         ],
                         returns: .nullable(.int)
                     ),
@@ -435,45 +437,6 @@ struct NullableTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError && "\(error)".contains("never null")
-        }
-    }
-
-    @Test("a mark on the head is refused wherever a path is judged")
-    func aMarkedHeadIsRefused() async throws {
-        // Given. The head is a name a scope holds, so there is nothing before
-        // it that could have been absent. A front end that builds segments
-        // directly is told so where the module is made
-        // When / Then
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [
-                                Parameter(name: "items", type: .array(.string))
-                            ]
-                        ),
-                        body: [],
-                        result: .reference([.key("items", optional: true), .index(0)])
-                    )
-                ]
-            )
-        } throws: { error in
-            "\(error)".contains("marks the head optional")
-        }
-
-        // And the run says the same rather than reading past it. The layers
-        // share one sentence, so neither answers what the other refuses
-        let marked: Path = [.key("items", optional: true), .index(0)]
-        let folding = try await builder.build(
-            [try Module(procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))])]
-        ).folding(["items": .array([.string("one")])])
-
-        await #expect {
-            try await folding.read(marked, at: .given("test"))
-        } throws: { error in
-            "\(error)".contains(marked.markedHead ?? "")
         }
     }
 

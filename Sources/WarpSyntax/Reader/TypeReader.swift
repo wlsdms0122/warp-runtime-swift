@@ -125,112 +125,10 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Public
-    // A type from its spelling. `qualifying` is what a declared name written
-    // short stands for, which is the notation's answer where a text may write
-    // one short and the name itself where every name is written full.
-    public static func parse(
-        _ written: String,
-        qualifying: (Name) -> Name = { name in name }
-    ) throws -> TypeExpression {
-        let text = written.trimmingCharacters(in: .whitespaces)
-
-        guard !text.isEmpty else {
-            throw TypeFormError("a type name must not be empty")
-        }
-
-        // `inout` and `var` stand in front of the whole type, including a
-        // trailing `?`, so they are read before anything else is.
-        if let (mark, bare) = SlotMark.leading(of: text) {
-            return mark.marking(try parse(bare, qualifying: qualifying))
-        }
-
-        // A trailing `?` reads next because it wraps the whole spelling under
-        // the mark: `Array<Int>?` is a nullable array, `const Procedure?` a
-        // nullable procedure and `A & B?` a nullable composition, and what may
-        // be inside the brackets never carries one.
-        if text.hasSuffix("?") {
-            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
-        }
-
-        guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
-            throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
-        }
-
-        if constness == .const || isolation == .isolated {
-            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying) else {
-                throw TypeFormError("only a procedure is written const or isolated")
-            }
-
-            return .procedure(signature, constness, isolation)
-        }
-
-        // `A & B`: the names a value answers, and nothing else, so every part
-        // is held to being a name.
-        if let parts = joined(text) {
-            return .composition(
-                Set(
-                    try parts.map { part -> Name in
-                        let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
-
-                        guard case let .named(name) = parsed else {
-                            throw TypeFormError(
-                                "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                                    + " and `&` joins the names of contracts, each a bare name"
-                            )
-                        }
-
-                        return name
-                    }
-                )
-            )
-        }
-
-        // A type parameter rather than a name: `some T` is worked out from the
-        // call, where `T` alone would be looked up in the table of declared
-        // types. A slot only names the parameter. Its bound is declared once,
-        // in the signature's `bounds`, because the signature owns what its
-        // names mean and a bound repeated per slot is one claim written
-        // several times.
-        if text == "some" || text.hasPrefix("some ") {
-            return .parameter(name: try named(text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)))
-        }
-
-        guard let open = text.firstIndex(of: "<") else {
-            guard !text.contains(">") else {
-                throw TypeFormError("type '\(text)' closes an argument it never opened")
-            }
-
-            // A list or a map says what it holds. `Array<Any>` is a list of
-            // anything, and the bare word is not a second spelling of it.
-            guard Holding(spelling: text) == nil else {
-                throw TypeFormError(
-                    "type '\(text)' says nothing of what it holds. Write `\(text)<Any>`"
-                        + " for one of anything"
-                )
-            }
-
-            let name = try named(text)
-
-            return TypeExpression.keywords[name] ?? .named(qualifying(name))
-        }
-
-        let head = String(text[text.startIndex ..< open])
-
-        guard text.hasSuffix(">") else {
-            throw TypeFormError("type '\(text)' opens an argument it never closes")
-        }
-
-        let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
-
-        guard let holding = Holding(spelling: head) else {
-            throw TypeFormError(
-                "type '\(head)' takes no argument. Only "
-                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: " and ")
-                    + " do"
-            )
-        }
-
-        return holding.holding(try parse(inner, qualifying: qualifying))
+    // A type from its spelling, a declared name written short standing for
+    // what the notation reads it as.
+    public static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
+        try parse(written) { name in notation.qualified(name, as: .type) }
     }
 
     // Whether the reading takes this key as a procedure form's. Asked of the
@@ -310,6 +208,102 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Private
+    // `qualifying` is the notation's reading of a declared name, handed down
+    // the spelling's parts.
+    private static func parse(
+        _ written: String,
+        qualifying: (Name) -> Name
+    ) throws -> TypeExpression {
+        let text = written.trimmingCharacters(in: .whitespaces)
+
+        guard !text.isEmpty else {
+            throw TypeFormError("a type name must not be empty")
+        }
+
+        // `inout` and `var` stand in front of the whole type, including a
+        // trailing `?`, so they are read before anything else is.
+        if let (mark, bare) = SlotMark.leading(of: text) {
+            return mark.marking(try parse(bare, qualifying: qualifying))
+        }
+
+        // A trailing `?` reads next because it wraps the whole spelling under
+        // the mark: `Array<Int>?` is a nullable array, `const Procedure?` a
+        // nullable procedure and `A & B?` a nullable composition, and what may
+        // be inside the brackets never carries one.
+        if text.hasSuffix("?") {
+            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
+        }
+
+        guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
+            throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
+        }
+
+        if constness == .const || isolation == .isolated {
+            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying) else {
+                throw TypeFormError("only a procedure is written const or isolated")
+            }
+
+            return .procedure(signature, constness, isolation)
+        }
+
+        // `A & B`: the names a value answers, and nothing else, so every part
+        // is held to being a name.
+        if let parts = joined(text) {
+            return .composition(
+                Set(
+                    try parts.map { part -> Name in
+                        let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
+
+                        guard case let .named(name) = parsed else {
+                            throw TypeFormError(
+                                "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
+                                    + " and `&` joins the names of contracts, each a bare name"
+                            )
+                        }
+
+                        return name
+                    }
+                )
+            )
+        }
+
+        // A type parameter rather than a name: `some T` is worked out from the
+        // call, where `T` alone would be looked up in the table of declared
+        // types. A slot only names the parameter; its bound is the
+        // signature's, under `BoundsReader`.
+        if text == "some" || text.hasPrefix("some ") {
+            return .parameter(name: try named(text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)))
+        }
+
+        guard let open = text.firstIndex(of: "<") else {
+            guard !text.contains(">") else {
+                throw TypeFormError("type '\(text)' closes an argument it never opened")
+            }
+
+            let name = try named(text)
+
+            return TypeExpression.keywords[name] ?? .named(qualifying(name))
+        }
+
+        let head = String(text[text.startIndex ..< open])
+
+        guard text.hasSuffix(">") else {
+            throw TypeFormError("type '\(text)' opens an argument it never closes")
+        }
+
+        let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
+
+        guard let holding = Holding(spelling: head) else {
+            throw TypeFormError(
+                "type '\(head)' takes no argument. Only "
+                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: " and ")
+                    + " do"
+            )
+        }
+
+        return holding.holding(try parse(inner, qualifying: qualifying))
+    }
+
     // The parts an `&` at the top of a spelling joins, or nothing where the
     // spelling has no such `&`: one inside brackets belongs to the argument.
     private static func joined(_ text: String) -> [Substring]? {
@@ -339,7 +333,7 @@ public struct TypeReader: Decodable {
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         let notation = decoder.notation
         if let written = try? decoder.singleValueContainer().decode(String.self) {
-            return try parse(written) { name in notation.qualified(name, as: .type) }
+            return try parse(written, in: notation)
         }
 
         guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {

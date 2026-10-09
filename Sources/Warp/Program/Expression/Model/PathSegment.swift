@@ -28,9 +28,9 @@ public enum PathSegment: Sendable, Equatable {
     // one thing the mark's rule needs that the segment cannot know. A landing
     // is spelled out rather than implied, so each one says what a mark means
     // on it, and the ones that name something carry the name rather than
-    // asking the segment back for it. Internal, like
-    // the rule it feeds: `unwrapped` is the walk's own state, and nothing
-    // outside the walk can answer it.
+    // asking the segment back for it. Internal, like the rule it feeds:
+    // `unwrapped` is the walk's own state, and nothing outside the walk can
+    // answer it.
     enum Landing {
         case field(Name)
         case entry

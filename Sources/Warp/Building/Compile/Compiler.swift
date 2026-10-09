@@ -407,7 +407,7 @@ struct Compiler {
         // back up in the table the order was read from. Everything this one
         // needs comes before it, and asking again is a second chance to ask
         // a different table.
-        for (name, expression) in try order(module.constants, in: module) {
+        for (name, expression) in order(module.constants) {
             let place = Place.constant(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
@@ -461,7 +461,7 @@ struct Compiler {
 
             // A start written as a literal, or as a closure literal that
             // writes no answer, is read as what the variable declares.
-            let declaredType = variable.declared?.lowered(in: context.loweredTypes)
+            let declaredType = declaredTypes[name]
             let start = declaredType.map { declaredType in
                 declaredType.written(
                     declaredType.completing(variable.start, in: context.loweredTypes),
@@ -592,75 +592,30 @@ struct Compiler {
     }
 
     // The order a module's constants settle in: what a constant reads comes
-    // before it. Constants that wait on each other have no such order, and that
-    // is refused here, standing on one of them.
-    private func order(
-        _ constants: [Name: Expression],
-        in module: Module
-    ) throws -> [(name: Name, expression: Expression)] {
+    // before it. The load holds a module's constants to naming no cycle.
+    private func order(_ constants: [Name: Expression]) -> [(name: Name, expression: Expression)] {
         var ordered: [(name: Name, expression: Expression)] = []
-        var settled: Set<Name> = []
+        var placed: Set<Name> = []
 
-        // What the walk is standing on, root first. Where it meets a name
-        // already on it, everything from that name down is the cycle, and
-        // nothing above it is, which is the difference between what names
-        // itself back and what merely waits on something that does.
-        var walking: [Name] = []
+        func place(_ name: Name, reading expression: Expression) {
+            guard placed.insert(name).inserted else { return }
 
-        func place(_ name: Name, reading expression: Expression) throws {
-            guard !settled.contains(name) else { return }
-
-            if let met = walking.firstIndex(of: name) {
-                let cycle = walking[met...].sorted()
-
-                throw BuildError(
-                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
-                        + " cycle. A constant may name another declared beside it, but"
-                        + " not one that names it back",
-                    // Any of them is where the fix can be made, so the one
-                    // walked to is the first in sorted order: a cycle has no
-                    // first member, and reading one off the walk would name a
-                    // different constant depending on where the walk started.
-                    at: .constant(cycle[0].spelling, in: .of(module))
-                )
-            }
-
-            walking.append(name)
-
-            // Sorted, so a module with two mistakes in it refuses the same one
-            // every run. What a set hands back is seeded per process.
-            for read in mentions(of: expression).sorted() {
+            // Sorted, so the order is the same every run. What a set hands
+            // back is seeded per process.
+            for read in expression.pathHeads.sorted() {
                 // The walk goes only to names this module declared as constants.
                 guard let reading = constants[read] else { continue }
 
-                try place(read, reading: reading)
+                place(read, reading: reading)
             }
 
-            walking.removeLast()
-            settled.insert(name)
             ordered.append((name, expression))
         }
 
         for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
-            try place(name, reading: expression)
+            place(name, reading: expression)
         }
 
         return ordered
-    }
-
-    // Every constant this expression names, at whatever depth.
-    //
-    // Flat, because nothing in here can mean anything but a constant: a body
-    // may not introduce a name the module bound, which is settled where a
-    // module is made, so no scope between a mention and this one can have taken
-    // the spelling. A closure's body is walked with the rest. Making one
-    // captures the scope it was written in, so a sibling it reads has to be
-    // settled by then.
-    private func mentions(of expression: Expression) -> Set<Name> {
-        expression.subexpressions.reduce(into: Set<Name>()) { names, held in
-            guard case let .reference(path) = held else { return }
-
-            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-        }
     }
 }

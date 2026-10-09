@@ -79,9 +79,9 @@ struct PathParserTests {
                 == [.key("rows"), .index(0), .index(1, optional: true)]
         )
 
-        // The head is a name a scope holds, and `?[` at the head expects an
-        // absence nothing stands before. Refused the way `?.` is there.
-        #expect(throws: PathSyntaxError.self) { try sut.parse("?[0]") }
+        // A mark on the head reads as written, for the load to refuse.
+        #expect(try sut.parse("?[0]") == [.index(0, optional: true)])
+        #expect(try sut.parse("?.a") == [.key("a", optional: true)])
 
         #expect(Path([.key("items"), .index(0, optional: true)]).rendered == "items?[0]")
         #expect(
@@ -94,10 +94,9 @@ struct PathParserTests {
         // Given
         let sut = PathParser()
 
-        // When / Then. A trailing `?`, a `?` before the head, and a doubled `?`
-        // each claim an absence no segment reads
+        // When / Then. A trailing `?` and a doubled `?` each claim an absence
+        // no segment reads
         #expect(throws: PathSyntaxError.self) { try sut.parse("a.b?") }
-        #expect(throws: PathSyntaxError.self) { try sut.parse("?.a") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a??.b") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a?b.c") }
 

@@ -38,11 +38,7 @@ struct TypeNamespace {
                 // Read before written. Written first, the entry that says what
                 // this collides with is the one this call overwrote.
                 if let first = types[name] {
-                    throw BuildError(
-                        "type '\(name)' is declared more than once in this link, by"
-                            + " \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
+                    throw BuildError.declaredTwice(name, by: first.spelled, and: declaration.spelled, at: declaration.place)
                 }
 
                 types[name] = declaration
@@ -68,11 +64,7 @@ struct TypeNamespace {
                 }
 
                 if let first = contracts[name] {
-                    throw BuildError(
-                        "contract '\(name)' is declared more than once in this"
-                            + " link, by \(first.spelled) and \(declaration.spelled)",
-                        at: declaration.place
-                    )
+                    throw BuildError.declaredTwice(name, by: first.spelled, and: declaration.spelled, at: declaration.place)
                 }
 
                 contracts[name] = declaration

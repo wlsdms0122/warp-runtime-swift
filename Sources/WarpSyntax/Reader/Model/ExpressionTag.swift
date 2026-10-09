@@ -10,7 +10,7 @@ import Warp
 
 // The keys a mapping where a value is wanted is an expression by, one to a
 // mapping.
-public enum ExpressionTag: String, CaseIterable, Sendable {
+enum ExpressionTag: String, CaseIterable, Sendable {
     case reference = "ref"
     case record
     case call
@@ -19,7 +19,7 @@ public enum ExpressionTag: String, CaseIterable, Sendable {
     case optionalCast = "as?"
 
     // MARK: - Property
-    public var key: Name {
+    var key: Name {
         Name(normal: rawValue)
     }
 

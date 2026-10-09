@@ -177,7 +177,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([one, two])
         } throws: { error in
-            error is BuildError && "\(error)".contains("declared more than once")
+            error is BuildError && "\(error)".contains("Two declarations of a name have no way to be told apart")
         }
     }
 

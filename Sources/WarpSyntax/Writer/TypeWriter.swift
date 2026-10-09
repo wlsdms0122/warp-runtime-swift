@@ -27,7 +27,7 @@ struct TypeWriter {
         let read: TypeExpression
 
         do {
-            read = try TypeReader.parse(spelling) { name in readBy.qualified(name, as: .type) }
+            read = try TypeReader.parse(spelling, in: readBy)
         } catch {
             throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
         }
@@ -70,9 +70,8 @@ struct TypeWriter {
             return .string(name.spelling)
 
         // No document spells this. It is a type the build worked out from a
-        // body, and the build refuses one written into a declaration. Reaching
-        // here means a type got past that, so it is said rather than silently
-        // written as something else.
+        // body, and the load refuses one written into a declaration; a draft
+        // holding one is said rather than written as something else.
         case let .projection(of, path):
             throw WritingError(
                 "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
@@ -81,8 +80,7 @@ struct TypeWriter {
                     + " fills"
             )
 
-        // Bare, because a slot names the parameter and its bound is written
-        // in the `bounds` of the signature that declares the name.
+        // Bare: a slot names the parameter, and its bound is the signature's.
         case let .parameter(name):
             return .string("some \(name)")
 

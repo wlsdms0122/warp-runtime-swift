@@ -11,14 +11,14 @@ import Warp
 // A document's path: what `{ ref: }` reads and `set` writes. A name, then
 // `.name` for a field, `[3]` for a literal index and `[i]` for an index read
 // from a name. `?.` and `?[` read an absence as null.
-public struct PathParser: Sendable {
+struct PathParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
-    public func parse(_ text: String) throws -> Path {
+    func parse(_ text: String) throws -> Path {
         var segments: [PathSegment] = []
         var buffer = ""
         var depth = 0
@@ -38,7 +38,7 @@ public struct PathParser: Sendable {
         func flushKey() throws -> Bool {
             // What the author wrote, kept whole. A refusal quotes their
             // spelling, not a peeled copy of it.
-            let written = buffer.trimmingCharacters(in: .whitespaces)
+            let written = buffer.trimmingCharacters(in: Path.whiteSpace)
             var key = written
 
             buffer = ""
@@ -50,7 +50,7 @@ public struct PathParser: Sendable {
             if key.hasSuffix("?") {
                 // Trimmed again, because the `?` may have held a space off the
                 // name's end. `b ?` names `b`, not `b `.
-                key = String(key.dropLast()).trimmingCharacters(in: .whitespaces)
+                key = String(key.dropLast()).trimmingCharacters(in: Path.whiteSpace)
                 next = true
             }
 
@@ -120,7 +120,7 @@ public struct PathParser: Sendable {
                     // A `?` carried to a bracket is the author's `?[`. The same
                     // mark `?.` puts on a name, on an index instead.
                     segments.append(try indexSegment(
-                        buffer.trimmingCharacters(in: .whitespaces),
+                        buffer.trimmingCharacters(in: Path.whiteSpace),
                         optional: optional
                     ))
                     optional = false
@@ -179,16 +179,7 @@ public struct PathParser: Sendable {
             throw PathSyntaxError("empty reference path")
         }
 
-        // What a mark on the head would claim is the path's own fact, said by
-        // the path, whichever spelling wrote it, and wherever a layer judges
-        // the same path later.
-        let path = Path(segments)
-
-        if let refusal = path.markedHead {
-            throw PathSyntaxError(refusal)
-        }
-
-        return path
+        return Path(segments)
     }
 
     // MARK: - Private
@@ -202,22 +193,18 @@ public struct PathParser: Sendable {
         }
     }
 
-    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
-    // `[]` is an author mistake refused at the load, not carried into the model.
+    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an
+    // empty `[]` refuses.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: Path.whiteSpace)
 
         if inner.hasPrefix("${"), inner.hasSuffix("}") {
             inner = String(inner.dropFirst(2).dropLast())
-                .trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: Path.whiteSpace)
         }
 
         if let literal = Int(inner) {
-            guard literal >= 0 else {
-                throw PathSyntaxError("index segment '[\(literal)]' is below zero, and a whole number below zero is no position")
-            }
-
             return .index(literal, optional: optional)
         }
 

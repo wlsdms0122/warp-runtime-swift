@@ -12,11 +12,10 @@ import Warp
 //
 // The pair round-trips as far as the carrier can carry: a Codable carrier's
 // number grammar is its own, so a whole-worth fraction may come back as the int
-// of the same worth. Worth survives the trip, and the kind survives where the
-// carrier can say it. The warp encodings are where the kind is the text's own
-// fact at every value. A procedure has no spelling, so writing one refuses
-// rather than putting something in the text that reading it back could not
-// answer with.
+// of the same worth, and a record's name is not carried. Worth survives the
+// trip, and the kind survives where the carrier can say it. The warp encodings
+// are where the kind and the name are the text's own facts at every value. A
+// procedure has no spelling, so writing one refuses.
 public struct ValueWriter: Encodable {
     // MARK: - Property
     public let value: Value

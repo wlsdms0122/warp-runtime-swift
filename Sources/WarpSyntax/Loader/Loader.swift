@@ -43,34 +43,16 @@ public struct Loader: Sendable {
         registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 
-    // Loading is not decoding: decoding produces a fragment, and only this says
-    // the fragment is a module worth linking. It reads a document and nothing
-    // else. A spelling a notation offers has been spent by the time a document
-    // exists, so there is no table here to read one with. It answers with a
-    // module rather than something runnable because a document is not runnable.
-    // What runs is decided when this module is linked with the others.
+    // A document read into a module, the one door a document comes through.
+    // It reads a document and nothing else: a spelling a notation offers has
+    // been spent by the time a document exists. What runs is decided when the
+    // module is linked with the others.
     //
-    // Which document this is, handed in rather than worked out: deriving it
-    // means writing the document back to its canonical bytes, and that is the
-    // serialization's job.
+    // Which document this is is handed in, and stated rather than defaulted,
+    // since a module is checked where it is made and a refusal names the
+    // document it came from. A caller with no document says `nil`.
     //
     //     let module = try Loader().load(document, identity: Identity.of(document))
-    //
-    // It goes in with what is being read rather than onto what came back. A
-    // module is checked where it is made, so a stamp put on afterwards would
-    // reach only the modules nothing was wrong with, and a refusal is exactly
-    // the moment somebody wants the file it came from.
-    //
-    // Handing the wrong document to `Identity.of` is not a way to be pointed at
-    // the wrong text: whatever compares identities computes its own side from
-    // what it holds, so a mismatch is a refusal nobody can place, never a
-    // refusal placed somewhere it did not come from.
-    //
-    // Stated and never defaulted. A caller with no document under what it is
-    // handing in says `nil` out loud, and a caller that has one cannot forget
-    // to say so. A module that came through here without being told which text
-    // it came from would refuse without ever being able to say where, and
-    // nothing would have gone wrong loudly enough to notice.
     public func load(_ value: Value, identity: Identity?) throws -> Module {
         // Which document every refusal from here is about, worked out before
         // anything is read: what fails is the reading, and a reader that got
@@ -80,7 +62,8 @@ public struct Loader: Sendable {
 
         // Reading first and checking second, and both before the imports
         // question below.
-        let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
+        let draft = try reading(by: .standard) { try spelled(value, in: document, by: .standard) }
+        let module = try reading(by: .standard) { try Module(draft, identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
         // a host decides whether to grant before it decides whether to link.
@@ -94,13 +77,10 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        let written = try Self.document(value)
-        let imports = ModuleReader.CodingKeys.imports.name
-
-        guard ModuleReader.declaresImports(written[imports]) else {
+        guard draft.imports != nil else {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
-                    + " Write `\(imports)`, empty where the program uses nothing"
+                    + " Write `\(ModuleReader.CodingKeys.imports.name)`, empty where the program uses nothing"
             )
             .read(in: document)
         }
@@ -111,7 +91,7 @@ public struct Loader: Sendable {
         //
         // A document is read and written by the standard table, the one
         // `canonical` writes with. A table a host composes is for what it
-        // lowers into a document, and a document is spelled one way.
+        // spends into a document, and a document is spelled one way.
         let spelling = try Writer(registry: .standard, readBy: .canonical).value(of: module)
 
         if let (steps, held) = value.divergence(from: spelling) {
@@ -126,39 +106,15 @@ public struct Loader: Sendable {
         return module
     }
 
-    // The document a document is: what it spells, written back out the one way
-    // a document is written, with the two things nobody writes by hand filled
-    // in. The version, and the imports where the text claimed none.
-    //
-    // The notation is handed in rather than held, because it is an answer about
-    // the text going in and not about the document coming out. What is spelled
-    // one way here is spelled the one way afterwards, and the reading that
-    // takes the result is a reading with no notation at all.
-    //
-    // What wants this is anything asking what a text *is* rather than whether
-    // its program is any good. Telling one document from another, which is done
-    // on the canonical writing. A program with a name nothing declares is still
-    // a document, and still that one, so nothing here is judged.
-    //
-    // It answers with a document and not with the module behind it: what is
-    // being asked for is the text, and a module is the reading of one.
-    //
-    // Filling the imports is what makes this a front end's call and not a
-    // reader's. A text in a notation has no author for that list (the procedures it
-    // sends are what the spellings lowered to, which the author never typed) so
-    // the side that lowered them is the side that can state them. A text that
-    // claimed a list keeps it, and is held to it on the way in.
-    //
-    // So the way to make a document out of anything is this, and a caller that
-    // then loads what it got is loading exactly what it will send.
-    //
-    // The version is put on before the reading rather than left to the writer
-    // alone, because the reading refuses a value that does not say which warp
-    // it is written for, so a caller left to stamp it first would be keeping
-    // one half of this call's contract on this call's behalf, and two callers
-    // will not keep it the same way. A number the value already carries is left
-    // alone: a document claiming a language this reader is not is refused, and
-    // that refusal is the version's whole job.
+    // The document a text is: what it spells in a notation, written back out
+    // the one way a document is written, with the version and, where the text
+    // claimed none, the imports filled in. Nothing here is judged: a program
+    // with a name nothing declares is still that document. The imports are
+    // filled here because the procedures a text sends are what its notation's
+    // spellings were spent into, which its author never wrote; a text that
+    // claimed a list keeps it, and is held to it on the way in. A version the
+    // value already carries is left as it is, for the reading to refuse where
+    // it is not this reader's.
     public func canonical(_ value: Value, from notation: Notation) throws -> Value {
         let stamped = try stamped(value)
 
@@ -181,19 +137,10 @@ public struct Loader: Sendable {
     //
     // Which notation it is written in is the caller's to say, the same as it is
     // for a whole text. A caller holding a fragment of a document says nothing
-    // and gets the document's reading.
+    // and gets the document's reading. What the fragment is held to is the
+    // module's, where it is checked beside the module's own names.
     public func procedure(from value: Value, in notation: Notation = .canonical) throws -> Procedure {
-        let procedure = try read(
-            ProcedureReader.self,
-            from: value,
-            in: .assembled,
-            from: notation
-        )
-        .procedure
-
-        try reading { try Validator().validate(procedure) }
-
-        return procedure
+        try read(ProcedureReader.self, from: value, in: .assembled, from: notation).procedure
     }
 
     // A body read on its own, for a caller assembling a procedure rather than a

@@ -37,6 +37,23 @@ struct OneSpellingTests {
         }
     }
 
+    @Test("a parameter writing Any is refused, since writing no type says it")
+    func aParameterWritingAnyIsRefused() {
+        // Given
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": [["name": "x", "type": "Any"]], "result": 1]]
+        ]
+
+        // When / Then
+        #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            "\(error)".contains("parameters[0].type") && "\(error)".contains("The one way writes nothing")
+        }
+    }
+
     @Test("a list written out of its order is refused, naming what the one spelling writes there")
     func aListOutOfOrderIsRefused() {
         // Given
@@ -138,17 +155,6 @@ struct OneSpellingTests {
             (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
                 && "\(error)".contains("A record type is written")
         }
-    }
-
-    @Test("a dictionary literal has no document, since record is read back as a record")
-    func aDictionaryLiteralIsNotWritten() throws {
-        // Given
-        let module = try Module(
-            procedures: ["entry": Procedure(access: .public, body: [], result: .literal(.dictionary(["a": .int(1)])))]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) { try Writer().value(of: module) }
     }
 
     @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [

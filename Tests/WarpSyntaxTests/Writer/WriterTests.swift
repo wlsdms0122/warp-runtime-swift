@@ -496,21 +496,6 @@ struct WriterTests {
         #expect(refused?.place?.rendered == "contracts.App.Kept.keep.bounds")
     }
 
-    @Test("a contract's procedure that says nothing of its failures has no document to write")
-    func anUnstatedContractFailureIsNotWritten() throws {
-        // Given. A document writing no `failing` says the procedure fails
-        // with nothing, which is a claim this one does not make
-        let sut = try Module(
-            contracts: ["App.Shown": ["show": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)]), failing: .unstated)]],
-            procedures: [:]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: sut)
-        }
-    }
-
     @Test("a call of literal text has no document to write")
     func aCallOfTextIsNotWritten() throws {
         // Given. Text under `procedure` reads back as a declaration's name, so
@@ -738,7 +723,7 @@ struct WriterTests {
         // Then
         guard
             case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let message = body.first?["value"]?["conditional"]?["when"]?["call"]
+            let call = body.first?["value"]?["conditional"]?["when"]?["call"]
         else {
             Issue.record("a conditional is written with a condition under `when`")
 
@@ -746,9 +731,9 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the call it always was.
-        #expect(message["procedure"] == .string("Standard.Logic.equal"))
-        #expect(message["of"] == nil)
-        #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
+        #expect(call["procedure"] == .string("Standard.Logic.equal"))
+        #expect(call["of"] == nil)
+        #expect(call["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
     @Test("a record whose field is named like a tag is written under `record` and read back as a record")

@@ -46,15 +46,15 @@ public enum Implementation: Sendable {
 
     // What a native declares about itself, in the answers a builder works out
     // for a body. Nil where nothing was declared, which is what a body is.
-    public var isNativelyConst: Bool? {
+    var isNativelyConst: Bool? {
         native.map { procedure in procedure.constness == .const }
     }
 
-    public var isNativelyIsolated: Bool? {
+    var isNativelyIsolated: Bool? {
         native.map { procedure in procedure.isolation == .isolated }
     }
 
-    public var nativelyFailing: Failing? {
+    var nativelyFailing: Failing? {
         native?.failing
     }
 

@@ -10,8 +10,7 @@ import Warp
 
 // A fraction read back as an `Int`, after it was rounded. An `Int` is 64
 // bits, so a fraction whose whole part is past its edge has no `Int` to
-// answer. That stops
-// the run the way arithmetic off that edge does.
+// answer. That stops the run the way arithmetic off that edge does.
 struct IntegerConversion: Sendable {
     // MARK: - Property
     private let procedure: String

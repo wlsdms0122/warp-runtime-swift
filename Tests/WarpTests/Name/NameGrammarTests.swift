@@ -37,11 +37,21 @@ struct NameGrammarTests {
 
     @Test("a value's name is one a path reads back as its key", arguments: [
         ("total", true), ("a b", true), ("café", true), ("x-y", true), ("Int", true),
-        ("a.b", false), ("a[0]", false), ("a]", false), ("a?", false), (" a", false), ("a ", false)
+        ("a.b", false), ("a[0]", false), ("a]", false), ("a?", false), (" a", false), ("a ", false),
+        ("a\n", false), ("\ra", false)
     ])
     func aValueNameIsAPathKey(name: String, holds: Bool) {
         // When / Then
         #expect(((try? Name(name)).map(NameGrammar.value.holds) ?? false) == holds)
+    }
+
+    @Test("a contract's procedure is named by one identifier", arguments: [
+        ("describe", true), ("_x1", true), ("Int", true),
+        ("a.b", false), ("a b", false), ("café", false), ("", false)
+    ])
+    func aContractProcedureNameIsOneIdentifier(name: String, holds: Bool) {
+        // When / Then
+        #expect(((try? Name(name)).map(NameGrammar.contractProcedure.holds) ?? false) == holds)
     }
 
     // MARK: - Public

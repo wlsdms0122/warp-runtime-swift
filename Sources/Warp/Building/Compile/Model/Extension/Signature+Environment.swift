@@ -13,7 +13,7 @@ extension Signature {
     func environment(in table: LoweredTypeTable) -> [Name: Binding] {
         Dictionary(
             parameters.map { parameter in
-                (parameter.name, Binding(parameter: parameter.declared.lowered(in: table, bounds: bounds)))
+                (parameter.name, Binding(parameter: parameter.type.lowered(in: table, bounds: bounds)))
             }
         ) { first, _ in first }
     }

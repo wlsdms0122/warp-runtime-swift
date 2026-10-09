@@ -314,10 +314,10 @@ struct ClaimChecker {
                     )
                 }
 
-                if case let .these(allowed) = wanted.failing, !facts.failing.fails(within: allowed) {
+                if !facts.failing.fails(within: wanted.failing) {
                     return .waits(
                         "\(witness.spelled) declares '\(spelling)', which may fail with \(facts.failing.rendered),"
-                            + " and '\(contract)' lets '\(procedure)' fail with \(wanted.failing.rendered)"
+                            + " and '\(contract)' lets '\(procedure)' fail with \(Failing.these(wanted.failing).rendered)"
                     )
                 }
             }
@@ -404,7 +404,7 @@ struct ClaimChecker {
 
             return "is named for '\(type)' and the procedure '\(procedure)' that"
                     + " '\(contract)' asks, and takes \(taken.rendered(in: loweredTypes))"
-                    + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
+                    + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
 
         guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds) else {

@@ -143,13 +143,6 @@ struct TypeChecker {
         case refused(String)
     }
 
-    // What makes an expression something the run runs rather than reads.
-    private enum RunReason {
-        case calling(Name)
-        case applying
-        case construct
-    }
-
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
     // statement, and which other unwritten answers its own may come from.
@@ -718,8 +711,6 @@ struct TypeChecker {
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
-        if let refusal = path.markedHead { return .refused(refusal) }
-
         guard let head = path.head, let bound = environment[head] else {
             return asWritten(path, in: environment, with: context, at: place)
         }
@@ -905,7 +896,8 @@ struct TypeChecker {
             case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
-                        + " and only an array or a dictionary is indexed"
+                        + " and an array is indexed by a position or a name the run settles,"
+                        + " a dictionary by a name the run settles alone"
                 )
 
             // A dictionary holds entries of one type under names that are
@@ -1004,11 +996,7 @@ struct TypeChecker {
             // Whether the container being entered is a declared type's, which
             // is asked of this segment alone: a record written inline under a
             // `var` field is nobody's declaration.
-            var declared = false
-
-            if case .named = current {
-                declared = true
-            }
+            let declared = if case .named = current { true } else { false }
 
             current = context.resolve(current)
 
@@ -1083,19 +1071,19 @@ struct TypeChecker {
         return .reaches(current)
     }
 
-    // What an operand or a condition answers only by running, if anything. An
-    // operand is data: the run reads it rather than running it, so what it may
-    // hold is a literal, a name, a record, a cast and a call whose declaration
-    // answers without running. Anything else is found here rather than at the
-    // run.
+    // The declaration an operand or a condition calls that answers only by
+    // running, if any. An operand is data: the run reads it rather than
+    // running it, so a call in it reaches a declaration that answers without
+    // running. A value call and a construct in one are the load's to refuse,
+    // since the text alone says where they stand.
     //
     // The module variables constness strikes a body for reading are not struck
     // here. Reading one is what reading a name is; what it costs a body is the
     // promise of answering the same thing twice, and an operand makes no such
     // promise.
-    private func runs(in expression: Expression, given context: TypingContext) -> RunReason? {
+    private func runs(in expression: Expression, given context: TypingContext) -> Name? {
         switch expression {
-        case .literal, .reference, .closure:
+        case .literal, .reference, .closure, .apply, .block, .conditional, .loop, .attempt, .leave:
             return nil
 
         case let .cast(value, _, _):
@@ -1119,15 +1107,7 @@ struct TypeChecker {
                     .compactMap { argument in runs(in: argument, given: context) }.first
             }
 
-            return .calling(call.selector)
-
-        // Which procedure a value is, is the run's answer, so nothing here says
-        // whether calling it runs.
-        case .apply:
-            return .applying
-
-        case .block, .conditional, .loop, .attempt, .leave:
-            return .construct
+            return call.selector
         }
     }
 
@@ -1326,31 +1306,15 @@ struct TypeChecker {
         given context: TypingContext,
         when ask: Ask
     ) throws {
-        switch runs(in: expression, given: context) {
-        case nil:
-            return
+        guard let selector = runs(in: expression, given: context) else { return }
 
-        case let .calling(selector)?:
-            try refuse(
-                "reads '\(selector)', which answers only by running, and an"
-                    + " operand is read rather than run. A procedure that runs"
-                    + " is called by a statement, whose name the operand reads",
-                at: place,
-                when: ask
-            )
-
-        case .applying?:
-            try refuse(
-                "calls a value, and which procedure that is, is the run's"
-                    + " answer, so an operand cannot be read without running"
-                    + " it. A statement calls it and the operand reads its name",
-                at: place,
-                when: ask
-            )
-
-        case .construct?:
-            try refuse(Expression.constructInOperand, at: place, when: ask)
-        }
+        try refuse(
+            "reads '\(selector)', which answers only by running, and an"
+                + " operand is read rather than run. A procedure that runs"
+                + " is called by a statement, whose name the operand reads",
+            at: place,
+            when: ask
+        )
     }
 
     // A condition chooses a way through a body, so what it reads has to be a
@@ -1531,7 +1495,7 @@ struct TypeChecker {
             }
 
             // A literal element read beside fractions is the fraction it
-            // names, since the list holds one kind.
+            // names, since the list holds one type.
             if let element, ask.rewrites {
                 rewritten = rewritten.map { item in element.written(item, in: context.loweredTypes) }
             }
@@ -2174,7 +2138,7 @@ struct TypeChecker {
                 // A closure literal written here, at any depth, is completed
                 // by the type it is written into.
                 let argument = signature.parameters.indices.contains(position)
-                    ? signature.parameters[position].declared.lowered(in: context.loweredTypes, bounds: signature.bounds)
+                    ? signature.parameters[position].type.lowered(in: context.loweredTypes, bounds: signature.bounds)
                         .completing(written, in: context.loweredTypes)
                     : written
                 let inner = try await inspected(
@@ -2576,12 +2540,7 @@ struct TypeChecker {
 
         if body.reading == .never {
             if block.result != nil {
-                try refuse(
-                    "never finishes before it, and nothing"
-                        + " written after it would ever run",
-                    at: place.child(.result),
-                    when: ask
-                )
+                try refuse(Expression.resultAfterWhatNeverFinishes, at: place.child(.result), when: ask)
             }
 
             tail = nil
@@ -2701,12 +2660,7 @@ struct TypeChecker {
                     // The leaving statement, not what follows it: what an
                     // author has to change is the one that ends the body, and
                     // the load says the same thing from the same place.
-                    try refuse(
-                        "every way through this statement leaves, and what"
-                            + " follows it here would never run",
-                        at: here,
-                        when: ask
-                    )
+                    try refuse(Expression.afterWhatNeverFinishes, at: here, when: ask)
                 }
 
                 // Judging refused anything after this statement above, so
@@ -2821,12 +2775,9 @@ struct TypeChecker {
                         }
                     }
 
+                // The load holds a write's head to a variable.
                 default:
-                    try refuse(
-                        "writes '\(id)', which is not a variable here",
-                        at: here,
-                        when: ask
-                    )
+                    break
                 }
 
             // A nameless statement writes no name for a later reading to
@@ -2859,12 +2810,7 @@ struct TypeChecker {
     // statement that ends the body, so the two facts cannot part. The load
     // refuses the leaves it can see, and the build the calls only it can see.
     private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
-        try refuse(
-            "never finishes,"
-                + " so it binds nothing and takes no name",
-            at: place,
-            when: ask
-        )
+        try refuse(Expression.nameOnWhatNeverFinishes, at: place, when: ask)
     }
 
     // The environment a loop's insides read: the enclosing names plus the

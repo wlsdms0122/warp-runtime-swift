@@ -167,7 +167,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // declaration answering the claim takes whatever it is. A claim about
     // `Procedure` is the same about every procedure, whatever it takes and
     // answers.
-    public static let nominalTypes: [Name: TypeExpression] = [
+    static let nominalTypes: [Name: TypeExpression] = [
         TypeSpelling.null: .null,
         TypeSpelling.bool: .bool,
         TypeSpelling.int: .int,
@@ -204,7 +204,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return TypeSpelling.string.spelling
 
         case let .parameter(name):
-            return "some \(name)"
+            return "\(TypeSpelling.some) \(name)"
 
         case let .composition(names):
             return names.sorted().map(\.spelling).joined(separator: " & ")
@@ -216,18 +216,18 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // writes this, so the spelling answers to the message alone: a refusal
         // about `item.a` names where it came from.
         case let .projection(of, path):
-            return "some \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
 
         case let .variable(inner):
-            return "var \(inner.rendered)"
+            return "\(TypeSpelling.variable) \(inner.rendered)"
 
         case let .inout(inner):
-            return "inout \(inner.rendered)"
+            return "\(TypeSpelling.inout) \(inner.rendered)"
 
         case let .procedure(type, constness, isolation):
             let spelling = [
-                constness == .const ? "const" : nil,
-                isolation == .isolated ? "isolated" : nil,
+                constness == .const ? TypeSpelling.const.spelling : nil,
+                isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
                 TypeSpelling.procedure.spelling
             ]
             .compactMap { part in part }
@@ -267,7 +267,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // The refusal a cast earns for naming a type there is nothing to read, once
     // its names are resolved. Nil where the type names one. Each of the two
     // says its own, because a refusal carries its reason.
-    var unreadableClaim: String? {
+    var unreadableCast: String? {
         if self == .any {
             return "reads as \(rendered), which declares nothing."
                 + " A cast names the type a value is read as, and `Any` is"
@@ -379,7 +379,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     //
     // No `default`: a mark nobody thought about must be a compile error here
     // rather than an answer of "no mark".
-    public var slotUnwrapped: TypeExpression {
+    var slotUnwrapped: TypeExpression {
         switch self {
         case let .inout(inner):
             return inner
@@ -394,7 +394,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether a `?` on this says something new. It says nothing on what
     // already takes null, on `Never`, which no value is, and on a type
     // parameter, which stands for the whole type the call fills in.
-    public var takesQuestionMark: Bool {
+    var takesQuestionMark: Bool {
         switch self {
         case .any, .null, .never, .parameter, .nullable:
             return false
@@ -405,18 +405,40 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    public var isInout: Bool {
+    // Whether a document writes this type as a string, which a `?` trails and
+    // a slot mark stands in front of. An inline record and a procedure type
+    // that writes its signature are written as a mapping under one key, and
+    // so is a list or a map of one of those.
+    var hasSpelling: Bool {
+        switch self {
+        case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
+            .selfType, .projection:
+            return true
+
+        case let .procedure(type, _, _):
+            return type == nil
+
+        case .record:
+            return false
+
+        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner),
+            let .inout(inner):
+            return inner.hasSpelling
+        }
+    }
+
+    var isInout: Bool {
         if case .inout = self { return true }
         return false
     }
 
-    public var isVariable: Bool {
+    var isVariable: Bool {
         if case .variable = self { return true }
         return false
     }
 
     // The type a field holds, whether or not a path may write through it.
-    public var fieldUnwrapped: TypeExpression {
+    var fieldUnwrapped: TypeExpression {
         switch self {
         case let .variable(inner):
             return inner
@@ -432,19 +454,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // MARK: - Initializer
     // MARK: - Public
-    // What this type accepts, settled to the declared representation, or a
-    // refusal saying which part disagreed. `at` is the path into the value so
-    // the message names the field rather than the whole argument. A value
-    // handed here comes from outside, so it is fitted at this door the way
-    // it is at every other.
-    func settling(
-        _ value: Value,
-        at path: @autoclosure () -> String,
-        in types: TypeTable = .empty
-    ) throws -> Value {
-        try lowered(in: types.loweredTypes).settling(outside: value, at: path(), in: types.loweredTypes)
-    }
-
     // The same type with every name it holds walked through to what that name
     // declares. At every depth, not only the outermost.
     func resolved(in types: TypeTable) -> TypeExpression {

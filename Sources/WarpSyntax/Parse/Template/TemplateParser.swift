@@ -11,14 +11,14 @@ import Warp
 // The template a notation's `{ format: }` writes: text with `${path}`
 // placeholders and `$$` for a literal `$`. What a placeholder holds is a
 // document's path.
-public struct TemplateParser: Sendable {
+struct TemplateParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
-    public func parse(_ text: String) throws -> [TemplateSegment] {
+    func parse(_ text: String) throws -> [TemplateSegment] {
         var segments: [TemplateSegment] = []
         var index = text.startIndex
         var buffer = ""
@@ -68,7 +68,7 @@ public struct TemplateParser: Sendable {
         return segments
     }
 
-    public func render(_ segments: [TemplateSegment]) -> String {
+    func render(_ segments: [TemplateSegment]) -> String {
         segments.map { segment -> String in
             switch segment {
             case let .text(text):

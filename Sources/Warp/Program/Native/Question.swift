@@ -11,11 +11,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // MARK: - Property
     // The arguments a procedure reads, settled by the row a run sent. The row
     // being asked travels with the run: the sends it declared are its
-    // document's numbers, and only a run can say which rows they are. The way
-    // back in travels with the arguments rather than being handed to
-    // `Query.evaluate`: most procedures never call anything, and a parameter
-    // every procedure declares to serve the few that do is a parameter in the
-    // wrong place.
+    // document's numbers, and only a run can say which rows they are.
     private let settled: Settled
     private let callee: Linked
     private let evaluator: Evaluator
@@ -42,14 +38,8 @@ public struct Question<P: NativeProcedure>: Sendable {
         _ key: P.Imports,
         handing arguments: [Value] = []
     ) async throws -> Value {
-        guard callee.sends.indices.contains(key.position) else {
-            throw ExecutionError(
-                "this procedure sends '\(key.selector)', and the link resolved no row for it"
-            )
-        }
-
-        return try await evaluator.send(
-            callee.sends[key.position],
+        try await evaluator.send(
+            try callee.sent(key.position, as: key.selector),
             from: callee.origin,
             handing: arguments
         )

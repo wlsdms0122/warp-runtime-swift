@@ -7,8 +7,6 @@
 
 import Foundation
 import Warp
-import WarpSyntax
-import WarpStandard
 
 // A procedure a case asked for that answers without running. What it answers is
 // the case's, and it is the same every time: a case asks what a declaration

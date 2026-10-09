@@ -10,11 +10,8 @@ import Warp
 
 // `return:`, `break:` and `continue:`.
 //
-// Three forms rather than one under three keys, because the table maps a key
-// to a form and reads back the same way. One form answering to three keys
-// could be written down but not written out. Asked which key means it, the
-// table would have three answers and no way to say which. Three forms also make
-// each key droppable on its own, which one would not.
+// Three forms, one to a key, since the table maps a key to a form and back,
+// and each key may be dropped on its own.
 //
 //     { value { return { ref "answer" } } }
 //     { value { break null } }

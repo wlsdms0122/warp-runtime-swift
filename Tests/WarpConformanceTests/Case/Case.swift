@@ -304,6 +304,21 @@ struct Case: Sendable, CustomStringConvertible {
     // for the same reason `warp` does and on its own schedule.
     static let version = 1
 
+    // The specification's folder. The cases live in its `conformance`,
+    // beside the pages they belong to, since they are the language's and not
+    // this implementation's.
+    static let specification = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // Case
+        .deletingLastPathComponent()   // WarpConformanceTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // warp-runtime-swift
+        .deletingLastPathComponent()   // runtime
+        .deletingLastPathComponent()   // the repository
+        .appendingPathComponent("spec")
+
+    // What a case's file is named with after the case's name.
+    static let suffix = ".test.warpt"
+
     static let versionKey: Name = "test"
 
     let name: String
@@ -464,32 +479,22 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Public
-    // The cases live in `spec/conformance`, beside the specification they
-    // belong to, since they are the language's and not this implementation's.
     static func all() throws -> [Case] {
-        let directory = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // Case
-            .deletingLastPathComponent()   // WarpConformanceTests
-            .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
-            .deletingLastPathComponent()   // the repository
-            .appendingPathComponent("spec")
-            .appendingPathComponent("conformance")
-
-        // The cases are the files named like cases, and nothing else in the
-        // folder is read, so a case saved under another name is not asked.
-        let files = try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
-            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
-
-        return try files.map { file in
+        try files().map { file in
             try Case(
                 from: try TextEncoding().value(from: try Data(contentsOf: file)),
-                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
+                in: String(file.lastPathComponent.dropLast(suffix.count))
             )
         }
+    }
+
+    // The cases are the files named like cases, and nothing else in the
+    // folder is read, so a case saved under another name is not asked.
+    static func files() throws -> [URL] {
+        try FileManager.default
+            .contentsOfDirectory(at: specification.appendingPathComponent("conformance"), includingPropertiesForKeys: nil)
+            .filter { file in file.lastPathComponent.hasSuffix(suffix) }
+            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
     }
 
     // MARK: - Private

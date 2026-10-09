@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A message plus where it was written. The place exists only to make a refusal
+// A call plus where it was written. The place exists only to make a refusal
 // answerable: a name that did not resolve, said without the path to the
 // statement holding it, sends the author searching the whole document.
 struct CallSite: Sendable {

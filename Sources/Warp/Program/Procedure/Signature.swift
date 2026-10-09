@@ -16,11 +16,9 @@ public struct Signature: Sendable, Equatable {
     // and the order the run keeps them in.
     public let parameters: [Parameter]
 
-    // What a call returns, or nil where nothing was declared. Absence is
-    // spelled by being absent rather than by a type meaning "no claim". `Any`
-    // is a claim, so a declaration nobody wrote stays distinguishable from one
-    // somebody wrote. Nothing is checked either way; they differ in what they
-    // say.
+    // What a call returns, or nil where nothing was declared. A call reads a
+    // declaration writing none as what its body answers, and one writing
+    // `Any` as `Any`.
     public let returns: TypeExpression?
 
     // The contracts each type parameter is bounded by, by its name. The
@@ -37,23 +35,23 @@ public struct Signature: Sendable, Equatable {
     // position order and the answer. No names, since a value is applied by
     // position and the names are the declaration's own.
     public var type: ProcedureType {
-        ProcedureType(parameters: parameters.map(\.declared), returns: returns)
+        ProcedureType(parameters: parameters.map(\.type), returns: returns)
     }
 
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {
-        Set(parameters.compactMap { parameter in parameter.declared.isInout ? nil : parameter.name })
+        Set(parameters.compactMap { parameter in parameter.type.isInout ? nil : parameter.name })
     }
 
     // The first parameter handed in place, which only a call a body writes
     // can fill.
     var inPlace: Name? {
-        parameters.first { parameter in parameter.declared.isInout }?.name
+        parameters.first { parameter in parameter.type.isInout }?.name
     }
 
     // Whether the declaration writes a type parameter anywhere.
-    public var isGeneric: Bool { type.isGeneric }
+    var isGeneric: Bool { type.isGeneric }
 
     // Every type parameter this signature names. A nested procedure type's
     // parameters are named too: they are this signature's own slots, so
@@ -65,7 +63,7 @@ public struct Signature: Sendable, Equatable {
     // it answers and the contracts its bounds name.
     var mentions: Set<Name> {
         parameters.reduce(into: (returns?.mentions ?? []).union(bounds.values.joined())) { mentioned, parameter in
-            mentioned.formUnion(parameter.declared.mentions)
+            mentioned.formUnion(parameter.type.mentions)
         }
     }
 
@@ -156,49 +154,13 @@ public struct Signature: Sendable, Equatable {
             parameters: parameters.map { parameter in
                 Parameter(
                     name: parameter.name,
-                    type: parameter.type?.replacingSelf(with: type),
+                    type: parameter.type.replacingSelf(with: type),
                     description: parameter.description
                 )
             },
             returns: returns?.replacingSelf(with: type),
             bounds: bounds
         )
-    }
-
-    // Arguments given by name, the door an entry's come through, settled
-    // into the order a run keeps them in. A name the declaration lacks is
-    // refused, and so is one it declares that was not given; a null standing
-    // at a name was given, since null is a value the way any other is. Each
-    // value is fitted and judged by the door rule. `subject` is what a
-    // refusal names the procedure as.
-    func settle(
-        _ given: [Name: Value],
-        over slots: [Slot],
-        as subject: String,
-        in table: LoweredTypeTable
-    ) throws -> [Value] {
-        let undeclared = given.keys
-            .filter { name in !slots.contains { slot in slot.name == name } }
-            .sorted()
-
-        guard undeclared.isEmpty else {
-            throw ArgumentError(
-                "\(subject) declares no parameter"
-                    + " \(undeclared.map { name in "'\(name)'" }.joined(separator: ", "))"
-            )
-        }
-
-        let values = slots.compactMap { slot in given[slot.name] }
-
-        guard values.count == slots.count else {
-            let missing = slots.filter { slot in given[slot.name] == nil }.map { slot in "'\(slot.name)'" }
-
-            throw ArgumentError("\(subject) was given nothing for \(missing.joined(separator: ", "))")
-        }
-
-        return try zip(slots, values).map { slot, value in
-            try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
-        }
     }
 
     // MARK: - Private

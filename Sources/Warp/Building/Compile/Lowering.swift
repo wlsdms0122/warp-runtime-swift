@@ -1030,12 +1030,6 @@ struct Lowering {
         on slots: SlotAllocator,
         at place: Place
     ) throws -> Address {
-        // A mark on the head expects a name to be missing, which is not
-        // absence but a reading gone wrong.
-        if let refusal = path.markedHead {
-            throw BuildError(refusal, at: place)
-        }
-
         guard let head = path.head else {
             throw BuildError.unjudged("a path '\(path.rendered)' with no name at its head", at: place)
         }
@@ -1073,7 +1067,6 @@ struct Lowering {
                 reached = reached?.element(in: loweredTypes)
 
                 return .at(address, optional: optional)
-
             }
         }
 
@@ -1107,7 +1100,7 @@ struct Lowering {
         try type.replacingRows { number in
             guard let stands = place[number] else {
                 throw BuildError.unjudged(
-                    "type \'\(loweredTypes.labels[number])\', which its document never numbered",
+                    "type '\(loweredTypes.labels[number])', which its document never numbered",
                     at: Place.procedure(label.spelling, in: .assembled)
                 )
             }

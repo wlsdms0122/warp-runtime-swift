@@ -144,7 +144,7 @@ struct Fanout: Sendable {
             )
 
         default:
-            throw ExecutionError("\(name) asks a record or an Array of closures")
+            throw ExecutionError("\(name) asks an Array or a Dictionary of procedures")
         }
     }
 

@@ -41,7 +41,7 @@ public struct BinaryEncoding {
 
     // A container being put back together: what it still expects, what it holds
     // so far, and (for a record) the key the next value belongs to and the last
-    // key seen, so order can be held without keeping the keys. A sum rather
+    // key seen, so order is held against the one before. A sum rather
     // than two optionals, so "neither" and "both" are not states the code has
     // to promise never to reach.
     private enum Opened {

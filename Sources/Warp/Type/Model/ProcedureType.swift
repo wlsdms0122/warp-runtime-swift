@@ -35,7 +35,7 @@ public struct ProcedureType: Sendable, Equatable {
     }
 
     // Whether a type parameter stands anywhere in its parameters or answer.
-    public var isGeneric: Bool {
+    var isGeneric: Bool {
         parameters.contains { parameter in parameter.isGeneric }
             || (returns?.isGeneric ?? false)
     }

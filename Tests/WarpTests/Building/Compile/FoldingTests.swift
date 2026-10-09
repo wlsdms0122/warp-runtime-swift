@@ -114,19 +114,19 @@ struct FoldingTests {
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() async throws {
         // Given. The payload is data: a ref-shaped record inside stays a record
-        let reference = Expression.literal(.dictionary([
+        let reference = Expression.literal(.record(Record(name: nil, [
             "ref": .string("count"),
             "note": .string("${count}")
-        ]))
+        ])))
 
         // When
         let value = try await read(reference)
 
         // Then. Nothing evaluated, nothing rendered
-        #expect(value == .dictionary([
+        #expect(value == .record(Record(name: nil, [
             "ref": .string("count"),
             "note": .string("${count}")
-        ]))
+        ])))
     }
 
     // MARK: - Public

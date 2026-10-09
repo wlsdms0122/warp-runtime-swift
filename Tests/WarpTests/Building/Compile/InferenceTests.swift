@@ -212,105 +212,6 @@ struct InferenceTests {
         #expect(try await run([running]) == .null)
     }
 
-    @Test("a loop result's writes stay out of the rounds' own reading")
-    func aLoopResultsWritesStayOutOfTheRounds() async throws {
-        // Given. The result runs once, at an exit, never between rounds; a body
-        // that reads `y` as the int it is must not be refused on account of a
-        // write only the exit makes
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [
-                    Statement(binding: .constant("used"), expression: .call(Call(
-                        selector: "wants",
-                        arguments: [.reference([.key("y")])]
-                    )))
-                ],
-                result: .block(
-                    Block(
-                        body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
-                        ],
-                        result: reference("y")
-                    )
-                )
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop)
-                    ],
-                    result: reference("y")
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Builds, and the run answers what the exit wrote
-        #expect(try await run([sut]) == .string("s"))
-    }
-
-    @Test("a loop's result reads a box its condition took as held")
-    func aLoopsResultReadsWhatItsConditionTook() async throws {
-        // Given. The condition hands `ready` a closure that takes `n`, and the
-        // result runs after the condition on every way out of the loop. The
-        // text notation writes no construct in a result, so this asks it of
-        // a module assembled in Swift
-        let loop = Warp.Expression.loop(
-            while: .call(Call(
-                selector: "ready",
-                arguments: [.closure(Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: reference("n")
-                ))]
-            )),
-            body: Block(
-                body: [],
-                result: .block(Block(
-                    body: [Statement(binding: .assignment([.key("n")]), expression: .literal(.string("s")))],
-                    result: .literal(.int(1))
-                ))
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("n"), expression: .literal(.int(0))),
-                        Statement(expression: loop)
-                    ],
-                    result: .literal(.int(1))
-                ),
-                "ready": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "peek", type: .procedure(ProcedureType(returns: .int)))],
-                        returns: .bool
-                    ),
-                    body: [],
-                    result: .literal(.bool(true))
-                )
-            ]
-        )
-
-        // When / Then
-        let refusal = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(refusal?.message == "writes 'n' as String, and it holds Int")
-    }
-
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() async throws {
         // Given
@@ -712,7 +613,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("name[0] indexes into String, and only an array or a dictionary is indexed")
+                && "\(error)".contains("name[0] indexes into String, and an array is indexed by a position")
         }
     }
 
@@ -1577,53 +1478,6 @@ struct InferenceTests {
         }
     }
 
-    @Test("a later field reads what an earlier field wrote")
-    func aLaterFieldReadsAnEarlierFieldsWrite() async throws {
-        // Given. Fields evaluate in name order, and that order is the same fact
-        // for the run and for the reading: field `a` writes the variable, so
-        // field `b` reads it as the int `a` left, not as the null the record
-        // was entered with.
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("held"), expression: .literal(.null)),
-                        Statement(binding: .constant("made"), expression: .record([
-                                "a": .block(
-                                    Block(
-                                        body: [
-                                            Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1)))
-                                        ],
-                                        result: .literal(.int(0))
-                                    )
-                                ),
-                                "b": .reference([.key("held")])
-                            ])
-                        ),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("made"), .key("b")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "number", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
-                    ]
-                )
-            ]
-        )
-
-        // When / Then. Builds, because `b` is an int by the time it is read
-        _ = try await builder.build([sut] + Module.standard)
-    }
-
     @Test("a rescue reads what the body may have written before it failed")
     func aRescueReadsTheBodysPartialWrites() async throws {
         // Given. The body writes a null and then risks a failing cast: the
@@ -1834,10 +1688,10 @@ struct InferenceTests {
 
     @Test("what the body may have written is not overwritten by the rescue's write")
     func aBodyWriteJoinsTheRescueWrite() async throws {
-        // Given. The body wrote a string or got nowhere, the rescue wrote an
-        // int or never ran: the name holds any of null, the string and the int.
-        // That is `Any` (where readings disagree the slot holds neither), which
-        // the string slot below takes only through a cast. A rescue that
+        // Given. The body wrote a String or got nowhere, the rescue wrote an
+        // Int or never ran: the name holds any of null, the String and the
+        // Int. That is `Any` (where readings disagree the slot holds neither),
+        // which the String slot below takes only through a cast. A rescue that
         // overwrote the body's write would read `Int` instead.
         let sut = try Module(
             procedures: [

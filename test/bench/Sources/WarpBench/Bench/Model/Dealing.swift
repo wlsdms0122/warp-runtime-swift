@@ -14,8 +14,8 @@ import Foundation
 // several holds ones that stand next to each other.
 struct Dealing {
     private enum Refusal: Error {
-        // No procedures leaves every document declaring none, and a document
-        // declares at least one.
+        // No procedures leaves every document declaring none, which builds
+        // nothing to measure.
         case procedureless
 
         // Fewer documents than one, or more documents than there are procedures to

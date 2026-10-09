@@ -17,15 +17,13 @@ struct SignatureTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a parameter written without a type declares nothing, and takes anything")
-    func untypedParameterDeclaresNothing() throws {
-        // Given / When. `Any` would say every type is welcome; this says nothing
-        // at all, and the two are not the same declaration even though neither
-        // is checked
+    @Test("a parameter written without a type takes anything")
+    func untypedParameterTakesAnything() throws {
+        // Given / When. Writing no type is how a document says `Any`
         let sut = try Loader.testing.loadDocument([
             "procedures": [
                 "keep": [
-                    "parameters": [["name": "labelled", "type": "Any"], ["name": "subject"]],
+                    "parameters": [["name": "subject"]],
                     "body": [["let": "done", "value": ["ref": "subject"]]]
                 ]
             ]
@@ -34,14 +32,8 @@ struct SignatureTests {
         // Then
         let signature = try #require(sut.procedures["keep"]).signature
 
-        #expect(signature.parameter(named: "subject")?.type == nil)
-        #expect(signature.parameter(named: "labelled")?.type == .any)
-
-        // And. Neither checks, so both take a type nothing was said about.
-        let settled = try settled(signature, given: ["subject": .int(1), "labelled": .int(2)])
-
-        #expect(settled["subject"] == .int(1))
-        #expect(settled["labelled"] == .int(2))
+        #expect(signature.parameter(named: "subject")?.type == .any)
+        #expect(try settled(signature, given: ["subject": .int(1)])["subject"] == .int(1))
     }
 
     @Test("a procedure written without a return type declares nothing")
@@ -144,13 +136,23 @@ struct SignatureTests {
 
     // MARK: - Public
     // MARK: - Private
-    // The boundary over no table, answered by name.
+    // The entry's door over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
-        let slots = signature.lowered(in: .empty)
-        let settled = try signature.settle(given, over: slots, as: "entry '\(entryName)'", in: .empty)
+        let entry = Linked.unlowered(
+            label: entryName,
+            origin: 0,
+            procedure: Procedure(signature: signature, body: []),
+            const: false,
+            isolated: false,
+            failing: .these([]),
+            builtin: false,
+            sends: [],
+            in: .empty
+        )
+        let settled = try entry.settle(given)
 
-        return settled.enumerated().reduce(into: [Name: Value]()) { named, entry in
-            named[slots[entry.offset].name] = entry.element
+        return settled.enumerated().reduce(into: [Name: Value]()) { named, value in
+            named[entry.slots[value.offset].name] = value.element
         }
     }
 }

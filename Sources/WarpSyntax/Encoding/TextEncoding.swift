@@ -11,8 +11,7 @@ import Warp
 // The encoding a document is read in. By a person. The binary is what a
 // document travels as; this is the same document laid out for eyes. A dump, not
 // a syntax: machines write it, people read it, and composing by hand is a front
-// end's job in a front end's notation, which is why there are no comments to
-// lose on the way back.
+// end's job in a front end's notation.
 //
 // A whole number and a fraction are different tokens here by grammar. `1` is
 // whole and `1.0` is a fraction. And there is nothing else: no commas to
@@ -23,9 +22,9 @@ import Warp
 // two spaces an indent), so a text that has been through it is the same bytes
 // everywhere. Layout is free on the way in: the reader takes keys in any order
 // and any whitespace between tokens, and a key written bare or quoted is one
-// key either way. What it does not take is a second
-// spelling of a value, `1.50` for `1.5` or `\u0041` for `A`, since those are
-// two texts for one value rather than two layouts of one text.
+// key either way. What it does not take is a second spelling of a value,
+// `1.50` for `1.5` or `\u0041` for `A`, since those are two texts for one
+// value rather than two layouts of one text.
 public struct TextEncoding {
     private enum Token: Equatable {
         case arrayOpen
@@ -415,7 +414,11 @@ public struct TextEncoding {
                 case .recordClose:
                     opened.removeLast()
 
-                    settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                    do {
+                        settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                    } catch let refusal as ValueRefused {
+                        throw refused(refusal.message, at: at)
+                    }
 
                 case let .bare(spelling):
                     let key = try key(spelling, at: at)
@@ -475,11 +478,11 @@ public struct TextEncoding {
                     settled = .bytes(bytes)
 
                 // A bare token in front of a record is the record's name, the
-                // declared type the value settled to, where it is written as a
-                // type's name. Any other bare token is a scalar, the record
-                // after it the next value.
+                // declared type the value settled to, where it is no scalar's
+                // writing; what a record's name may be is the value's to hold.
+                // A scalar is a scalar, the record after it the next value.
                 case let .bare(bare):
-                    if tokens.first?.token == .recordOpen, let name = try? Name(bare), NameGrammar.type.holds(name) {
+                    if tokens.first?.token == .recordOpen, !writesScalar(bare), let name = try? Name(bare) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
                         opened.append(.record(held: [:], key: nil, name: name))
@@ -512,7 +515,7 @@ public struct TextEncoding {
                     opened.append(.record(held: held, key: nil, name: name))
 
                 // A record with no key is waiting for a field name, and every
-                // token it could meet in that state was answered above
+                // token it could meet in that state was answered above.
                 case .record(_, .none, _):
                     throw refused("a record writes a field name here", at: at)
                 }
@@ -523,11 +526,20 @@ public struct TextEncoding {
     // What a bare token names. Everything unquoted is one of five things, and a
     // number is whole or a fraction by grammar. A point or an exponent, not a
     // reader's guess.
+    // Whether a bare token is written as a scalar: a keyword, or what starts
+    // as a number.
+    private func writesScalar(_ bare: String) -> Bool {
+        guard Name.scalarKeywords[bare] == nil else { return true }
+        guard let first = bare.first else { return false }
+
+        return first == "-" || first.isNumber
+    }
+
     private func scalar(from bare: String, at offset: Int) throws -> Value {
         if let scalar = Name.scalarKeywords[bare] { return scalar }
 
         do {
-            guard let first = bare.first, first == "-" || first.isNumber else {
+            guard writesScalar(bare) else {
                 throw refused("nothing is written \(bare)", at: offset)
             }
 

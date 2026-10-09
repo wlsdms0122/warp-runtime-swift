@@ -7,11 +7,8 @@
 
 import Foundation
 
-// What one document declares, and nothing about running.
-//
-// A module is not a procedure and cannot be run. A build takes it with the
-// others, and a run names the declaration it starts from, so there is no
-// marking to put on a declaration and no reserved name.
+// What one document declares. A build takes it with the others, and a run
+// names the declaration it starts from.
 public struct Module: Sendable {
     // MARK: - Property
     // The document this was made from. What a module declares is what its
@@ -71,11 +68,9 @@ public struct Module: Sendable {
     // claim to.
     public var claims: [Name: Set<Name>] { source.claims }
 
-    // Names bound to values, settled at the build and gone by run time. Private to
-    // the module: a constant is read by writing its name, and a name is a scope
-    // question, so exporting one would need a second name table in path
-    // position. Where a declared spelling cannot be told from drilling into a
-    // record.
+    // Names bound to values, settled at the build and gone by run time,
+    // private to the module: a constant is read by writing its name, and a
+    // name is the module's scope.
     public var constants: [Name: Expression] { source.constants }
 
     // Names bound to boxes this module's procedures share for one run. Private

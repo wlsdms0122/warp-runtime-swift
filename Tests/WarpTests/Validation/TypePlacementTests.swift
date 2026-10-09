@@ -10,8 +10,8 @@ import Testing
 @testable import Warp
 import WarpTestSupport
 
-// Where each word a type writes may stand, and the head of a write: facts of
-// a module's text, held at the load by the Validator for every module.
+// Where each word a type writes may stand: facts of a module's text, held at
+// the load by the Validator for every module.
 @Suite("Every word a type writes stands where it may, held at the load")
 struct TypePlacementTests {
     // MARK: - Property
@@ -89,26 +89,6 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("a document writes only the variables it declares")
-    func aDocumentWritesOnlyItsOwnVariables() {
-        // Given. One write of `total`
-        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
-
-        // When / Then. Taken at the load of the document declaring
-        // `total`, and refused at the load of one that does not
-        #expect(throws: Never.self) {
-            try Module(
-                variables: ["total": .literal(.int(0))],
-                procedures: ["App.poke": Procedure(body: [write])]
-            )
-        }
-        #expect {
-            try Module(procedures: ["Other.poke": Procedure(body: [write])])
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("assigns 'total', which is not visible here")
-        }
-    }
-
     @Test("inout is written on a parameter and nowhere else")
     func inoutOutsideAParameterRefuses() throws {
         // When / Then. A declared type with an inout field
@@ -139,7 +119,7 @@ struct TypePlacementTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
         }
     }
 
@@ -161,7 +141,7 @@ struct TypePlacementTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("only a field of a declared type is written through")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
         }
 
         #expect {
@@ -171,6 +151,141 @@ struct TypePlacementTests {
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("variables.x.fields.a: writes `var Int`")
+        }
+    }
+
+    @Test("a ? that says nothing new is refused where it is written", arguments: [
+        TypeExpression.nullable(.nullable(.int)), .nullable(.null), .nullable(.any), .nullable(.never),
+        .nullable(.parameter(name: "T"))
+    ])
+    func aNeedlessQuestionMarkIsRefused(type: TypeExpression) throws {
+        // When / Then. Twice says it once too often; what already admits null
+        // gains nothing; never admits nothing; a parameter stands for the whole
+        // filled type
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains("a `?` says nothing")
+        }
+    }
+
+    @Test("a ? and a slot mark stand only where a type is written as a spelling", arguments: [
+        (TypeExpression.nullable(.record(["a": .int])), "a `?` trails a type's spelling"),
+        (.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
+        (.nullable(.array(.record(["a": .int]))), "a `?` trails a type's spelling"),
+        (.inout(.record(["a": .int])), "a mark stands in front of a type's spelling"),
+        (.inout(.array(.procedure(ProcedureType(returns: .int)))), "a mark stands in front of a type's spelling")
+    ])
+    func aMarkWithNoSpellingIsRefused(type: TypeExpression, refusal: String) throws {
+        // When / Then. An inline record and a written signature are mappings
+        // under one key, with nothing for a `?` to trail or a mark to stand
+        // before; a module made in Swift is held to it where it is made
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains(refusal)
+        }
+
+        // And a mark on a procedure type's key, and a `?` on a spelling, stand
+        let marked = TypeExpression.inout(.procedure(ProcedureType(returns: .int)))
+
+        #expect(throws: Never.self) {
+            try Module(
+                types: ["App.R": .record(["a": .variable(.nullable(.array(.int)))])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: marked)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("var stands on a field of the record a declared type is, and on no record inside it", arguments: [
+        TypeExpression.array(.record(["a": .variable(.int)])),
+        .record(["b": .record(["c": .variable(.int)])]),
+        .dictionary(.record(["a": .variable(.int)]))
+    ])
+    func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
+        // When / Then. An inline record's fields are written through as they
+        // are, so `var` there says nothing
+        #expect {
+            try Module(types: ["App.T": type], procedures: [:])
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
+        }
+
+        // And on the declared record's own field it stands
+        #expect(throws: Never.self) {
+            try Module(types: ["App.T": .record(["a": .variable(.int)])], procedures: [:])
+        }
+    }
+
+    @Test("a composition joins two contracts or more, however the module was made", arguments: [
+        TypeExpression.composition([]), .composition(["App.A"])
+    ])
+    func aCompositionOfFewerThanTwoIsRefused(type: TypeExpression) throws {
+        // When / Then. One contract is written by its name
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(parameters: [Parameter(name: "x", type: type)]),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("`&` joins two contracts or more")
+        }
+    }
+
+    @Test("a type read out of a body is no declaration anybody can write")
+    func aProjectionIsRefusedWhereADeclarationGoes() throws {
+        // When / Then. A declaration assembled in the host claiming what only
+        // a walk produces: a declaration says what a call fills, and nothing
+        // fills a path only one body can read
+        #expect {
+            try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))]
+                        ),
+                        body: [],
+                        result: .literal(.null)
+                    )
+                ]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
+                && "\(error)".contains("read out of a body")
         }
     }
 

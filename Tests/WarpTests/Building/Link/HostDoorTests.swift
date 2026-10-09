@@ -44,6 +44,34 @@ struct HostDoorTests {
         // MARK: - Private
     }
 
+    // A procedure the host answers writing text into the variable it was
+    // handed in place, which declares a whole number.
+    private struct WritingEffect: Effect {
+        enum Parameters: Int, ParameterSet {
+            case box
+
+            // MARK: - Property
+            var declared: Parameter {
+                Parameter(name: "box", type: .inout(.int))
+            }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) async throws -> Value {
+            try invocation.write(.box, .string("s"))
+
+            return .null
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private var sut: Module {
         get throws {
@@ -150,6 +178,40 @@ struct HostDoorTests {
 
         // When / Then
         #expect(try await Executor().run(image) == .string("a"))
+    }
+
+    @Test("a value a host writes through a parameter handed in place is judged at the door")
+    func aValueWrittenInPlaceIsJudged() async throws {
+        // Given
+        let writing = try Module(
+            procedures: [
+                "App.writing": Procedure(
+                    signature: Signature(of: WritingEffect.self),
+                    implementation: .effect(WritingEffect())
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.writing"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
+                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.key("n")])])))
+                    ],
+                    result: .reference([.key("n")])
+                )
+            ]
+        )
+        let image = try await Builder().build([document, writing])
+
+        // When / Then. The text never reaches the variable
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            "\(error)".contains("'box'") && "\(error)".contains("expected Int, got String")
+        }
     }
 
     // MARK: - Public

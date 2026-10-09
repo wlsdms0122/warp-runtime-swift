@@ -44,12 +44,11 @@ public struct ExpressionReader: Decodable {
 
     // MARK: - Public
     // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which construct keys a statement may write is the
-    // registry's answer, which travels in the decoder rather than in the data.
-    //
-    // Not public: a form reading an expression goes through `init(from:)`, which
-    // is where a refusal from this grammar is given the address of the walk
-    // that asked for it.
+    // closure carries statements, and which construct keys a statement may
+    // write is the registry's answer, which travels in the decoder rather than
+    // in the data. A form reading an expression goes through `init(from:)`,
+    // where a refusal from this grammar is given the address of the walk that
+    // asked for it.
     static func read(_ value: Value, in decoder: Decoder) throws -> Warp.Expression {
         try read(value, at: decoder.steps, in: decoder)
     }
@@ -88,18 +87,17 @@ public struct ExpressionReader: Decodable {
 
             // A form is keys the notation reserved, and a name under which a
             // value stands is not one of them. So a value the document named
-            // is read as the literal it spells, name included, for the
-            // `Validator` to refuse; reading it as a form would drop the name.
+            // is read as the literal it spells, name included, and a procedure
+            // as the value it is, for the `Validator` to refuse; reading
+            // either as a form would drop what it is refused for.
             case let .record(record) where record.name != nil:
+                return .literal(value)
+
+            case .procedure:
                 return .literal(value)
 
             case let .record(record):
                 return try read(record: record.asDictionary, at: steps, in: decoder)
-
-            // A closure reaches the language by being spelled, and spelling it
-            // is a form.
-            case .procedure:
-                throw ExpressionFormError("a document cannot contain a procedure value")
             }
         } catch let error as ExpressionFormError {
             throw ReadingError(error.message, at: steps)
@@ -169,7 +167,10 @@ public struct ExpressionReader: Decodable {
             spelling.claims(Set(record.names), in: decoder.notation)
         else { return nil }
 
-        return try spelling.expression(from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder))
+        return try spelling.expression(
+            from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder),
+            in: decoder.notation
+        )
     }
 
     // `{ record: { … } }`: the fields, each an expression.
@@ -247,9 +248,7 @@ public struct ExpressionReader: Decodable {
 
         do {
             if case let .string(spelling) = spelled {
-                let notation = decoder.notation
-
-                type = try TypeReader.parse(spelling) { name in notation.qualified(name, as: .type) }
+                type = try TypeReader.parse(spelling, in: decoder.notation)
             } else {
                 type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
                     .type
@@ -291,7 +290,7 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.rawValue, holding: written, at: steps))
+            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps))
                 .expression
         } catch let refusal as ReadingError {
             throw refusal
@@ -317,8 +316,7 @@ public struct ExpressionReader: Decodable {
         }
 
         guard record.names.contains(Interpolation.formatKey) else {
-            // Only `with` remains, with is format's companion, meaningless
-            // alone.
+            // Only `with` remains, and `with` is `format`'s companion.
             throw ExpressionFormError(
                 "`with` only accompanies `format` (found keys: \(record.names))"
             )

@@ -150,16 +150,11 @@ struct Evaluator: Sendable {
     // MARK: - Private
     // A body run as a procedure: what it answers is caught here. The build
     // held every way out to what the body declares, so it is handed on as it
-    // came.
-    //
-    // Both halves are the frame, and neither works without the other, so there
-    // is one of these rather than one per way of reaching a body. A body is
-    // reached three ways, and each makes its frame in one place that ends
-    // here: a run starting, a written procedure being called, and a closure
-    // being invoked.
+    // came. A body is reached three ways, and each makes its frame in one
+    // place that ends here: a run starting, a written procedure being called,
+    // and a closure being invoked.
     private func answer(
         _ body: LoweredBody,
-        of callee: Linked,
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> Value {
@@ -534,17 +529,6 @@ struct Evaluator: Sendable {
 
         try linked.refuseCount(arguments.count)
 
-        // A parameter handed in place takes a variable, and a call of a value
-        // hands one only where the build read the slot's procedure type, so a
-        // closure taking one where the slot wrote no parameters is refused
-        // here, before its body runs.
-        for (position, slot) in linked.slots.enumerated()
-        where slot.type.isInout && !holds.contains(where: { held in held.position == position }) {
-            throw ExecutionError(
-                "'\(linked.rendered)' takes '\(slot.name)' in place, and this call hands it a value"
-            )
-        }
-
         var activation = try self.activation(of: linked, in: frame)
 
         for (slot, cell) in closure.captured {
@@ -561,12 +545,7 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        return try await answer(
-            body,
-            of: linked,
-            in: &activation,
-            at: trace.appending(linked.hop)
-        )
+        return try await answer(body, in: &activation, at: trace.appending(linked.hop))
     }
 
     // A row answered with its arguments settled and nothing handed in place:
@@ -610,7 +589,7 @@ struct Evaluator: Sendable {
             activation.cells[frame.parameters[position]] = .value(value)
         }
 
-        return try await answer(body, of: callee, in: &activation, at: trace)
+        return try await answer(body, in: &activation, at: trace)
     }
 
     private func loop(
@@ -793,8 +772,6 @@ struct Evaluator: Sendable {
         in activation: inout Activation,
         at trace: Trace
     ) async throws -> [Value?] {
-        try callee.refuseCount(call.arguments.count)
-
         var given: [Value?] = []
         given.reserveCapacity(call.arguments.count)
 

@@ -36,6 +36,7 @@ public struct Validator: Sendable {
         // what it can see is a fact about the module.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
+            try held(expression, asOperand: .constant(name.spelling, in: .of(module)))
 
             try validate(
                 expression,
@@ -46,6 +47,8 @@ public struct Validator: Sendable {
                 at: .constant(name.spelling, in: .of(module))
             )
         }
+
+        try acyclic(module.constants, in: module)
 
         // A variable's start is written like a constant and sees what a
         // constant sees: the constants beside it, and no variable. A variable
@@ -61,6 +64,7 @@ public struct Validator: Sendable {
                 )
             }
 
+            try held(variable.start, asOperand: .variable(name.spelling, in: .of(module)))
             try validate(
                 variable.start,
                 naming: nil,
@@ -87,6 +91,8 @@ public struct Validator: Sendable {
             for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
                 let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
 
+                try held(name, as: .contractProcedure, at: place)
+
                 // A bound is declared by the procedure whose call fills the
                 // name, and a contract's procedure is answered by declarations
                 // that each declare their own.
@@ -104,7 +110,7 @@ public struct Validator: Sendable {
                 // the declaration by the value standing there.
                 guard asked.signature.parameters.first?.type == .selfType else {
                     throw ValidationError(
-                        "takes \(asked.signature.parameters.first?.declared.rendered ?? "nothing") first."
+                        "takes \(asked.signature.parameters.first?.type.rendered ?? "nothing") first."
                             + " A contract's procedure takes `Self` first: the value it is"
                             + " answered about, of the type that answers it",
                         at: place.part(.parameters)
@@ -223,6 +229,55 @@ public struct Validator: Sendable {
         )
     }
 
+    // A constant settles from what it names, so constants that name each
+    // other back have nothing to settle from. Refused standing on one of
+    // them.
+    private func acyclic(_ constants: [Name: Expression], in module: Module) throws {
+        var settled: Set<Name> = []
+
+        // What the walk is standing on, root first. Where it meets a name
+        // already on it, everything from that name down is the cycle, and
+        // nothing above it is, which is the difference between what names
+        // itself back and what merely waits on something that does.
+        var walking: [Name] = []
+
+        func walk(_ name: Name, reading expression: Expression) throws {
+            guard !settled.contains(name) else { return }
+
+            if let met = walking.firstIndex(of: name) {
+                let cycle = walking[met...].sorted()
+
+                throw ValidationError(
+                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
+                        + " cycle. A constant may name another declared beside it, but"
+                        + " not one that names it back",
+                    // Any of them is where the fix can be made, so the one
+                    // walked to is the first in sorted order: a cycle has no
+                    // first member, and reading one off the walk would name a
+                    // different constant depending on where the walk started.
+                    at: .constant(cycle[0].spelling, in: .of(module))
+                )
+            }
+
+            walking.append(name)
+
+            // Sorted, so a module with two mistakes in it refuses the same one
+            // every run. What a set hands back is seeded per process.
+            for read in expression.pathHeads.sorted() {
+                guard let reading = constants[read] else { continue }
+
+                try walk(read, reading: reading)
+            }
+
+            walking.removeLast()
+            settled.insert(name)
+        }
+
+        for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
+            try walk(name, reading: expression)
+        }
+    }
+
     // A private procedure is named by its document, and the code a host
     // brings for one is joined to it by that document. A module that is no
     // document has nothing to join it by.
@@ -336,12 +391,7 @@ public struct Validator: Sendable {
 
             if let binding = statement.binding {
                 if statement.expression.alwaysLeaves {
-                    throw ValidationError(
-                        "every way through this statement"
-                            + " leaves, so its name could never bind. It takes"
-                            + " no name",
-                        at: here
-                    )
+                    throw ValidationError(Expression.nameOnWhatNeverFinishes, at: here)
                 }
 
                 if statement.expression.answersNothing {
@@ -357,35 +407,42 @@ public struct Validator: Sendable {
                     throw ValidationError(Expression.declarationOnABoundName, at: here)
                 }
 
-                // What a name says it holds is the statement's, beside the
-                // construct it writes.
+                // What a name says it holds, the name itself and the path a
+                // write names are the statement's, beside the construct it
+                // writes.
+                let named = place.statement(statement.name?.spelling, at: position)
+
                 if let declared = binding.declared {
-                    try written(declared, in: .value, at: place.statement(statement.name?.spelling, at: position))
+                    try written(declared, in: .value, at: named)
                 }
 
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
-                    try held(name, as: .value, at: here)
-                    try collides(name, in: scope, at: here)
+                    try held(name, as: .value, at: named)
+                    try collides(name, in: scope, at: named)
 
                     guard !declared.contains(name) else {
-                        throw ValidationError("two statements here are named '\(name)'", at: here)
+                        throw ValidationError("two statements here are named '\(name)'", at: named)
                     }
 
                     declared.insert(name)
 
                 // A write names a path, and the head of the path is the
-                // variable it writes. The rest of the path is judged at the
-                // build, where the variable's type is known.
+                // variable it writes. An index the path reads by a name is a
+                // path read like any other. The rest of the path is judged at
+                // the build, where the variable's type is known.
                 case let .assignment(path):
                     if let refusal = path.markedHead {
-                        throw ValidationError(refusal, at: here)
+                        throw ValidationError(refusal, at: named)
                     }
+
+                    try refuseBelowZero(in: path, at: named)
+                    try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: named)
 
                     guard let head = path.head else {
                         throw ValidationError(
                             "writes a path headed by no name. A write starts at a variable",
-                            at: here
+                            at: named
                         )
                     }
 
@@ -396,18 +453,13 @@ public struct Validator: Sendable {
                             "which is not visible here. Declare it earlier or check the spelling"
                         }
 
-                        throw ValidationError("assigns '\(head)', \(reason)", at: here)
+                        throw ValidationError("assigns '\(head)', \(reason)", at: named)
                     }
                 }
             }
 
             if statement.expression.alwaysLeaves, position != body.statements.count - 1 {
-                throw ValidationError(
-                    "every way through this"
-                        + " statement leaves, and what follows it here"
-                        + " would never run",
-                    at: here
-                )
+                throw ValidationError(Expression.afterWhatNeverFinishes, at: here)
             }
 
             try validate(
@@ -469,6 +521,13 @@ public struct Validator: Sendable {
                 )
             }
 
+            guard !value.holdsDictionary else {
+                throw ValidationError(
+                    "a literal holds a map, and a map is written as a record cast to the `Dictionary<T>` it is",
+                    at: place
+                )
+            }
+
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
 
@@ -476,7 +535,7 @@ public struct Validator: Sendable {
             for (position, element) in array.enumerated() {
                 let here = place.child(.element(position))
 
-                try refuseAnswerless(element, at: here)
+                try held(element, asValueAt: here)
                 try validate(element, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
@@ -484,7 +543,7 @@ public struct Validator: Sendable {
             for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.child(.field(name))
 
-                try refuseAnswerless(field, at: here)
+                try held(field, asValueAt: here)
                 try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
@@ -493,7 +552,7 @@ public struct Validator: Sendable {
         // walks any other operand.
         case let .cast(value, type, optional):
             try written(type, in: .value, at: place)
-            try refuseAnswerless(value, at: place.child(.subject(optional: optional)))
+            try held(value, asValueAt: place.child(.subject(optional: optional)))
             try validate(
                 value,
                 naming: nil,
@@ -506,14 +565,13 @@ public struct Validator: Sendable {
         case let .leave(leave):
             try validate(leave, in: scope, at: place)
 
-            // What a `return` carries is an operand like any other. A name it
-            // reads has to be visible where it was written, and a construct
-            // that answers nothing has nothing to hand back. Only `return`
+            // What a `return` carries is a value like any other. A name it
+            // reads has to be visible where it was written. Only `return`
             // reaches here with one: the check above refuses a value on the two
             // that end a loop.
             guard let value = leave.value else { return }
 
-            try refuseAnswerless(value, at: place.child(.held))
+            try held(value, asValueAt: place.child(.held))
             try validate(
                 value,
                 naming: nil,
@@ -564,7 +622,7 @@ public struct Validator: Sendable {
             )
 
         case let .apply(callee, arguments):
-            try refuseConstruct(callee, at: place.child(.callee))
+            try held(callee, asOperand: place.child(.callee))
             try validate(
                 callee,
                 naming: nil,
@@ -577,7 +635,7 @@ public struct Validator: Sendable {
             for (position, argument) in arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try refuseConstruct(argument, at: here)
+                try held(argument, asOperand: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -592,10 +650,7 @@ public struct Validator: Sendable {
             try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
 
         case let .conditional(condition, then, otherwise):
-            try refuseConstructCondition(
-                condition,
-                at: place.child(.condition(of: .conditional))
-            )
+            try held(condition, asOperand: place.child(.condition(of: .conditional)))
             try validate(
                 condition,
                 naming: nil,
@@ -628,7 +683,7 @@ public struct Validator: Sendable {
             let round = name
             let inner = visible.union(round.map { round in [round] } ?? [])
 
-            try refuseConstructCondition(condition, at: place.child(.condition(of: .loop)))
+            try held(condition, asOperand: place.child(.condition(of: .loop)))
             try validate(
                 condition,
                 naming: nil,
@@ -676,7 +731,7 @@ public struct Validator: Sendable {
             for (position, argument) in call.arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try refuseConstruct(argument, at: here)
+                try held(argument, asOperand: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -689,31 +744,24 @@ public struct Validator: Sendable {
         }
     }
 
-    // A construct that answers nothing (a conditional) has nothing to give a
-    // slot that exists to hold an answer. Refused for that reason wherever one
-    // asks, rather than as a null that fails to fit downstream.
-    private func refuseAnswerless(_ expression: Expression, at place: Place) throws {
-        guard expression.answersNothing else { return }
-
-        throw ValidationError(
-            "this construct answers nothing, so it cannot"
-                + " stand where a value is wanted",
-            at: place
-        )
+    // A construct runs a body, so it stands as a statement's value and nowhere
+    // a value is wanted: an operand, an element, a field, what a cast reads,
+    // what `return` carries and a block's result.
+    private func held(_ expression: Expression, asValueAt place: Place) throws {
+        guard !expression.holdsConstruct else {
+            throw ValidationError(Expression.constructWhereAValueIsWanted, at: place)
+        }
     }
 
-    // A call's operand is data the run reads rather than runs, so it holds no construct.
-    private func refuseConstruct(_ expression: Expression, at place: Place) throws {
-        guard expression.holdsConstruct else { return }
+    // An operand is data the run reads rather than runs: a call's and a value
+    // call's operands, a condition, a constant and a variable's start. Which
+    // procedure a value is, is the run's answer, so calling one is running.
+    private func held(_ expression: Expression, asOperand place: Place) throws {
+        try held(expression, asValueAt: place)
 
-        throw ValidationError(Expression.constructInOperand, at: place)
-    }
-
-    // A condition is data by the same fact, refused with its own sentence because the fix differs.
-    private func refuseConstructCondition(_ expression: Expression, at place: Place) throws {
-        guard expression.holdsConstruct else { return }
-
-        throw ValidationError(Expression.constructInCondition, at: place)
+        guard !expression.callsValue else {
+            throw ValidationError(Expression.valueCallInOperand, at: place)
+        }
     }
 
     private func validate(
@@ -735,18 +783,10 @@ public struct Validator: Sendable {
             // The result runs after the body, so it is "after" the same way a
             // trailing statement is. A body that left never reaches it.
             if block.body.alwaysLeaves {
-                throw ValidationError(
-                    "nothing runs after leaving,"
-                        + " and this result would never be reached",
-                    at: place.child(.result)
-                )
+                throw ValidationError(Expression.resultAfterWhatNeverFinishes, at: place.child(.result))
             }
 
-            // A conditional answers nothing, so a result slot (a place that
-            // exists to hold an answer) has nothing to take from one. Refused
-            // for that reason, rather than as a type that fails to fit
-            // downstream.
-            try refuseAnswerless(result, at: place.child(.result))
+            try held(result, asValueAt: place.child(.result))
 
             try validate(
                 result,
@@ -813,6 +853,8 @@ public struct Validator: Sendable {
                 throw ValidationError(refusal, at: place)
             }
 
+            try refuseBelowZero(in: path, at: place)
+
             guard let head = path.head else {
                 throw ValidationError(
                     "reference { ref: \(path.rendered) } does not"
@@ -829,6 +871,17 @@ public struct Validator: Sendable {
                     at: place
                 )
             }
+        }
+    }
+
+    // A whole number written between the brackets is a position, and one
+    // below zero is no position.
+    private func refuseBelowZero(in path: Path, at place: Place) throws {
+        for case let .index(index, _) in path.segments where index < 0 {
+            throw ValidationError(
+                "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
+                at: place
+            )
         }
     }
 
@@ -868,7 +921,8 @@ public struct Validator: Sendable {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
-            try written(parameter.declared.slotUnwrapped, in: context, at: here)
+            try marked(parameter.type, at: here)
+            try written(parameter.type.slotUnwrapped, in: context, at: here)
         }
 
         if let returns = signature.returns {
@@ -890,10 +944,13 @@ public struct Validator: Sendable {
         case let .named(name):
             try held(name, as: .type, at: place)
 
+        // One contract is written by its name, so a composition joins two
+        // or more.
         case let .composition(names):
-            guard !names.isEmpty else {
+            guard names.count > 1 else {
                 throw ValidationError(
-                    "joins nothing with `&`, and a composition names the contracts a value answers",
+                    "joins \(names.count) with `&`, and `&` joins two contracts or more."
+                        + " One contract is written by its name",
                     at: place
                 )
             }
@@ -934,7 +991,7 @@ public struct Validator: Sendable {
             try held(name, as: .typeParameter, at: place)
 
         case let .array(inner), let .dictionary(inner):
-            try written(inner, in: context, at: place)
+            try written(inner, in: context.nested, at: place)
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
@@ -942,7 +999,15 @@ public struct Validator: Sendable {
                 throw ValidationError("writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)", at: place)
             }
 
-            try written(inner, in: context, at: place)
+            guard inner.hasSpelling else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and a `?` trails a type's spelling, which \(inner.rendered) is"
+                        + " written without. What may be null of it is declared under a name and written `Name?`",
+                    at: place
+                )
+            }
+
+            try written(inner, in: context.nested, at: place)
 
         // A field of a record type is reached by a path alone, so its name is
         // a value's.
@@ -951,7 +1016,12 @@ public struct Validator: Sendable {
                 let here = place.part(.fields).key(name.spelling)
 
                 try held(name, as: .value, at: here)
-                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context, at: here)
+
+                if context.takesWritableFields {
+                    try marked(field, at: here)
+                }
+
+                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context.nested, at: here)
             }
 
         // A procedure type's parameters are slots, each of which may be
@@ -960,10 +1030,11 @@ public struct Validator: Sendable {
             guard let procedure else { return }
 
             for (position, parameter) in procedure.parameters.enumerated() {
-                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+                try marked(parameter, at: place.index(position))
+                try written(parameter.slotUnwrapped, in: context.nested, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context, at: place)
+            try written(procedure.returns ?? .any, in: context.nested, at: place)
 
         case .inout:
             throw ValidationError(
@@ -974,10 +1045,32 @@ public struct Validator: Sendable {
 
         case .variable:
             throw ValidationError(
-                "writes `\(type.rendered)`, and only a field of a declared type"
-                    + " is written through. `var` is written on a field in `types`",
+                "writes `\(type.rendered)`, and `var` is written on a field of the record a type in"
+                    + " `types` declares. Any other record's field is written through as it is",
                 at: place
             )
+        }
+    }
+
+    // A slot mark stands in front of a type's spelling or on the key a
+    // procedure type is written under, and a type written as any other
+    // mapping has no front for one.
+    private func marked(_ type: TypeExpression, at place: Place) throws {
+        switch type {
+        case let .inout(inner), let .variable(inner):
+            if inner.hasSpelling { return }
+
+            if case .procedure(.some, _, _) = inner { return }
+
+            throw ValidationError(
+                "writes `\(type.rendered)`, and a mark stands in front of a type's spelling or on a procedure"
+                    + " type's key, which \(inner.rendered) is written without. Declare it under a name and"
+                    + " mark the name",
+                at: place
+            )
+
+        default:
+            return
         }
     }
 

@@ -10,17 +10,10 @@ import Warp
 
 // The other direction: a program written back out as data. `Loader` reads a
 // document and answers with a module; this takes a module and answers with the
-// document that would load into it.
-//
-// It exists because a program has to be able to leave the machine that built
-// it. Building the language's types directly is what a front end with a syntax
-// of its own does, and a host assembling procedures in native code does the
-// same, but neither can hand what it built to anything running elsewhere unless
-// the result can be written down.
-//
-// Only the types that stand one to one with the language are written, so a
-// program that arrived spelled is written back unspelled, and it means the
-// same thing.
+// document that would load into it, so a program built in Swift can leave the
+// machine that built it. Only the types that stand one to one with the
+// language are written, so a program that arrived spelled is written back
+// unspelled, and it means the same thing.
 public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
@@ -64,10 +57,12 @@ public struct Writer: Sendable {
             Module.versionKey: .int(ModuleReader.version),
             ModuleReader.CodingKeys.imports.name: .array(
                 (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
-            ),
-            ModuleReader.CodingKeys.procedures.name:
-                .dictionary(try draft.procedures.mapValues(value(of:)))
+            )
         ]
+
+        if !draft.procedures.isEmpty {
+            written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try draft.procedures.mapValues(value(of:)))
+        }
 
         if let description = draft.description {
             written[ModuleReader.CodingKeys.description.name] = .string(description)
@@ -92,21 +87,9 @@ public struct Writer: Sendable {
                                 written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
                             }
 
-                            // A contract's procedure that writes no `failing`
-                            // fails with nothing, so one that may fail with
-                            // anything has no document to say it.
-                            switch asked.failing {
-                            case let .these(failures):
-                                if !failures.isEmpty {
-                                    written[ContractProcedureReader.CodingKeys.failing.name] = .array(
-                                        failures.sorted().map(Value.string)
-                                    )
-                                }
-
-                            case .unstated:
-                                throw WritingError(
-                                    "a contract's procedure says nothing of what it may fail with,"
-                                        + " and a document writing none says it fails with nothing"
+                            if !asked.failing.isEmpty {
+                                written[ContractProcedureReader.CodingKeys.failing.name] = .array(
+                                    asked.failing.sorted().map(Value.string)
                                 )
                             }
 
@@ -182,12 +165,12 @@ public struct Writer: Sendable {
     public func value(of parameter: Parameter) throws -> Value {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
-        if let type = parameter.type {
-            written[ParameterReader.CodingKeys.type.name] = try value(of: type)
+        if parameter.type != .any {
+            written[ParameterFieldsReader.CodingKeys.type.name] = try value(of: parameter.type)
         }
 
         if let description = parameter.description {
-            written[ParameterReader.CodingKeys.description.name] = .string(description)
+            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
         }
 
         // A record holding nothing but the name is one pair, which a notation
@@ -283,16 +266,9 @@ public struct Writer: Sendable {
 
     // MARK: - Private
     // The keys a block writes, with whoever reads it asked whether an empty
-    // `body` is written or dropped. Asked rather than remembered: a writer
-    // carrying its own list of which forms demand the key is a list that goes
-    // stale the moment a form is added, and what it writes then is a document
-    // its own reader refuses.
-    //
-    // Every caller names its reader, and `nil` is a reader rather than a
-    // default. A rescue and a procedure are read by their own readers, which
-    // take `body` as a key that may be absent. Said out loud because a way of
-    // writing a block without saying who reads it is a way of skipping the
-    // question, and skipping it is the failure this asks about.
+    // `body` is written or dropped. A rescue and a procedure are read by their
+    // own readers, which take `body` as a key that may be absent, and say
+    // `nil`.
     private func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
@@ -317,15 +293,15 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
-            written[ProcedureReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
+            written[SignatureFieldsReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
-            written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
+            written[SignatureFieldsReader.CodingKeys.returns.name] = try value(of: returns)
         }
 
         if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
-            written[ProcedureReader.CodingKeys.bounds.name] = bounds
+            written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
         }
 
         return written

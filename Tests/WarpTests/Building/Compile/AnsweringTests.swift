@@ -21,7 +21,7 @@ struct AnsweringTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a dot stands on what an undeclared call answers")
+    @Test("a dot stands on what a call whose declaration writes no answer answers")
     func aDotStandsOnAnUnwrittenAnswer() async throws {
         // Given. `counts` declares no answer and its body answers a record. The
         // dot after the call is judged against that record, which is the whole

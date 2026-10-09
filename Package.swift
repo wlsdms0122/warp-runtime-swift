@@ -73,14 +73,12 @@ let package = Package(
                 "WarpTestSupport"
             ]
         ),
-        // The vocabulary's tests make records under a nominal name the way a
-        // link does, which no public door spells, so they reach inside the
-        // language.
         .testTarget(
             name: "WarpStandardTests",
             dependencies: [
                 "Warp",
                 "WarpStandard",
+                "WarpSyntax",
                 "WarpTestSupport"
             ]
         ),

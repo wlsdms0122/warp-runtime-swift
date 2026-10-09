@@ -7,8 +7,6 @@
 
 import Foundation
 import Warp
-import WarpSyntax
-import WarpStandard
 
 // The place a procedure a case asks for reads its one argument at, `first`.
 enum OneName: Int, ParameterSet {

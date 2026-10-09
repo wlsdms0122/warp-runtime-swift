@@ -150,105 +150,6 @@ struct DeclaredNameTests {
         #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
     }
 
-    @Test("a construct that binds the name says what it holds, and the author does not")
-    func aConstructBoundNameTakesNoDeclaration() throws {
-        // Given. A loop binds the round under the statement's name
-        let statement = Statement(
-            binding: .constant("walk", declared: .int),
-            expression: .loop(while: .literal(.bool(false)), body: Block(body: []))
-        )
-
-        // When / Then. Refused where the module is made
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(access: .public, body: [statement], result: .literal(.int(1)))
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("this construct binds the name")
-        }
-    }
-
-    @Test("a block answering an attempt writes each way into the name on its own")
-    func anAttemptABlockAnswersIsHeldEachWay() async throws {
-        // Given. The body answers an int and the rescue a string, under a block the name starts with
-        let attempt = Warp.Expression.attempt(
-            Block(
-                body: [
-                    Statement(
-                        expression: .conditional(
-                            .literal(.bool(false)),
-                            then: [Statement(expression: aborting(literal("stops")))],
-                            else: nil
-                        )
-                    )
-                ],
-                result: .literal(.int(1))
-            ),
-            rescue: Block(body: [], result: .literal(.string("s")))
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("x", declared: .int), expression: .block(Block(body: [], result: attempt)))
-                    ],
-                    result: reference("x")
-                )
-            ]
-        )
-
-        // When
-        let refusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
-        }
-
-        // Then
-        #expect(refusal?.message == "holds Int, and what it was given is Int or String")
-    }
-
-    @Test("an attempt inside a list literal writes each way into the element on its own")
-    func anAttemptInAListIsHeldEachWay() async throws {
-        // Given. The list's one element is an attempt whose body answers an int and whose rescue a string
-        let attempt = Warp.Expression.attempt(
-            Block(
-                body: [
-                    Statement(
-                        expression: .conditional(
-                            .literal(.bool(false)),
-                            then: [Statement(expression: aborting(literal("stops")))],
-                            else: nil
-                        )
-                    )
-                ],
-                result: .literal(.int(1))
-            ),
-            rescue: Block(body: [], result: .literal(.string("s")))
-        )
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("xs", declared: .array(.int)), expression: .array([attempt]))
-                    ],
-                    result: reference("xs")
-                )
-            ]
-        )
-
-        // When
-        let refusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
-        }
-
-        // Then
-        #expect(refusal?.message == "holds Array<Int>, and what it was given is [Int or String]")
-    }
-
     @Test("a declaration inside a module variable is held the way one inside a procedure is")
     func aDeclarationInsideAModuleVariableIsHeld() async throws {
         // Given
@@ -320,7 +221,7 @@ struct DeclaredNameTests {
     }
 
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
-    func anUndeclaredClosureDoesNotFitTheSlot() async throws {
+    func aClosureUnderANameSayingNothingDoesNotFitTheSlot() async throws {
         // Given. The same program with the declaration left off. The build works
         // out `const isolated Procedure` for the literal, and the slot asks for
         // `Procedure`

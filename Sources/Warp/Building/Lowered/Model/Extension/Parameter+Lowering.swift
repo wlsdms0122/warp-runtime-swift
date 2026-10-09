@@ -8,12 +8,10 @@
 import Foundation
 
 extension Parameter {
-    // This parameter as the run reads it. A parameter declaring no type
-    // lowers to `Any`: the boundary tells "nothing written" from "`Any` written" in no
-    // way, so the slot does not either. `bounds` are what the signature
+    // This parameter as the run reads it. `bounds` are what the signature
     // holds its type parameters to.
     func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>]) -> Slot {
-        Slot(name: name, type: declared.lowered(in: table, bounds: bounds))
+        Slot(name: name, type: type.lowered(in: table, bounds: bounds))
     }
 
     // The same, with what a call put in the type parameters written in. A
@@ -24,6 +22,6 @@ extension Parameter {
         bounds: [Name: Set<Name>],
         filling bound: [Name: LoweredType]
     ) -> Slot {
-        Slot(name: name, type: declared.lowered(in: table, bounds: bounds).filling(bound))
+        Slot(name: name, type: type.lowered(in: table, bounds: bounds).filling(bound))
     }
 }

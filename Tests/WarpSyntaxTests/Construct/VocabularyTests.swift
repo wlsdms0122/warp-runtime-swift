@@ -151,7 +151,7 @@ struct VocabularyTests {
     @Test("a claimed construct key is never silently replaced")
     func claimedConstructKeyRejected() {
         // Given / When / Then. Nobody may silently replace `loop`
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try ConstructRegistry.standard.registering(LoopForm.self)
         }
     }

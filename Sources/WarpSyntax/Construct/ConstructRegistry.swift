@@ -10,14 +10,9 @@ import Warp
 
 // The keyword table: which key a document may write, and which form reads it.
 // The language's constructs are anonymous, so this is the only place that
-// admits they have names.
-//
-// A form's `key` is the spelling it proposes, not the one it gets. The table is
-// what a notation *is*, so the composer of the table has the last say: the
-// same form can be registered under another spelling, and a built-in spelling
-// can be dropped. Otherwise a form type would be its own name forever, and two
-// notations that wanted the same key could never both exist, which is a fact
-// about a `static let`, not about the language.
+// admits they have names. A form's `key` is the spelling it proposes; the
+// composer of the table has the last say, registering a form under another
+// spelling or dropping a built-in one.
 public struct ConstructRegistry: Sendable {
     // MARK: - Property
     public static let standard = ConstructRegistry(unchecked: [
@@ -54,10 +49,7 @@ public struct ConstructRegistry: Sendable {
             do {
                 try insert(form, as: try Name(written))
             } catch let refusal as NameRefused {
-                throw ValidationError(
-                    "construct key '\(written)' cannot be a name: \(refusal)",
-                    at: nil
-                )
+                throw ConstructRegistryError("construct key '\(written)' cannot be a name: \(refusal)")
             }
         }
     }
@@ -137,18 +129,15 @@ public struct ConstructRegistry: Sendable {
     // down.
     private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
-            // A registry is assembled by a host and not read out of a
-            // document, so there is no place in one to point at.
-            throw ValidationError("construct key '\(key)' is already registered", at: nil)
+            throw ConstructRegistryError("construct key '\(key)' is already registered")
         }
 
         // `value` is the key a statement writes what it runs under, so a
         // construct registered under it would never be reached.
         guard key != StatementReader.valueKey else {
-            throw ValidationError(
+            throw ConstructRegistryError(
                 "construct key '\(key)' is the key a statement writes its expression under,"
-                    + " and no construct sits under it",
-                at: nil
+                    + " and no construct sits under it"
             )
         }
 
@@ -156,9 +145,8 @@ public struct ConstructRegistry: Sendable {
         // `value` included, so a construct under a tag would take a record, a
         // reference or a call for itself.
         guard ExpressionTag(key) == nil else {
-            throw ValidationError(
-                "construct key '\(key)' is an expression's tag, and an expression is read under it",
-                at: nil
+            throw ConstructRegistryError(
+                "construct key '\(key)' is an expression's tag, and an expression is read under it"
             )
         }
 

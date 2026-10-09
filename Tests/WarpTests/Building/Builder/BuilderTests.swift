@@ -83,41 +83,6 @@ struct BuilderTests {
         #expect(last == .int(3))
     }
 
-    @Test("a closure a constant holds may not introduce a sibling's name")
-    func aClosureConstantMayNotShadowASibling() async throws {
-        // Given. The rule a body is held to at load, met here from the caller's
-        // side. Neither module is made, and both are the same mistake: a name the
-        // module bound, introduced again where it would take the constant's
-        // place.
-        func module(introducing statement: Statement?) throws -> Module {
-            try Module(
-                constants: [
-                    "apply": .closure(Procedure(
-                        signature: Signature(
-                            parameters: statement == nil
-                                ? [Parameter(name: "zebra", type: .int)]
-                                : [],
-                            returns: .int
-                        ),
-                        body: statement.map { one in [one] } ?? [],
-                        result: reference("zebra")
-                    )),
-                    "zebra": .literal(.int(7))
-                ],
-                procedures: [entryName: Procedure(access: .public, body: [])]
-            )
-        }
-
-        // When / Then. The two ways a closure introduces a name of its own
-        for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            await #expect {
-                try await run(module(introducing: introduced))
-            } throws: { error in
-                error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
-            }
-        }
-    }
-
     @Test("a closure reading a constant from inside a block still has it")
     func aClosureReadsASiblingFromInsideABlock() async throws {
         // Given. How deep in the closure the name is read makes no difference

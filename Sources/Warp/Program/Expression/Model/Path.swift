@@ -11,6 +11,11 @@ import Foundation
 // that reach into what it holds.
 public struct Path: Sendable, Equatable {
     // MARK: - Property
+    // What a path's segment is read without at either end: white space, a
+    // line break included. So a value's name with one at an end is no name a
+    // path reaches.
+    public static let whiteSpace = CharacterSet.whitespacesAndNewlines
+
     public private(set) var segments: [PathSegment]
 
     // The canonical textual form. Diagnostics and encoding share one spelling.
@@ -33,8 +38,8 @@ public struct Path: Sendable, Equatable {
         return rendered
     }
 
-    // What a mark on the head claims, said once for every layer that judges a
-    // path. Nil where the head is written plain. The head is a name a scope
+    // What a mark on the head claims, which the load refuses. Nil where the
+    // head is written plain. The head is a name a scope
     // holds, not a field that may be absent: there is nothing before it to read
     // past, so the mark has nothing to mean.
     public var markedHead: String? {
@@ -56,7 +61,7 @@ public struct Path: Sendable, Equatable {
     // An index segment may itself name a binding. `items[i]` references both
     // `items` and `i`. Static validation must see the nested path too, or a
     // typo'd index escapes to runtime.
-    public var expandingIndexReferences: [Path] {
+    var expandingIndexReferences: [Path] {
         var paths: [Path] = [self]
 
         for segment in segments {

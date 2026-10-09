@@ -34,7 +34,6 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
     }
 
     // MARK: - Public
-
     func bytes(of text: String) -> [UInt8] {
         switch self {
         case .utf8:

@@ -39,8 +39,8 @@ struct ModuleNotationTests {
 
     @Test("a top-level body is rejected, because a document is not a procedure")
     func topLevelBodyRejected() {
-        // Given. This was the whole of a document once, and it made every
-        // document an entry point with no way to write one that only declares
+        // Given. A document declares procedures; a body written at its top
+        // would be an entry no key names
         let fixture: Value = ["body": [["let": "done", "value": "end"]]]
 
         // When / Then

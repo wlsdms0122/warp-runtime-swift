@@ -22,6 +22,12 @@ public struct BlockReader: Decodable {
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "block")
 
+        try self.init(reading: decoder)
+    }
+
+    // The same keys read beside others the caller has already held the
+    // record to.
+    init(reading decoder: Decoder) throws {
         self.block = Block(
             body: try decoder.descendingIfPresent(to: CodingKeys.body)?
                 .read(BodyReader.self)

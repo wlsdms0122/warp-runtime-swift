@@ -41,7 +41,7 @@ public struct Block: Sendable {
     // validated or not: a leaving body never reaches the result, and a leaving
     // result leaves the block the body finished. (`Validator` refuses a result
     // under a leaving body as unreachable.)
-    public var alwaysLeaves: Bool {
+    var alwaysLeaves: Bool {
         body.alwaysLeaves || result?.alwaysLeaves == true
     }
 

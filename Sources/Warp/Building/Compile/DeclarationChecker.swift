@@ -130,7 +130,7 @@ struct DeclarationChecker {
         in table: TypeTable
     ) throws {
         for (position, parameter) in signature.parameters.enumerated() {
-            try mentioned(in: parameter.declared.slotUnwrapped, at: place.part(.parameters).index(position), resolve: table)
+            try mentioned(in: parameter.type.slotUnwrapped, at: place.part(.parameters).index(position), resolve: table)
         }
 
         try mentioned(in: signature.returns ?? .any, at: place.part(.returns), resolve: table)
@@ -148,7 +148,7 @@ struct DeclarationChecker {
         in table: TypeTable
     ) throws {
         for (position, parameter) in signature.parameters.enumerated()
-        where parameter.declared.lowered(in: table.loweredTypes).carriesProcedureTakingInPlace(in: table.loweredTypes) {
+        where parameter.type.lowered(in: table.loweredTypes).carriesProcedureTakingInPlace(in: table.loweredTypes) {
             throw BuildError(
                 "takes '\(parameter.name)', which may hold a procedure taking a parameter in place,"
                     + " and a procedure the host answers calls what it is handed with values",
@@ -168,7 +168,7 @@ struct DeclarationChecker {
     ) throws {
         try mentioned(in: named, at: place, resolve: table)
 
-        if let refusal = named.resolved(in: table).unreadableClaim {
+        if let refusal = named.resolved(in: table).unreadableCast {
             throw BuildError(refusal, at: place)
         }
     }

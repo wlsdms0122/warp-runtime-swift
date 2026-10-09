@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// Failing on purpose instead of answering. The only procedure that never
-// returns, which is what `returns: Never` on its declaration says and what lets
-// the arm that fails stay out of the type the arm that stays decides.
+// Failing on purpose instead of answering. It never returns, which is what
+// `returns: Never` on its declaration says and what lets the arm that fails
+// stay out of the type the arm that stays decides.
 //
 // The failure it raises carries the recoverable marker, so `attempt` around it
 // catches it and nothing else does.
