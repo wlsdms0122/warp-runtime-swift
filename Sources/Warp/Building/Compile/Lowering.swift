@@ -1092,7 +1092,6 @@ struct Lowering {
                 reached = reached?.element(in: loweredTypes)
 
                 return .at(address, optional: optional)
-
             }
         }
 
@@ -1126,7 +1125,7 @@ struct Lowering {
         try type.renumbered { number in
             guard let stands = place[number] else {
                 throw BuildError.unjudged(
-                    "type \'\(loweredTypes.labels[number])\', which its document never numbered",
+                    "type '\(loweredTypes.labels[number])', which its document never numbered",
                     at: Place.procedure(label.spelling, in: .assembled)
                 )
             }

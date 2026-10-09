@@ -1168,11 +1168,7 @@ struct TypeChecker {
             // Whether the container being entered is a declared type's, which
             // is asked of this segment alone: a record written inline under a
             // `var` field is nobody's declaration.
-            var declared = false
-
-            if case .named = current {
-                declared = true
-            }
+            let declared = if case .named = current { true } else { false }
 
             current = context.resolve(current)
 

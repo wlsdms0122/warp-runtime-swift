@@ -476,7 +476,7 @@ struct Compiler {
 
             // A start written as a literal, or as a closure literal that
             // writes no answer, is read as what the variable declares.
-            let declaredType = variable.declared?.lowered(in: context.loweredTypes)
+            let declaredType = declaredTypes[name]
             let start = declaredType.map { declaredType in
                 declaredType.written(
                     declaredType.completing(variable.start, in: context.loweredTypes),
