@@ -8,11 +8,10 @@
 import Foundation
 import Warp
 
-// How many, for every type answering `Standard.Collection`.
+// How many, for each type the shared ground claims `Standard.Collection` for.
 struct CountQuery: Query {
     // What this takes: the thing counted, and nothing else. The type is
-    // each declaration's own, since one query counts for every type that
-    // has a count.
+    // each declaration's own, since one query counts for each of those types.
     enum Parameters: Int, ParameterSet {
         case collection
 

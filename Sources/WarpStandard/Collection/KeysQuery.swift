@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The names a record holds, in order. Declared fields are read by name; this
+// The names a map holds, in order. Declared fields are read by name; this
 // reads names that are data, and is how a program walks them without knowing
 // what they are called.
 struct KeysQuery: Query {

@@ -9,15 +9,16 @@ import Foundation
 import Warp
 
 // The two numbers an arithmetic procedure reads. One type because the two sides of
-// every operation are declared alike: both are the one type answering
-// `Standard.Numeric`, so a whole answers a whole and a fraction a fraction.
+// every operation are declared alike: both are the one type a declaration
+// answers `Standard.Numeric` for, so a whole answers a whole and a fraction a
+// fraction.
 enum NumericPair: Int, ParameterSet {
     case lhs
     case rhs
 
     // MARK: - Property
-    // The type is each declaration's own: one query answers for every type
-    // a numeric procedure is declared for.
+    // The type is each declaration's own: one query answers for each type
+    // the shared ground claims `Standard.Numeric` for.
     var declared: Parameter {
         switch self {
         case .lhs:

@@ -9,17 +9,10 @@ import Foundation
 import Warp
 
 public extension Module {
-    // The procedures an implementation writes in its own language. What makes
-    // one of these builtin is that the language cannot express it: arithmetic,
-    // ordering and counting are the machine's, answered for each type the
-    // standard contracts are claimed for, case mapping and encoding carry
-    // Unicode's tables with them, running at once is the host's scheduler, and
-    // `appending` is the only way an array grows and `gathering` the only way
-    // an answer keeps the spelling its collection arrived in.
-    //
-    // `trimmed` names the set it removes and still stands here: whether a
-    // character is whitespace is a question about the code points inside it,
-    // and `characters` answers characters.
+    // The procedures an implementation writes in its own language, the ones
+    // the standard vocabulary's page says the language cannot express.
+    // `trimmed` is one: whether a character is whitespace is a question about
+    // the code points inside it, and `characters` answers characters.
     static let builtinProcedures: Set<Name> = [
         "Standard.Logic.equal",
 

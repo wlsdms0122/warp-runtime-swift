@@ -8,9 +8,7 @@
 import Foundation
 import Warp
 
-// The elements with one more at the end. Nothing is written in place: this
-// answers a new array, which is what a language whose names are fixed by
-// default can offer.
+// The elements with one more at the end, as a new array.
 struct AppendingQuery: Query {
     // What this takes: the array, and one more element of its own kind.
     enum Parameters: Int, ParameterSet {

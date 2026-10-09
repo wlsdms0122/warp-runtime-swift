@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// The whole number at or below a number. Answers an int whatever it was sent,
-// which is how a quotient becomes a whole number again: `dividedBy` always
-// answers a double.
+// The whole number at or below a fraction, as an `Int`, which is how a
+// quotient becomes a whole number again: `dividedBy` always answers a
+// `Double`.
 struct FlooredQuery: Query {
     typealias Parameters = NumberOperand
 

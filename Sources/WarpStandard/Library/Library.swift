@@ -1144,7 +1144,7 @@ enum Library {
                   bounds {
                     Element "Standard.Comparable"
                   }
-                  description "The elements in order, for numbers or for strings."
+                  description "The elements in the order lessThan puts them in, for any type that orders."
                   parameters [
                     {
                       name "array"
@@ -1237,7 +1237,7 @@ enum Library {
                       }
                     }
                   ]
-                  description "What a record holds, by its names in order."
+                  description "What a map holds, by its names in order."
                   parameters [
                     {
                       name "dictionary"

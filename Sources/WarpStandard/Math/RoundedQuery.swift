@@ -8,8 +8,7 @@
 import Foundation
 import Warp
 
-// The nearest whole number. Answers an int whatever it was sent, the same as
-// `floored`.
+// The whole number nearest a fraction, as an `Int`, the same as `floored`.
 struct RoundedQuery: Query {
     typealias Parameters = NumberOperand
 

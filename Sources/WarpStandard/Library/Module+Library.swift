@@ -36,11 +36,10 @@ extension Module {
     // a module is compiled against the modules standing before it, and a
     // declaration the host answers has no body to compile.
     //
-    // Merged into one, a bundle would need whatever its written half sends to,
-    // and the bundles it declares for stand above it: `Standard.Logic` walks, so it
-    // sends `Standard.Collection.count`, and a collection procedure comparing two
-    // elements sends `Standard.Logic.equal`. Apart, `equal` stands first with
-    // nothing to wait for and the cycle never forms.
+    // Merged into one, a bundle would need whatever its written half sends to
+    // stand before it, so two bundles whose written halves send to each
+    // other's declared halves would have no order. Apart, every half the host
+    // answers stands first with nothing to wait for.
     static func bundled(_ bundle: Module, with written: String) -> [Module] {
         guard let document = library[written] else { return [bundle] }
 
