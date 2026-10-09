@@ -221,11 +221,6 @@ public struct PathParser: Sendable {
             return .index(literal, optional: optional)
         }
 
-        // A whole number no `Int` holds is still a whole number, and no name.
-        if case .overflow = IntSpelling(inner) {
-            throw PathSyntaxError("index segment '[\(inner)]' is a whole number past what an Int holds")
-        }
-
         guard !inner.isEmpty else {
             throw PathSyntaxError("empty index segment '[]' in reference path")
         }
