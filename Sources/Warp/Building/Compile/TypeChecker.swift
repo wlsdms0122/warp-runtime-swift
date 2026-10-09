@@ -1934,7 +1934,8 @@ struct TypeChecker {
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
             // A closure literal the body answers, at any depth, is completed
-            // by the type the closure answers.
+            // by the type the closure answers. Its body reads the names of
+            // the procedure around it, so a closure it writes does too.
             let promised = procedure.signature.returns?.lowered(in: context.loweredTypes, bounds: procedure.signature.bounds)
             let inner = try await inspected(
                 block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
@@ -1942,7 +1943,7 @@ struct TypeChecker {
                 in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
                 },
-                with: context.bounding(procedure.signature.bounds),
+                with: context,
                 ask: ask.answering(promised)
             )
 
