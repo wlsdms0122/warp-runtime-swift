@@ -556,11 +556,7 @@ public struct Builder: Sendable {
                 )
 
                 if let first = claimed[name] {
-                    throw BuildError(
-                        "'\(name)' is declared by \(first) and by \(declaration.spelled)."
-                            + " Two declarations of a name have no way to be told apart",
-                        at: declaration.place
-                    )
+                    throw BuildError.declaredTwice(name, by: first, and: declaration.spelled, at: declaration.place)
                 }
 
                 claimed[name] = declaration.spelled

@@ -54,5 +54,15 @@ public struct BuildError: WarpError {
         )
     }
 
+    // One name declared by two documents of a link, said once for a
+    // procedure, a type and a contract, at the second declaration.
+    static func declaredTwice(_ name: Name, by first: String, and second: String, at place: Place) -> BuildError {
+        BuildError(
+            "'\(name)' is declared by \(first) and by \(second)."
+                + " Two declarations of a name have no way to be told apart",
+            at: place
+        )
+    }
+
     // MARK: - Private
 }
