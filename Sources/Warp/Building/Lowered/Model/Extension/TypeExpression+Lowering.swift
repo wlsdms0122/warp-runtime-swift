@@ -85,7 +85,7 @@ extension TypeExpression {
 
         // A bound names a contract.
         case let .parameter(name):
-            return lowered(bounds: Array(bounds[name] ?? []), in: table) { bounds in .parameter(label: name, bounds: bounds) }
+            return lowered(bounds: bounds[name] ?? [], in: table) { bounds in .parameter(label: name, bounds: bounds) }
 
         case let .composition(names):
             return lowered(bounds: names, in: table, as: LoweredType.composition)
@@ -104,7 +104,7 @@ extension TypeExpression {
     // What a list of names stands for: the contracts, in the one order a set
     // of bounds is written in, or the first name that is no contract.
     private func lowered(
-        bounds names: [Name],
+        bounds names: some Collection<Name>,
         in table: LoweredTypeTable,
         as bounded: ([Name]) -> LoweredType
     ) -> LoweredType {
