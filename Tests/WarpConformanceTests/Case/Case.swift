@@ -470,9 +470,8 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Public
-    // The cases live beside the specification they belong to rather than inside
-    // this package, because they are not this implementation's. The day there
-    // is a second implementation they move with `spec/` and this file stays.
+    // The cases live in `spec/conformance`, beside the specification they
+    // belong to, since they are the language's and not this implementation's.
     static func all() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()   // Case
@@ -484,17 +483,8 @@ struct Case: Sendable, CustomStringConvertible {
             .appendingPathComponent("spec")
             .appendingPathComponent("conformance")
 
-        // The cases are the ones named like cases, and everything else in the
-        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
-        // a merge, a copy someone kept while editing. A runner that refused to
-        // start over any of those would be putting "is this folder tidy" and
-        // "is this implementation the language" behind one red light, and the
-        // second question is the only one it was built to ask.
-        //
-        // The cost is real and is accepted: a case saved under a name this
-        // misses is not asked, and nothing here says so. What catches that is
-        // the same thing that catches a case deleted outright. It is a file in
-        // a diff, and the dumper that writes these names them.
+        // The cases are the files named like cases, and nothing else in the
+        // folder is read, so a case saved under another name is not asked.
         let files = try FileManager.default
             .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
             .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
@@ -541,10 +531,6 @@ struct Case: Sendable, CustomStringConvertible {
         return stage
     }
 
-    // An encoding is read and nothing is run, so nothing is given, brought,
-    // laid beside it or read under an identity. A case writing any of those
-    // asked something the runner would not ask, and it is refused rather than
-    // left unasked.
     // A case holds what every case writes and the keys its subject reads, and
     // nothing else: a key outside them, a misspelled one included, is a
     // question the runner would not ask.
@@ -558,6 +544,10 @@ struct Case: Sendable, CustomStringConvertible {
         }
     }
 
+    // An encoding is read and nothing is run, so nothing is given, brought,
+    // laid beside it or read under an identity. A case writing any of those
+    // asked something the runner would not ask, and it is refused rather than
+    // left unasked.
     private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
         try reads(written, ["bytes", "text"], about: "an encoding")
 
