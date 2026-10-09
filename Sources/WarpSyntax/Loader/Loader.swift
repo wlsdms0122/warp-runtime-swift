@@ -80,7 +80,8 @@ public struct Loader: Sendable {
 
         // Reading first and checking second, and both before the imports
         // question below.
-        let module = try reading(by: .standard) { try Module(try spelled(value, in: document, by: .standard), identity: identity) }
+        let draft = try reading(by: .standard) { try spelled(value, in: document, by: .standard) }
+        let module = try reading(by: .standard) { try Module(draft, identity: identity) }
 
         // What a document imports is read before the program it belongs to, so
         // a host decides whether to grant before it decides whether to link.
@@ -94,13 +95,10 @@ public struct Loader: Sendable {
         // read is refused for that. A missing list is the least specific thing
         // that can be wrong with a document, and going first would make it the
         // only thing an author ever heard about.
-        let written = try Self.document(value)
-        let imports = ModuleReader.CodingKeys.imports.name
-
-        guard ModuleReader.declaresImports(written[imports]) else {
+        guard draft.imports != nil else {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
-                    + " Write `\(imports)`, empty where the program uses nothing"
+                    + " Write `\(ModuleReader.CodingKeys.imports.name)`, empty where the program uses nothing"
             )
             .read(in: document)
         }

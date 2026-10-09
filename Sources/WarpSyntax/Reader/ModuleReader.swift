@@ -84,42 +84,18 @@ public struct ModuleReader: Decodable {
     }
 
     // MARK: - Public
-    // Whether a document declares what it imports.
-    //
-    // Written and not null. A key holding nothing is not a claim, and the two
-    // who ask have to agree about that: the door turns away a document that
-    // declares nothing, and the reader takes a key holding nothing as a list
-    // of no names. Answering differently is how `imports: Null` passes the
-    // door as a claim while the module behind it says it takes nothing.
-    //
-    // Asked twice because the two are in different places. The door holds the
-    // document and reads the value; the reader is inside it and has a
-    // container. One rule, said here for both.
-    static func declaresImports(_ written: Value?) -> Bool {
-        guard let written else { return false }
-
-        return written != .null
-    }
-
-    static func declaresImports<Key: CodingKey>(
-        in container: KeyedDecodingContainer<Key>,
-        forKey key: Key
-    ) throws -> Bool {
-        try container.contains(key) && !container.decodeNil(forKey: key)
-    }
-
     // MARK: - Private
     // What the document says it takes from its link, read and not judged. What
     // it is held against is what the module sends, which is a fact about the
     // module rather than about the text, so the refusal is the module's.
     //
     // Nothing written is nothing claimed, and a slot written as null says the
-    // same. Whether a document may leave it out at all is the door's, and the
-    // door sees the value rather than a container.
+    // same. Whether a document may leave it out at all is the door's, which
+    // reads the claim off the draft this answers.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
     ) throws -> Set<Name>? {
-        guard try Self.declaresImports(in: container, forKey: .imports) else { return nil }
+        guard container.contains(.imports), try !container.decodeNil(forKey: .imports) else { return nil }
 
         let written = try container.superDecoder(forKey: .imports)
 
