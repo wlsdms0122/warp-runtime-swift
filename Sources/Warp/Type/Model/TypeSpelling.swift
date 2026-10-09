@@ -7,11 +7,12 @@
 
 import Foundation
 
-// The names the language gives the types it names, each written once. A
-// document spells one of these types by its name, a claim about one is keyed
-// by it, and a value is an instance of the one its kind is, so every table
-// answering one of those questions reads the name from here and no two of
-// them can come to spell one type two ways.
+// The names the language gives the types it names, and the words a type's
+// spelling writes in front of one, each written once. A document spells one
+// of these types by its name, a claim about one is keyed by it, and a value
+// is an instance of the one its kind is, so every table answering one of
+// those questions reads the name from here and no two of them can come to
+// spell one type two ways.
 public enum TypeSpelling {
     public static let any: Name = "Any"
     public static let never: Name = "Never"
@@ -26,6 +27,14 @@ public enum TypeSpelling {
 
     // The type answering a contract, written in that contract's procedures.
     public static let selfType: Name = "Self"
+
+    // The words a type's spelling writes in front of a type: a type
+    // parameter, a procedure's constness and isolation, and a slot's marks.
+    public static let some: Name = "some"
+    public static let const: Name = "const"
+    public static let isolated: Name = "isolated"
+    public static let `inout`: Name = "inout"
+    public static let variable: Name = "var"
 
     // What a claim about `Array` or `Dictionary` reads an element as: a type
     // parameter nothing fills, spelled with a dot, which no document's `some`

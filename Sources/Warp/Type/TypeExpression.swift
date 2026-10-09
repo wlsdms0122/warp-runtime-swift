@@ -204,7 +204,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return TypeSpelling.string.spelling
 
         case let .parameter(name):
-            return "some \(name)"
+            return "\(TypeSpelling.some) \(name)"
 
         case let .composition(names):
             return names.sorted().map(\.spelling).joined(separator: " & ")
@@ -216,18 +216,18 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // writes this, so the spelling answers to the message alone: a refusal
         // about `item.a` names where it came from.
         case let .projection(of, path):
-            return "some \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
 
         case let .variable(inner):
-            return "var \(inner.rendered)"
+            return "\(TypeSpelling.variable) \(inner.rendered)"
 
         case let .inout(inner):
-            return "inout \(inner.rendered)"
+            return "\(TypeSpelling.inout) \(inner.rendered)"
 
         case let .procedure(type, constness, isolation):
             let spelling = [
-                constness == .const ? "const" : nil,
-                isolation == .isolated ? "isolated" : nil,
+                constness == .const ? TypeSpelling.const.spelling : nil,
+                isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
                 TypeSpelling.procedure.spelling
             ]
             .compactMap { part in part }
