@@ -442,7 +442,7 @@ struct NullableTests {
 
     @Test("an optional index reference reads its name at the exit that indexes")
     func anOptionalIndexReferenceOverANullable() async throws {
-        // Given. `items?[i]`: the index is a name the run settles, and the null
+        // Given. `items?[i]`: the index is a name the run reads, and the null
         // that short-circuits before it never reads the name at all
         let sut = try Module(
             procedures: [

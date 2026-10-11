@@ -559,7 +559,7 @@ struct WriterTests {
     func aCanonicalDocumentIsWrittenBackUnchanged() throws {
         // Given / When. `canonical` is written in the types themselves, so
         // reading it and writing it must arrive at the same document. A fixed
-        // point only says the writing settled; this says nothing was left
+        // point only says the writing stopped changing; this says nothing was left
         // behind, because every slot the language has is written down here and
         // a slot that stopped being written would go missing from the answer.
         let sut = try sut.value(of: try loader.load(Self.canonical))
@@ -616,7 +616,7 @@ struct WriterTests {
 
     @Test("a written program runs the way the one it came from did")
     func aWrittenProgramRunsTheSame() async throws {
-        // Given. A fixed point says the writing settled, not that it kept
+        // Given. A fixed point says the writing stopped changing, not that it kept
         // everything. Running both is what notices a slot dropped on the way
         // out.
         let document: Value = [

@@ -12,7 +12,7 @@ import WarpStandard
 // Procedures that call nothing, dealt into a given number of documents, with
 // the two halves of a build timed apart.
 //
-// A build compiles and then links. Compiling settles what a document says
+// A build compiles and then links. Compiling judges what a document says
 // against what it reaches, and a procedure here reaches nothing outside the document
 // it is written in, so each document's compile is a question about that
 // document alone. Linking lays the compiled documents down together and is one
@@ -33,12 +33,12 @@ struct Fanout {
     private let modules: [Module]
 
     // The same documents already compiled, which is what `link()` is handed.
-    // What that door times is the laying down, so settling the documents again
+    // What that door times is the laying down, so compiling the documents again
     // for every sample would only be time spent outside the clock.
     private let compiled: [Compiled]
 
     // The vocabulary these were compiled against, held so that every door
-    // times the same build rather than settling it again.
+    // times the same build rather than compiling it again.
     private let vocabulary: Vocabulary
 
     // MARK: - Initializer

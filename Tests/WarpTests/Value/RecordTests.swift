@@ -64,7 +64,7 @@ struct RecordTests {
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
     }
 
-    @Test("a value that settled to a name keeps it, and is refused a field that name does not declare")
+    @Test("a value under a name keeps it, and is refused a field that name does not declare")
     func writingHoldsARecordNameToItsDeclaration() throws {
         // Given
         let sut = Value.record(Record(name: "App.Point", ["a": .int(1)]))
@@ -73,12 +73,12 @@ struct RecordTests {
         #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "App.Point", ["a": .int(9)])))
 
         // A name the declaration never had would make this something other
-        // than the type it settled to
+        // than the type it names
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
         #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
     }
 
-    @Test("a value that settled to no name holds a new one as data")
+    @Test("a value under no name holds a new one as data")
     func writingOutsideALayoutWithNoNameAnswersData() throws {
         // Given
         let sut = Value.record(Record(name: nil, ["a": .int(1)]))
