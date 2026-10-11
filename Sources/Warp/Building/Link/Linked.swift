@@ -342,7 +342,7 @@ public final class Linked: Sendable {
     private func refuseInPlace() throws {
         guard let slot = slots.first(where: { slot in slot.type.isInout }) else { return }
 
-        throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
+        throw ArgumentError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
     }
 
     // Values from outside, one at each slot, settled together in the door's
