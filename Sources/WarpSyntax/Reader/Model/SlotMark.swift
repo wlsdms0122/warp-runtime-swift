@@ -8,24 +8,32 @@
 import Foundation
 import Warp
 
-// What a slot may write in front of a whole type, and how this notation
-// spells it. The two do not stand in the same place (`var` is a field's and
-// `inout` a parameter's), but a document writes them the same way, so the
-// spelling is said once here and the reading, the writing and the document's
-// own vocabulary come off it.
+// What a slot may write in front of a whole type. The two do not stand in
+// the same place (`var` is a field's and `inout` a parameter's), but a
+// document writes them the same way, so the shape of a marked spelling is
+// said once here and the reading and the writing come off it. The words are
+// `TypeSpelling`'s.
 //
 // The language's own record of which types are marked is the cases of
-// `TypeExpression`. What is here is their spelling, which is this notation's
-// and not something a caller assembling a `TypeExpression` in Swift ever needs.
-enum SlotMark: String, CaseIterable, Sendable {
-    case variable = "var"
+// `TypeExpression`. What is here is how a spelling carries them, which is this
+// notation's and not something a caller assembling a `TypeExpression` in Swift
+// ever needs.
+enum SlotMark: CaseIterable, Sendable {
+    case variable
     case `inout`
 
     // MARK: - Property
+    // The word the mark is written as.
+    var word: Name {
+        switch self {
+        case .variable: TypeSpelling.variable
+        case .inout: TypeSpelling.inout
+        }
+    }
+
     // The mark as it stands in front of a spelling. The reading takes this off
-    // the front and the writing puts it there, so the shape of a marked
-    // spelling is said once.
-    var front: String { "\(rawValue) " }
+    // the front and the writing puts it there.
+    var front: String { "\(word) " }
 
     // MARK: - Initializer
     // MARK: - Public

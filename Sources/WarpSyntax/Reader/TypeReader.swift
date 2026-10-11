@@ -168,9 +168,13 @@ public struct TypeReader: Decodable {
     // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before the head.
     static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
-            .compactMap { part in part }
-            .joined(separator: " ")
+        [
+            constness == .const ? TypeSpelling.const.spelling : nil,
+            isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
+            head == .name ? TypeSpelling.procedure.spelling : "procedure"
+        ]
+        .compactMap { part in part }
+        .joined(separator: " ")
     }
 
     // The modifiers at the front of a type's text, in either order, and the
@@ -183,11 +187,11 @@ public struct TypeReader: Decodable {
         var isolation = Isolation.unstated
 
         while true {
-            if let bare = dropPrefixed("const ", from: rest) {
+            if let bare = dropPrefixed("\(TypeSpelling.const) ", from: rest) {
                 guard constness == .unstated else { return nil }
                 constness = .const
                 rest = String(bare)
-            } else if let bare = dropPrefixed("isolated ", from: rest) {
+            } else if let bare = dropPrefixed("\(TypeSpelling.isolated) ", from: rest) {
                 guard isolation == .unstated else { return nil }
                 isolation = .isolated
                 rest = String(bare)
@@ -271,8 +275,8 @@ public struct TypeReader: Decodable {
         // call, where `T` alone would be looked up in the table of declared
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
-        if text == "some" || text.hasPrefix("some ") {
-            return .parameter(name: try named(text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)))
+        if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
+            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: .whitespaces)))
         }
 
         guard let open = text.firstIndex(of: "<") else {

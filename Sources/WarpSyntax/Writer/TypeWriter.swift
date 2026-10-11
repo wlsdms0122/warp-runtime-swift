@@ -74,7 +74,7 @@ struct TypeWriter {
         // holding one is said rather than written as something else.
         case let .projection(of, path):
             throw WritingError(
-                "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
+                "`\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"
@@ -82,7 +82,7 @@ struct TypeWriter {
 
         // Bare: a slot names the parameter, and its bound is the signature's.
         case let .parameter(name):
-            return .string("some \(name)")
+            return .string("\(TypeSpelling.some) \(name)")
 
         case let .composition(names):
             return .string(names.sorted().map(\.spelling).joined(separator: " & "))
@@ -182,7 +182,7 @@ struct TypeWriter {
             // record whose field is named after them.
             if let inside = SlotMark.marked(inner) {
                 throw WritingError(
-                    "`\(inside.rawValue)` is written inside `\(mark.rawValue)`, and a procedure's key"
+                    "`\(inside.word)` is written inside `\(mark.word)`, and a procedure's key"
                         + " carries one mark"
                 )
             }
@@ -193,9 +193,9 @@ struct TypeWriter {
 
         default:
             throw WritingError(
-                "`\(mark.rawValue)` is written in front of a type name, and"
+                "`\(mark.word)` is written in front of a type name, and"
                     + " \(inner.rendered) is not written as one. Declare it under a"
-                    + " name and write `\(mark.rawValue)` on the name"
+                    + " name and write `\(mark.word)` on the name"
             )
         }
     }

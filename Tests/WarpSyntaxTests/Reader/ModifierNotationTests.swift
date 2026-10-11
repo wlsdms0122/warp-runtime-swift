@@ -38,13 +38,13 @@ struct ModifierNotationTests {
         let writtenForm = try Writer().value(of: form)
 
         // Then
-        #expect(writtenName == .string("\(mark.rawValue) Handle"))
-        #expect(try TypeReader.parse("\(mark.rawValue) Handle") == named)
+        #expect(writtenName == .string("\(mark.word) Handle"))
+        #expect(try TypeReader.parse("\(mark.word) Handle") == named)
         #expect(SlotMark.marked(named) == mark)
 
         #expect(
             writtenForm == .dictionary([
-                try Name("\(mark.rawValue) procedure"): .dictionary(["returns": "Int"])
+                try Name("\(mark.word) procedure"): .dictionary(["returns": "Int"])
             ])
         )
 
@@ -82,8 +82,8 @@ struct ModifierNotationTests {
 
         // When / Then. A name takes both in front of it, and reads back as it
         // was written
-        #expect(try Writer().value(of: named) == .string("\(mark.rawValue) \(inside.rawValue) Handle"))
-        #expect(try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle") == named)
+        #expect(try Writer().value(of: named) == .string("\(mark.word) \(inside.word) Handle"))
+        #expect(try TypeReader.parse("\(mark.word) \(inside.word) Handle") == named)
 
         // And a procedure's key carries one
         #expect(throws: WritingError.self) {
@@ -103,7 +103,7 @@ struct ModifierNotationTests {
                 "warp": 1,
                 "imports": [],
                 "procedures": ["entry": ["result": 1]],
-                "types": ["Box": ["record": ["f": .string("\(mark.rawValue) \(inside.rawValue) Int")]]]
+                "types": ["Box": ["record": ["f": .string("\(mark.word) \(inside.word) Int")]]]
             ])
         }
 
@@ -112,7 +112,7 @@ struct ModifierNotationTests {
                 "warp": 1,
                 "imports": [],
                 "procedures": [
-                    "entry": ["parameters": [["name": "f", "type": .string("\(mark.rawValue) \(inside.rawValue) Int")]]]
+                    "entry": ["parameters": [["name": "f", "type": .string("\(mark.word) \(inside.word) Int")]]]
                 ]
             ])
         }
@@ -127,7 +127,7 @@ struct ModifierNotationTests {
         // procedure form's, and a key that is not one is a field's name like
         // any other. The writing never makes one: a marked type holding a
         // marked type is refused before it gets here
-        let key = try Name("\(mark.rawValue) \(inside.rawValue) procedure")
+        let key = try Name("\(mark.word) \(inside.word) procedure")
         let type = TypeExpression.record([key: .record(["returns": .int])])
 
         // When
@@ -157,7 +157,7 @@ struct ModifierNotationTests {
         }
 
         // And the same spelling read back is the mark outside the doubt
-        #expect(try TypeReader.parse("\(mark.rawValue) Task?") == mark.marking(.nullable(.named("Task"))))
+        #expect(try TypeReader.parse("\(mark.word) Task?") == mark.marking(.nullable(.named("Task"))))
     }
 
     @Test("a record's field is named whatever the document named it")
