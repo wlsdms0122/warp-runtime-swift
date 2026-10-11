@@ -639,18 +639,24 @@ struct Evaluator: Sendable {
             // did, not for what the procedure says.
             guard let recoverable = error as? any RecoverableFailure else { throw error }
 
+            // While the rescue runs, the failure is a value under the declared
+            // name, where the attempt bound one. What a failure carries is the
+            // failing procedure's, a value from outside, so the payload comes
+            // in through the door at the envelope's type.
+            if let failure {
+                activation.cells[failure] = .value(
+                    try FailurePayload.declared.lowered(in: loweredTypes).settling(
+                        outside: recoverable.payload,
+                        at: "'\(activation.frame.names[failure])'",
+                        in: loweredTypes
+                    )
+                )
+            }
+
             await observer?.failureRescued(
                 name: failure.map { failure in activation.frame.names[failure].spelling },
                 error: error
             )
-
-            // While the rescue runs, the failure is a value under the declared
-            // name, where the attempt bound one. Its type needs no check here:
-            // `RecoverableFailure` assembles the payload itself, so `type` and
-            // `message` are there by construction rather than by inspection.
-            if let failure {
-                activation.cells[failure] = .value(recoverable.payload)
-            }
 
             return try await run(rescue, in: &activation, at: trace)
         }
