@@ -147,13 +147,12 @@ public struct Compiled: Sendable, Declaring {
         )
     }
 
-    // Every name this document reaches outside itself, read off what its
-    // object holds: its module's `references`. What its bodies send, the
-    // types they, its signatures and its declared types stand on, and the
-    // names its claims and the pairs it leaned on write. An object keeps no
-    // list of what its document named, so this is that list worked out again
-    // from the facts the object does keep.
-    var references: Set<Reference> {
+    // What this document needs of the documents a link lays before it, read
+    // off what its object holds: what its bodies send, and the types they,
+    // its signatures and its declared types stand on. A claim is not among
+    // them: a document claims a type answers a contract declared anywhere in
+    // its link, and the link holds the claim to it.
+    var needs: Set<Reference> {
         var reached = Set(numbering.sending.map(Reference.procedure))
 
         reached.formUnion(typeNumbering.types.map(Reference.type))
@@ -172,6 +171,16 @@ public struct Compiled: Sendable, Declaring {
             }
         }
 
+        return outside(reached)
+    }
+
+    // Every name this document reaches outside itself: its module's
+    // `references`. What it needs, and the names its claims and the pairs it
+    // leaned on write. An object keeps no list of what its document named, so
+    // this is that list worked out again from the facts the object does keep.
+    var references: Set<Reference> {
+        var reached = needs
+
         for (type, claimed) in claims {
             reached.insert(.type(type))
             reached.formUnion(claimed.map(Reference.type))
@@ -181,7 +190,7 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion([.type(claim.type), .type(claim.contract)])
         }
 
-        return reached.subtracting(supplies).subtracting(hidden.map(Reference.procedure))
+        return outside(reached)
     }
 
     // Which document this stands against, which is what a host keeps it
@@ -365,6 +374,11 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
+    // The names among these this document does not declare itself.
+    private func outside(_ reached: Set<Reference>) -> Set<Reference> {
+        reached.subtracting(supplies).subtracting(hidden.map(Reference.procedure))
+    }
+
     // The frame of the row a body's closure number stands, or nothing where
     // this document numbers no closure there.
     private func frame(ofClosure number: Int) -> Frame? {

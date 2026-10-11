@@ -799,6 +799,54 @@ struct SeparateCompilationTests {
         }
     }
 
+    @Test("an object claiming a contract a document after it declares stands before that document")
+    func aClaimNeedsNothingStandBeforeIt() async throws {
+        // Given. A document declaring a type and claiming it answers a
+        // contract the program declares, compiled first, and the program,
+        // which names the type, compiled against it.
+        let card = try Module(
+            imports: ["App.P"],
+            types: ["Bank.Card": .record(["last": .string])],
+            claims: ["Bank.Card": ["App.P"]],
+            procedures: [
+                "Bank.Card.show": Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Card"))], returns: .string),
+                    body: [],
+                    result: .literal(.string("card"))
+                )
+            ]
+        )
+        let program = try Module(
+            imports: ["Bank.Card"],
+            contracts: ["App.P": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .string),
+                    body: [],
+                    result: .call(
+                        Call(
+                            selector: "App.P.show",
+                            arguments: [.cast(.record(["last": .literal(.string("1"))]), as: .named("Bank.Card"), optional: false)]
+                        )
+                    )
+                )
+            ]
+        )
+        let standard = try await builder.compile(Module.standard)
+        let first = try await builder.compile([card], against: standard, supplying: Supplying(Module.standard))
+        let second = try await builder.compile([program], against: standard + first, supplying: Supplying(Module.standard))
+
+        // When. The claim names the program's contract, and the program
+        // names the card: a claim is held by the link, so the card needs
+        // nothing of the program.
+        let image = try builder.link(standard + first + second, supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image) == .string("card"))
+    }
+
     @Test("an object's signature naming a type nothing in the link declares is refused at the build")
     func anObjectsSignatureNamingNothingIsRefused() async throws {
         // Given. A document whose declaration takes a type its counterpart

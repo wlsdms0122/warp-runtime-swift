@@ -20,9 +20,10 @@ import Foundation
 // Two modules that need each other have no such order, so this refuses them.
 // The names each side needs of the other are what makes the cycle, and neither
 // can be the one that goes first. The objects a link is handed are held to the
-// same order by the same walk: each was compiled against what it names, so two
-// that name each other were each compiled against something not beside them,
-// and a type one names is read through what the other declares.
+// same order by the same walk, over what each sends and every type its
+// declared types, signatures and bodies name: each was compiled against those,
+// so two that need each other were each compiled against something not beside
+// them, and a type one names is read through what the other declares.
 //
 // What a module needs is read the way a link reads it: the procedures it calls and
 // every type it names. A name nothing here declares is left alone: the build
@@ -62,14 +63,14 @@ public struct ModuleGraph: Sendable {
     }
 
     // MARK: - Public
-    // The objects a link is handed, held to the order the modules they were
-    // compiled from stood in: what each one names of another stands before
-    // it, read off what the object holds.
+    // The objects a link is handed, held to the order they were compiled in:
+    // what each one needs of another stands before it, read off what the
+    // object holds.
     static func stand(_ objects: [Compiled]) throws {
         _ = try standing(
             objects.map(\.document),
             supplying: objects.map(\.supplies),
-            needing: objects.map(\.references),
+            needing: objects.map(\.needs),
             after: 0
         )
     }
