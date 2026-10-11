@@ -254,8 +254,8 @@ struct TypeNotationTests {
                 == .array(.procedure(ProcedureType(returns: .int)))
         )
 
-        // And. A record is declared under `types` and named, so a slot
-        // written as a record is no type
+        // And. A record is declared under its name in `types` and named
+        // everywhere else, so a slot written as a record is no type
         #expect(throws: ReadingError.self) {
             try loader.loadDocument([
                 "procedures": [
