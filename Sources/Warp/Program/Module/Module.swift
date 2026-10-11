@@ -127,7 +127,7 @@ public struct Module: Sendable {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {
@@ -154,7 +154,7 @@ public struct Module: Sendable {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {

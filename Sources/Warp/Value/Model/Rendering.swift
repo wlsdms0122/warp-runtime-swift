@@ -54,8 +54,7 @@ public struct Rendering {
             return "<procedure>"
 
         case .array, .record, .dictionary:
-            // `Unwritable` is the only thing `written` throws, so the fallback
-            // is the whole failure story.
+            // `written` throws only `Unwritable`.
             return (try? Self.written(value)) ?? "<unencodable>"
         }
     }

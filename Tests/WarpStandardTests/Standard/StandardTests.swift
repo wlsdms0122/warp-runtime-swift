@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 import Warp
-import WarpStandard
+@testable import WarpStandard
 import WarpTestSupport
 
 // The procedures that ship in bundles, and the fact that they are bundles: a host
