@@ -1175,7 +1175,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 var fieldReadings = Substitution()
 
                 mine.binding(against: field, into: &fieldReadings, taking: &taking, holding: &holding, in: table)
-                fields.read(fieldReadings, joining: .partByPart, in: table)
+                fields.read(fieldReadings, joining: .joined, in: table)
             }
 
             substitution.read(fields, in: table)

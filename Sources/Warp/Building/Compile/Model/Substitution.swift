@@ -32,9 +32,9 @@ struct Substitution: Sendable {
         // Only where one holds the other, and a disagreement otherwise.
         case holdingBoth
 
-        // Part by part, as a list literal's elements do, and never a
-        // disagreement.
-        case partByPart
+        // Part by part, as `joined` joins a list literal's elements, and never
+        // a disagreement.
+        case joined
     }
 
     // MARK: - Property
@@ -115,7 +115,7 @@ struct Substitution: Sendable {
         case .holdingBoth:
             already.holdingBoth(given, in: table)
 
-        case .partByPart:
+        case .joined:
             already.joined(given)
         }
 
