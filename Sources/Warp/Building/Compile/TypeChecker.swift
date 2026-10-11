@@ -627,7 +627,7 @@ struct TypeChecker {
             // type like any other (`Any`, null, another name, another nullable)
             // and an unwrap that skipped the questions would judge on a type
             // nobody checked.
-            settling: while true {
+            unwrapping: while true {
                 // Three types stop a walk, and they stop it for three
                 // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
@@ -706,7 +706,7 @@ struct TypeChecker {
                     }
                 }
 
-                guard case let .nullable(inner) = current else { break settling }
+                guard case let .nullable(inner) = current else { break unwrapping }
 
                 guard segment.optional else {
                     return .refused(
@@ -1313,14 +1313,14 @@ struct TypeChecker {
                 // name survives into the image. One indexed by what only the run
                 // settles (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
-                let settled = try await foldedIndexReferences(path, at: place, folding: folding)
+                let folded = try await foldedIndexReferences(path, at: place, folding: folding)
 
-                guard let head = folding.boundHead(of: settled) else {
-                    return Inspection(rewritten: .reference(settled), reading: read, flow: reached)
+                guard let head = folding.boundHead(of: folded) else {
+                    return Inspection(rewritten: .reference(folded), reading: read, flow: reached)
                 }
 
                 do {
-                    let value = try await folding.read(settled, at: place)
+                    let value = try await folding.read(folded, at: place)
 
                     return Inspection(rewritten: .literal(value), reading: read, flow: reached)
                 } catch {
@@ -2186,7 +2186,7 @@ struct TypeChecker {
             let entry = rounded(environment, as: round)
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
-            let (seeded, probed, converged) = try await settled(
+            let (seeded, probed, converged) = try await fixedPoint(
                 from: entry,
                 start: { flow in try flow.start(of: round, meeting: climbing) }
             ) { seeding -> (round: BodyWalk, flow: Flow) in
@@ -2484,14 +2484,14 @@ struct TypeChecker {
 
             // A write's path settles its constant indexes the way a read's
             // path does, so no constant name survives into the image.
-            var settled = statement.binding
+            var binding = statement.binding
 
-            if case let .assignment(path)? = settled, case let .judging(folding, _, _) = ask, let folding {
-                settled = .assignment(try await foldedIndexReferences(path, at: here, folding: folding))
+            if case let .assignment(path)? = binding, case let .judging(folding, _, _) = ask, let folding {
+                binding = .assignment(try await foldedIndexReferences(path, at: here, folding: folding))
             }
 
             rewritten.append(
-                Statement(binding: settled, expression: inner.rewritten)
+                Statement(binding: binding, expression: inner.rewritten)
             )
             calls += inner.calls
             judgements.absorb(inner.judgements)
@@ -2723,7 +2723,7 @@ struct TypeChecker {
     // the body writes falls to `Any`, or to the type it is held to where
     // something took it, over-wide and never wrong; the judging ask answers
     // that state out loud, where it can refuse.
-    private func settled<Round>(
+    private func fixedPoint<Round>(
         from entry: [Name: Binding],
         start starting: (Flow) throws -> Way,
         read: ([Name: Binding]) async throws -> (round: Round, flow: Flow)
@@ -2755,9 +2755,9 @@ struct TypeChecker {
 
         // One more look in the widened environment, so what is handed back
         // was read where the caller will stand.
-        let (settled, _) = try await read(widened)
+        let (round, _) = try await read(widened)
 
-        return (widened, settled, false)
+        return (widened, round, false)
     }
 
     // Where ways that each held one box meet. A taker on either way was
