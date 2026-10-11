@@ -326,9 +326,9 @@ struct Evaluator: Sendable {
 
         // The run's whole share of a cast: the build already decided what every
         // dot after this means, and the one thing it could not know is what
-        // actually arrived. A plain cast lets the refusal out as a failure like
-        // any other; an optional one reads the mismatch as null, which is the
-        // author saying they expected it.
+        // actually arrived. A plain cast lets a mismatch out as `cast_refused`,
+        // a failure like any other; an optional one reads it as null, which is
+        // the author saying they expected it.
         case let .cast(value, type, optional):
             return try type.reading(
                 await evaluate(value, in: &activation, at: trace),

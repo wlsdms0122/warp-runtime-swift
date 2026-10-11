@@ -1442,10 +1442,10 @@ indirect enum LoweredType: Sendable, Equatable {
             // an error kind added later surfaces instead of quietly becoming
             // null.
             guard optional else {
-                // Recoverable, unlike the same refusal at a parameter's
-                // boundary: a cast is the author expecting a kind of data
-                // that came from outside, and being wrong about that is what
-                // the world does. An `attempt` catches it.
+                // Recoverable, unlike the same mismatch at a door: a cast is
+                // the author expecting a kind of data the build could not
+                // type, and being wrong about that is what the world does. An
+                // `attempt` catches it.
                 throw CastRefused(
                     mismatch.message,
                     expected: rendered(in: table),

@@ -8,8 +8,9 @@
 import Foundation
 
 // A declaration, or a closure literal, read against a lowered type table: the
-// parameters as a run settles them and what the answer settles against, which
-// are that table's rows. What a document settles without one is `Judged`.
+// parameters a door settles values at and the answer a host's is settled
+// against, which are that table's rows. What a document settles without one
+// is `Judged`.
 //
 // A written body is lowered code with its frame layout; a native answers as it
 // is. A class, so a call reads it without copying it and a closure value holds
@@ -63,9 +64,9 @@ public final class Linked: Sendable {
     // rescues, or declared by the native procedure.
     public let failing: Failing
 
-    // The parameters as the run settles them, in the same order, and what
-    // the answer settles against. The declaration's lowering, born here
-    // from the signature beside it.
+    // The parameters a door settles values at, in the same order, and the
+    // answer a host's is settled against. The declaration's lowering, born
+    // here from the signature beside it.
     let slots: [Slot]
     let returns: LoweredType?
 
@@ -155,7 +156,7 @@ public final class Linked: Sendable {
     // documents beside the one this came out of numbers their types past the
     // ones here and moves none of them, so the slots stand as they are and are
     // carried over rather than lowered a second time. What changes is the
-    // table the row settles a call against, which is the one the compile is
+    // table the row reads its types by, which is the one the compile is
     // asking with: its rows carry what that compile has worked out and what it
     // is still owed.
     init(_ row: Linked, in table: LoweredTypeTable) {
@@ -226,9 +227,10 @@ public final class Linked: Sendable {
         )
     }
 
-    // How many arguments a call hands, against the slots this row keeps. A
-    // count read out of an object is about to place values in a frame, so
-    // another one is refused rather than trapped on.
+    // How many arguments a call hands, against the slots this row keeps: a
+    // host's, at the door, and a value call's, whose count an object may
+    // write. Either is about to place values in a frame, so another one is
+    // refused rather than trapped on.
     func refuseCount(_ count: Int) throws {
         guard count == slots.count else {
             throw ArgumentError("'\(rendered)' was given \(count) arguments, and it takes \(slots.count)")
