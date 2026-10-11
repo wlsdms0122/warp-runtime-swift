@@ -590,7 +590,9 @@ struct InPlaceTests {
 
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
-        // Given. `App.g` writes its own `some T` beside a value read as `Any`, and a record of an empty list beside one of `Any`, into lists it was handed in place
+        // Given. `App.list` writes its own `some T` beside a value read as
+        // `Any`, and `App.records` a record of an empty list beside one of
+        // `Any`, into lists each was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [

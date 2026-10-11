@@ -357,7 +357,7 @@ struct ValidationTests {
     }
 
     @Test("a closure a constant holds may not introduce a sibling's name")
-    func aClosureConstantMayNotShadowASibling() async throws {
+    func aClosureConstantMayNotShadowASibling() {
         // Given. The rule a body is held to at load, met here from the caller's
         // side. Neither module is made, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
@@ -383,8 +383,8 @@ struct ValidationTests {
 
         // When / Then. The two ways a closure introduces a name of its own
         for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            await #expect {
-                try await run(module(introducing: introduced))
+            #expect {
+                try module(introducing: introduced)
             } throws: { error in
                 error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
             }
@@ -1051,7 +1051,7 @@ struct ValidationTests {
         ]))
     }
 
-    @Test("a result after a leaving statement is refused at the check")
+    @Test("a result after a leaving statement is refused at the load")
     func aResultAfterLeavingIsRefused() {
         // Given. The syntactic half of the same rule, held where leaves are
         let sut = Procedure(
