@@ -694,8 +694,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.message.contains("the module at 0 in this link") == true)
-        #expect(error?.message.contains("the module at 1 in this link") == true)
+        #expect(error?.message.contains("the module at 0") == true)
+        #expect(error?.message.contains("the module at 1") == true)
     }
 
     // MARK: - Public

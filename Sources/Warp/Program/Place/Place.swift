@@ -60,7 +60,7 @@ public struct Place: Sendable, Hashable {
         // Without an identity there is only where the host put it: the
         // host counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
-            rendered ?? "the module at \(origin) in this link"
+            rendered ?? "the module at \(origin)"
         }
 
         // MARK: - Private
