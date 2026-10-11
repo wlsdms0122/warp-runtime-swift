@@ -19,9 +19,9 @@ struct SpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("the language's own table registers at the door a composed one takes")
+    @Test("the language's own table registers as a composed one does")
     func standardTableRegisters() throws {
-        // Given. `standard` stands without the check
+        // Given. `standard` stands without the registration's judgement
         let forms = ConstructRegistry.standard.keys.compactMap(ConstructRegistry.standard.form(for:))
 
         // When

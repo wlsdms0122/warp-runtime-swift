@@ -170,11 +170,11 @@ struct LoadGateTests {
         }
     }
 
-    @Test("runtime data becomes IR through the loader's Value door")
+    @Test("runtime data becomes IR through the loader's reading of a Value")
     func valueLowersThroughFrontendDoor() throws {
         // Given. A step array that arrived as data (through a signature)
-        // becomes IR via the loader's Value door; the string stays a literal
-        // even there
+        // becomes IR through the loader's reading of a Value; the string stays
+        // a literal even there
         let carried = Value.array([
             .dictionary(["let": .string("greet"), "value": .string("hello there")])
         ])

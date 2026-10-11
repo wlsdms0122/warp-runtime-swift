@@ -210,7 +210,7 @@ struct ConditionTests {
         }
     }
 
-    @Test("validation covers both sides of a predicate")
+    @Test("the load holds both sides of a predicate")
     func validationCoversBothSides() {
         // Given
         let condition = equals(

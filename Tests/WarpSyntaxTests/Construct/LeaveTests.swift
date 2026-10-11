@@ -396,7 +396,7 @@ struct LeaveTests {
 
     @Test("a loop's result reads what its rounds bound")
     func aLoopResultReadsWhatTheBodyBound() async throws {
-        // Given. The checker shows the result what the body declared, so a
+        // Given. The build shows the result what the body declared, so a
         // result naming one has to work. Reading the scope the round started in
         // would show it nothing the round bound.
         let sut = try loader.loadProcedure([
