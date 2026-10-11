@@ -1209,14 +1209,18 @@ indirect enum LoweredType: Sendable, Equatable {
         // What a procedure handed here takes is what it accepts, not a value
         // the call hands, so it is read into `taking`: it fills a parameter
         // only where nothing handed does, and the procedure is then judged
-        // against what filled it. What it takes is no value standing where a
+        // against what filled it. Two positions taking a parameter fill it
+        // with what both take. What it takes is no value standing where a
         // composition is asked, so nothing there is held to one.
         case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
             var takenInside = Substitution()
             var accepted: [Substitution.Held] = []
 
             for (parameter, against) in zip(mine, theirs) {
-                parameter.binding(against: against, into: &taking, taking: &takenInside, holding: &accepted, in: table)
+                var taken = Substitution()
+
+                parameter.binding(against: against, into: &taken, taking: &takenInside, holding: &accepted, in: table)
+                taking.read(taken, joining: .takenByBoth, in: table)
             }
 
             taking.read(takenBy: takenInside)

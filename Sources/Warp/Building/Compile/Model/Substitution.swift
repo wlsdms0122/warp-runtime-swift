@@ -35,6 +35,11 @@ struct Substitution: Sendable {
         // Part by part, as `joined` joins a list literal's elements, and never
         // a disagreement.
         case joined
+
+        // What procedures handed take, where one takes the other: the one
+        // both take, which is the one the other accepts, and a disagreement
+        // otherwise.
+        case takenByBoth
     }
 
     // MARK: - Property
@@ -197,6 +202,9 @@ struct Substitution: Sendable {
 
         case .joined:
             already.joined(given)
+
+        case .takenByBoth:
+            already.accepts(given, in: table) ? given : given.accepts(already, in: table) ? already : nil
         }
 
         // Two that do not join stay as they were read: the first is what the
@@ -211,8 +219,9 @@ struct Substitution: Sendable {
 
         // What a reading reads as once the join writes it, so a whole literal
         // the join reads as a fraction is held to the bounds as the fraction
-        // the call hands on.
-        for reading in [already, given] where both.written(reading, in: table) != both {
+        // the call hands on. What a procedure takes is no value, so the wider
+        // of two it takes is held to nothing.
+        for reading in [already, given] where join != .takenByBoth && both.written(reading, in: table) != both {
             apart[parameter, default: []].append(both.written(reading, in: table))
         }
 
