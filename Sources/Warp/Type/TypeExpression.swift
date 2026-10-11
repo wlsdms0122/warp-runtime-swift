@@ -158,15 +158,13 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.selfType: .selfType
     ]
 
-    // The types the language names that a value is an instance of, under
-    // the name a claim writes and `Value.nominal` answers, each as the type
-    // a claim about it stands for. A list and a map are named bare: every
+    // The types the language names that a claim may be about, under the
+    // name a claim writes and `Value.nominal` answers, each as the type a
+    // claim about it stands for. A list and a map are named bare: every
     // list is a list whatever it holds, and a value does not say which
     // elements a slot declared it to hold. So a claim about one is about
     // every list, its element a type parameter nothing fills, which a
-    // declaration answering the claim takes whatever it is. A claim about
-    // `Procedure` is the same about every procedure, whatever it takes and
-    // answers.
+    // declaration answering the claim takes whatever it is.
     static let nominalTypes: [Name: TypeExpression] = [
         TypeSpelling.null: .null,
         TypeSpelling.bool: .bool,
@@ -174,8 +172,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.double: .double,
         TypeSpelling.string: .string,
         TypeSpelling.array: .array(.parameter(name: TypeSpelling.selfElement)),
-        TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement)),
-        TypeSpelling.procedure: .procedure(nil)
+        TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement))
     ]
 
     // How the type reads in a message: a declaration an author wrote comes
