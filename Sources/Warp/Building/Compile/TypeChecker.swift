@@ -197,8 +197,7 @@ struct TypeChecker {
         try held(
             written: LiteralShape(inner.literalShape, reading: inner.reading),
             answered: inner.flow.answered,
-            to: returns,
-            bounds: context.bounds,
+            to: promised,
             result: inner.block.result,
             at: place,
             in: context.loweredTypes,
@@ -380,15 +379,12 @@ struct TypeChecker {
     // carries.
     private func held(
         _ written: LiteralShape,
-        to returns: TypeExpression?,
-        bounds: [Name: Set<Name>],
+        to promised: LoweredType?,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment
     ) throws {
-        guard let returns else { return }
-
-        let promised = returns.lowered(in: table, bounds: bounds)
+        guard let promised else { return }
 
         guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
@@ -578,7 +574,7 @@ struct TypeChecker {
             return .refusal(refusal)
         }
 
-        if let refusal = severalTypesRefusal(over: slots, substitution: substitution, in: loweredTypes) {
+        if let refusal = severalTypesRefusal(bounds: declared.bounds, over: slots, substitution: substitution, in: loweredTypes) {
             return .refusal(refusal)
         }
 
@@ -589,7 +585,7 @@ struct TypeChecker {
         // the rest against what filled it. Each part is asked as the call
         // hands it on, a whole literal the filled slot reads as a fraction
         // being that fraction.
-        for (position, written) in shapes.sorted(by: { $0.key < $1.key }) where slots.indices.contains(position) {
+        for (position, written) in shapes.sorted(by: { $0.key < $1.key }) {
             let slot = slots[position]
             let bounded = slot.type.boundedAlone
 
@@ -627,13 +623,12 @@ struct TypeChecker {
     // alone at one position, the value is the one thing the parameter stands
     // for, and the call reads the parameter the way it read the value.
     private func severalTypesRefusal(
+        bounds: [Name: Set<Name>],
         over slots: [Slot],
         substitution: Substitution,
         in loweredTypes: LoweredTypeTable
     ) -> String? {
-        for (parameter, bounds) in slots.reduce(into: [Name: [Name]](), { found, slot in
-            found.merge(slot.type.boundedParameters) { first, _ in first }
-        }).sorted(by: { $0.key < $1.key }) where !bounds.isEmpty {
+        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) where !names.isEmpty {
             guard let valueOfSeveral = substitution.everyReading(of: parameter).first(where: { reading in
                 switch reading {
                 case let .composition(read):
@@ -958,22 +953,20 @@ struct TypeChecker {
         return folded
     }
 
-    // What a path write reaches, or why it may not. The head is a box; each
-    // field on the way is one a declared type wrote `var`, or a field of a
-    // type no declaration named; an element is written through its index. A
-    // type that may be null is not written into, and neither is `Any`.
+    // What a path write reaches from the box its head names, or why it may
+    // not. Each field on the way is one a declared type wrote `var`, or a
+    // field of a type no declaration named; an element is written through
+    // its index. A type that may be null is not written into, and neither is
+    // `Any`.
     private func writable(
         _ path: Path,
+        from box: Binding,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
     ) -> Writable {
-        guard let head = path.head, let box = environment[head] else {
-            return .refused("writes '\(path.rendered)', and its head is not a name here")
-        }
-
         var current = box.type
-        var walked: Path = [.key(head)]
+        var walked = Path(Array(path.segments.prefix(1)))
 
         for segment in path.segments.dropFirst() {
             walked.append(segment)
@@ -1113,8 +1106,7 @@ struct TypeChecker {
     private func held(
         written answer: LiteralShape,
         answered: [Flow.Answer],
-        to returns: TypeExpression?,
-        bounds: [Name: Set<Name>],
+        to promised: LoweredType?,
         result: Expression?,
         at place: Place,
         in table: LoweredTypeTable,
@@ -1123,8 +1115,7 @@ struct TypeChecker {
         for one in answered {
             try held(
                 LiteralShape(one.literalShape, reading: one.reading),
-                to: returns,
-                bounds: bounds,
+                to: promised,
                 at: one.place,
                 in: table,
                 fulfillment: fulfillment
@@ -1133,8 +1124,7 @@ struct TypeChecker {
 
         try held(
             answer,
-            to: returns,
-            bounds: bounds,
+            to: promised,
             at: place.part(result != nil ? .result : .returns),
             in: table,
             fulfillment: fulfillment
@@ -1518,7 +1508,7 @@ struct TypeChecker {
             // depth.
             let read = inner.reading.asHeld
             let claim = type.lowered(in: context.loweredTypes)
-            
+
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
             //
@@ -1753,8 +1743,7 @@ struct TypeChecker {
                 try held(
                     written: LiteralShape(inner.literalShape, reading: inner.reading),
                     answered: inner.flow.answered,
-                    to: procedure.signature.returns,
-                    bounds: procedure.signature.bounds,
+                    to: promised,
                     result: inner.block.result,
                     at: place.child(.closure),
                     in: context.loweredTypes,
@@ -1998,7 +1987,6 @@ struct TypeChecker {
             }
 
             try check(
-                rewritten,
                 reading: sent,
                 shaped: shapes,
                 against: parameters,
@@ -2118,10 +2106,8 @@ struct TypeChecker {
             for (position, written) in call.arguments.enumerated() {
                 // A closure literal written here, at any depth, is completed
                 // by the type it is written into.
-                let argument = signature.parameters.indices.contains(position)
-                    ? signature.parameters[position].type.lowered(in: context.loweredTypes, bounds: signature.bounds)
-                        .completing(written, in: context.loweredTypes)
-                    : written
+                let argument = signature.parameters[position].type.lowered(in: context.loweredTypes, bounds: signature.bounds)
+                    .completing(written, in: context.loweredTypes)
                 let inner = try await inspected(
                     argument,
                     naming: nil,
@@ -2588,7 +2574,8 @@ struct TypeChecker {
 
             // A closure literal written here, at any depth, is completed by
             // the type it is written into.
-            let statement = writtenInto(by: written.binding, in: environment, with: context, at: here).map { into in
+            let target = writtenInto(by: written.binding, in: environment, with: context, at: here)
+            let statement = target.map { into in
                 Statement(binding: written.binding, expression: into.completing(written.expression, in: context.loweredTypes))
             } ?? written
 
@@ -2682,21 +2669,21 @@ struct TypeChecker {
             var into: LoweredType?
 
             switch statement.binding {
-            case let .constant(id, declared)?:
+            case let .constant(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(
                     .fixed(declared: declaredType),
-                    try held(inner.reading, writing: inner.written, declaredAs: declared, at: here, with: context, when: ask)
+                    try held(inner.reading, writing: inner.written, declaredAs: target, at: here, with: context, when: ask)
                 )
-                into = declared?.lowered(in: context.loweredTypes)
+                into = target
 
-            case let .variable(id, declared)?:
+            case let .variable(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(
                     declaredType.map(Binding.Holding.declared) ?? .assigned,
-                    try held(inner.reading, writing: inner.written, declaredAs: declared, at: here, with: context, when: ask)
+                    try held(inner.reading, writing: inner.written, declaredAs: target, at: here, with: context, when: ask)
                 )
-                into = declared?.lowered(in: context.loweredTypes)
+                into = target
 
             // A write to a whole variable retypes it, the way a declaration
             // did, unless the box's type is fixed elsewhere, in which case what
@@ -2715,6 +2702,7 @@ struct TypeChecker {
                     let held = try refuseUnfit(
                         written,
                         writtenTo: path,
+                        of: binding,
                         holding: binding.heldType,
                         in: environment,
                         with: context,
@@ -2746,6 +2734,7 @@ struct TypeChecker {
                         if let reached = try refuseUnfit(
                             written,
                             writtenTo: path,
+                            of: binding,
                             holding: nil,
                             in: environment,
                             with: context,
@@ -2882,7 +2871,7 @@ struct TypeChecker {
     // Where ways that each held one box meet. A taker on either way was
     // judged against the type its way held, and goes on writing that type
     // after the meeting, so the two ways agree only where they held the box
-    // to one type, names resolved. Anything else is refused here.
+    // to one type. Anything else is refused here.
     private func meeting(at place: Place, in table: LoweredTypeTable, when ask: Ask) -> Flow.Meeting {
         { name, one, other in
             guard one != other else { return }
@@ -2959,7 +2948,7 @@ struct TypeChecker {
                 continue
             }
 
-            guard environment[head]?.isBox == true else {
+            guard let box = environment[head], box.isBox else {
                 try refuse(
                     "hands '\(head)' in place, which is a fixed name here. A"
                         + " variable is handed in place",
@@ -2969,13 +2958,13 @@ struct TypeChecker {
                 continue
             }
 
-            if case let .refused(reason) = writable(path, in: environment, with: context, at: at) {
+            if case let .refused(reason) = writable(path, from: box, in: environment, with: context, at: at) {
                 try refuse("hands '\(path.rendered)' in place, and \(reason)", at: at, when: ask)
             }
 
             if
                 path.segments.count == 1,
-                case let .held(held)? = environment[head]?.holding,
+                case let .held(held) = box.holding,
                 slot.slotUnwrapped != held
             {
                 try refuse(
@@ -2993,12 +2982,12 @@ struct TypeChecker {
     private func held(
         _ given: LoweredType,
         writing written: LiteralShape,
-        declaredAs spelled: TypeExpression?,
+        declaredAs declared: LoweredType?,
         at place: Place,
         with context: TypingContext,
         when ask: Ask
     ) throws -> LoweredType {
-        guard let declared = spelled?.lowered(in: context.loweredTypes) else { return given }
+        guard let declared else { return given }
 
         guard written.isHeld(by: declared, inPlace: false, in: context.loweredTypes) else {
             try refuse(
@@ -3049,7 +3038,9 @@ struct TypeChecker {
 
             guard path.segments.count > 1 else { return box.heldType }
 
-            guard case let .reaches(reached) = writable(path, in: environment, with: context, at: place) else { return nil }
+            guard case let .reaches(reached) = writable(path, from: box, in: environment, with: context, at: place) else {
+                return nil
+            }
 
             return reached
 
@@ -3065,6 +3056,7 @@ struct TypeChecker {
     private func refuseUnfit(
         _ written: LiteralShape,
         writtenTo path: Path,
+        of box: Binding,
         holding fixed: LoweredType?,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -3076,7 +3068,7 @@ struct TypeChecker {
         if path.segments.count == 1, let fixed {
             slot = fixed
         } else {
-            switch writable(path, in: environment, with: context, at: place) {
+            switch writable(path, from: box, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)
                 return nil
@@ -3086,7 +3078,7 @@ struct TypeChecker {
             }
         }
 
-        guard fits(written, into: slot, of: path.head.flatMap { head in environment[head] }, in: context.loweredTypes) else {
+        guard fits(written, into: slot, of: box, in: context.loweredTypes) else {
             try refuse(
                 "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
                     + " \(slot.rendered(in: context.loweredTypes))",
@@ -3189,7 +3181,6 @@ struct TypeChecker {
         }
 
         try check(
-            call.arguments,
             reading: site.readings,
             shaped: site.shapes,
             against: slots.map(\.type),
@@ -3221,7 +3212,6 @@ struct TypeChecker {
     // call's declared answer. A declaration's slots name each position; a
     // value's type writes the positions alone.
     private func check(
-        _ arguments: [Expression],
         reading readings: [LoweredType],
         shaped shapes: [Int: LiteralShape],
         against types: [LoweredType],
