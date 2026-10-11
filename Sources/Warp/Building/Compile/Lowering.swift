@@ -913,7 +913,7 @@ struct Lowering {
 
         if let round, let slot {
             inner.slots[round] = slot
-            context.slots.hold(slot, .record(.round))
+            context.slots.hold(slot, loweredTypes.prelude(TypeSpelling.round))
         }
 
         let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))

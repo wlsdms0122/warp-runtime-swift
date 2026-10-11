@@ -25,13 +25,9 @@ public protocol RecoverableFailure: WarpError {
 public extension RecoverableFailure {
     var details: [Name: Value] { [:] }
 
-    // Built here and not by a conformer, so every payload is the envelope
-    // `FailurePayload` declares.
+    // Built here and not by a conformer, so every payload is the record
+    // `Failure` the language declares.
     var payload: Value {
-        .dictionary([
-            FailurePayload.type: .string(type),
-            FailurePayload.message: .string(message),
-            FailurePayload.details: .dictionary(details)
-        ])
+        .record(Record(layout: Prelude.failure, values: [.dictionary(details), .string(message), .string(type)]))
     }
 }

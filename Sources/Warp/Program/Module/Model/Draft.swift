@@ -240,7 +240,7 @@ public struct Draft: Sendable {
 
         return Reading(
             sends: sent.subtracting(declaredProcedures),
-            mentions: named.subtracting(declaredTypes).subtracting(NameGrammar.contracts),
+            mentions: named.subtracting(declaredTypes).subtracting(Prelude.names),
             closures: counts
         )
     }

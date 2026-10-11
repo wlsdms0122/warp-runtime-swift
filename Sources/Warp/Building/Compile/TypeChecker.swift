@@ -163,7 +163,6 @@ struct TypeChecker {
     }
 
     // MARK: - Property
-    private static let roundType = LoweredType.record(.round)
 
     // MARK: - Initializer
     // MARK: - Public
@@ -2171,7 +2170,7 @@ struct TypeChecker {
             // and the result never runs between rounds. The probe reads, so a
             // probing asker takes the final probe of the statements as its
             // own walk; judging walks once more for the rewrite.
-            let entry = rounded(environment, as: round)
+            let entry = rounded(environment, as: round, in: context.loweredTypes)
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await fixedPoint(
@@ -2680,11 +2679,12 @@ struct TypeChecker {
     // its asker both read it.
     private func rounded(
         _ environment: [Name: Binding],
-        as round: Name?
+        as round: Name?,
+        in table: LoweredTypeTable
     ) -> [Name: Binding] {
         guard let round else { return environment }
 
-        return environment.merging([round: Binding(.fixed(declared: nil), Self.roundType)]) { _, new in new }
+        return environment.merging([round: Binding(.fixed(declared: nil), table.prelude(TypeSpelling.round))]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the
@@ -2701,7 +2701,7 @@ struct TypeChecker {
         failed?.indefinite().apply(to: &caught)
 
         if let failure {
-            caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
+            caught[failure] = Binding(.fixed(declared: nil), context.loweredTypes.prelude(TypeSpelling.failure))
         }
 
         return caught

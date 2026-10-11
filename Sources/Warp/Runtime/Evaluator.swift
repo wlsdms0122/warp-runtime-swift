@@ -586,7 +586,7 @@ struct Evaluator: Sendable {
             // and the result reads it as it stands when the loop ends.
             if let round {
                 activation.cells[round] = .value(
-                    .record(Record(layout: LoweredRecord.round.layout, values: [.int(index)]))
+                    .record(Record(layout: Prelude.round, values: [.int(index)]))
                 )
             }
 
@@ -641,7 +641,7 @@ struct Evaluator: Sendable {
             // in through the door at the envelope's type.
             if let failure {
                 activation.cells[failure] = .value(
-                    try FailurePayload.declared.lowered(in: loweredTypes).settling(
+                    try loweredTypes.prelude(TypeSpelling.failure).settling(
                         outside: recoverable.payload,
                         at: "'\(activation.frame.names[failure])'",
                         in: loweredTypes

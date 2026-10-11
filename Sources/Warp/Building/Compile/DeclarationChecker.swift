@@ -34,7 +34,7 @@ struct DeclarationChecker {
         let table = TypeTable(
             types: declared.mapValues(\.held),
             contracts: namespace.contracts.mapValues(\.held),
-            standing: documents.flatMap { document in document.types.keys.sorted() },
+            standing: Prelude.types.keys.sorted() + documents.flatMap { document in document.types.keys.sorted() },
             of: linkage
         )
 

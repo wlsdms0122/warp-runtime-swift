@@ -14,7 +14,7 @@ import Foundation
 //   is about, and a record's name. Identifiers joined by dots, a dot being a
 //   character of the name.
 // - a mention: a type or a contract named in a type, a bound or a claim. A
-//   type's name, or a contract the language names.
+//   type's name, or a name the language declares itself.
 // - a type parameter's name: the `T` of `some T` and a key of `bounds`. One
 //   identifier, since the signature that names it is the only place it means
 //   anything.
@@ -37,13 +37,9 @@ public enum NameGrammar: Sendable {
     case contractProcedure
 
     // MARK: - Property
-    // The contracts the language names: a mention of one is that contract,
-    // and no module declares one.
-    public static let contracts: Set<Name> = [TypeSpelling.hashable]
-
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
         .union(TypeExpression.nominalTypes.keys)
-        .union(contracts)
+        .union(Prelude.names)
         .union([TypeSpelling.some, TypeSpelling.const, TypeSpelling.isolated, TypeSpelling.inout, TypeSpelling.variable])
         .union(Name.scalarKeywords.keys.map(Name.init(normal:)))
 
@@ -60,7 +56,7 @@ public enum NameGrammar: Sendable {
             return !NameGrammar.reserved.contains(name) && NameGrammar.joinsIdentifiers(name)
 
         case .mention:
-            return NameGrammar.contracts.contains(name) || NameGrammar.type.holds(name)
+            return Prelude.names.contains(name) || NameGrammar.type.holds(name)
 
         case .typeParameter:
             return !NameGrammar.reserved.contains(name) && name.isIdentifier

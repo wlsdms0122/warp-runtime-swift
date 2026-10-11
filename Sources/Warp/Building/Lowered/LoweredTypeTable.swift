@@ -159,6 +159,13 @@ final class LoweredTypeTable: Sendable {
         }
     }
 
+    // A record the language declares itself, by its row. Every table a
+    // compile or a link holds stands on the `Prelude`, and one a caller
+    // assembled with nothing declared reads it as no value's type.
+    func prelude(_ name: Name) -> LoweredType {
+        row(named: name).map(LoweredType.named) ?? .never
+    }
+
     // Whether a row is a declared record's.
     func declaresRecord(_ row: Int) -> Bool {
         if case .record = loweredTypes[row] { true } else { false }

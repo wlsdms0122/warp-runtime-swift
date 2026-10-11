@@ -36,8 +36,11 @@ public enum TypeSpelling {
     public static let `inout`: Name = "inout"
     public static let variable: Name = "var"
 
-    // The contract the language names: the one a map's key answers.
+    // What the language declares itself: the contract a map's key answers,
+    // the failure a rescue binds and the round a loop binds.
     public static let hashable: Name = "Hashable"
+    public static let failure: Name = "Failure"
+    public static let round: Name = "Round"
 
     // What a claim about `Array` or `Dictionary` reads an element, and a
     // map's key, as: a type parameter nothing fills, spelled with a dot,

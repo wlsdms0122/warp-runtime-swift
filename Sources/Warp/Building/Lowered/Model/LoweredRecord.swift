@@ -21,11 +21,6 @@ struct LoweredRecord: Sendable, Equatable {
         zip(layout.fields, fields)
     }
 
-    // What a loop binds each round. The build judges a round against it and
-    // the run builds each round on its layout, so the place the build lowers
-    // is the place the value puts the field at.
-    static let round = LoweredRecord(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
-
     // MARK: - Initializer
     // The same, where the two were read apart and the pairing is what has to be
     // true. The inner door is reached with a pairing this proved, which is what
