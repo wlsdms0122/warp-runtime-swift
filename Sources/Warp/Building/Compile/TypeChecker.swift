@@ -241,8 +241,8 @@ struct TypeChecker {
     // written from is read rather than run. The same gate an operand passes:
     // an operand, a constant and a variable's start are where the build reads
     // an expression instead of running it.
-    func settles(
-        _ expression: Expression,
+    func refuseRunning(
+        in expression: Expression,
         at place: Place,
         given context: TypingContext,
         writing fulfillment: Fulfillment

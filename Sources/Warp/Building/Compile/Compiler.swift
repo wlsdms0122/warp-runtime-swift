@@ -559,7 +559,7 @@ struct Compiler {
         )
 
         try TypeChecker().checked(calls, in: context, writing: fulfillment)
-        try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
+        try TypeChecker().refuseRunning(in: judged, at: place, given: context, writing: fulfillment)
 
         var judgements = sites
 
