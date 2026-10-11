@@ -16,6 +16,11 @@ import Foundation
 // this reads, so validation never consults the procedure table.
 public struct Validator: Sendable {
     // MARK: - Property
+    // What a declared name that comes back to itself is refused with, by a
+    // document's load and by an object's reading alike.
+    static let comingBack = "names itself through what it stands for, and no type spells itself."
+        + " A type that holds itself is a declared record"
+
     // MARK: - Initializer
     public init() {
     }
@@ -82,7 +87,10 @@ public struct Validator: Sendable {
         for (name, type) in module.types.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .type, at: .type(name.spelling, in: .of(module)))
             try written(type, in: .declaration, at: .type(name.spelling, in: .of(module)))
-            try refuseComingBack(name, in: module.types, at: .type(name.spelling, in: .of(module)))
+
+            guard !comesBack(name, in: module.types) else {
+                throw ValidationError(Self.comingBack, at: .type(name.spelling, in: .of(module)))
+            }
         }
 
         for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
@@ -163,39 +171,36 @@ public struct Validator: Sendable {
         try validate(procedure, constants: constants, variables: variables, at: .given("procedure"))
     }
 
-    // MARK: - Private
-    // A declared name that is no record and comes back to itself through the
-    // names it mentions, at any depth: a spelling that reaches itself spells
-    // no type, and a type that holds itself is a declared record. A record on
-    // the way stands as its own name, so the walk stops there. The names a
-    // document mentions and declares are all its own text.
-    private func refuseComingBack(_ name: Name, in types: [Name: TypeExpression], at place: Place) throws {
+    // Whether a declared name that is no record comes back to itself through
+    // the names it mentions, at any depth: a spelling that reaches itself
+    // spells no type, and a type that holds itself is a declared record. A
+    // record on the way stands as its own name, so the walk stops there. Asked
+    // of every module's types here and of every object's where it is read, so
+    // no later stage meets one.
+    func comesBack(_ name: Name, in types: [Name: TypeExpression]) -> Bool {
         func standsAsAName(_ mentioned: Name) -> Bool {
             if case .record = types[mentioned] { true } else { false }
         }
 
-        guard let declared = types[name], !standsAsAName(name) else { return }
+        guard let declared = types[name], !standsAsAName(name) else { return false }
 
         var walked: Set<Name> = []
         var waiting = [declared]
 
         while let type = waiting.popLast() {
             for mentioned in type.mentions where !standsAsAName(mentioned) {
-                guard mentioned != name else {
-                    throw ValidationError(
-                        "names itself through what it stands for, and no type spells itself."
-                            + " A type that holds itself is a declared record",
-                        at: place
-                    )
-                }
+                guard mentioned != name else { return true }
 
                 if walked.insert(mentioned).inserted, let next = types[mentioned] {
                     waiting.append(next)
                 }
             }
         }
+
+        return false
     }
 
+    // MARK: - Private
     // What a module says it imports against what it uses: the procedures it
     // sends and the types and contracts it names. A host reads the list to
     // decide what to grant and what to lay in the link before it links

@@ -85,8 +85,14 @@ struct ObjectReader {
                     Fingerprint(try Field(written, of: "dependencies").bytes())
                 }
 
+            // Held where they are read to the rule a document's are held to
+            // at the load, so no lowering meets a name coming back to itself.
             case .types:
                 types = try keyed(part, of: "types", expression)
+
+                if let name = types.keys.sorted().first(where: { name in Validator().comesBack(name, in: types) }) {
+                    throw ObjectRefused("'\(name)' \(Validator.comingBack)")
+                }
 
             case .contracts:
                 contracts = try keyed(part, of: "contracts") { written in

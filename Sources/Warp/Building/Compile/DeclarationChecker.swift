@@ -223,25 +223,23 @@ struct DeclarationChecker {
 
         // The load held a `?` to saying something new on what it wraps as
         // written. A name may stand for what it says nothing on, and that is
-        // known here, where names resolve.
+        // known here, where names resolve: what the name lowers to, spelled.
         case let .nullable(inner):
-            var resolved = inner
+            try mentioned(in: inner, at: place, resolve: table)
 
-            while case let .named(next) = resolved, let underneath = table.types[next] {
-                resolved = underneath
-            }
+            guard case .named = inner else { return }
 
-            if case .named = inner, !resolved.takesQuestionMark {
+            let stands = inner.lowered(in: table.loweredTypes).spelled(in: table.loweredTypes)
+
+            guard stands.takesQuestionMark else {
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which"
-                        + " stands for `\(resolved.rendered)`. A `?` says"
+                        + " stands for `\(stands.rendered)`. A `?` says"
                         + " nothing there, the same rule the spelling"
-                        + " `\(resolved.rendered)?` is refused by",
+                        + " `\(stands.rendered)?` is refused by",
                     at: place
                 )
             }
-
-            try mentioned(in: inner, at: place, resolve: table)
 
         case let .record(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
