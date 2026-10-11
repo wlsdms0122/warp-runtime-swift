@@ -45,7 +45,7 @@ struct Derivation {
     // module's variables by the type each declared, which every body reads.
     func const(
         among symbols: [Symbol],
-        settling const: inout Set<Name>,
+        deriving const: inout Set<Name>,
         reading variables: Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
@@ -56,7 +56,7 @@ struct Derivation {
         // place is the caller's box, not the body's own.
         strike(
             among: symbols,
-            settling: &const,
+            deriving: &const,
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
             fact: { given in
@@ -74,7 +74,7 @@ struct Derivation {
     // and calls.
     func isolated(
         among symbols: [Symbol],
-        settling isolated: inout Set<Name>,
+        deriving isolated: inout Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
@@ -82,7 +82,7 @@ struct Derivation {
     ) {
         strike(
             among: symbols,
-            settling: &isolated,
+            deriving: &isolated,
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
             fact: { given in
@@ -106,7 +106,7 @@ struct Derivation {
     // added, which the finite set of declared names guarantees.
     func failing(
         among symbols: [Symbol],
-        settling failing: inout [Name: Failing],
+        deriving failing: inout [Name: Failing],
         beyond: @escaping (Name) -> Failing?
     ) {
         let own = Set(symbols.map(\.declared))
@@ -123,8 +123,8 @@ struct Derivation {
             var grown = false
 
             for (name, block) in bodies {
-                let settled = failing
-                let read = self.failing(block, given: { selector in own.contains(selector) ? settled[selector] : beyond(selector) })
+                let before = failing
+                let read = self.failing(block, given: { selector in own.contains(selector) ? before[selector] : beyond(selector) })
 
                 guard read != failing[name] else { continue }
 
@@ -295,7 +295,7 @@ struct Derivation {
     // and reaches nothing here.
     private func strike(
         among symbols: [Symbol],
-        settling holding: inout Set<Name>,
+        deriving holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
         fact: (@escaping (Name) -> Bool) -> Fact,
@@ -331,8 +331,8 @@ struct Derivation {
         )
 
         while true {
-            let settled = holding
-            let walked = fact { name in own.contains(name) ? settled.contains(name) : beyond(name) }
+            let before = holding
+            let walked = fact { name in own.contains(name) ? before.contains(name) : beyond(name) }
             let struck = bodies.compactMap { name, written in
                 holding.contains(name)
                     && !holds(

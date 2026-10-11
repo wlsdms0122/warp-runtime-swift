@@ -202,7 +202,7 @@ struct Compiler {
 
         Derivation().const(
             among: holding,
-            settling: &const,
+            deriving: &const,
             reading: reading,
             beside: declaredVariables,
             taking: taking,
@@ -211,13 +211,13 @@ struct Compiler {
         )
         Derivation().isolated(
             among: holding,
-            settling: &isolated,
+            deriving: &isolated,
             beside: declaredVariables,
             taking: taking,
             beyond: touchesNothingShared,
             in: loweredTypes
         )
-        Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
+        Derivation().failing(among: holding, deriving: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in
