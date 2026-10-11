@@ -498,8 +498,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // What a slot said about the procedure it holds. A body applying a name a
     // slot declared this way is judged on the slot's word, since the slot is
-    // what says which values may arrive there. A name says what the type it
-    // stands for says.
+    // what says which values may arrive there.
     func isConstProcedure(in table: LoweredTypeTable) -> Bool {
         guard case .procedure(_, _, .const, _)? = procedureHeld else { return false }
 
@@ -1018,11 +1017,10 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether a write into a box handed in place, of this type, holds. The
-    // caller reads its box as what filled each type parameter here, and a
-    // write settles against this type and never against what filled one, so
-    // where this writes a parameter only that parameter lands. Around one, a
+    // caller reads its box as what filled each type parameter here, so where
+    // this writes a parameter only that parameter lands. Around one, a
     // nullable, a list or a dictionary takes what it takes anywhere, a record
-    // as a dictionary included, which the write's settling makes one; a type
+    // whose every field the entry takes as a dictionary included; a type
     // holding one some other way is written only as itself. A type naming
     // none takes what it accepts.
     func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -1922,9 +1920,8 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Names are peeled one layer at a time, with the question each was
-    // peeled at remembered, because this walk is the one that recurses: one
-    // met there again has come back, and is assumed to hold.
+    // A declared record may hold itself, so each question is remembered as
+    // it is asked: one met again has come back, and is assumed to hold.
     //
     // This is what a cast names and `other` is what it reads.
     private func couldBothHold(
@@ -1939,13 +1936,12 @@ indirect enum LoweredType: Sendable, Equatable {
 
         let question = (self, other)
 
-        // A declared record is its name, through `?` and the aliases that
-        // stand for it: one record shares its values with itself and with no
-        // other. A value read as one is of no nameless record or map either,
-        // since nothing takes a name off. The other way a cast writes the name
-        // onto a nameless value of the record's fields, so that is asked of
-        // the structure below. The one value both of two apart could hold is
-        // null.
+        // A declared record is its name, through `?`: one record shares its
+        // values with itself and with no other. A value read as one is of no
+        // nameless record or map either, since nothing takes a name off. The
+        // other way a cast writes the name onto a nameless value of the
+        // record's fields, so that is asked of the structure below. The one
+        // value both of two apart could hold is null.
         let myRecord = self.row
         let theirRecord = other.row
 
@@ -2039,8 +2035,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // an alias of it, is held to the declared fields and keeps it; one
         // under no name or another name is refused, whatever its fields,
         // since a literal, a value from outside and a cast write the name
-        // before this reads it. A declared name that is not a record type
-        // settles as the type it stands for.
+        // before this reads it.
         case let .named(row):
             return try settlingNamed(value, row: row, at: path(), in: table)
 

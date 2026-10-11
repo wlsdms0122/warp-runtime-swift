@@ -8,8 +8,8 @@
 import Foundation
 
 // The facts nobody declared, worked out over a document's declarations at
-// once: constness, isolation, what may fail, and whose answers stand as
-// declared. Each is a fixed point over what the bodies reach.
+// once: constness, isolation and what may fail. Each is a fixed point over
+// what the bodies reach.
 struct Derivation {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a

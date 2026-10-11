@@ -381,9 +381,7 @@ struct Compiler {
     // document is read.
     //
     // One may name another declared beside it, so they are settled in the order
-    // they read each other and that order is worked out first. What is wrong
-    // with a set of constants is a fact about that order, and asking the order
-    // is the whole of finding it.
+    // they read each other, and that order is worked out first.
     private func constants(
         of module: Module,
         at origin: Int,
