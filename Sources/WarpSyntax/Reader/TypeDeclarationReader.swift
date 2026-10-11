@@ -10,8 +10,7 @@ import Warp
 
 // A type a module declares, as a document writes it under `types`: a record,
 // its fields under `record`, each beside its type, or any type, which the
-// declared name is then a second spelling of. A notation that reads bare
-// records reads a mapping under no form's key as the record.
+// declared name is then a second spelling of.
 struct TypeDeclarationReader: Decodable {
     // MARK: - Property
     let declared: TypeDeclaration
@@ -31,8 +30,6 @@ struct TypeDeclarationReader: Decodable {
 
         if keys == [Self.recordKey] {
             self.declared = try Self.record(from: try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling)))
-        } else if decoder.notation.readsBareRecords, !keys.contains(where: { key in TypeForm(key) != nil }) {
-            self.declared = try Self.record(from: decoder)
         } else {
             self.declared = .alias(try TypeReader(from: decoder).type)
         }

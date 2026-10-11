@@ -10,9 +10,9 @@ import Warp
 
 // How a notation writes an expression specially, for a notation that writes
 // one. In a document a value slot holds an expression: a literal, a reference,
-// a call, a cast, a closure, a record or an array of these. Everything else a
-// slot is written as is a notation's: the record of an operator key and its
-// subject, which keys count as operators, whether one takes its expression
+// a call, a cast, a closure, a record, a map or an array of these. Everything
+// else a slot is written as is a notation's: the mapping of an operator key and
+// its subject, which keys count as operators, whether one takes its expression
 // directly, which procedure each reaches, and which side of the send the
 // subject lands on.
 //
@@ -24,14 +24,13 @@ import Warp
 // recursively, and the pieces report where they are through the same coding
 // path everything else does.
 public protocol ExpressionSpelling: Sendable {
-    // Whether a record with these field names is one of this notation's
-    // spellings. A record it does not claim is read as the expression it is,
-    // which is what keeps these spellings optional wherever an expression is
-    // asked for, and a record it claims is answered by this spelling or
-    // refused by it. Never read as a record that happens to have those
-    // fields. Giving up a spelling says a document may not write it; it does
-    // not hand the keys back to mean something else, which would make the
-    // same document mean two things in two notations.
+    // Whether a mapping with these keys is one of this notation's spellings.
+    // A mapping it does not claim is read as the expression it is, which is
+    // what keeps these spellings optional wherever an expression is asked
+    // for, and a mapping it claims is answered by this spelling or refused by
+    // it. Giving up a spelling says a document may not write it; it does not
+    // hand the keys back to mean something else, which would make the same
+    // document mean two things in two notations.
     //
     // Asked of the names and the notation they are read in, since what a
     // text declares is the notation's to know.
@@ -41,8 +40,8 @@ public protocol ExpressionSpelling: Sendable {
     // reach anything. A slot spends them on the notation's behalf.
     var vocabulary: Set<Name> { get }
 
-    // The expression a record spells, read in the notation that claimed it.
-    // Reached only for a record this notation claims that is not a tag's, and
+    // The expression a mapping spells, read in the notation that claimed it.
+    // Reached only for a mapping this notation claims that is not a tag's, and
     // free to refuse. A key this notation names but does not offer is refused
     // here, and so is one written in a form it does not have.
     func expression(from decoder: Decoder, in notation: Notation) throws -> Warp.Expression
