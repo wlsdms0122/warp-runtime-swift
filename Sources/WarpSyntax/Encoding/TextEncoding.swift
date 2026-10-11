@@ -15,8 +15,8 @@ import Warp
 //
 // A whole number and a fraction are different tokens here by grammar. `1` is
 // whole and `1.0` is a fraction. And there is nothing else: no commas to
-// forget, no colons; a record is `{ key value … }` and an array is `[ value …
-// ]`.
+// forget, no colons; a map is `{ key value … }`, a record `Name { field value
+// … }` and an array `[ value … ]`.
 //
 // One value, one spelling. The writer lays a text out one way (sorted keys,
 // two spaces an indent), so a text that has been through it is the same bytes
@@ -29,8 +29,8 @@ public struct TextEncoding {
     private enum Token: Equatable {
         case arrayOpen
         case arrayClose
-        case recordOpen
-        case recordClose
+        case braceOpen
+        case braceClose
         case string(String)
         case bytes([UInt8])
         case bare(String)
@@ -61,12 +61,16 @@ public struct TextEncoding {
         // MARK: - Private
     }
 
-    // A container being put back together. A sum rather than two optionals,
-    // so "neither" and "both" are not states the code has to promise never to
-    // reach; a record with no key is one waiting for its next field name.
+    // A container being put back together, and where it began. A sum rather
+    // than two optionals, so "neither" and "both" are not states the code has
+    // to promise never to reach. A map with no key is one waiting for its
+    // next key, and each entry keeps where its key was written, for a
+    // refusal of a key written twice; a record with no field is one waiting
+    // for its next field's name.
     private enum Opened {
-        case array([Value])
-        case record(held: [Name: Value], key: Name?, name: Name?)
+        case array([Value], at: Int)
+        case map(held: [(key: Value, value: Value, at: Int)], key: (value: Value, at: Int)?, at: Int)
+        case record(held: [Name: Value], field: Name?, name: Name, at: Int)
     }
 
     // MARK: - Property
@@ -223,11 +227,11 @@ public struct TextEncoding {
 
             case "{":
                 reading.removeFirst()
-                tokens.append(Placed(token: .recordOpen, offset: start))
+                tokens.append(Placed(token: .braceOpen, offset: start))
 
             case "}":
                 reading.removeFirst()
-                tokens.append(Placed(token: .recordClose, offset: start))
+                tokens.append(Placed(token: .braceClose, offset: start))
 
             case "\"":
                 reading.removeFirst()
@@ -406,122 +410,175 @@ public struct TextEncoding {
             let token = placed.token
             let at = placed.offset
 
-            var completed: Value?
+            // The value this token completes, and where it began.
+            var completed: (value: Value, at: Int)?
 
-            // A record waits for a key where everything else waits for a value,
-            // and a closing brace is only honest in that position.
-            if case let .record(held, .none, name) = opened.last {
+            switch opened.last {
+            // A record waits for a field's name where everything else waits
+            // for a value, and a closing brace is only honest in that
+            // position.
+            case let .record(held, nil, name, begun):
                 switch token {
-                case .recordClose:
+                case .braceClose:
                     opened.removeLast()
 
                     do {
-                        completed = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                        completed = (try .holding(held.map { field in (name: field.key, value: field.value) }, named: name), begun)
                     } catch let refusal as ValueRefused {
                         throw refused(refusal.message, at: at)
                     }
 
-                case let .bare(spelling):
-                    let key = try key(spelling, at: at)
+                case let .bare(spelling) where readsAsText(spelling), let .string(spelling):
+                    let field = try fieldName(spelling, at: at)
 
-                    guard key.isIdentifier else {
-                        throw refused("a record writes a field name here", at: at)
+                    guard held[field] == nil else {
+                        throw refused("the record writes '\(field)' twice", at: at)
                     }
 
-                    try expect(key, in: held, at: at)
-
-                    opened[opened.count - 1] = .record(held: held, key: key, name: name)
-
-                    continue
-
-                case let .string(spelling):
-                    let key = try key(spelling, at: at)
-
-                    try expect(key, in: held, at: at)
-
-                    opened[opened.count - 1] = .record(held: held, key: key, name: name)
+                    opened[opened.count - 1] = .record(held: held, field: field, name: name, at: begun)
 
                     continue
 
                 default:
                     throw refused("a record writes a field name here", at: at)
                 }
-            } else {
+
+            // A map waits for a key. Text written bare or quoted is the
+            // key's own token; any other key is a value spelled as one.
+            case let .map(held, nil, begun):
                 switch token {
-                case .arrayOpen:
-                    try opening(opened, at: at)
-                    opened.append(.array([]))
+                case .braceClose:
+                    opened.removeLast()
+
+                    completed = (try map(held), begun)
+
+                case let .bare(spelling) where readsAsText(spelling), let .string(spelling):
+                    opened[opened.count - 1] = .map(held: held, key: (.string(spelling), at), at: begun)
 
                     continue
 
-                case .recordOpen:
+                default:
+                    break
+                }
+
+            default:
+                break
+            }
+
+            if completed == nil {
+                switch token {
+                case .arrayOpen:
                     try opening(opened, at: at)
-                    opened.append(.record(held: [:], key: nil, name: nil))
+                    opened.append(.array([], at: at))
+
+                    continue
+
+                case .braceOpen:
+                    try opening(opened, at: at)
+                    opened.append(.map(held: [], key: nil, at: at))
 
                     continue
 
                 case .arrayClose:
-                    guard case let .array(held) = opened.last else {
+                    guard case let .array(held, begun) = opened.last else {
                         throw refused("nothing here is an array to close", at: at)
                     }
 
                     opened.removeLast()
 
-                    completed = .array(held)
+                    completed = (.array(held), begun)
 
-                case .recordClose:
-                    throw refused("nothing here is a record to close", at: at)
+                case .braceClose:
+                    throw refused("nothing here is a map or a record to close", at: at)
 
                 case let .string(string):
-                    completed = .string(string)
+                    completed = (.string(string), at)
 
                 case let .bytes(bytes):
-                    completed = .bytes(bytes)
+                    completed = (.bytes(bytes), at)
 
-                // A bare token in front of a record is the record's name, the
+                // A bare token in front of a brace is the record's name, the
                 // declared type the value names, where it is no scalar's
                 // writing; what a record's name may be is the value's to hold.
-                // A scalar is a scalar, the record after it the next value.
+                // A scalar is a scalar, the map after it the next value.
                 case let .bare(bare):
-                    if tokens.first?.token == .recordOpen, !writesScalar(bare), let name = try? Name(bare) {
+                    if tokens.first?.token == .braceOpen, !writesScalar(bare), let name = try? Name(bare) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
-                        opened.append(.record(held: [:], key: nil, name: name))
+                        opened.append(.record(held: [:], field: nil, name: name, at: at))
 
                         continue
                     }
 
-                    completed = try scalar(from: bare, at: at)
+                    completed = (try scalar(from: bare, at: at), at)
                 }
             }
 
             // Closing is a token here, not a count, so a completed value climbs
             // one step at most: into whatever holds it, or out.
-            if let value = completed {
+            if let (value, begun) = completed {
                 guard let open = opened.popLast() else { return value }
 
                 switch open {
-                case let .array(held):
+                case let .array(held, at):
                     var held = held
                     held.append(value)
 
-                    opened.append(.array(held))
+                    opened.append(.array(held, at: at))
 
-                case let .record(held, key?, name):
+                case let .map(held, nil, at):
+                    opened.append(.map(held: held, key: (value, begun), at: at))
+
+                case let .map(held, key?, at):
                     var held = held
-                    // Unique: the key was refused where it was read if the
-                    // record already held it.
-                    held[key] = value
+                    held.append((key: key.value, value: value, at: key.at))
 
-                    opened.append(.record(held: held, key: nil, name: name))
+                    opened.append(.map(held: held, key: nil, at: at))
 
-                // A record with no key is waiting for a field name, and every
-                // token it could meet in that state was answered above.
-                case .record(_, .none, _):
-                    throw refused("a record writes a field name here", at: at)
+                // Unique: the name was refused where it was read if the
+                // record already held it.
+                case let .record(held, field?, name, at):
+                    var held = held
+                    held[field] = value
+
+                    opened.append(.record(held: held, field: nil, name: name, at: at))
+
+                // A record with no field is waiting for a field's name, and
+                // every token it could meet in that state was answered above.
+                case .record(_, nil, _, _):
+                    throw refused("a record writes a field name here", at: begun)
                 }
             }
         }
+    }
+
+    // A map's entries, read in any order, held in the key order. A key the
+    // same as one written before it is refused where it was written: two
+    // values under one key are two documents, not one document twice. Keys
+    // that order the same stand in the order written, so of two the same,
+    // the second written is the second here.
+    private func map(_ held: [(key: Value, value: Value, at: Int)]) throws -> Value {
+        let ordered = held.enumerated().sorted { one, other in
+            switch Value.Dictionary.order(one.element.key, other.element.key) {
+            case .orderedAscending: true
+            case .orderedDescending: false
+            case .orderedSame: one.offset < other.offset
+            }
+        }
+        .map(\.element)
+
+        if let (first, second) = zip(ordered, ordered.dropFirst()).first(where: { one, other in one.key.matches(other.key) }) {
+            throw refused("the map writes '\(Rendering(first.key).text())' twice", at: second.at)
+        }
+
+        return .dictionary(try Value.Dictionary(ordered.map { entry in (key: entry.key, value: entry.value) }))
+    }
+
+    // Whether a bare token in key position is text: an identifier that is no
+    // scalar's writing. `null`, `true` and `false` there are the values they
+    // write, and text spelled like one of them is quoted.
+    private func readsAsText(_ bare: String) -> Bool {
+        Name.scalarKeywords[bare] == nil && (try? Name(bare))?.isIdentifier == true
     }
 
     // Whether a bare token is written as a scalar: a keyword, or what starts
@@ -564,9 +621,11 @@ public struct TextEncoding {
         return .double(double)
     }
 
-    // A key's spelling as the name it stands for, said in this reader's own
-    // words.
-    private func key(_ spelling: String, at offset: Int) throws -> Name {
+    // A field's name as the name it stands for, said in this reader's own
+    // words. A field is read in any position, since layout is the writer's,
+    // and refused where the record already holds it: two values under one
+    // name are two documents, not one document twice.
+    private func fieldName(_ spelling: String, at offset: Int) throws -> Name {
         do {
             return try Name(spelling)
         } catch let refusal as NameRefused {
@@ -574,18 +633,10 @@ public struct TextEncoding {
         }
     }
 
-    // A field name is read in any position, since layout is the writer's, and
-    // refused where the record already holds it: two values under one key are
-    // two documents, not one document twice.
-    private func expect(_ key: Name, in held: [Name: Value], at offset: Int) throws {
-        guard held[key] == nil else {
-            throw refused("the record writes '\(key)' twice", at: offset)
-        }
-    }
-
     // The one layout: a container that holds something ends its line, holds
-    // one element or field a line two spaces deeper, and closes on a line of
-    // its own.
+    // one element or entry a line two spaces deeper, and closes on a line of
+    // its own. An entry is its key, a space and its value, the value starting
+    // on the line the key ends on.
     private func write(_ value: Value, into text: inout String) throws {
         var walk = ValueWalk(value)
 
@@ -596,9 +647,14 @@ public struct TextEncoding {
         // Whether the next value follows its key on the key's line.
         var keyed = false
 
+        // Whether the next value is a map's key, and the depths at which a
+        // key being written ends.
+        var key = false
+        var keys: [Int] = []
+
         while let step = try walk.next() {
             switch step {
-            case .key, .arrayClose, .recordClose:
+            case .key, .field, .arrayClose, .mapClose, .recordClose:
                 break
 
             default:
@@ -608,6 +664,9 @@ public struct TextEncoding {
 
                 keyed = false
             }
+
+            let standsAsKey = key
+            key = false
 
             switch step {
             case .null:
@@ -623,7 +682,11 @@ public struct TextEncoding {
                 text += double.uncheckedSpelling
 
             case let .string(string):
-                write(string, into: &text)
+                if standsAsKey, readsAsText(string) {
+                    text += string
+                } else {
+                    write(string, into: &text)
+                }
 
             case let .bytes(bytes):
                 text += "x\""
@@ -642,10 +705,26 @@ public struct TextEncoding {
 
                 continue
 
-            case let .record(name, count):
-                if let name {
-                    text += name.spelling + " "
+            case let .map(count):
+                guard count > 0 else {
+                    text += "{}"
+
+                    break
                 }
+
+                text += "{\n"
+                depth += 1
+
+                continue
+
+            // Where a key stands, a bare identifier is text, so a record named
+            // by one has no writing there.
+            case let .record(name, count):
+                if standsAsKey, readsAsText(name.spelling) {
+                    throw EncodingRefused("a record named '\(name)' stands as a key, where the text reads a bare name as text")
+                }
+
+                text += name.spelling + " "
 
                 guard count > 0 else {
                     text += "{}"
@@ -658,10 +737,18 @@ public struct TextEncoding {
 
                 continue
 
-            case let .key(name):
+            case .key:
+                text += String(repeating: "  ", count: depth)
+                keyed = true
+                key = true
+                keys.append(depth)
+
+                continue
+
+            case let .field(name):
                 text += String(repeating: "  ", count: depth)
 
-                if name.isIdentifier {
+                if readsAsText(name.spelling) {
                     text += name.spelling
                 } else {
                     write(name.spelling, into: &text)
@@ -676,13 +763,18 @@ public struct TextEncoding {
                 depth -= 1
                 text += String(repeating: "  ", count: depth) + "]"
 
-            case .recordClose:
+            case .mapClose, .recordClose:
                 depth -= 1
                 text += String(repeating: "  ", count: depth) + "}"
             }
 
-            // A value ended, and inside a container its line does too.
-            if depth > 0 {
+            // A value ended. A key's value follows it on its line, and inside
+            // a container any other value's line ends with it.
+            if keys.last == depth {
+                keys.removeLast()
+                text += " "
+                keyed = true
+            } else if depth > 0 {
                 text += "\n"
             }
         }

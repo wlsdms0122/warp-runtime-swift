@@ -54,7 +54,8 @@ extension Value {
     }
 
     // What a container holds, by the step that reaches each, and nothing for
-    // a value that holds nothing.
+    // a value that holds nothing. A map holds its keys as well as its values,
+    // and a key is reached by the step its entry is.
     private var held: [(step: Place.Step, value: Value)]? {
         switch self {
         case let .array(elements):
@@ -63,8 +64,12 @@ extension Value {
         case let .record(record):
             return zip(record.layout.fields, record.values).map { name, value in (.key(name.spelling), value) }
 
-        case let .dictionary(fields):
-            return fields.entries.map { entry in (.key(Rendering(entry.key).text()), entry.value) }
+        case let .dictionary(held):
+            return held.entries.flatMap { entry in
+                let step = Place.Step.key(Rendering(entry.key).text())
+
+                return [(step, entry.key), (step, entry.value)]
+            }
 
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return nil

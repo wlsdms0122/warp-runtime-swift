@@ -10,7 +10,7 @@ import Foundation
 // An object said as a value, so that the writing a document already travels
 // in carries what the document compiled to as well.
 //
-// The record is keyed by `ObjectLayout.Key`; inside a part the fields stand
+// The map is keyed by `ObjectLayout.Key`; inside a part the fields stand
 // in order and a kind as its `ObjectLayout` tag before them, so any reading of
 // the same format reads it back.
 //
