@@ -610,7 +610,7 @@ struct ValidationTests {
             try Module(procedures: [entryName: read])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'run.id' reads 'run', which is not visible here")
+                && "\(error)".contains("reads 'run', which is not visible here")
         }
 
         _ = try Module(procedures: [entryName: taken])
@@ -971,7 +971,7 @@ struct ValidationTests {
             try Module(procedures: [entryName: sut])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("'never' reads 'never', which is not visible here")
+                && "\(error)".contains("reads 'never', which is not visible here")
         }
     }
 

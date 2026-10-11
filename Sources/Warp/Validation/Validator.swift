@@ -856,8 +856,7 @@ struct Validator: Sendable {
 
             guard visible.contains(head) else {
                 throw ValidationError(
-                    "'\(path.rendered)' reads '\(head)', which is not visible here. Declare it earlier"
-                        + " or check the spelling",
+                    "reads '\(head)', which is not visible here. Declare it earlier or check the spelling",
                     at: place
                 )
             }
