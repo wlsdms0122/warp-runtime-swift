@@ -134,6 +134,40 @@ final class LoweredTypeTable: Sendable {
         }
     }
 
+    // A value from outside with every record it holds under a name, at any
+    // depth, held to the record the name declares: an alias's name is its
+    // record's, the record is fitted to its declaration and judged against
+    // it, and a name that declares no record is the name of no type here.
+    // So every record the run holds under a name is a value of that record,
+    // whatever slot it came in at.
+    func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
+        guard value.holdsName else { return value }
+
+        switch value {
+        case let .array(items):
+            return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
+
+        case let .dictionary(entries):
+            return .dictionary(try entries.mapValues { _, item in try resolvingNames(in: item, at: path()) })
+
+        case let .record(record):
+            let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
+
+            guard let name = record.name else { return .record(fields) }
+
+            guard let row = self.record(named: name) else {
+                throw ArgumentError("\(path()): is a \(name), which no document declares as a record")
+            }
+
+            let declared = LoweredType.named(row)
+
+            return try declared.settling(declared.fitted(.record(fields.named(labels[row])), in: self), at: path(), in: self)
+
+        default:
+            return value
+        }
+    }
+
     // Whether a row is a declared record's.
     func declaresRecord(_ row: Int) -> Bool {
         if case .record = loweredTypes[row] { true } else { false }
