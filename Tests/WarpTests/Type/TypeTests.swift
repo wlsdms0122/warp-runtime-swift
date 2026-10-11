@@ -298,7 +298,7 @@ struct TypeTests {
         // Given. Assembled against the table it is judged against, so what is
         // being asked is the claim and not which link made the row
         let types = try TypeTable()
-        let closure = Closure.assembled(answering: .int(1), in: types)
+        let closure = Self.assembled(answering: .int(1), in: types)
 
         // When / Then
         #expect(throws: ArgumentError.self) {
@@ -367,4 +367,28 @@ struct TypeTests {
 
     // MARK: - Public
     // MARK: - Private
+    // A closure a test builds by hand, answering a value: no body a document
+    // spelled, no captures, claiming nothing.
+    private static func assembled(answering result: Value? = nil, in types: TypeTable = .empty) -> Closure {
+        Closure(
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("assembled")),
+            nth: 0,
+            linked: Linked(
+                label: "assembled",
+                origin: 0,
+                signature: Signature(),
+                access: .internal,
+                constness: .unstated,
+                isolation: .unstated,
+                failing: .unstated,
+                implementation: .body(
+                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
+                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
+                ),
+                foldable: true,
+                in: types.loweredTypes
+            ),
+            captured: []
+        )
+    }
 }

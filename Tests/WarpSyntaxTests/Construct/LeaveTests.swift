@@ -17,11 +17,7 @@ import WarpStandard
 // Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
 // loop around it. A procedure could be handed the value and could not be told either
-// thing.
-//
-// Before these existed the only way out was to fail on purpose and catch it,
-// which meant a successful early exit had to travel down the failure channel.
-// These do not: a rescue is for what the world did.
+// thing. A rescue is for what the world did, so a leave is no failure.
 @Suite("A body can stop before its end")
 struct LeaveTests {
     // MARK: - Property

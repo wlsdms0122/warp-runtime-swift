@@ -1169,6 +1169,66 @@ struct ValidationTests {
         }
     }
 
+    @Test("a name that is no record and comes back to itself refuses at the load")
+    func aNameComingBackRefusesAtTheLoad() {
+        // Given. A record may name itself, and a name that is no record
+        // spells no type where it reaches itself, through names or a structure
+        let cycles: [[Name: TypeExpression]] = [
+            ["Loop": .named("Loop")],
+            ["A": .named("B"), "B": .named("A")],
+            ["List": .array(.named("List"))]
+        ]
+
+        for types in cycles {
+            // When / Then
+            #expect {
+                try Module(
+                    types: types,
+                    procedures: [
+                        entryName: Procedure(
+                            access: .public,
+                            signature: Signature(),
+                            body: [],
+                            result: .literal(.int(1))
+                        )
+                    ]
+                )
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("names itself through what it stands for")
+            }
+        }
+
+        // A recursive type passes: the name reaches a type on the way back.
+        #expect(throws: Never.self) {
+            try Module(
+                types: ["Tree": .record(["children": .array(.named("Tree"))])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("a name is a constant or a variable, and not both")
+    func aNameIsBoundOnce() {
+        // When / Then
+        #expect {
+            try Module(
+                imports: [],
+                constants: ["limit": .literal(.int(1))],
+                variables: ["limit": .literal(.int(2))],
+                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
+            )
+        } throws: { error in
+            "\(error)".contains("one name holds one thing")
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }
