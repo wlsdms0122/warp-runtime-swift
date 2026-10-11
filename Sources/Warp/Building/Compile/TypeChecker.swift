@@ -193,7 +193,7 @@ struct TypeChecker {
             ask: .judging(folding: folding, writing: fulfillment, answering: promised)
         )
 
-        try held(
+        try refuseAnswers(
             written: LiteralShape(inner.literalShape, reading: inner.reading),
             answered: inner.flow.answered,
             to: promised,
@@ -246,7 +246,7 @@ struct TypeChecker {
         given context: TypingContext,
         writing fulfillment: Fulfillment
     ) throws {
-        try held(
+        try refuseRunning(
             expression,
             asOperand: place,
             given: context,
@@ -374,7 +374,7 @@ struct TypeChecker {
     // can act on it: at the `result` when one is written, at the `returns`
     // when the body answers nothing at all, and at a `return` for what it
     // carries.
-    private func held(
+    private func refuseAnswer(
         _ written: LiteralShape,
         to promised: LoweredType?,
         at place: Place,
@@ -981,7 +981,7 @@ struct TypeChecker {
     // the question out again further on.
     //
     // What opens to `Any` stands only where `Any` is declared.
-    private func held(
+    private func refuseAnswers(
         written answer: LiteralShape,
         answered: [Flow.Answer],
         to promised: LoweredType?,
@@ -991,7 +991,7 @@ struct TypeChecker {
         fulfillment: Fulfillment
     ) throws {
         for one in answered {
-            try held(
+            try refuseAnswer(
                 LiteralShape(one.literalShape, reading: one.reading),
                 to: promised,
                 at: one.place,
@@ -1000,7 +1000,7 @@ struct TypeChecker {
             )
         }
 
-        try held(
+        try refuseAnswer(
             answer,
             to: promised,
             at: place.part(result != nil ? .result : .returns),
@@ -1159,7 +1159,7 @@ struct TypeChecker {
     // An operand is data: the run reads it rather than running it. A call to a
     // declaration that answers only by running is refused here, where the
     // operand is written, rather than found when the reading reaches it.
-    private func held(
+    private func refuseRunning(
         _ expression: Expression,
         asOperand place: Place,
         given context: TypingContext,
@@ -1178,9 +1178,9 @@ struct TypeChecker {
 
     // A condition chooses a way through a body, so what it reads has to be a
     // `Bool`, and a value read as `Any` is one once a cast says so.
-    private func held(
+    private func refuseCondition(
         _ reading: LoweredType,
-        asCondition place: Place,
+        at place: Place,
         in context: TypingContext,
         when ask: Ask
     ) throws {
@@ -1615,7 +1615,7 @@ struct TypeChecker {
                     }
                 }
 
-                try held(
+                try refuseAnswers(
                     written: LiteralShape(inner.literalShape, reading: inner.reading),
                     answered: inner.flow.answered,
                     to: promised,
@@ -1707,10 +1707,10 @@ struct TypeChecker {
             // One by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             if case .judging = ask {
-                try held(callee, asOperand: place.child(.callee), given: context, when: ask)
+                try refuseRunning(callee, asOperand: place.child(.callee), given: context, when: ask)
 
                 for (position, argument) in arguments.enumerated() {
-                    try held(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
+                    try refuseRunning(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
                 }
             }
 
@@ -1947,7 +1947,7 @@ struct TypeChecker {
             // one by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
-                try held(argument, asOperand: argumentPlaces[position], given: context, when: ask)
+                try refuseRunning(argument, asOperand: argumentPlaces[position], given: context, when: ask)
             }
 
             // A selector this document cannot name is refused where the walk
@@ -2096,8 +2096,8 @@ struct TypeChecker {
                 ask: ask
             )
 
-            try held(condition, asOperand: place.child(.condition(of: .conditional)), given: context, when: ask)
-            try held(head.reading, asCondition: place.child(.condition(of: .conditional)), in: context, when: ask)
+            try refuseRunning(condition, asOperand: place.child(.condition(of: .conditional)), given: context, when: ask)
+            try refuseCondition(head.reading, at: place.child(.condition(of: .conditional)), in: context, when: ask)
 
             let inside = environment
 
@@ -2211,8 +2211,8 @@ struct TypeChecker {
                 ask: ask
             )
 
-            try held(condition, asOperand: place.child(.condition(of: .loop)), given: context, when: ask)
-            try held(head.reading, asCondition: place.child(.condition(of: .loop)), in: context, when: ask)
+            try refuseRunning(condition, asOperand: place.child(.condition(of: .loop)), given: context, when: ask)
+            try refuseCondition(head.reading, at: place.child(.condition(of: .loop)), in: context, when: ask)
 
             // The statements run where the condition left things.
             var asked = seeded
