@@ -58,7 +58,7 @@ public struct StatementReader: Decodable {
     // What the name says it holds, where it says.
     public static let typeKey: Name = "type"
 
-    public let statement: Statement
+    let statement: Statement
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {

@@ -23,7 +23,7 @@ import Warp
 //
 // A mapping is one of these by its one key, so a record's field names are
 // never keys the grammar reads.
-public struct TypeReader: Decodable {
+struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
     // position order, and what it answers. No names, since a value carries
     // none.
@@ -102,7 +102,7 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Property
-    public let type: TypeExpression
+    let type: TypeExpression
 
     // The one key a record type is written under.
     static let recordKey: Name = "record"
@@ -116,7 +116,7 @@ public struct TypeReader: Decodable {
     // A type's own refusals do not know where in a document they happened, and
     // every one of them arrives here, so the place is put on them in one
     // statement rather than in whichever branch threw.
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         do {
             self.type = try Self.read(from: decoder)
         } catch let error as TypeFormError {
@@ -127,7 +127,7 @@ public struct TypeReader: Decodable {
     // MARK: - Public
     // A type from its spelling, a declared name written short standing for
     // what the notation reads it as.
-    public static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
+    static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
         try parse(written) { name in notation.qualified(name, as: .type) }
     }
 
