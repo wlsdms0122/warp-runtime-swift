@@ -420,12 +420,12 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(elements):
             self = .array(LoweredType(joining: elements.map { element in LoweredType(of: element, in: table) }))
 
-        // A record under a name reads as that name; the type is the
-        // declaration's, and the name is what the value fits. A document's
-        // type names its fields by Swift's equality, so two spellings the
-        // value keeps apart are one field here, the first by bytes.
+        // A record under a name reads as the record the name declares, an
+        // alias's name its record's. A document's type names its fields by
+        // Swift's equality, so two spellings the value keeps apart are one
+        // field here, the first by bytes.
         case let .record(record):
-            self = record.name.flatMap { name in table.row(named: name).map(LoweredType.named) }
+            self = record.name.flatMap { name in table.record(named: name).map(LoweredType.named) }
                 ?? .record(
                     Dictionary(
                         zip(record.names, record.values).map { name, value in (name, LoweredType(of: value, in: table)) }
@@ -2121,32 +2121,20 @@ indirect enum LoweredType: Sendable, Equatable {
     // arrived to a contract by the type the value is an instance of: what
     // the link found to answer it is what a value may arrive as. Neither
     // settles: a value stands as it arrived.
-    //
-    // A table that cannot say which types answer writes the pair down and
-    // lets the value pass, so the list that holds every claim answers for
-    // it. Where there is nowhere to write, there is nothing to wait for and
-    // the value is held to what this table knows.
     private func standing(
         _ value: Value,
         answering name: Name,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        switch table.settles(contract: name, arrived: value.nominal) {
-        case true?:
-            return value
-
-        case nil where table.unsettled != nil:
-            table.unsettled?.require(folded: Claim(type: value.nominal, contract: name))
-
-            return value
-
-        case nil, false?:
+        guard table.stands(value.nominal, answering: name) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), and '\(value.nominal)'"
                     + " does not answer every procedure '\(name)' asks"
             )
         }
+
+        return value
     }
 
     private func settlingNamed(

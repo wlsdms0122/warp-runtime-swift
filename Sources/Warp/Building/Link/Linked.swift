@@ -237,19 +237,19 @@ public final class Linked: Sendable {
 
     // Arguments handed by position from outside the build: the door a host
     // hands a closure values through, and a procedure the host answers its
-    // sends. One for each slot, each fitted and judged by the door rule.
+    // sends. One for each slot, settled together by the door rule.
     func settle(outside given: [Value]) throws -> [Value] {
         try refuseInPlace()
         try refuseCount(given.count)
 
-        return try zip(slots, given).map(settled)
+        return try settled(given)
     }
 
     // Arguments given by name: the door a run's entry is handed values
     // through, settled into the order a run keeps them in. A name the
     // declaration lacks is refused, and so is one it declares that was not
     // given; a null standing at a name was given, since null is a value the
-    // way any other is. Each is fitted and judged by the door rule.
+    // way any other is. They are settled together by the door rule.
     func settle(_ given: [Name: Value]) throws -> [Value] {
         try refuseInPlace()
 
@@ -272,7 +272,7 @@ public final class Linked: Sendable {
             throw ArgumentError("entry '\(label)' was given nothing for \(missing.joined(separator: ", "))")
         }
 
-        return try zip(slots, values).map(settled)
+        return try settled(values)
     }
 
     // What a procedure the host answers hands back, a value from outside at
@@ -331,9 +331,81 @@ public final class Linked: Sendable {
         throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
     }
 
-    // One value from outside at its slot, fitted and judged by the door rule.
-    private func settled(_ slot: Slot, _ value: Value) throws -> Value {
-        try slot.type.settling(outside: value, at: "input '\(slot.name)'", in: table)
+    // Values from outside, one at each slot, settled together: the type
+    // parameters the slots name filled by what the values read as, and each
+    // value fitted and judged by the door rule at its slot so filled.
+    private func settled(_ values: [Value]) throws -> [Value] {
+        let filling = try filling(by: values)
+
+        return try zip(slots, values).map { slot, value in
+            try slot.type.filling(filling).settling(outside: value, at: "input '\(slot.name)'", in: table)
+        }
+    }
+
+    // What the type parameters this row's slots name stand for where values
+    // cross the door at them, as the call the door is. What each value reads
+    // as fills them the way a call's readings fill a declaration's, so the
+    // door judges a value as the build judges a reading there. A type
+    // parameter is one type: one filled by two types refuses, and so does a
+    // bounded one filled with what may be null, a value of the type or of
+    // `Null`. What fills a bounded one is then held to its bounds, and `Any`,
+    // what values of several types join to, answers none. A parameter only a
+    // procedure's own signature reaches is left standing, for the judgement
+    // of that procedure to fill.
+    //
+    // A closure's type parameters are its writer's, filled by the call that
+    // made it, which no value at this door says, so they stand as they are
+    // and each value is held to the bounds alone.
+    private func filling(by values: [Value]) throws -> [Name: LoweredType] {
+        let types = slots.map(\.type)
+        let parameters = types.reduce(into: [Name: [Name]]()) { found, type in
+            found.merge(type.boundedParameters) { first, _ in first }
+        }
+
+        guard closure == nil, !parameters.isEmpty else { return [:] }
+
+        let substitution = Substitution(
+            filling: types,
+            against: values.map { value in LoweredType(of: value, in: table) },
+            in: table
+        )
+
+        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
+            let standing = slots
+                .filter { slot in slot.type.boundedParameters[parameter] != nil }
+                .map { slot in "input '\(slot.name)'" }
+                .joined(separator: ", ")
+
+            func refusal(_ first: LoweredType, _ second: LoweredType) -> ArgumentError {
+                ArgumentError(
+                    "\(standing): '\(parameter)' is read as \(first.rendered(in: table))"
+                        + " and as \(second.rendered(in: table)), and a type parameter is one type"
+                )
+            }
+
+            if let first = substitution.readings[parameter], let second = substitution.disagreeing[parameter] {
+                throw refusal(first, second)
+            }
+
+            for reading in substitution.everyReading(of: parameter) where !bounds.isEmpty && reading != .never {
+                if case let .nullable(inner) = reading {
+                    throw refusal(inner, .null)
+                }
+
+                for bound in bounds {
+                    guard let type = reading.nominal(in: table), table.stands(type, answering: bound) else {
+                        throw ArgumentError(
+                            "\(standing): '\(parameter)' is read as \(reading.rendered(in: table)),"
+                                + " which does not answer every procedure '\(bound)' asks"
+                        )
+                    }
+                }
+            }
+        }
+
+        return parameters.reduce(into: [:]) { filled, parameter in
+            filled[parameter.key] = substitution.readings[parameter.key] ?? .parameter(label: parameter.key, bounds: parameter.value)
+        }
     }
 
     // The rows a body can send a run into, read off its code: every call, every
