@@ -275,10 +275,9 @@ public final class Linked: Sendable {
         return try zip(slots, values).map(settled)
     }
 
-    // What this row answers where it crosses a door, a value from outside
-    // or one leaving to the host: what a procedure the host answers hands
-    // back, and what an entry answers the run's host. It is fitted to what
-    // the row declares and judged against it.
+    // What a procedure the host answers hands back, a value from outside at
+    // the door it comes through: fitted to what the row declares and judged
+    // against it.
     func settling(answered value: Value) throws -> Value {
         guard let returns else { return value }
 

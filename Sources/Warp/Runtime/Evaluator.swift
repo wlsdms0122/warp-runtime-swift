@@ -81,12 +81,11 @@ struct Evaluator: Sendable {
     }
 
     // MARK: - Public
-    // A run starting from an entry, its arguments by name. Both ends are
-    // doors: what the host hands in and what the entry hands back.
+    // A run starting from an entry, its arguments by name, which cross the
+    // door. What the entry answers the build held to the `returns` it
+    // declares, so it reaches the host as it is.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try entry.settling(
-            answered: try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
-        )
+        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
