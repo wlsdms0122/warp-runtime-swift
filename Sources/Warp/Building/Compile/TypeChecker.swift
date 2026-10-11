@@ -766,7 +766,7 @@ struct TypeChecker {
                 // neither `Any` nor the parameter itself, so a body naming a
                 // step on the way (`held = of.inner`, then `held.count`) reads
                 // the same field.
-                if let reached = current.reaching(rest()) {
+                if let reached = current.projecting(along: rest()) {
                     switch asWritten(rest(), in: environment, with: context, at: place) {
                     case let .refused(reason):
                         return .refused(reason)

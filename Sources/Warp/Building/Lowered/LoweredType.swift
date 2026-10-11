@@ -540,7 +540,7 @@ indirect enum LoweredType: Sendable, Equatable {
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.
-    func reaching(_ path: Path) -> LoweredType? {
+    func projecting(along path: Path) -> LoweredType? {
         switch self {
         case let .parameter(name, _):
             return .projection(of: name, path: path.unmarked)
