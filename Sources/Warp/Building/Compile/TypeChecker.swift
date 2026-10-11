@@ -1452,8 +1452,10 @@ struct TypeChecker {
         // `?.` is: the mark of a doubt where no doubt is left says nothing, and
         // a spelling that says nothing is a reading gone wrong.
         case let .cast(value, type, optional):
-            // The type the cast names is a place a record literal in what it
-            // reads is written into.
+            // The type the cast names is a place a literal in what it reads
+            // is written into, as a slot is: a record literal is read as the
+            // record it names, and a whole literal as the fraction it names
+            // where it declares a Double, at every depth.
             let claim = type.lowered(in: context.loweredTypes)
             let inner = try await inspected(
                 value,
@@ -1464,9 +1466,7 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
-            // A whole literal in what a cast reads is the Int it is, at every
-            // depth.
-            let read = inner.reading.asHeld
+            let read = claim.written(inner.reading, in: context.loweredTypes).asHeld
 
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
@@ -1537,7 +1537,7 @@ struct TypeChecker {
                 // The author's spelling stands, so a document written back
                 // out keeps the declaration it leaned on.
                 rewritten: ask.rewrites
-                    ? .cast(inner.rewritten, as: type, optional: optional)
+                    ? .cast(claim.written(inner.rewritten, in: context.loweredTypes), as: type, optional: optional)
                     : expression,
                 calls: inner.calls,
                 judgements: inner.judgements,
