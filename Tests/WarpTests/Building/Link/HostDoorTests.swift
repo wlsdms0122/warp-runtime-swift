@@ -287,7 +287,7 @@ struct HostDoorTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("'failed'.details.held: is a App.Z, which no document declares as a record")
+            error is ArgumentError && "\(error)".contains("'failed'.details[\"held\"]: is a App.Z, which no document declares as a record")
         }
     }
 
@@ -447,7 +447,7 @@ struct HostDoorTests {
                             binding: .constant("failed"),
                             expression: .attempt(
                                 Block(body: [Statement(expression: .call(Call(selector: "App.carry")))]),
-                                rescue: Block(body: [], result: .reference([.name("failed"), .name("details"), .name("held")]))
+                                rescue: Block(body: [], result: .reference([.name("failed"), .name("details"), .index("held")]))
                             )
                         )
                     ],

@@ -21,10 +21,10 @@ struct AnsweringTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a dot stands on what a call whose declaration writes no answer answers")
+    @Test("a path stands on what a call whose declaration writes no answer answers")
     func aDotStandsOnAnUnwrittenAnswer() async throws {
-        // Given. `counts` declares no answer and its body answers a record. The
-        // dot after the call is judged against that record, which is the whole
+        // Given. `counts` declares no answer and its body answers a map. The
+        // path after the call is judged against that map, which is the whole
         // of what this buys: the type the body states does not have to be
         // stated twice.
         let sut = try Module(
@@ -38,7 +38,7 @@ struct AnsweringTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "counts")))
                     ],
-                    result: .reference([.name("said"), .name("total")])
+                    result: .reference([.name("said"), .index("total")])
                 )
             ]
         )
@@ -64,7 +64,7 @@ struct AnsweringTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "middle")))
                     ],
-                    result: .reference([.name("said"), .name("total")])
+                    result: .reference([.name("said"), .index("total")])
                 )
             ]
         )
@@ -75,11 +75,11 @@ struct AnsweringTests {
 
     @Test("every way out of a body is one of its answers")
     func aReturnIsAnAnswerToo() async throws {
-        // Given. A body whose result answers a record, with and without an
+        // Given. A body whose result answers a map, with and without an
         // early `return` carrying a string. A body hands its caller either way
-        // out, so the second answers what holds both, and a dot on that is
-        // refused the way a dot on `Any` is. Reading the result alone would
-        // have called both a record and let both dots stand.
+        // out, so the second answers what holds both, and a path into that
+        // is refused the way one into `Any` is. Reading the result alone
+        // would have called both a map and let both paths stand.
         func module(leaving early: Bool) throws -> Module {
             try Module(
                 procedures: [
@@ -116,16 +116,16 @@ struct AnsweringTests {
                                 arguments: [.literal(.bool(true))]
                             )))
                         ],
-                        result: .reference([.name("said"), .name("total")])
+                        result: .reference([.name("said"), .index("total")])
                     )
                 ]
             )
         }
 
-        // When / Then. One way out, and the dot is judged against it
+        // When / Then. One way out, and the path is judged against it
         _ = try await builder.build([module(leaving: false)] + Module.standard)
 
-        // Two, and what holds both says nothing about a field
+        // Two, and what holds both says nothing about an entry
         await #expect {
             try await builder.build([module(leaving: true)] + Module.standard)
         } throws: { error in
@@ -157,10 +157,10 @@ struct AnsweringTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a dot on an answer that would come from itself refuses, and stands once the cycle is broken")
+    @Test("a path on an answer that would come from itself refuses, and stands once the cycle is broken")
     func aDotOnACycleAnswerRefuses() async throws {
         // Given. `Any` is what saying nothing looks like at a call site. With
-        // the cycle broken, the same dot reads the record `pong` answers
+        // the cycle broken, the same path reads the map `pong` answers
         func reading(cycling: Bool) throws -> Module {
             try Module(
                 procedures: [
@@ -176,7 +176,7 @@ struct AnsweringTests {
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                         ],
-                        result: .reference([.name("said"), .name("total")])
+                        result: .reference([.name("said"), .index("total")])
                     )
                 ]
             )
@@ -186,7 +186,7 @@ struct AnsweringTests {
         await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("said.total reads a dot on Any, which declares nothing")
+            error is BuildError && "\(error)".contains("said[\"total\"] indexes into Any, which declares nothing")
         }
 
         _ = try await builder.build([reading(cycling: false)] + Module.standard)

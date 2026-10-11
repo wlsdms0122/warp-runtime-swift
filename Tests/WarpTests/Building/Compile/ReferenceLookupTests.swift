@@ -39,22 +39,22 @@ struct ReferenceLookupTests {
     func existingPathReturnsValue() async {
         // When / Then
         await #expect(lookup([.name("name")], in: sut) == .found(.string("spec")))
-        await #expect(lookup([.name("run"), .name("id")], in: sut) == .found(.string("r-1")))
-        await #expect(lookup([.name("step"), .name("out")], in: sut) == .found(.string("done")))
+        await #expect(lookup([.name("run"), .index("id")], in: sut) == .found(.string("r-1")))
+        await #expect(lookup([.name("step"), .index("out")], in: sut) == .found(.string("done")))
         await #expect(lookup([.name("items"), .index(1)], in: sut) == .found(.int(2)))
     }
 
-    @Test("a missing entry refuses, and ?. reads it as null")
+    @Test("a missing entry refuses, and ?[ reads it as null")
     func missingEntryRefusesUnlessOptional() async {
         // When / Then. Absence past the head is a defect unless the author spelled
         // that they expect it
-        guard case .unfit = await lookup([.name("step"), .name("gone")], in: sut) else {
+        guard case .unfit = await lookup([.name("step"), .index("gone")], in: sut) else {
             Issue.record("expected unfit for an absent entry")
 
             return
         }
 
-        await #expect(lookup([.name("step"), .name("gone", optional: true)], in: sut) == .found(.null))
+        await #expect(lookup([.name("step"), .index("gone", optional: true)], in: sut) == .found(.null))
     }
 
     @Test("an index past the end is unfit, not absent")

@@ -324,10 +324,10 @@ struct InPlaceTests {
                             expression: map([:])
                         ),
                         Statement(
-                            expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: [.reference([.name("table"), .index("k")])]))
                         )
                     ],
-                    result: reference("table", "k")
+                    result: .reference([.name("table"), .index("k")])
                 ),
                 "fill": Procedure(
                     signature: Signature(parameters: [Parameter(name: "slot", type: .inout(.int))]),

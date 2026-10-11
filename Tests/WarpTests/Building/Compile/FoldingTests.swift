@@ -63,11 +63,11 @@ struct FoldingTests {
         #expect(value == .string("amount=null"))
     }
 
-    @Test("a field nobody set reads as null where the author marked it")
+    @Test("an entry nobody set reads as null where the author marked it")
     func absentPathReadsAsNull() async throws {
         // Given. The head of every reference is checked at load, so what is
-        // left to be absent at run time is a field nobody set
-        let reference: Path = [.name("record"), .name("gone", optional: true)]
+        // left to be absent at run time is an entry nobody set
+        let reference: Path = [.name("record"), .index("gone", optional: true)]
 
         // When / Then
         #expect(try await sut.read(reference, at: .given("test")) == .null)

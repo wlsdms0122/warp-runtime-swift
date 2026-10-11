@@ -183,9 +183,9 @@ struct ExecutorTests {
         }
     }
 
-    @Test("an entry the data does not carry reads as null where the author wrote ?.")
+    @Test("an entry the data does not carry reads as null where the author wrote ?[")
     func absentEntryReadsAsNullThroughOptional() async throws {
-        // Given. `?.` expects absence: it answers null, nothing is thrown,
+        // Given. `?[` expects absence: it answers null, nothing is thrown,
         // and the rescue never runs
         let spec = try Module(
             procedures: [
@@ -199,7 +199,7 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.name("data"), .name("missing", optional: true)]))
+                                        Statement(binding: .constant("fragile"), expression: .reference([.name("data"), .index("missing", optional: true)]))
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]))
@@ -221,8 +221,8 @@ struct ExecutorTests {
 
     @Test("an entry the data does not carry refuses where nothing said it may be absent")
     func absentEntryWithoutOptionalIsUnfit() async throws {
-        // Given. The plain dot promises the entry is there, so an absent one is
-        // a defect the run refuses rather than a null it invents
+        // Given. The plain bracket promises the entry is there, so an absent
+        // one is a defect the run refuses rather than a null it invents
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
@@ -234,7 +234,7 @@ struct ExecutorTests {
                         returns: .any
                     ),
                     body: [],
-                    result: .reference([.name("data"), .name("missing")])
+                    result: .reference([.name("data"), .index("missing")])
                 )
             ]
         )

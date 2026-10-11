@@ -787,19 +787,6 @@ struct TypeChecker {
                         + " and brackets read a list by a position and a map by a key"
                 )
 
-            // A dictionary holds entries of one type under names that are
-            // data, so which names are there is a run's fact. `?.` reads an
-            // absent one as null, and the plain spelling refuses it at run. The
-            // rule is asked here like everywhere else and always answers yes:
-            // the mark has an absence to expect on an entry, unwrapped or not,
-            // and that fact lives in the rule rather than in this landing.
-            case let (.name, .dictionary(_, entry)):
-                if let refusal = needless(.entry) { return refusal }
-
-                if segment.optional { optional = true }
-
-                current = entry
-
             // A dot on a record reads the field it declares. A field it does
             // not declare is a defect the text shows, refused here rather than
             // found at run, and so is a `?.` on one it does declare: the type
@@ -820,14 +807,16 @@ struct TypeChecker {
 
                 current = field.fieldUnwrapped
 
-            // A type with no fields has no name here to read. The procedure by
-            // this spelling is sent with a written call, which names the
-            // declaration it means.
+            // A type with no fields, a map among them, has no name here to
+            // read. The procedure by this spelling is sent with a written
+            // call, which names the declaration it means, and what a list or
+            // a map holds is read through brackets.
             case let (.name(key, _), _):
                 return .refused(
                     "\(walked.rendered) names '\(key)',"
                         + " and \(current.rendered(in: context.loweredTypes)) has no name there to read."
-                        + " A procedure by that spelling is sent with a written call"
+                        + " A procedure by that spelling is sent with a written call,"
+                        + " and what a list or a map holds is read through brackets"
                 )
             }
         }
@@ -900,9 +889,6 @@ struct TypeChecker {
                 }
 
                 current = field.fieldUnwrapped
-
-            case let (.name, .dictionary(_, entry)):
-                current = entry
 
             // What stands between the brackets is judged as a read's is: a
             // position in a list and a key in a map.

@@ -74,7 +74,7 @@ struct VariableTests {
         ]
 
         // When. The pieces' answers are read as the map they are
-        let answer = try await answer(of: sut, result: reference("both", "left"))
+        let answer = try await answer(of: sut, result: .reference([.name("both"), .index("left")]))
 
         // Then
         #expect(answer == .int(1))

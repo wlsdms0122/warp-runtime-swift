@@ -46,7 +46,7 @@ struct CallTests {
                 result: map([
                     "counted": reference("counted"),
                     "shouted": reference("shouted"),
-                    "echoed": reference("echoed", "said")
+                    "echoed": .reference([.name("echoed"), .index("said")])
                 ])
             ),
             beside: ["echo": echo],

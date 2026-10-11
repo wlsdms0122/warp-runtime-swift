@@ -143,21 +143,14 @@ struct Activation: Sendable {
 
                 read = .found(record.values[position])
 
-            case let .name(name, optional):
-                switch current {
-                case .record, .dictionary: break
-                default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
+            // A field by its name, of a record a call decides.
+            case let .name(name, _):
+                guard case let .record(record) = current else {
+                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
-                guard let next = current[name] else {
-                    guard optional else {
-                        return .unfit(
-                            "\(walked().rendered): '\(name)' is not there."
-                                + " Only `\(segment().mark)` reads absence"
-                        )
-                    }
-
-                    return .found(.null)
+                guard let next = record[name] else {
+                    return .unfit("\(walked().rendered) drills past the fields this record holds")
                 }
 
                 read = .found(next)

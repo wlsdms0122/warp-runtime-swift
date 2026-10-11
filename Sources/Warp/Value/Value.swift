@@ -773,9 +773,9 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (.record, .name(name)), let (.dictionary, .name(name)):
-            guard let field = self[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
             }
 
             return try field.reading(at: rest, under: rendered)
@@ -821,8 +821,12 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].written(at: rest, under: rendered)
 
-        case let (.record, .name(name)), let (.dictionary, .name(name)):
-            return try self[name]?.written(at: rest, under: rendered)
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+            }
+
+            return try field.written(at: rest, under: rendered)
 
         case let (.dictionary(map), .index(key)):
             return try map[key: key]?.written(at: rest, under: rendered)
@@ -860,14 +864,13 @@ public indirect enum Value: Sendable, Equatable {
 
             return .record(record.writing(at: position, with: written))
 
-        // A name written into what holds its names as data. The build judged
-        // the path, so a name that reaches here is one it allowed.
-        case let (.record, .name(name)), let (.dictionary, .name(name)):
-            do {
-                return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
-            } catch let refused as ValueRefused {
-                throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
+        // A field by its name, of a record a call decides.
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
             }
+
+            return .record(try record.writing(name, with: try field.writing(value, at: rest, under: rendered)))
 
         case let (.dictionary(map), .index(key)):
             let entry = try (map[key: key] ?? .null).writing(value, at: rest, under: rendered)
