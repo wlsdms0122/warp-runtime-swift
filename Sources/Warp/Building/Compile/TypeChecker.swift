@@ -1454,11 +1454,12 @@ struct TypeChecker {
         case let .cast(value, type, optional):
             // The type the cast names is a place a literal in what it reads
             // is written into, as a slot is: a record literal is read as the
-            // record it names, and a whole literal as the fraction it names
-            // where it declares a Double, at every depth.
+            // record it names, a whole literal as the fraction it names where
+            // it declares a Double, and a closure literal is completed by the
+            // procedure type it names, at every depth.
             let claim = type.lowered(in: context.loweredTypes)
             let inner = try await inspected(
-                value,
+                claim.completing(value, in: context.loweredTypes),
                 naming: nil,
                 into: claim,
                 at: place.child(.subject(optional: optional)),
