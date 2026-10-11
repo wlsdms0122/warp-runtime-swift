@@ -112,38 +112,37 @@ enum ObjectCoverageFixture {
         )
     ])
 
-    // Every case of `LoweredType`, the same way.
-    static let everyLoweredType: LoweredType = .record(
-        LoweredRecord(
-            name: "a.every",
-            names: Self.loweredFields.map(\.0).sorted(),
-            fields: Self.loweredFields.sorted { one, other in one.0 < other.0 }.map(\.1)
-        )
+    // Every case of `LoweredType` an object writes, each holding something
+    // no other holds, as the parameters of a procedure type.
+    static let everyLoweredType: LoweredType = .procedure(
+        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double)),
+        constness: .unstated,
+        isolation: .isolated
     )
 
-    static let loweredFields: [(Name, LoweredType)] = [
-        ("any", .any),
-        ("never", .never),
-        ("null", .null),
-        ("Bool", .bool),
-        ("Int", .int),
-        ("Double", .double),
-        ("String", .string),
-        ("array", .array(.string)),
-        ("dictionary", .dictionary(key: .string, value: .bool)),
-        ("procedure", .procedure(
+    static let loweredTypes: [LoweredType] = [
+        .any,
+        .never,
+        .null,
+        .bool,
+        .int,
+        .double,
+        .string,
+        .array(.string),
+        .dictionary(key: .string, value: .bool),
+        .procedure(
             LoweredProcedureType(parameters: [.int], returns: .double),
             constness: .const,
             isolation: .unstated
-        )),
-        ("variable", .variable(.int)),
-        ("inoutish", .inout(.bool)),
-        ("nullable", .nullable(.string)),
-        ("named", .named(2)),
-        ("parameterContract", .parameter(label: "U", bounds: ["a.five"])),
-        ("parameterNone", .parameter(label: "V", bounds: [])),
-        ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("composition", .composition(["a.five", "a.four"]))
+        ),
+        .variable(.int),
+        .inout(.bool),
+        .nullable(.string),
+        .named(2),
+        .parameter(label: "U", bounds: ["a.five"]),
+        .parameter(label: "V", bounds: []),
+        .projection(of: "a.sixteen", path: [.index(1, optional: true)]),
+        .composition(["a.five", "a.four"])
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and

@@ -699,7 +699,6 @@ struct ObjectReader {
         case .string: read = .string
         case .array: read = .array(try lowered(cursor.next()))
         case .dictionary: read = .dictionary(key: try lowered(cursor.next()), value: try lowered(cursor.next()))
-        case .record: read = .record(try loweredRecord(cursor.next()))
         // A type that writes no parameters writes no signature, so it says
         // nothing of an answer either.
         case .procedure:
@@ -745,20 +744,6 @@ struct ObjectReader {
 
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
-
-        try cursor.end()
-
-        return read
-    }
-
-    // A record type's layout is a declared record's, as a record built from
-    // parts is.
-    private func loweredRecord(_ value: Value) throws -> LoweredRecord {
-        var cursor = try FieldCursor(value, of: "record")
-        let read = try LoweredRecord(
-            layout: try layout(cursor.next()),
-            judging: try cursor.field().list(lowered)
-        )
 
         try cursor.end()
 
