@@ -596,10 +596,21 @@ struct Case: Sendable, CustomStringConvertible {
     private static func supplied(in written: Value?) throws -> Vocabulary? {
         guard let written else { return nil }
 
-        guard case let .dictionary(module) = written, case let .dictionary(entries)? = module["procedures"] else {
-            throw ConformanceError(
-                "the vocabulary a case asks for is a module, and a module declares procedures"
-            )
+        guard case let .dictionary(module) = written else {
+            throw ConformanceError("the vocabulary a case asks for is a module")
+        }
+
+        let entries: Value.Dictionary
+
+        switch module["procedures"] {
+        case nil:
+            entries = Value.Dictionary([:])
+
+        case let .dictionary(declared)?:
+            entries = declared
+
+        case let other?:
+            throw ConformanceError("the vocabulary a case asks for declares its procedures as a record, and not as \(other)")
         }
 
         if let taken = module.names.first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
@@ -635,20 +646,16 @@ struct Case: Sendable, CustomStringConvertible {
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
         // document's, and the three the runner says for itself.
-        let stripped = Value.dictionary(
-            Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
-                .merging([
-                    "warp": .int(1),
-                    "imports": .array([]),
-                    "procedures": .dictionary(
-                        Dictionary(
-                            uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }
-                        )
-                    )
-                ]) { _, made in made }
-        )
+        var stripped = Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
 
-        return Vocabulary(module: stripped, procedures: procedures)
+        stripped["warp"] = .int(1)
+        stripped["imports"] = .array([])
+        stripped["procedures"] = procedures.isEmpty
+            ? nil
+            : .dictionary(Dictionary(uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }))
+
+
+        return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
     }
 
     // What the entry is given is a record or is not written. Anything else
