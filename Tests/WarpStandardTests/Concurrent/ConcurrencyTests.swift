@@ -362,7 +362,7 @@ struct ConcurrencyTests {
         } throws: { error in
             guard let failed = error as? ConcurrentFailed else { return false }
 
-            return failed.failures.keys.sorted() == ["first", "second"]
+            return failed.failures.keys == [.string("first"), .string("second")]
         }
     }
 
