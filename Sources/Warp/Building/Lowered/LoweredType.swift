@@ -1079,14 +1079,6 @@ indirect enum LoweredType: Sendable, Equatable {
         couldBothHold(other, in: table, assumingQuestions: [])
     }
 
-    // The judge asked where a value is read and not rewritten: refused the
-    // way settling refuses it, and kept as it came. Settling is the one rule
-    // for what a type holds, so this is that rule with what it shapes left
-    // behind.
-    func admitting(_ value: Value, at path: String, in table: LoweredTypeTable) throws {
-        _ = try settling(value, at: path, in: table)
-    }
-
     // The judge asked as a question. Settling is the one rule for what a
     // type holds, so whether it holds something is that rule run with its
     // refusal dropped rather than a second rule written beside it. The path
