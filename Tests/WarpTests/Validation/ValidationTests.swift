@@ -305,8 +305,8 @@ struct ValidationTests {
         }
 
         // And a constant's and a variable's start, which a module holds
-        #expect(throws: ValidationError.self) { try Module(constants: ["c": construct], procedures: [:]) }
-        #expect(throws: ValidationError.self) { try Module(variables: ["v": construct], procedures: [:]) }
+        #expect(throws: ValidationError.self) { try Module(constants: ["c": construct]) }
+        #expect(throws: ValidationError.self) { try Module(variables: ["v": construct]) }
     }
 
     @Test("a value call is refused in an operand, a constant and a variable's start")
@@ -322,13 +322,12 @@ struct ValidationTests {
         #expect(!validates(body: [read, Statement(expression: .conditional(called, then: [], else: nil))]))
         #expect(!validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [.array([called])])))]))
         #expect(throws: ValidationError.self) {
-            try Module(constants: ["f": .closure(Procedure(body: [])), "c": .apply(reference("f"), arguments: [])], procedures: [:])
+            try Module(constants: ["f": .closure(Procedure(body: [])), "c": .apply(reference("f"), arguments: [])])
         }
         #expect(throws: ValidationError.self) {
             try Module(
                 constants: ["f": .closure(Procedure(body: []))],
-                variables: ["v": .apply(reference("f"), arguments: [])],
-                procedures: [:]
+                variables: ["v": .apply(reference("f"), arguments: [])]
             )
         }
 

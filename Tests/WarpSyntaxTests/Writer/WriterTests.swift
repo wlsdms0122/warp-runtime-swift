@@ -480,8 +480,7 @@ struct WriterTests {
                         )
                     )
                 ]
-            ],
-            procedures: [:]
+            ]
         )
 
         // When

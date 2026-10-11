@@ -233,14 +233,14 @@ struct TypePlacementTests {
         // When / Then. An inline record's fields are written through as they
         // are, so `var` there says nothing
         #expect {
-            try Module(types: ["App.T": type], procedures: [:])
+            try Module(types: ["App.T": type])
         } throws: { error in
             error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
         }
 
         // And on the declared record's own field it stands
         #expect(throws: Never.self) {
-            try Module(types: ["App.T": .record(["a": .variable(.int)])], procedures: [:])
+            try Module(types: ["App.T": .record(["a": .variable(.int)])])
         }
     }
 

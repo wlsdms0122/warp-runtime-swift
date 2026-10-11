@@ -215,7 +215,7 @@ struct SeparateCompilationTests {
                 entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [], result: .literal(.int(1)))
             ]
         )
-        let held = try Module(types: ["A.Held": .int], procedures: [:])
+        let held = try Module(types: ["A.Held": .int])
 
         // When
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes

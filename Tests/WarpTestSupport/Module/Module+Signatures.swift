@@ -19,7 +19,7 @@ public extension Module {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Warp.Expression] = [:],
         variables: [Name: Warp.Expression] = [:],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {

@@ -291,7 +291,7 @@ struct BakedTests {
         // Given. A document with an identity, so two copies of it are one
         // document, compiled once.
         let arriving = try Module(
-            try Module(procedures: [:]).draft,
+            try Module().draft,
             identity: Identity([0x01, 0x02, 0x03])
         )
         let baked = try await builder.compile(Module.standard)
@@ -310,7 +310,7 @@ struct BakedTests {
     func aCompiledDocumentIsNotLinkedTwice() async throws {
         // Given. A document with an identity, compiled once.
         let arriving = try Module(
-            try Module(procedures: [:]).draft,
+            try Module().draft,
             identity: Identity([0x01, 0x02, 0x03])
         )
         let baked = try await builder.compile(Module.standard)

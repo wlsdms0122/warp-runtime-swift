@@ -48,7 +48,7 @@ public struct TypeTable: Sendable {
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) throws {
-        let declaring = try Module(types: types, contracts: contracts, procedures: [:])
+        let declaring = try Module(types: types, contracts: contracts)
         let table = try DeclarationChecker().types(
             of: try TypeNamespace([declaring]),
             standing: [declaring],
