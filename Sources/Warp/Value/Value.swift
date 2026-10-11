@@ -452,8 +452,8 @@ public indirect enum Value: Sendable, Equatable {
 
     // What a reading of fields under names makes: a record of the declared
     // record the name says. One name holds one field, and a name written
-    // twice is refused. The name is a declared type's, so it holds a type's
-    // grammar.
+    // twice is refused. The name is a declared record's, so it is one a
+    // mention writes: a type's name, or a name the language declares.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name
@@ -464,8 +464,8 @@ public indirect enum Value: Sendable, Equatable {
             throw ValueRefused("'\(repeated.0.name)' is written twice")
         }
 
-        guard NameGrammar.type.holds(name) else {
-            throw ValueRefused(NameGrammar.type.refusal(of: name))
+        guard NameGrammar.mention.holds(name) else {
+            throw ValueRefused(NameGrammar.mention.refusal(of: name))
         }
 
         return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
