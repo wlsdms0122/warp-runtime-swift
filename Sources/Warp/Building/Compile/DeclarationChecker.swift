@@ -8,10 +8,10 @@
 import Foundation
 
 // What the compile refuses about declarations once their names resolve: a
-// name reaching only names, a mention no module in the link declares, a bound
-// or a composition naming what is no contract, a `?` behind a name where it
-// says nothing, a cast naming nothing to read, and a parameter a procedure the
-// host answers could never call.
+// mention no module in the link declares, a bound or a composition naming what
+// is no contract, a `?` behind a name where it says nothing, a cast naming
+// nothing to read, and a parameter a procedure the host answers could never
+// call.
 struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
@@ -158,9 +158,9 @@ struct DeclarationChecker {
     }
 
     // Everything a cast's type is held to on its spelling alone: the names it
-    // mentions resolve, and it names a type there is something to read. Both
-    // are answered without knowing what the value reads as, so every cast is
-    // held to both, reached or not.
+    // mentions resolve, and what it lowers to is a type there is something to
+    // read. Both are answered without knowing what the value reads as, so
+    // every cast is held to both, reached or not.
     private func judge(
         cast named: TypeExpression,
         at place: Place,
@@ -168,8 +168,25 @@ struct DeclarationChecker {
     ) throws {
         try mentioned(in: named, at: place, resolve: table)
 
-        if let refusal = named.resolved(in: table).unreadableCast {
-            throw BuildError(refusal, at: place)
+        switch named.lowered(in: table.loweredTypes) {
+        case .any:
+            throw BuildError(
+                "reads as \(TypeSpelling.any), which declares nothing."
+                    + " A cast names the type a value is read as, and `Any` is"
+                    + " the absence of one",
+                at: place
+            )
+
+        case .never:
+            throw BuildError(
+                "reads as \(TypeSpelling.never), which no value is."
+                    + " A cast names the type a value turns out to have, and"
+                    + " nothing arrives to have this one",
+                at: place
+            )
+
+        default:
+            return
         }
     }
 

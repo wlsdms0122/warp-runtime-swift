@@ -264,25 +264,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // The refusal a cast earns for naming a type there is nothing to read, once
-    // its names are resolved. Nil where the type names one. Each of the two
-    // says its own, because a refusal carries its reason.
-    var unreadableCast: String? {
-        if self == .any {
-            return "reads as \(rendered), which declares nothing."
-                + " A cast names the type a value is read as, and `Any` is"
-                + " the absence of one"
-        }
-
-        if self == .never {
-            return "reads as \(rendered), which no value is."
-                + " A cast names the type a value turns out to have, and"
-                + " nothing arrives to have this one"
-        }
-
-        return nil
-    }
-
     // Every declared name this reaches: the types and contracts it names.
     //
     // A parameter's own name is not one of them. It stands for a type the
@@ -454,12 +435,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // MARK: - Initializer
     // MARK: - Public
-    // The same type with every name it holds walked through to what that name
-    // declares. At every depth, not only the outermost.
-    func resolved(in types: TypeTable) -> TypeExpression {
-        resolved(in: types, assuming: [])
-    }
-
     // The same type with `Self` written as `type` wherever it stands: what a
     // contract's procedure says once a claim names the type answering it, or
     // once a call through the contract reads `Self` as one of its type
@@ -519,37 +494,4 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // MARK: - Private
-    // A name already being walked through stands as itself. A type may name
-    // itself (`Tree` holding `Array<Tree>` is a declared type) so a walk that
-    // expanded every name at every depth would chase one forever. The link
-    // refuses *cyclic name chains*, which makes a walk that only follows names
-    // finite; this one goes into fields as well, so it is outside that
-    // guarantee and carries its own, the way `accepts` does.
-    private func resolved(in types: TypeTable, assuming: Set<Name>) -> TypeExpression {
-        switch self {
-        case let .named(name):
-            guard !assuming.contains(name), let declared = types.types[name] else {
-                return self
-            }
-
-            return declared.resolved(in: types, assuming: assuming.union([name]))
-
-        case let .array(element):
-            return .array(element.resolved(in: types, assuming: assuming))
-
-        case let .dictionary(element):
-            return .dictionary(element.resolved(in: types, assuming: assuming))
-
-        case let .nullable(element):
-            return .nullable(element.resolved(in: types, assuming: assuming))
-
-        case let .record(fields):
-            return .record(fields.mapValues { field in
-                field.resolved(in: types, assuming: assuming)
-            })
-
-        default:
-            return self
-        }
-    }
 }
