@@ -8,7 +8,7 @@
 import Foundation
 
 extension Expression: Traversable {
-    public func walked<Trail>(
+    func walked<Trail>(
         at trail: Trail,
         stepping: (Trail, Place.Step) -> Trail
     ) -> [(Trail, Node)] {

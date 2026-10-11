@@ -115,7 +115,7 @@ public struct Signature: Sendable, Equatable {
     // everything that will be passed to it, and what is required must accept
     // everything it will get back. A body promising less than the slot asks and
     // returning more than the slot allows is the one that fits.
-    public func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
+    func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
         let table = types.loweredTypes
 
         return TypeExpression.procedure(type).lowered(in: table, bounds: bounds)

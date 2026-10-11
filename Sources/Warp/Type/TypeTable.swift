@@ -36,7 +36,7 @@ public struct TypeTable: Sendable {
 
     // A table declaring nothing, for a judgement asked with no declarations
     // behind it.
-    public static let empty = TypeTable(types: [:], of: Linkage())
+    static let empty = TypeTable(types: [:], of: Linkage())
 
     // MARK: - Initializer
     // A table a caller assembled: declarations and not a link, so no row
@@ -44,7 +44,7 @@ public struct TypeTable: Sendable {
     // declaring them is held to, by the same judges, so a name nothing
     // declares and a name that is no record and comes back to itself are
     // refused here, in the words a document is refused in.
-    public init(
+    init(
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) throws {

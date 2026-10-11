@@ -42,7 +42,7 @@ public struct Path: Sendable, Equatable {
     // head is written plain. The head is a name a scope
     // holds, not a field that may be absent: there is nothing before it to read
     // past, so the mark has nothing to mean.
-    public var markedHead: String? {
+    var markedHead: String? {
         guard let first = segments.first, first.optional else { return nil }
 
         return "\(rendered) marks the head optional, and the head of a path"

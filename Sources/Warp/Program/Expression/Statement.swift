@@ -66,12 +66,12 @@ public struct Statement: Sendable {
             }
         }
 
-        public var isConstant: Bool {
+        var isConstant: Bool {
             if case .constant = self { return true }
             return false
         }
 
-        public var isAssignment: Bool {
+        var isAssignment: Bool {
             if case .assignment = self { return true }
             return false
         }
