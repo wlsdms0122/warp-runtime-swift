@@ -328,14 +328,7 @@ final class Relocating {
                     )
                 }
 
-                calls[entry.key] = try CallOperation(
-                    handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
-                    to: table[row],
-                    row: row,
-                    picked: true,
-                    in: loweredTypes,
-                    at: context.place
-                )
+                calls[entry.key] = try dispatch.call(of: table[row], at: row, in: loweredTypes, at: context.place)
             }
         )
     }

@@ -51,6 +51,23 @@ struct DispatchOperation: Sendable {
     }
 
     // MARK: - Public
+    // The call this makes of a row answering it, placed against that row's
+    // slots with nothing at the first, which the run hands over from the
+    // reading that picked the row. How many arguments it stands is held
+    // where its number becomes a row, as a named call's is.
+    func call(of callee: Linked, at row: Int, in loweredTypes: LoweredTypeTable, at place: Place) throws -> CallOperation {
+        try callee.refuseCall(standing: arguments.count + 1, at: place)
+
+        return try CallOperation(
+            handing: [nil] + arguments.map { argument in Optional(argument) },
+            to: callee,
+            row: row,
+            picked: true,
+            in: loweredTypes,
+            at: place
+        )
+    }
+
     // The same call with its first and its arguments rewritten. The calls
     // beside it are the link's to lay out, so they are handed over as they
     // stand for the relocation to answer.
