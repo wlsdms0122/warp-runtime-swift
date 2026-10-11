@@ -1079,9 +1079,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether some value read as `reading` could be one of this type, which
     // a cast names. Not `accepts`: two records that name no field in common
     // accept each other in neither direction and are still both satisfied
-    // by a value carrying every field. The bias is deliberate: a refusal is
-    // earned only where the types provably disagree, and everything else is
-    // left to the run.
+    // by a value carrying every field. It refuses only where the types
+    // provably disagree, and leaves everything else to the run.
     func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
         couldBothHold(other, in: table, assumingQuestions: [])
     }
@@ -1459,9 +1458,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether null is one of this type's values rather than an absence: the
-    // fact `T?` exists to declare, and the boundary reads it. `Any` is not
-    // this: a type that declares nothing accepts a null that arrives, but it
-    // does not spell null as a value.
+    // fact `T?` exists to declare, and the boundary reads it.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
         switch self {
         case .null, .nullable:

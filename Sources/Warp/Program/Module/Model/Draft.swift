@@ -48,9 +48,6 @@ public struct Draft: Sendable {
         // counted under its kind.
         //
         // Read off the document so a closure's number is the document's fact.
-        // The link lowers the procedures before the rest, and which declarations
-        // are procedures depends on the whole graph, so a count taken while
-        // lowering would move when an unrelated module joins.
         let closures: [Closure.Declaration: Int]
 
         // MARK: - Initializer
@@ -63,8 +60,6 @@ public struct Draft: Sendable {
 
     // What the document said it imports, and nil where it said nothing. A
     // module resolves this; here it is still only what was written.
-    // Settable only from here, so `resolving(_:)` changes this one field of a
-    // copy instead of naming every field to keep it.
     public private(set) var imports: Set<Name>?
 
     public let types: [Name: TypeExpression]
@@ -91,8 +86,6 @@ public struct Draft: Sendable {
     // unlike a constant, a body may write one.
     public let variables: [Name: ModuleVariable]
 
-    // Settable only from here, the way `imports` is, so `declaring(_:)`
-    // changes this one field of a copy.
     public private(set) var procedures: [Name: Procedure]
 
     // Every name this uses and does not itself declare, which is what `imports`
@@ -158,11 +151,6 @@ public struct Draft: Sendable {
 
     // What this document says it leans on and how many closures it wrote,
     // read in one walk over its text.
-    //
-    // Every one of these is answered by walking the same expressions, so
-    // asking for them apart walks the text once for each. A document is made
-    // once and read by every link it stands in, and this is where that reading
-    // happens.
     func read() -> Reading {
         // A native procedure's sends are its own declaration rather than something
         // read off a body, since a Swift body is not text this could read. A

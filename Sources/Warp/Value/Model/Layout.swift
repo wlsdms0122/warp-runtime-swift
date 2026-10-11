@@ -31,7 +31,7 @@ public struct Layout: Sendable, Hashable {
     // MARK: - Initializer
     // Fields in any order, none of which repeats, under no name: a name says
     // a declaration, and a declaration is the link's. `Value.holding(_:named:)`
-    // carries one a document wrote, and `Image.settling(_:as:)` one the link
+    // carries one an encoding read, and `Image.settling(_:as:)` one the link
     // declared.
     public init(fields: [Name]) throws {
         let sorted = fields.sorted()

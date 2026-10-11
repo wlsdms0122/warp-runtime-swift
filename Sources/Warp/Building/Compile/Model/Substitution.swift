@@ -11,8 +11,7 @@ import Foundation
 // things in one.
 //
 // A parameter read two ways has no answer, so the disagreement is kept beside
-// the first reading rather than read as `Any`: `Any` is what a declaration
-// says when it said nothing.
+// the first reading.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
     // composition holds it to, and whether the slot takes null as well.
@@ -93,8 +92,7 @@ struct Substitution: Sendable {
 
     // Why a reading of a parameter does not answer a contract its bounds
     // name, or nil where every reading answers each or leans on a claim,
-    // which goes to `leaning` for the asker to write down. That a named bound
-    // is declared is the declaration's own fact, held where it is declared.
+    // which goes to `leaning` for the asker to write down.
     func unanswered(
         _ parameter: Name,
         bounds: Set<Name>,

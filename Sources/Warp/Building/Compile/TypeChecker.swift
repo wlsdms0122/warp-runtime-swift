@@ -16,8 +16,7 @@ import Foundation
 //
 // Nothing here is required to say anything: what cannot be read is `Any`,
 // which stands where `Any` is declared and anywhere else once a cast says
-// what it is. A wrong answer would be a refusal an author cannot act on, so
-// the walk answers only where the text says so.
+// what it is.
 //
 // A dot on `Any` is held the same way: a dot needs a type to be judged
 // against, so it refuses rather than deferring to the run. The author names
@@ -29,7 +28,7 @@ import Foundation
 // is refused rather than left for the run.
 struct TypeChecker {
     // What a call put in a generic declaration's type parameters, read once
-    // by the walk: a parameter read two ways is refused rather than folded,
+    // by the walk: a parameter read two ways is refused rather than joined,
     // a bounded one is judged against its bounds, and the slots come back
     // with the readings filled.
     private enum Instantiation {
@@ -255,11 +254,9 @@ struct TypeChecker {
         )
     }
 
-    // What a declaration answers when nobody wrote it down, read off its body.
-    // Not into the declaration: what the author wrote is what the image
-    // carries and what the boundary checks, and an answer worked out here is
-    // the build's own reading rather than anybody's promise. It reaches
-    // exactly as far as the readings do.
+    // What a declaration answers when nobody wrote it down, read off its body
+    // and kept beside the declaration, which the image carries as the author
+    // wrote it. It reaches exactly as far as the readings do.
     //
     // A body's answer may be another body's, so the order is the call graph's. Each
     // declaration read after everything its answer could come from. Bodies that
@@ -319,8 +316,7 @@ struct TypeChecker {
             // own parameter answers what the caller put there, and a body
             // answering a type only it could name (what a walk *through* a
             // parameter reaches, named for the path that reached it) fills with
-            // nothing, which is `Any`. One rule, and the useful half comes for
-            // free.
+            // nothing, which is `Any`.
             recording(only.symbol.declared, read ?? .any)
         }
     }
@@ -1148,9 +1144,8 @@ struct TypeChecker {
     // The gate a refusal passes: judging throws it, and the probing ask has
     // none to throw. A refusal the walk states passes here, so it cannot forget
     // which ask refuses, and what remains after it under reading is the
-    // degraded answer beside each call. The constant-folding throws stand apart
-    // on purpose: a folding scope rides only the judging ask, so those are
-    // judging's by construction.
+    // degraded answer beside each call. The constant-folding throws do not
+    // pass here: a folding scope rides only the judging ask.
     private func refuse(
         _ reason: @autoclosure () -> String,
         at place: Place,
@@ -1420,10 +1415,8 @@ struct TypeChecker {
 
             if !couldBe {
                 // Neither could ever be the other, and the reading proves what
-                // it is, so this cast cannot succeed on any run. `as` would
-                // refuse every time and `as?` would answer null every time,
-                // which is the silent permanent null `as?` exists to avoid
-                // being. What is decidable before a run is decided before it.
+                // it is, so `as` would fail and `as?` answer null on every
+                // run, and the build refuses it.
                 try refuse(
                     "reads \(read.rendered(in: context.loweredTypes)) as \(claim.rendered(in: context.loweredTypes)),"
                         + " and no value is both."
@@ -3026,10 +3019,10 @@ struct TypeChecker {
 
         // A declaration with a type parameter in it is checked with the
         // parameter filled, or a slot standing for whatever arrives would
-        // refuse whatever arrived. The judgement (a parameter read two ways has
-        // no answer, a bounded one takes only what answers its bounds) is
-        // the one every call surface shares, so this only gathers what the call
-        // wrote into each slot.
+        // refuse whatever arrived. `instantiated` judges the filling (a
+        // parameter read two ways has no answer, a bounded one takes only what
+        // answers its bounds), so this only gathers what the call wrote into
+        // each slot.
         let declaredSlots = context.slots(of: call.selector)
         let slots: [Slot]
 

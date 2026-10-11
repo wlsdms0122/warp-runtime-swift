@@ -336,8 +336,7 @@ public indirect enum Value: Sendable, Equatable {
     // reading that carries one makes a record; without one the names stay the
     // value's own data. Either way one name holds one field, and a name
     // written twice is refused. The name is a declared type's, so it holds a
-    // type's grammar: this is the one door a record comes through with a name
-    // from outside.
+    // type's grammar.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
