@@ -125,20 +125,20 @@ struct Judged: Sendable {
 
     // MARK: - Public
     // What the body stands on, judged against the frame it stands in and
-    // against the rows beside it. One walk answers all of them, so the walk is
-    // here rather than split between this row and the list that holds it, and
-    // what the list alone knows is handed in.
+    // against the frames of the closures beside it. One walk answers all of
+    // them, so the walk is here rather than split between this row and the
+    // list that holds it, and what the list alone knows is handed in.
     //
     // A frame is reached by position everywhere a run touches it, and so are
     // the boxes a document holds and the frames its closures stand in. A list
     // written short is an array read past its end rather than a row that
-    // answers wrongly.
+    // answers wrongly. What a call hands is counted where its number is
+    // answered with a row, which no reading of one object does.
     //
     // A native's sends are its document's to number, so they are judged here
     // against that numbering and every link reads them as numbered.
     func judge(
         standingIn frames: (Int) -> Frame?,
-        reaching given: (Int) -> Int?,
         holding variables: Int,
         numberedBy numbering: Numbering
     ) throws {
@@ -169,21 +169,6 @@ struct Judged: Sendable {
             throw ObjectRefused(
                 "a body stands on a variable past the \(variables) its document holds"
             )
-        }
-
-        // What a call hands over fills the slots the row it reaches declares,
-        // and a run writes them by position. Answered where the row is this
-        // document's own; a row another document holds is the link's answer
-        // and is asked there, as is a number this document never gave.
-        for call in standing.calls {
-            guard let taking = given(call.number) else { continue }
-
-            guard taking == call.arguments else {
-                throw ObjectRefused(
-                    "a call stands \(call.arguments) argument(s) where the"
-                        + " \(taking) its callee declares stand"
-                )
-            }
         }
 
         // What a closure takes with it fills the slots its own frame is

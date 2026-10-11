@@ -340,61 +340,6 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a call stands more arguments than its callee takes")
-    func aCallStandingTooMany() async throws {
-        // Given. A document whose body calls one of its own declarations, with
-        // one argument added to what the call stands.
-        let sut = try Module(
-            procedures: [
-                "App.entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
-                ),
-                "App.twice": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
-                    body: [],
-                    result: reference("n")
-                )
-            ]
-        )
-
-        var parts = try await parts(of: sut)
-
-        guard case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[6],
-            case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
-            case var .array(call) = operation[1],
-            case let .array(arguments) = call[1]
-        else {
-            Issue.record("an object writes a body whose result is a call")
-
-            return
-        }
-
-        call[1] = .array(arguments + [.array([])])
-        operation[1] = .array(call)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[6] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
-
-        // When / Then. The row the call reaches is this document's own, so the
-        // reading answers it and no link is needed.
-        #expect {
-            try Compiled(written: .dictionary(parts), of: nil)
-        } throws: { error in
-            error is ObjectRefused
-                && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
-        }
-    }
-
     @Test("is refused where a name is not in normal form")
     func aNameNotInNormalForm() async throws {
         // Given. A real object whose declared spelling is written in the

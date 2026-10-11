@@ -678,6 +678,73 @@ struct SeparateCompilationTests {
         }
     }
 
+    @Test("a call an object stands past what its callee takes is counted where its number is answered")
+    func aCallStandingTooManyIsCountedWhereItsRowIsKnown() async throws {
+        // Given. A document whose body calls another document's declaration,
+        // written down with one argument added to what the call stands.
+        let library = try Module(
+            procedures: [
+                "Lib.twice": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
+                    body: [],
+                    result: reference("n")
+                )
+            ]
+        )
+        let caller = try Module(
+            procedures: [
+                "App.relay": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [],
+                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(2))]))
+                )
+            ]
+        )
+        let compiled = try await Builder { value in Fingerprint(Array("\(value)".utf8)) }.compile([library, caller])
+
+        guard
+            case var .dictionary(parts) = try compiled[1].object(),
+            case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[6],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case var .array(call) = operation[1],
+            case let .array(arguments) = call[1]
+        else {
+            Issue.record("an object writes a body whose result is a call")
+
+            return
+        }
+
+        call[1] = .array(arguments + [.array([])])
+        operation[1] = .array(call)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
+
+        let read = [compiled[0], try Compiled(written: .dictionary(parts), of: compiled[1].identity)]
+
+        // When / Then. The row the call reaches is another document's, so the
+        // reading takes it, and a compile laying it down refuses it before a
+        // fold could run it, as a link does.
+        #expect {
+            try builder.lay(read, supplying: .none)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
+        }
+
+        #expect {
+            try builder.link(read, supplying: .none)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
+        }
+    }
+
     @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
         // Given. A document declaring a procedure that writes no `returns`, and

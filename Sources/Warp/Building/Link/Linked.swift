@@ -323,6 +323,19 @@ public final class Linked: Sendable {
         }
     }
 
+    // How many arguments a call a body stands hands, against the slots this
+    // row keeps, which a run fills by position. Asked where the call's number
+    // is first answered with this row: by a compile laying documents already
+    // compiled down, and by a link.
+    func refuseCall(standing arguments: Int, at place: Place) throws {
+        guard arguments == slots.count else {
+            throw BuildError(
+                "a call stands \(arguments) argument(s) where the \(slots.count) its callee declares stand",
+                at: place
+            )
+        }
+    }
+
     // MARK: - Private
     // A value from outside is no variable, so a row taking one in place takes
     // nothing through a door.

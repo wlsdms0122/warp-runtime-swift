@@ -289,7 +289,6 @@ public struct Compiled: Sendable, Declaring {
         for row in table {
             try row.judge(
                 standingIn: frame(ofClosure:),
-                reaching: reaches(_:),
                 holding: variables.count,
                 numberedBy: numbering
             )
@@ -359,20 +358,6 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
-    // What the row a number a body carries stands for takes, where that row
-    // is this document's own. Which row that is, is the numbering's answer; a
-    // row another document holds, or a number this document never gave, is
-    // the link's.
-    private func reaches(_ number: Int) -> Int? {
-        if let written = numbering.lifted(number) {
-            return table[lifted.lowerBound + written].signature.names.count
-        }
-
-        guard let row = numbering.declaring(number) else { return nil }
-
-        return table[row].signature.names.count
-    }
-
     // The frame of the row a body's closure number stands, or nothing where
     // this document numbers no closure there.
     private func frame(ofClosure number: Int) -> Frame? {
