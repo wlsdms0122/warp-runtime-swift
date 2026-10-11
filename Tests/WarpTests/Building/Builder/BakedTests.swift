@@ -403,7 +403,7 @@ struct BakedTests {
         #expect {
             try Supplying([try counting(isolated: true), try counting(isolated: false)])
         } throws: { error in
-            "\(error)".contains("'App.counted' is brought by two of the modules handed over")
+            "\(error)".contains("'App.counted' is declared by the module at 0 in this link and by the module at 1 in this link")
         }
     }
 
