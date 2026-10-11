@@ -673,14 +673,10 @@ struct ObjectReader {
 
     private func layout(_ value: Value) throws -> Layout {
         var cursor = try FieldCursor(value, of: "layout")
-        let named = try cursor.field().maybe(name)
+        let named = try name(cursor.next())
         let written = try cursor.field().list(name)
 
         try cursor.end()
-
-        guard let named else {
-            throw ObjectRefused("'layout' writes no name, and a record is a declared record's")
-        }
 
         // Through the door that judges rather than the one that orders. What
         // stands beside a layout here is a list of values read on its own, and
@@ -759,10 +755,8 @@ struct ObjectReader {
     // parts is.
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")
-        let layout = try self.layout(cursor.next())
         let read = try LoweredRecord(
-            name: layout.name,
-            names: layout.fields,
+            layout: try layout(cursor.next()),
             judging: try cursor.field().list(lowered)
         )
 
