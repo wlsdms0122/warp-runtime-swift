@@ -7,10 +7,10 @@
 
 import Foundation
 
-// Where a native procedure's declared sends stand in its document's numbering,
-// and how many arguments each one hands over. A procedure names the spellings it
-// sends and how many it hands at each, and this answers with numbers, so the run
-// reads numbers where the procedure wrote spellings.
+// Where a native procedure's declared sends stand in its document's numbering.
+// A procedure names the spellings it sends and how many it hands at each, and
+// this answers with numbers, so the run reads numbers where the procedure
+// wrote spellings, and holds each count to the parameters the send reaches.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing standing declares is refused here, the way a call
@@ -111,7 +111,7 @@ struct Sending {
                     )
                 }
 
-                return try handing(of: send, reaching: signature, called: label, at: place)
+                try handing(of: send, reaching: signature, called: label, at: place)
             }
         } catch let .unnumbered(selector) as SendNumberingError {
             throw BuildError("'\(label)' sends '\(selector)', and its document never asked for it", at: place)
@@ -126,7 +126,7 @@ struct Sending {
         reaching signature: Signature,
         called label: Name,
         at place: Place
-    ) throws -> Int {
+    ) throws {
         guard send.handing == signature.parameters.count else {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(send.handing) arguments, and it takes"
@@ -144,7 +144,5 @@ struct Sending {
                 at: place
             )
         }
-
-        return send.handing
     }
 }

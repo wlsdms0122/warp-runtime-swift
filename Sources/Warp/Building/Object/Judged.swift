@@ -238,7 +238,7 @@ struct Judged: Sendable {
     // Where a native's sends stand in its document's numbering.
     private func sent(_ sending: [Native.Send], numberedBy numbering: Numbering) throws -> [Sent] {
         do {
-            return try numbering.sent(sending) { send in send.handing }
+            return try numbering.sent(sending)
         } catch let .misplaced(positions) as SendNumberingError {
             throw ObjectRefused(
                 "'\(label)' sends procedures standing at \(positions), which is"

@@ -253,11 +253,15 @@ struct Numbering: Sendable {
     }
 
     // A native's declared sends as the numbers this document gives them, in
-    // the places the native names them at, each handing over what `handing`
-    // says. A run reaches a send by its place, so the places are one send to a
-    // place from the first, and every spelling is one this document numbers;
-    // a native whose sends say otherwise is answered with `SendNumberingError`.
-    func sent(_ sending: [Native.Send], handing: (Native.Send) throws -> Int) throws -> [Sent] {
+    // the places the native names them at, each numbered send asked of
+    // `holding` first. A run reaches a send by its place, so the places are
+    // one send to a place from the first, and every spelling is one this
+    // document numbers; a native whose sends say otherwise is answered with
+    // `SendNumberingError`.
+    func sent(
+        _ sending: [Native.Send],
+        holding: (Native.Send) throws -> Void = { _ in }
+    ) throws -> [Sent] {
         let ordered = sending.sorted { left, right in left.position < right.position }
 
         guard ordered.map(\.position) == Array(ordered.indices) else {
@@ -267,7 +271,9 @@ struct Numbering: Sendable {
         return try ordered.map { send in
             guard let number = call(send.selector) else { throw SendNumberingError.unnumbered(send.selector) }
 
-            return Sent(row: number, handing: try handing(send))
+            try holding(send)
+
+            return Sent(row: number)
         }
     }
 
