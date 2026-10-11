@@ -273,12 +273,12 @@ struct AnsweringTests {
         #expect(image[entryName]!.signature.returns == nil)
     }
 
-    @Test("what no body settles reads Any, which a typed slot takes only through a cast")
-    func anAnswerNothingSettlesReadsAny() async throws {
+    @Test("what no body decides reads Any, which a typed slot takes only through a cast")
+    func anAnswerNothingDecidesReadsAny() async throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
         // from its own is not one the text states, so nothing is known about
-        // it: inference answers where the text settles and `Any` everywhere
+        // it: inference answers where the text decides and `Any` everywhere
         // else, and a slot of a type takes `Any` only through a cast.
         let sut = try Module(
             procedures: [
@@ -317,9 +317,9 @@ struct AnsweringTests {
         }
     }
 
-    @Test("a body that settles an answer is held to it, declared or not")
+    @Test("a body that decides an answer is held to it, declared or not")
     func anAnswerReadOffABodyIsJudged() async throws {
-        // Given. The same type, with a body whose answer the text does settle:
+        // Given. The same type, with a body whose answer the text does decide:
         // a body with no result hands back null, and null is not a whole
         // number. What the declaration says stays what it says; what the build
         // reads a call as is what the body hands back.

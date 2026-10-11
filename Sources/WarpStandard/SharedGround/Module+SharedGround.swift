@@ -136,7 +136,12 @@ public extension Module {
     // What `Standard.Comparable` asks, answered for one type that orders.
     private static func ordering(of name: Name, as type: TypeExpression) -> Witness {
         Witness(name, answering: ContractSpelling.comparable, "lessThan") { spelling in
-            .witness(LessThanQuery(answering: spelling), taking: type, returns: .bool, description: "Whether one orders before the other.")
+            .witness(
+                LessThanQuery(answering: spelling),
+                taking: type,
+                returns: .bool,
+                description: "Whether one orders before the other."
+            )
         }
     }
 

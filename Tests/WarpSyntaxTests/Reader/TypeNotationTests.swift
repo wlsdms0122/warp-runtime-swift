@@ -90,7 +90,7 @@ struct TypeNotationTests {
                 "procedures": ["entry": ["parameters": [["name": "x", "type": "App.A & Int"]]]]
             ])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("'Int' is no type's name")
+            error is ValidationError && "\(error)".contains("'Int' is no name a module gives a type or a contract")
         }
 
         // And. A document writes the set one way, in name order, and a name

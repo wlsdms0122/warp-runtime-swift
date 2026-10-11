@@ -212,7 +212,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
+            "\(error)".hasPrefix("procedures.entry.result: the module at 0")
                 && "\(error)".contains("declares 'Bank.Account.describe', which is named for")
                 && "\(error)".contains("answers Int where the contract writes String")
         }

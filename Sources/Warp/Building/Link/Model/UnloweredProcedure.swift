@@ -1,5 +1,5 @@
 //
-//  UnsettledProcedure.swift
+//  UnloweredProcedure.swift
 //  Warp
 //
 //  Created by JSilver on 8/23/26.
@@ -13,7 +13,7 @@ import Foundation
 // be a cycle with no start. The fact lives in the table (the procedure is there,
 // judged and named, and answers with the refusal) rather than in a flag every
 // resolver would have to carry.
-struct UnsettledProcedure: Query {
+struct UnloweredProcedure: Query {
     typealias Parameters = NoParameters
 
     // MARK: - Property

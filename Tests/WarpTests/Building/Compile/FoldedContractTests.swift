@@ -130,7 +130,7 @@ struct FoldedContractTests {
         }
     }
 
-    @Test("a value wearing a name is written down where the table cannot settle")
+    @Test("a value wearing a name is written down where the table cannot decide")
     func aNamedValueIsWrittenDown() async throws {
         // Given. A procedure answering `Any` hands a named record, cast to a
         // contract, where the contract is asked, and the reading says nothing
@@ -155,7 +155,7 @@ struct FoldedContractTests {
 
         // Then. The pair the fold handed over is answered by the list, which
         // is the same answer the whole graph gives, and both say which
-        // declaration was being settled when the fold turned it up.
+        // declaration was being worked out when the fold turned it up.
         for link in [compiled, try await Builder().compile(modules)] {
             #expect {
                 try Builder().link(link, supplying: Supplying(Module.standard))

@@ -24,11 +24,6 @@ struct Derivation {
 
         // MARK: - Initializer
         // MARK: - Public
-        // Whether a slot of this type says the fact of the procedure it holds.
-        func isClaimed(by type: LoweredType) -> Bool {
-            claim(type)
-        }
-
         // MARK: - Private
     }
 
@@ -36,8 +31,8 @@ struct Derivation {
     // MARK: - Initializer
     // MARK: - Public
     // Which of these answer without running. A native says so about itself; a
-    // body cannot, so it is read off what it calls. What is settled grows in
-    // place: a document is settled against everything standing in front of
+    // body cannot, so it is read off what it calls. What is derived grows in
+    // place: a document is derived against everything standing in front of
     // it, and this call only ever adds its own.
     //
     // `beyond` answers for a selector this document does not declare: the
@@ -45,7 +40,7 @@ struct Derivation {
     // module's variables by the type each declared, which every body reads.
     func const(
         among symbols: [Symbol],
-        settling const: inout Set<Name>,
+        deriving const: inout Set<Name>,
         reading variables: Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
@@ -56,7 +51,7 @@ struct Derivation {
         // place is the caller's box, not the body's own.
         strike(
             among: symbols,
-            settling: &const,
+            deriving: &const,
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
             fact: { given in
@@ -74,7 +69,7 @@ struct Derivation {
     // and calls.
     func isolated(
         among symbols: [Symbol],
-        settling isolated: inout Set<Name>,
+        deriving isolated: inout Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
@@ -82,7 +77,7 @@ struct Derivation {
     ) {
         strike(
             among: symbols,
-            settling: &isolated,
+            deriving: &isolated,
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
             fact: { given in
@@ -102,11 +97,11 @@ struct Derivation {
     // Grown rather than struck out, the opposite of constness and isolation: a
     // body starts failing nothing and gains what it reaches, and a declaration
     // that says nothing about itself makes everything reaching it say nothing
-    // too. Two procedures calling each other settle where nothing more is
+    // too. Two procedures calling each other stop where nothing more is
     // added, which the finite set of declared names guarantees.
     func failing(
         among symbols: [Symbol],
-        settling failing: inout [Name: Failing],
+        deriving failing: inout [Name: Failing],
         beyond: @escaping (Name) -> Failing?
     ) {
         let own = Set(symbols.map(\.declared))
@@ -123,8 +118,10 @@ struct Derivation {
             var grown = false
 
             for (name, block) in bodies {
-                let settled = failing
-                let read = self.failing(block, given: { selector in own.contains(selector) ? settled[selector] : beyond(selector) })
+                let before = failing
+                let read = self.failing(block) { selector in
+                    own.contains(selector) ? before[selector] : beyond(selector)
+                }
 
                 guard read != failing[name] else { continue }
 
@@ -205,7 +202,7 @@ struct Derivation {
         case let .cast(_, _, optional):
             return optional ? .these([]) : .these([CastRefused.type])
 
-        // Which value is called is settled at run time, so what may come out
+        // Which value is called is decided at run time, so what may come out
         // of it is not knowable here.
         case .apply:
             return .unstated
@@ -291,11 +288,11 @@ struct Derivation {
     // MARK: - Private
     // Every body starts holding the fact and is struck when something it
     // reaches does not, until nothing more is struck. Only what this call was
-    // handed can be struck: what was settled before it stands in front of it
+    // handed can be struck: what was derived before it stands in front of it
     // and reaches nothing here.
     private func strike(
         among symbols: [Symbol],
-        settling holding: inout Set<Name>,
+        deriving holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
         fact: (@escaping (Name) -> Bool) -> Fact,
@@ -331,8 +328,8 @@ struct Derivation {
         )
 
         while true {
-            let settled = holding
-            let walked = fact { name in own.contains(name) ? settled.contains(name) : beyond(name) }
+            let before = holding
+            let walked = fact { name in own.contains(name) ? before.contains(name) : beyond(name) }
             let struck = bodies.compactMap { name, written in
                 holding.contains(name)
                     && !holds(
@@ -459,7 +456,7 @@ struct Derivation {
             guard
                 holds(callee),
                 let reached = reached(callee, given: { name in declared[name] }, in: fact.table),
-                fact.isClaimed(by: reached)
+                fact.claim(reached)
             else { return false }
 
             return handsOwned(arguments, at: reached.inPlacePositions, declaring: names)

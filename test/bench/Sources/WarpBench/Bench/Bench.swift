@@ -535,8 +535,8 @@ struct Bench {
     //
     // The procedures, the bodies and the names are the same in every row, and none
     // of them calls another, so nothing here grows with the count except what
-    // having more documents costs. `compile` is the documents settled together
-    // and `alone` the same documents settled one at a time, which is what a
+    // having more documents costs. `compile` is the documents compiled together
+    // and `alone` the same documents compiled one at a time, which is what a
     // build that handed each to its own core would have to do: the gap between
     // them is what a compile stops sharing once they are split. `link` lays
     // them down together and no spreading takes it away. The table's note

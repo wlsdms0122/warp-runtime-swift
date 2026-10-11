@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A declaration, or a closure literal, as its own document settles it. What
+// A declaration, or a closure literal, as its own document compiles it. What
 // compiling answers and what a link is handed.
 //
 // What a row's slots and answer lower to is this signature read against a
@@ -19,7 +19,7 @@ import Foundation
 // block landed, so a document reused in another link carries nothing it would
 // have to be corrected about.
 struct Judged: Sendable {
-    // How a declaration answers, as its own document settled it. A written
+    // How a declaration answers, as its own document compiled it. A written
     // body is lowered code with its frame layout; a native is this row's
     // spelling and the claims standing beside it, and the code a run calls
     // comes from the host.
@@ -93,7 +93,7 @@ struct Judged: Sendable {
         )
     }
 
-    // What of a row its document settled. What is left behind is a reading of
+    // What of a row its document worked out. What is left behind is a reading of
     // this against a table, which any table gives again. The link stood the
     // frame up beside the body it lowered, so what a reading of an object has
     // to judge, a build already holds, and a debug build says so.
@@ -188,7 +188,7 @@ struct Judged: Sendable {
     // its own table, which is what makes the two readings one.
     //
     // A native row is joined to the code the host brought under its spelling,
-    // which is the one thing a document settled that the document does not
+    // which is the one fact of a row a document worked out that it does not
     // hold, and its sends are numbered by the document's numbering.
     func linked(
         in table: LoweredTypeTable,
@@ -307,7 +307,7 @@ struct Judged: Sendable {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
-                // query is what a compile settled as const, and a stand-in on
+                // query is what a compile derived as const, and a stand-in on
                 // the other door would be read the wrong way by a run.
                 let standIn: Native = constness == .const
                     ? .query(UnbroughtQuery(label))

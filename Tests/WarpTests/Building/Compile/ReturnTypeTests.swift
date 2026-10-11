@@ -18,8 +18,8 @@ struct ReturnTypeTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a declared answer is settled before the caller sees it")
-    func answerIsSettled() async throws {
+    @Test("a declared answer is held to its declaration before the caller sees it")
+    func answerIsHeldToItsDeclaration() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -40,7 +40,7 @@ struct ReturnTypeTests {
         let image = try await builder.build([sut])
         let answer = try await Executor().run(image)
 
-        // Then. Settled to the declared representation, not merely waved past
+        // Then. Held to the declared representation, not merely waved past
         #expect(answer == .int(3))
     }
 

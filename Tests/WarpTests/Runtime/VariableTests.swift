@@ -33,7 +33,7 @@ struct VariableTests {
 
     @Test("an assignment sees the value it is replacing")
     func assignmentReadsItsOwnPriorValue() async throws {
-        // Given. The expression is settled before the write lands, which is
+        // Given. The expression is evaluated before the write lands, which is
         // what makes an accumulator work at all
         let sut: Body = [
             Statement(binding: .variable("text"), expression: .literal(.string("a"))),

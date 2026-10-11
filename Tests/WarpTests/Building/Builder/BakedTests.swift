@@ -263,8 +263,8 @@ struct BakedTests {
         // it. The two arriving documents are the vocabulary's count and one
         // past it.
         let baked = try await builder.compile(Module.standard)
-        let first = "the module at \(baked.count) in this link"
-        let second = "the module at \(baked.count + 1) in this link"
+        let first = "the module at \(baked.count)"
+        let second = "the module at \(baked.count + 1)"
 
         // When / Then. Two arriving documents colliding with each other.
         await #expect {
@@ -291,7 +291,7 @@ struct BakedTests {
         // Given. A document with an identity, so two copies of it are one
         // document, compiled once.
         let arriving = try Module(
-            try Module(procedures: [:]).draft,
+            try Module().draft,
             identity: Identity([0x01, 0x02, 0x03])
         )
         let baked = try await builder.compile(Module.standard)
@@ -310,7 +310,7 @@ struct BakedTests {
     func aCompiledDocumentIsNotLinkedTwice() async throws {
         // Given. A document with an identity, compiled once.
         let arriving = try Module(
-            try Module(procedures: [:]).draft,
+            try Module().draft,
             identity: Identity([0x01, 0x02, 0x03])
         )
         let baked = try await builder.compile(Module.standard)
@@ -403,7 +403,7 @@ struct BakedTests {
         #expect {
             try Supplying([try counting(isolated: true), try counting(isolated: false)])
         } throws: { error in
-            "\(error)".contains("'App.counted' is declared by the module at 0 in this link and by the module at 1 in this link")
+            "\(error)".contains("'App.counted' is declared by the module at 0 and by the module at 1")
         }
     }
 

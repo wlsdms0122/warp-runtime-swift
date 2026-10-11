@@ -1365,7 +1365,7 @@ struct InferenceTests {
     func anUndeclaredFieldIsRefused() async throws {
         // Given. The type proved the absence, so no spelling reads past it:
         // `?.` speaks about what may be absent at run, not about what the
-        // declaration already settled
+        // declaration already decided
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1389,7 +1389,7 @@ struct InferenceTests {
             error is BuildError && "\(error)".contains("does not declare")
         }
 
-        // The optional spelling changes nothing a declaration settled.
+        // The optional spelling changes nothing a declaration decided.
         let optional = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1577,10 +1577,10 @@ struct InferenceTests {
         }
     }
 
-    @Test("a chain of writes settles link by link, however long")
-    func aChainOfWritesSettles() async throws {
+    @Test("a chain of writes converges link by link, however long")
+    func aChainOfWritesConverges() async throws {
         // Given. Each round moves the null one link up the chain, so the head
-        // only reads nullable after as many settles as the chain is long.
+        // only reads nullable after as many looks as the chain is long.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain = Body(zip(names, names.dropFirst()).map { name, next in
             Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))

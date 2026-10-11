@@ -34,7 +34,7 @@ struct Lowering {
         var closureRows: [Int]
 
         // Which row each name it numbers stands for, once resolved. The names
-        // and the closures settle at different times: a name's row is the
+        // and the closures get their rows at different times: a name's row is the
         // link's before anything is lowered, and a closure's row is made by
         // lowering.
         var named: [Int?]?
@@ -77,7 +77,7 @@ struct Lowering {
 
         // The document's constants, settled, for the slots of a declaration's
         // own body. A body names one only where the fold could not settle the
-        // read, an index the run settles, and then the constant takes a slot
+        // read, an index the run reads, and then the constant takes a slot
         // the body binds before its first statement.
         let constants: [Name: (value: Value, type: LoweredType)]
         let outer: (slots: SlotAllocator, names: SlotScope)?
@@ -100,7 +100,13 @@ struct Lowering {
         var size: Int { names.count }
 
         var frame: Frame {
-            Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
+            Frame(
+                size: size,
+                parameters: parameters,
+                variables: reads,
+                captures: captures.map { _, inner in inner },
+                names: names
+            )
         }
 
         // MARK: - Initializer

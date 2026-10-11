@@ -11,7 +11,7 @@ import Foundation
 // what else the call was written with, and one lowered call for every type
 // that answers the procedure.
 //
-// A call names the row the link settled; this names a contract's procedure,
+// A call names the row the link picked; this names a contract's procedure,
 // and which types answer it is a fact of the link: a type declared in a
 // document this one never names can answer a contract this one calls through.
 // So `calls` is empty in what compiling a document answers, and the link

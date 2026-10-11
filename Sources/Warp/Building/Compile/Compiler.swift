@@ -63,7 +63,7 @@ struct Compiler {
 
         // The constants with what each reads as: what seeds the environment a
         // body is judged in, and what a body binds where it reads one at an
-        // index the run settles.
+        // index the run reads.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -169,7 +169,7 @@ struct Compiler {
         }
 
         // The facts nobody declared. All three are fixed points over what a
-        // body reaches, so a document's answer is settled once the documents
+        // body reaches, so a document's answer is decided once the documents
         // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //
@@ -202,7 +202,7 @@ struct Compiler {
 
         Derivation().const(
             among: holding,
-            settling: &const,
+            deriving: &const,
             reading: reading,
             beside: declaredVariables,
             taking: taking,
@@ -211,13 +211,13 @@ struct Compiler {
         )
         Derivation().isolated(
             among: holding,
-            settling: &isolated,
+            deriving: &isolated,
             beside: declaredVariables,
             taking: taking,
             beyond: touchesNothingShared,
             in: loweredTypes
         )
-        Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
+        Derivation().failing(among: holding, deriving: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in
@@ -422,8 +422,7 @@ struct Compiler {
 
                 known[name] = (
                     value,
-                    LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: true)
+                    LoweredType(of: value, in: context.loweredTypes).refined(by: written.folded)
                 )
             }
         }
@@ -436,8 +435,7 @@ struct Compiler {
     // and no variable; the starting value is a fact the link reads. A variable
     // that declares what it holds has its start held to that at the build,
     // the way an argument is held to its slot, and holds that type; one that
-    // declares nothing holds the type of the settled value, read the way a
-    // constant's is.
+    // declares nothing holds the type its start reads as.
     private func variables(
         of module: Module,
         at origin: Int,
@@ -480,13 +478,10 @@ struct Compiler {
                 )
 
                 guard let declared = variable.declared, let holding = declaredType else {
-                    let holding = LoweredType(of: settled, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: false)
+                    let holding = written.folded.boxed
 
-                    // A variable that declares nothing holds the type its
-                    // start reads as, and an empty list or map holds no
-                    // element, so a start of one says nothing of what the box
-                    // will hold.
+                    // An empty list or map holds no element, so a start of
+                    // one says nothing of what the box will hold.
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"

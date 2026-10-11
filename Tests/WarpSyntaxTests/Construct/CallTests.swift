@@ -21,8 +21,8 @@ struct CallTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("the callee signature settles inputs at the call boundary, a null handed reading null")
-    func calleeSignatureSettlesInputs() async throws {
+    @Test("the callee signature holds inputs at the call, a null handed reading null")
+    func calleeSignatureHoldsInputs() async throws {
         // Given
         let sut = try loader.loadDocument([
             "procedures": [

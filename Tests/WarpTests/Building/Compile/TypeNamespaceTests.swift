@@ -79,8 +79,8 @@ struct TypeNamespaceTests {
     @Test("a name declared as a type and as a contract is refused the same way in either order")
     func aTypeAndAContractAreRefusedInEitherOrder() async throws {
         // Given
-        let typing = try Module(types: ["T.T": .int], procedures: [:], identity: Identity([0x01]))
-        let contracting = try Module(contracts: ["T.T": [Name: Signature]()], procedures: [:], identity: Identity([0x02]))
+        let typing = try Module(types: ["T.T": .int], identity: Identity([0x01]))
+        let contracting = try Module(contracts: ["T.T": [Name: Signature]()], identity: Identity([0x02]))
 
         for given in [[typing, contracting], [contracting, typing]] {
             // When

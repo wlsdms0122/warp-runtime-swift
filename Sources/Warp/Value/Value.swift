@@ -92,10 +92,6 @@ public indirect enum Value: Sendable, Equatable {
             self.entries = entries
         }
 
-        private init(keeping entries: [(name: Name, value: Value)]) {
-            self.entries = entries
-        }
-
         // MARK: - Public
         public subscript(name: Name) -> Value? {
             let (position, found) = place(of: name)
@@ -115,7 +111,7 @@ public indirect enum Value: Sendable, Equatable {
                 written.insert((name: name, value: value), at: position)
             }
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
         // This dictionary without the entry of this name, or as it is where none
@@ -128,14 +124,14 @@ public indirect enum Value: Sendable, Equatable {
             var written = entries
             written.remove(at: position)
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
         // This dictionary with every value put through `transform`, under the
         // same names in the same order.
         public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Dictionary {
             Dictionary(
-                keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+                ordered: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
             )
         }
 
@@ -267,7 +263,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The type this value is an instance of, under the name a claim writes:
-    // a record under the declared name it settled to, and every other kind
+    // a record under the declared name it carries, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
     // spelling and a record with no name holds its names as data, so they
     // are `Array` and `Dictionary`.
@@ -336,8 +332,7 @@ public indirect enum Value: Sendable, Equatable {
     // reading that carries one makes a record; without one the names stay the
     // value's own data. Either way one name holds one field, and a name
     // written twice is refused. The name is a declared type's, so it holds a
-    // type's grammar: this is the one door a record comes through with a name
-    // from outside.
+    // type's grammar.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
@@ -357,8 +352,8 @@ public indirect enum Value: Sendable, Equatable {
 
     // This value with one field written. A field a record's layout names is
     // written where it stands. Any other name is not the declaration's, so a
-    // value that settled to one is refused rather than quietly made something
-    // else, and a value that settled to none holds the new name as data, the
+    // record under a name is refused rather than quietly made something
+    // else, and one under no name holds the new name as data, the
     // way the dictionary it equals does.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
@@ -831,8 +826,8 @@ public indirect enum Value: Sendable, Equatable {
         return taken
     }
 
-    // Whether a record and a dictionary hold the same fields. A record that
-    // settled to a name is that name's, and no dictionary is.
+    // Whether a record and a dictionary hold the same fields. A record under
+    // a name is that name's, and no dictionary is.
     private static func same(
         _ record: Record,
         _ dictionary: Value.Dictionary,

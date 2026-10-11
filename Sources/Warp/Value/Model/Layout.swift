@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Where a record's fields are: the name it settled to, where it has one, and
+// Where a record's fields are: the name it carries, where it has one, and
 // the field names in the order the values stand. The order is the language's,
 // not a maker's (ascending by the names' bytes) so a layout built by a link, a
 // reader or a host is the same layout for the same fields.
@@ -31,7 +31,7 @@ public struct Layout: Sendable, Hashable {
     // MARK: - Initializer
     // Fields in any order, none of which repeats, under no name: a name says
     // a declaration, and a declaration is the link's. `Value.holding(_:named:)`
-    // carries one a document wrote, and `Image.settling(_:as:)` one the link
+    // carries one an encoding read, and `Image.settling(_:as:)` one the link
     // declared.
     public init(fields: [Name]) throws {
         let sorted = fields.sorted()

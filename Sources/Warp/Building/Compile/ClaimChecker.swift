@@ -339,11 +339,10 @@ struct ClaimChecker {
     // back what that declaration answers. So each of the declaration's
     // positions stands where the contract's hands, the type first, and the
     // contract's answer takes what the declaration answers. The contract's
-    // type parameters are its own and no call fills them here, so each is
-    // judged rigidly, and a contract its signature names is held to what the
-    // documents say answers it; the declaration's own are filled by what the
-    // contract writes at the same positions. The names are each
-    // declaration's own.
+    // type parameters are its own and no call fills them here, so each
+    // stands as one type the declaration does not know; the declaration's
+    // own are filled by what the contract writes at the same positions. The
+    // names are each declaration's own.
     //
     // A declaration that wrote no `returns` answers what the build read off
     // its body, which is `read`. A declaration being compiled now has no
@@ -374,14 +373,13 @@ struct ClaimChecker {
         let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
         // What fills the declaration's own parameters is held to their bounds
-        // the way a call's readings are, rigidly, since what the contract
-        // writes there is filled by no call: what each was read as, and each
+        // the way a call's readings are: what each was read as, and each
         // reading of it that its join is not.
         for (parameter, names) in given.bounds.sorted(by: { $0.key < $1.key }) {
             let bounds = names.sorted()
 
             for reading in substitution.everyReading(of: parameter)
-                where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+                where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes) {
                 // An element of a list or a map the claim is about is whatever
                 // it holds, which no spelling of a document names.
                 let read = reading == .parameter(label: TypeSpelling.selfElement, bounds: [])
@@ -395,7 +393,7 @@ struct ClaimChecker {
         }
 
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
-            where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
+            where !taken.filling(substitution.readings).takes(handed, in: loweredTypes) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                         + " asks, and takes \(taken.rendered(in: loweredTypes)) first, where a call"
@@ -407,7 +405,10 @@ struct ClaimChecker {
                     + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
 
-        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds) else {
+        guard
+            let answer = asked.returns,
+            let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds)
+        else {
             return nil
         }
 
@@ -417,7 +418,7 @@ struct ClaimChecker {
         let answered = (declared ?? read ?? .any)
             .filling(substitution.readings)
 
-        guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
+        guard promised.accepts(answered, in: loweredTypes) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
                     + " asks, and answers \((declared ?? answered).rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"

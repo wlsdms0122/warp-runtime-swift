@@ -83,7 +83,7 @@ struct ReadingErrorTests {
     func aNumericNameIsAKey() throws {
         // Given. A coding key made for a dictionary carries the number its
         // spelling parses to, and `procedures[12]` is an address no document
-        // has: what the document holds where the walk is settles which it is
+        // has: what the document holds where the walk is decides which it is
         let fixture: Value = [
             "warp": 1,
             "imports": [],

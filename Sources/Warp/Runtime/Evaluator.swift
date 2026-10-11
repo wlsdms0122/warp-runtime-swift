@@ -85,7 +85,7 @@ struct Evaluator: Sendable {
     // door. What the entry answers the build held to the `returns` it
     // declares, so it reaches the host as it is.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
+        try await answer(entry, arguments: ArgumentList(values: try entry.settle(arguments)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
@@ -125,7 +125,7 @@ struct Evaluator: Sendable {
 
         return try await answer(
             callee,
-            settled: Settled(values: try callee.settle(outside: values)),
+            arguments: ArgumentList(values: try callee.settle(outside: values)),
             at: trace.appending(callee.hop)
         )
     }
@@ -408,23 +408,23 @@ struct Evaluator: Sendable {
                 values[handed.position] = try activation.value(at: handed.address)
             }
 
-            return try await answer(callee, with: Settled(values: values), at: trace)
+            return try await answer(callee, with: ArgumentList(values: values), at: trace)
 
         case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
+            let arguments = ArgumentList(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
-            return try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
+            return try await run(effect, of: callee, arguments: arguments, holds: holds, trace: trace)
 
         case let .body(body, frame):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
+            let arguments = ArgumentList(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
             return try await answer(
                 callee,
                 running: body,
                 in: frame,
-                settled: settled,
+                arguments: arguments,
                 holding: holds,
                 at: trace.appending(callee.hop)
             )
@@ -526,29 +526,29 @@ struct Evaluator: Sendable {
         return try await answer(body, in: &activation, at: trace.appending(linked.hop))
     }
 
-    // A row answered with its arguments settled and nothing handed in place:
+    // A row answered with its arguments and nothing handed in place:
     // what a send reaches and what a run starts from. An effect runs here,
     // and every other row answers the way it does as data.
     private func answer(
         _ callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         guard case let .native(.effect(effect), _) = callee.implementation else {
-            return try await answer(callee, with: settled, at: trace)
+            return try await answer(callee, with: arguments, at: trace)
         }
 
-        return try await run(effect, of: callee, settled: settled, holds: [], trace: trace)
+        return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
     }
 
-    // The one way a written procedure is called: its frame, the settled
-    // arguments in their slots, whatever the call handed in place held as a
+    // The one way a written procedure is called: its frame, the arguments
+    // in their slots, whatever the call handed in place held as a
     // box, and the body answered in that frame.
     private func answer(
         _ callee: Linked,
         running body: LoweredBody,
         in frame: Frame,
-        settled arguments: Settled,
+        arguments: ArgumentList,
         holding holds: [(position: Int, handle: Handle)],
         at trace: Trace
     ) async throws -> Value {
@@ -775,24 +775,24 @@ struct Evaluator: Sendable {
         return given
     }
 
-    // What a row answers from its settled arguments, with nothing handed in
+    // What a row answers from its arguments, with nothing handed in
     // place. A query answers through its own door and a body runs on a frame
     // of its own. An effect answers only by running, so it is not read here.
     private func answer(
         _ callee: Linked,
-        with arguments: Settled,
+        with arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         switch callee.implementation {
         case let .native(.query(query), _):
-            return try await evaluate(query, of: callee, settled: arguments, at: trace)
+            return try await evaluate(query, of: callee, arguments: arguments, at: trace)
 
         case let .body(body, frame):
             return try await answer(
                 callee,
                 running: body,
                 in: frame,
-                settled: arguments,
+                arguments: arguments,
                 holding: [],
                 at: trace
             )
@@ -819,13 +819,13 @@ struct Evaluator: Sendable {
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         try callee.settling(
             answered: try await query.evaluate(
                 Question(
-                    settled: settled,
+                    arguments: arguments,
                     of: callee,
                     evaluator: self,
                     at: trace
@@ -837,7 +837,7 @@ struct Evaluator: Sendable {
     private func run<W: Effect>(
         _ effect: W,
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         holds: [(position: Int, handle: Handle)],
         trace: Trace
     ) async throws -> Value {
@@ -845,7 +845,7 @@ struct Evaluator: Sendable {
             answered: try await effect.run(
                 Invocation(
                     of: callee,
-                    settled: settled,
+                    arguments: arguments,
                     holds: holds,
                     trace: trace,
                     evaluator: self

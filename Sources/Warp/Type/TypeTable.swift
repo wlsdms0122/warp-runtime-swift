@@ -8,7 +8,8 @@
 import Foundation
 
 // The type table: every type the modules in a link declared, and what each
-// name stands for. A named type is kept rather than expanded, so a type that
+// name stands for. `types` keeps each declaration as written; `loweredTypes`
+// expands every alias and keeps a declared record a row, so a record that
 // names itself is a row and not a regress.
 public struct TypeTable: Sendable {
     // MARK: - Property
@@ -47,7 +48,7 @@ public struct TypeTable: Sendable {
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) throws {
-        let declaring = try Module(types: types, contracts: contracts, procedures: [:])
+        let declaring = try Module(types: types, contracts: contracts)
         let table = try DeclarationChecker().types(
             of: try TypeNamespace([declaring]),
             standing: [declaring],

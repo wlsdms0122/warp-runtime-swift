@@ -25,7 +25,7 @@ public struct Rendering {
 
     // MARK: - Public
     // The value as text. One implementation, because `text` the procedure and an
-    // effect settling an argument are asking the same question.
+    // effect turning an argument into text are asking the same question.
     public func text() -> String {
         switch value {
         case .null:

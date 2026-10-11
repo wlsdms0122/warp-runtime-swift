@@ -12,7 +12,7 @@ import WarpStandard
 // Procedures that call nothing, dealt into a given number of documents, with
 // the two halves of a build timed apart.
 //
-// A build compiles and then links. Compiling settles what a document says
+// A build compiles and then links. Compiling judges what a document says
 // against what it reaches, and a procedure here reaches nothing outside the document
 // it is written in, so each document's compile is a question about that
 // document alone. Linking lays the compiled documents down together and is one

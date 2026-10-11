@@ -323,8 +323,8 @@ struct DeclarationChecker {
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             for bound in names.sorted() where table.contracts[bound] == nil {
                 throw BuildError(
-                    "`some \(parameter)` names '\(bound)', which no module in this"
-                        + " link declares as a contract",
+                    "`\(TypeExpression.parameter(name: parameter).rendered)` names '\(bound)',"
+                        + " which no module in this link declares as a contract",
                     at: place.part(.bounds).key(parameter.spelling)
                 )
             }

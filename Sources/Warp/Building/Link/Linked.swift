@@ -221,7 +221,7 @@ public final class Linked: Sendable {
             constness: const ? .const : .unstated,
             isolation: isolated ? .isolated : .unstated,
             failing: failing,
-            implementation: .native(native ?? .query(UnsettledProcedure()), sends: sends),
+            implementation: .native(native ?? .query(UnloweredProcedure()), sends: sends),
             foldable: native == nil || builtin,
             in: table
         )

@@ -147,9 +147,9 @@ struct LoweringTests {
         #expect(inner.names == ["b"])
     }
 
-    @Test("a constant read at an index the run settles is bound before the first statement")
+    @Test("a constant read at an index the run reads is bound before the first statement")
     func aConstantReadAtARunIndexIsBound() async throws {
-        // Given. The fold settles `digits`, and cannot settle which entry `key`
+        // Given. The fold reads `digits`, and cannot read which entry `key`
         // names, so the body reads the constant the way it reads any name
         let module = try Module(
             constants: [

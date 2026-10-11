@@ -285,7 +285,7 @@ struct LeaveTests {
         // Given. Three ways to reach a body: a run starting at one, a procedure
         // whose implementation is written, and a closure being invoked. When
         // only the first caught an answer, a `return` inside a called body left
-        // through its own frame and became the *caller's* answer. Settled
+        // through its own frame and became the *caller's* answer, judged
         // against the caller's declaration rather than its own.
         let sut = try loader.loadDocument([
             "procedures": [

@@ -11,8 +11,7 @@ import Foundation
 // things in one.
 //
 // A parameter read two ways has no answer, so the disagreement is kept beside
-// the first reading rather than read as `Any`: `Any` is what a declaration
-// says when it said nothing.
+// the first reading.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
     // composition holds it to, and whether the slot takes null as well.
@@ -35,6 +34,11 @@ struct Substitution: Sendable {
         // Part by part, as `joined` joins a list literal's elements, and never
         // a disagreement.
         case joined
+
+        // What procedures handed take, where one takes the other: the one
+        // both take, which is the one the other accepts, and a disagreement
+        // otherwise.
+        case takenByBoth
     }
 
     // MARK: - Property
@@ -88,8 +92,7 @@ struct Substitution: Sendable {
 
     // Why a reading of a parameter does not answer a contract its bounds
     // name, or nil where every reading answers each or leans on a claim,
-    // which goes to `leaning` for the asker to write down. That a named bound
-    // is declared is the declaration's own fact, held where it is declared.
+    // which goes to `leaning` for the asker to write down.
     func unanswered(
         _ parameter: Name,
         bounds: Set<Name>,
@@ -150,15 +153,16 @@ struct Substitution: Sendable {
             return nil
         }
 
-        let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
+        let spelled = parameter == TypeSpelling.selfType ? TypeExpression.selfType : .parameter(name: parameter)
 
         return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: table)), a value of more than one"
-            + " type, and \(spelled) is one type wherever it stands. A value of a contract or of what may"
-            + " be null fills a bounded parameter only where the parameter stands alone at one position"
+            + " type, and `\(spelled.rendered)` is one type wherever it stands. A value of a contract"
+            + " or of what may be null fills a bounded parameter only where the parameter stands alone"
+            + " at one position"
     }
 
     // A parameter read once more, joined with what it is already read as by
-    // `join`: holding both, only where one rigidly takes the other (a whole
+    // `join`: holding both, only where one takes the other (a whole
     // literal and a fraction, and the same through lists, maps, `?` and
     // fields), with the table, because a reading may stand on a row and the
     // type that row holds; or part by part, as two readings of one place
@@ -197,6 +201,9 @@ struct Substitution: Sendable {
 
         case .joined:
             already.joined(given)
+
+        case .takenByBoth:
+            already.accepts(given, in: table) ? given : given.accepts(already, in: table) ? already : nil
         }
 
         // Two that do not join stay as they were read: the first is what the
@@ -211,8 +218,9 @@ struct Substitution: Sendable {
 
         // What a reading reads as once the join writes it, so a whole literal
         // the join reads as a fraction is held to the bounds as the fraction
-        // the call hands on.
-        for reading in [already, given] where both.written(reading, in: table) != both {
+        // the call hands on. What a procedure takes is no value, so the wider
+        // of two it takes is held to nothing.
+        for reading in [already, given] where join != .takenByBoth && both.written(reading, in: table) != both {
             apart[parameter, default: []].append(both.written(reading, in: table))
         }
 

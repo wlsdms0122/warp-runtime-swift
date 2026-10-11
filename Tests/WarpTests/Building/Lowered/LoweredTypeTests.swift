@@ -104,14 +104,14 @@ struct LoweredTypeTests {
 
         // When / Then. A slot taking anything, its nullable, and an array of
         // that take it
-        #expect(LoweredType.any.accepts(parameter, in: table, rigid: true))
-        #expect(LoweredType.nullable(parameter).accepts(parameter, in: table, rigid: true))
-        #expect(LoweredType.array(.nullable(parameter)).accepts(.array(parameter), in: table, rigid: true))
+        #expect(LoweredType.any.accepts(parameter, in: table))
+        #expect(LoweredType.nullable(parameter).accepts(parameter, in: table))
+        #expect(LoweredType.array(.nullable(parameter)).accepts(.array(parameter), in: table))
 
         // Then. A type it may not be, and another parameter, do not
-        #expect(!LoweredType.int.accepts(parameter, in: table, rigid: true))
-        #expect(!LoweredType.nullable(.int).accepts(parameter, in: table, rigid: true))
-        #expect(!other.accepts(parameter, in: table, rigid: true))
+        #expect(!LoweredType.int.accepts(parameter, in: table))
+        #expect(!LoweredType.nullable(.int).accepts(parameter, in: table))
+        #expect(!other.accepts(parameter, in: table))
     }
 
     @Test("a contract standing as a type takes a parameter no call fills only where the parameter's own bounds prove it")
@@ -124,8 +124,8 @@ struct LoweredTypeTests {
 
         // When / Then. A parameter bounded by it answers it, and one bounded
         // by nothing may be anything
-        #expect(ordered.accepts(bounded, in: table, rigid: true))
-        #expect(!ordered.accepts(unbounded, in: table, rigid: true))
+        #expect(ordered.accepts(bounded, in: table))
+        #expect(!ordered.accepts(unbounded, in: table))
     }
 
     @Test("a record's name lowers to its row, and an alias to what it stands for")

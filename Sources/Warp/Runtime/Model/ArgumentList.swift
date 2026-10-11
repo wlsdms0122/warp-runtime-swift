@@ -1,5 +1,5 @@
 //
-//  Settled.swift
+//  ArgumentList.swift
 //  Warp
 //
 //  Created by JSilver on 9/3/26.
@@ -7,11 +7,11 @@
 
 import Foundation
 
-// The arguments as a row's boundary left them: one value per parameter of the
-// row, standing at that parameter's position. Positions and no names, because
-// the build owns where a parameter stands and a procedure reads the place its own
+// A call's arguments by position: one value per parameter of the row,
+// standing at that parameter's position. Positions and no names, because the
+// build owns where a parameter stands and a procedure reads the place its own
 // key says.
-struct Settled: Sendable {
+struct ArgumentList: Sendable {
     // MARK: - Property
     let values: [Value?]
 

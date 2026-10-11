@@ -26,23 +26,17 @@ struct CallSite: Sendable {
     // by position, where its reading does not say.
     let shapes: [Int: LiteralShape]
 
-    // What the readings put in the callee's type parameters, as the walk
-    // read them where the call stands.
-    let substitution: Substitution
-
     // MARK: - Initializer
     init(
         call: Call,
         place: Place,
         readings: [LoweredType],
-        shapes: [Int: LiteralShape],
-        substitution: Substitution
+        shapes: [Int: LiteralShape]
     ) {
         self.call = call
         self.place = place
         self.readings = readings
         self.shapes = shapes
-        self.substitution = substitution
     }
 
     // MARK: - Public

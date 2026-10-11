@@ -30,9 +30,9 @@ import Foundation
 // `Standard.Math.floored`, and that is the one declaration it can mean, wherever it was
 // written; the image the executor runs is spelled the way the documents were,
 // so a run never has to ask again. Constants settle here: compiling folds a
-// read of one into its value wherever the run has nothing left to settle.
+// read of one into its value wherever the run has nothing left to decide.
 //
-// Two stages. Compiling (`Compiler`, one document at a time) settles
+// Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
 // declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
 // facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
@@ -447,7 +447,7 @@ public struct Builder: Sendable {
     }
 
     // Every object standing beside what it was compiled against. An object
-    // says what it leaned on by fingerprint, and what it settled, a closure
+    // says what it leaned on by fingerprint, and what it worked out, a closure
     // spelled by a document's name and count among them, is true against
     // exactly those compiles of them. A document that leaned on nothing a
     // fingerprint was worked out for says nothing here. One that did is

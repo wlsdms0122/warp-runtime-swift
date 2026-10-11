@@ -59,7 +59,7 @@ struct ModuleGraphTests {
     @Test("a module stands after the module that declares a type it names")
     func aMentionedTypeStandsFirst() throws {
         // Given
-        let declaring = try Module(types: ["Age": .int], procedures: [:])
+        let declaring = try Module(types: ["Age": .int])
         let users = try Module(
             procedures: [
                 entryName: Procedure(

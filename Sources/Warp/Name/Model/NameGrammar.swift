@@ -88,8 +88,9 @@ public enum NameGrammar: Sendable {
     public func refusal(of name: Name) -> String {
         switch self {
         case .type:
-            return "'\(name)' is no type's name. A type is named by identifiers joined by dots,"
-                + " and a word the language writes itself (`Int`, `some`, `null` and the rest) is the language's"
+            return "'\(name)' is no name a module gives a type or a contract: such a name is identifiers"
+                + " joined by dots, and a word the language writes itself (`Int`, `some`, `null` and the rest)"
+                + " is the language's"
 
         case .typeParameter:
             return "'\(name)' is no type parameter's name. A type parameter is named by one identifier,"

@@ -13,9 +13,9 @@ import WarpTestSupport
 
 // The boundary between compiling a module graph and linking one.
 //
-// Compiling settles what the documents say on their own, and linking joins
+// Compiling works out what the documents say on their own, and linking joins
 // what was compiled. What each half may do is what these ask.
-@Suite("What compiling settles and what linking decides")
+@Suite("What compiling works out and what linking decides")
 struct SeparateCompilationTests {
     // A fixture that does not hold what a test reads out of it.
     private struct Unheld: Error, CustomStringConvertible {
@@ -215,7 +215,7 @@ struct SeparateCompilationTests {
                 entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [], result: .literal(.int(1)))
             ]
         )
-        let held = try Module(types: ["A.Held": .int], procedures: [:])
+        let held = try Module(types: ["A.Held": .int])
 
         // When
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
@@ -285,7 +285,7 @@ struct SeparateCompilationTests {
         let (typed, asking, _, program) = try leaning()
         let modules = [typed, asking, program] + Module.standard
 
-        // When. Compiled one at a time, which settles nothing about a claim.
+        // When. Compiled one at a time, which decides nothing about a claim.
         var compiled: [Compiled] = []
 
         await #expect(throws: Never.self) {
@@ -562,7 +562,7 @@ struct SeparateCompilationTests {
         #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
         #expect(try await run(modules, vocabulary: []) == .int(7))
 
-        // And. The two ways of building the accumulator settle the documents
+        // And. The two ways of building the accumulator build the documents
         // the same, name for name and number for number.
         let whole = try await self.compiled(modules)
 
