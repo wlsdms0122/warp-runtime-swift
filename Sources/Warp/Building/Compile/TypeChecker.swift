@@ -1220,7 +1220,7 @@ struct TypeChecker {
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
-        guard let head = folding.settled(inner) else {
+        guard let head = folding.boundHead(of: inner) else {
             return .indexRef(inner, optional: optionally)
         }
 
@@ -1420,7 +1420,7 @@ struct TypeChecker {
                 // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(path, at: place, folding: folding)
 
-                guard let head = folding.settled(settled) else {
+                guard let head = folding.boundHead(of: settled) else {
                     return Inspection(rewritten: .reference(settled), reading: read, flow: reached)
                 }
 

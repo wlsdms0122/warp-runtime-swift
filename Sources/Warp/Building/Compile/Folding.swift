@@ -91,11 +91,11 @@ struct Folding {
         names.contains(name)
     }
 
-    // The name a path settles from here, where it settles: headed by a name
-    // bound here, and indexed by nothing still a reference. Asked of a path
+    // The head of a path bound here, where the path folds here: a name bound
+    // here, and the path indexed by nothing still a reference. Asked of a path
     // whose index references have been folded, so one still a reference is
     // one only a run settles.
-    func settled(_ path: Path) -> Name? {
+    func boundHead(of path: Path) -> Name? {
         guard let head = path.head, holds(head) else { return nil }
 
         let indexedByTheRun = path.segments.contains { segment in
