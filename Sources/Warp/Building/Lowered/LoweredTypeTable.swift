@@ -147,7 +147,9 @@ final class LoweredTypeTable: Sendable {
             return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
 
         case let .dictionary(entries):
-            return .dictionary(try entries.mapValues { _, item in try resolvingNames(in: item, at: path()) })
+            return .dictionary(try entries.mapValues { name, item in
+                try resolvingNames(in: item, at: "\(path()).\(name)")
+            })
 
         case let .record(record):
             let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }

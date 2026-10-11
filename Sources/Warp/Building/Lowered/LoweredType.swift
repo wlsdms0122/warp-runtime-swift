@@ -1424,8 +1424,8 @@ indirect enum LoweredType: Sendable, Equatable {
             if entry.passesEverything { return .dictionary(held) }
 
             return .dictionary(
-                try held.mapValues { _, item in
-                    try entry.settling(item, at: path(), in: table)
+                try held.mapValues { name, item in
+                    try entry.settling(item, at: "\(path()).\(name)", in: table)
                 }
             )
 

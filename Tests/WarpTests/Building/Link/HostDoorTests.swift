@@ -283,7 +283,7 @@ struct HostDoorTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("'failed': is a App.Z, which no document declares as a record")
+            error is ArgumentError && "\(error)".contains("'failed'.details.held: is a App.Z, which no document declares as a record")
         }
     }
 
