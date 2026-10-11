@@ -8,16 +8,16 @@
 import Foundation
 import Warp
 
-// The names a map holds, in order. Declared fields are read by name; this
-// reads names that are data, and is how a program walks them without knowing
-// what they are called.
+// The keys a map holds, in its key order. A declared record's fields are read
+// by name; a map's keys are data, and this is how a program walks them
+// without knowing what they are.
 struct KeysQuery: Query {
-    // What this takes: the mapping, and nothing else.
+    // What this takes: the map, and nothing else.
     enum Parameters: Int, ParameterSet {
         case dictionary
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(key: .string, value: .any)) }
+        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(key: .parameter(name: "Key"), value: .any)) }
 
         // MARK: - Initializer
         // MARK: - Public
@@ -32,7 +32,7 @@ struct KeysQuery: Query {
             throw ExecutionError("Standard.Collection.keys asks a Dictionary")
         }
 
-        // In name order, the order both spellings hold: a walk that answered a
+        // In the key order the map holds them in: a walk that answered a
         // different order each run would make a program that reads it depend on
         // nothing an author wrote.
         return .array(held.keys)

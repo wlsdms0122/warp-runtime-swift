@@ -13,7 +13,7 @@ public extension Module {
 
     private static let nativeCollection = Module(
         unchecked: Draft(
-            description: "Appending, gathering, and the names a map holds.",
+            description: "Appending, gathering, and the keys a map holds.",
             procedures: [
                 "Standard.Collection.appending": Procedure(
                     description: "The elements with one more at the end.",
@@ -32,18 +32,20 @@ public extension Module {
                     implementation: .query(GatheringQuery())
                 ),
                 "Standard.Collection.keys": Procedure(
-                    description: "The names a map holds, in order.",
+                    description: "The keys a map holds, in its key order.",
                     signature: Signature(
                         of: KeysQuery.self,
-                        returns: .array(.string)
+                        returns: .array(key),
+                        bounds: keyed
                     ),
                     implementation: .query(KeysQuery())
                 ),
                 "Standard.Collection.setting": Procedure(
-                    description: "The map with one name bound to another value.",
+                    description: "The map with one key bound to another value.",
                     signature: Signature(
                         of: SettingQuery.self,
-                        returns: .dictionary(key: .string, value: .parameter(name: "Value"))
+                        returns: .dictionary(key: key, value: .parameter(name: "Value")),
+                        bounds: keyed
                     ),
                     implementation: .query(SettingQuery())
                 )
@@ -51,4 +53,10 @@ public extension Module {
         ),
         builtin: true
     )
+
+    // A map's key, one type the call fills from the map, held to what a key
+    // of any map answers.
+    private static let key = TypeExpression.parameter(name: "Key")
+
+    private static let keyed: [Name: Set<Name>] = ["Key": [TypeSpelling.hashable]]
 }

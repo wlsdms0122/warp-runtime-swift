@@ -147,8 +147,7 @@ public extension Module {
 
     // What `Standard.Collection` asks, answered for one type that has a
     // count: the elements of a list, bytes included, the entries of a map,
-    // a record's fields included, and the characters of text as a person
-    // reads them.
+    // and the characters of text as a person reads them.
     private static func counting(of name: Name, as type: TypeExpression, bounds: [Name: Set<Name>]) -> Witness {
         Witness(name, answering: ContractSpelling.collection, "count") { spelling in
             .witness(CountQuery(answering: spelling), taking: type, returns: .int, bounds: bounds, description: "How many.")
