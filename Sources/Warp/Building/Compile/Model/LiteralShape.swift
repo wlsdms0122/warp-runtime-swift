@@ -76,8 +76,8 @@ enum LiteralShape: Sendable {
     // be one type for each to be a value of what the slot asks there. Every
     // other slot takes what it accepts.
     func isHeld(by slot: LoweredType, inPlace: Bool, in table: LoweredTypeTable) -> Bool {
-        everyPart(along: slot, inPlace: inPlace, in: table) { slot, part, rigid in
-            if rigid {
+        everyPart(along: slot, inPlace: inPlace, in: table) { slot, part, inPlaceAtParameter in
+            if inPlaceAtParameter {
                 return slot.takesInPlace(part.folded.slotUnwrapped, in: table)
             }
 
@@ -90,8 +90,8 @@ enum LiteralShape: Sendable {
     // dictionary by every field, a record by the fields it names (one it
     // lacks refuses), a name by the type it names, what may be null by what
     // it is besides, and each way of an attempt on its own. A slot handed in
-    // place that names a type parameter is rigid, and shares no record,
-    // which `takesInPlace` judges whole.
+    // place that names a type parameter shares no record, which
+    // `takesInPlace` judges whole, and `holds` is told so.
     func everyPart(
         along slot: LoweredType,
         inPlace: Bool,
@@ -99,11 +99,11 @@ enum LiteralShape: Sendable {
         holds: (LoweredType, LiteralShape, Bool) -> Bool
     ) -> Bool {
         let slot = inPlace ? slot.slotUnwrapped : slot
-        let rigid = inPlace && slot.namesParameter
+        let inPlaceAtParameter = inPlace && slot.namesParameter
 
         switch self {
         case .part:
-            return holds(slot, self, rigid)
+            return holds(slot, self, inPlaceAtParameter)
 
         case let .either(attempted, rescued):
             return attempted.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
@@ -136,7 +136,7 @@ enum LiteralShape: Sendable {
 
         // A record literal is written with exactly the fields the place
         // declares; one of other fields is held whole, and refused there.
-        case let .record(record) where !rigid:
+        case let .record(record) where !inPlaceAtParameter:
             guard case let .record(fields) = self, Set(fields.keys) == Set(record.layout.fields) else { break }
 
             return record.named.allSatisfy { name, field in
@@ -149,7 +149,7 @@ enum LiteralShape: Sendable {
             break
         }
 
-        return holds(slot, self, rigid)
+        return holds(slot, self, inPlaceAtParameter)
     }
 
     // The literal as it reads once written where `place` is declared: each
