@@ -437,7 +437,7 @@ public struct Validator: Sendable {
                 // path read like any other. The rest of the path is judged at
                 // the build, where the variable's type is known.
                 case let .assignment(path):
-                    if let refusal = path.markedHead {
+                    if let refusal = path.markedHead ?? path.writtenThroughAbsence {
                         throw ValidationError(refusal, at: named)
                     }
 
