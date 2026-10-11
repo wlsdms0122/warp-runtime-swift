@@ -340,11 +340,13 @@ struct ObjectReader {
         case .named: read = .named(try name(cursor.next()))
         case .parameter: read = .parameter(name: try name(cursor.next()))
 
+        // One contract is written by its name, so a composition joins two
+        // or more, the way a document's does.
         case .composition:
             let names = try Field(cursor.next(), of: "composition").ordered(name)
 
-            guard !names.isEmpty else {
-                throw ObjectRefused("'composition' joins nothing")
+            guard names.count > 1 else {
+                throw ObjectRefused("'composition' joins fewer than two names, and one is written as the name")
             }
 
             read = .composition(Set(names))
@@ -457,13 +459,18 @@ struct ObjectReader {
         return read
     }
 
+    // A parameter taking anything writes no type, so a written `Any` is a
+    // second writing of one signature.
     private func parameter(_ value: Value) throws -> Parameter {
         var cursor = try FieldCursor(value, of: "parameter")
-        let read = Parameter(
-            name: try name(cursor.next()),
-            type: try cursor.field().maybe(expression) ?? .any,
-            description: try cursor.field().maybe(text)
-        )
+        let name = try name(cursor.next())
+        let type = try cursor.field().maybe(expression)
+
+        guard type != .any else {
+            throw ObjectRefused("a parameter taking anything writes no type")
+        }
+
+        let read = Parameter(name: name, type: type ?? .any, description: try cursor.field().maybe(text))
 
         try cursor.end()
 

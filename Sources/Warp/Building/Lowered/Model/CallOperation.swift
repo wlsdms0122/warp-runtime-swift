@@ -31,11 +31,17 @@ struct CallOperation: Sendable {
     // MARK: - Initializer
     // A call whose parts were read apart, from an object. What is handed in place
     // stands at one of the positions this call fills, and a run writes it
-    // there without asking how many there are.
+    // there without asking how many there are. The positions stand ascending,
+    // once each, as the lowering writes them, so one call is one writing.
     init(procedure: Int, arguments: [Operation?], handing handed: [Handed]) throws {
-        guard handed.allSatisfy({ one in one.position < arguments.count }) else {
+        let positions = handed.map(\.position)
+
+        guard
+            zip(positions, positions.dropFirst()).allSatisfy({ one, next in one < next }),
+            positions.allSatisfy({ position in position < arguments.count })
+        else {
             throw ObjectRefused(
-                "a call hands something in place at a position past the"
+                "a call hands in place at positions other than ascending, once each, among the"
                     + " \(arguments.count) it fills"
             )
         }
