@@ -718,7 +718,7 @@ struct SeparateCompilationTests {
             return
         }
 
-        call[1] = .array(arguments + [.array([])])
+        call[1] = .array(arguments + [.array([.array([.int(0), .array([.int(2), .int(3)])])])])
         operation[1] = .array(call)
         result[0] = .array(operation)
         body[1] = .array(result)
