@@ -1446,12 +1446,7 @@ struct TypeChecker {
                 do {
                     let value = try await folding.read(settled, at: place)
 
-                    return Inspection(
-                        rewritten: .literal(value),
-                        reading: LoweredType(of: value, in: context.loweredTypes)
-                            .refined(by: read, fixed: true, in: context.loweredTypes),
-                        flow: reached
-                    )
+                    return Inspection(rewritten: .literal(value), reading: read, flow: reached)
                 } catch {
                     throw BuildError("reading constant '\(head)': \(error)", at: place)
                 }
