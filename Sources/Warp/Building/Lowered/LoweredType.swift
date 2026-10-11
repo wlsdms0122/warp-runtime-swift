@@ -160,6 +160,18 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // What a literal written where this is read is written into: the type
+    // through `?`, `var` and `inout`, which hold no value of their own.
+    var literalPlace: LoweredType {
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.literalPlace
+
+        default:
+            return self
+        }
+    }
+
     // The declared record this stands on, through `?`, `var` and `inout`,
     // which hold no value of their own. Nil for a type that names no row.
     var row: Int? {
@@ -1672,49 +1684,14 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same for an expression written into a place of this type: the
-    // literals in it, at the depths a list, a record and the answer of a
-    // block or an attempt hand on. A record built from parts there takes
-    // the name where it is built (`naming`).
+    // literals in it, at the depths a list, a map, a record and the answer of
+    // a block or an attempt hand on.
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, at: nil, in: table) { place, standing, _ in
+        reaching(expression, in: table) { place, standing in
             guard case let .literal(value) = standing else { return nil }
 
             return .literal(place.written(value, in: table))
         }
-    }
-
-    // The records an expression written into a place of this type builds
-    // where a declared record is read, by the place each is built at, with
-    // the name it takes there: the build held each part to its field, so
-    // the record is the declared one and the run builds it under the name,
-    // with nothing to cast. What builds no record is not walked, so its place
-    // is never spelled.
-    func naming(_ expression: Expression, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
-        switch expression {
-        case .record, .array, .dictionary, .block, .attempt, .loop:
-            break
-
-        default:
-            return [:]
-        }
-
-        var names: [Place: Name] = [:]
-
-        _ = reaching(expression, at: place(), in: table) { type, standing, place in
-            if case .record = standing, case .named = type, let nominal = type.row, let place {
-                names[place] = table.labels[nominal]
-            }
-
-            return nil
-        }
-
-        return names
-    }
-
-    // The same for a block standing at a place, whose answer stands where
-    // this is read.
-    func naming(_ block: Block, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
-        block.result.map { result in naming(result, at: place().child(.result), in: table) } ?? [:]
     }
 
     // What a reading is once what it reads is written where this is
@@ -1768,7 +1745,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // not decide when what it answers is judged. An answer a call fills is no
     // place's to say, and anything else stands as written.
     func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, at: nil, in: table) { place, standing, _ in
+        reaching(expression, in: table) { place, standing in
             guard case let .closure(written) = standing else { return nil }
 
             guard written.signature.returns == nil, case let .procedure(signature, _, _) = place, let returns = signature?.returns else {
@@ -2279,22 +2256,21 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The walk `written`, `completing` and `naming` share: an expression
-    // standing where this is read, through what may be null and the names
-    // around it, at the depths a list, a record and the answer of a block, an
-    // attempt or a loop hand on, each at its place where one is asked for.
-    // `replacing` is asked first at each depth, with the type read there, and
-    // answers what stands in place of the expression, or nil to walk on.
+    // The walk `written` and `completing` share: an expression standing where
+    // this is read, through what may be null and the names around it, at the
+    // depths a list, a map, a record and the answer of a block, an attempt or
+    // a loop hand on. `replacing` is asked first at each depth, with the type
+    // read there, and answers what stands in place of the expression, or nil
+    // to walk on.
     private func reaching(
         _ expression: Expression,
-        at place: Place?,
         in table: LoweredTypeTable,
-        replacing: (LoweredType, Expression, Place?) -> Expression?
+        replacing: (LoweredType, Expression) -> Expression?
     ) -> Expression {
-        func answering(_ block: Block, at place: Place?) -> Block {
+        func answering(_ block: Block) -> Block {
             Block(
                 body: block.body,
-                result: block.result.map { result in reaching(result, at: place?.child(.result), in: table, replacing: replacing) }
+                result: block.result.map { result in reaching(result, in: table, replacing: replacing) }
             )
         }
 
@@ -2303,13 +2279,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // it included.
         switch expression {
         case let .block(block):
-            return .block(answering(block, at: place?.child(.held)))
+            return .block(answering(block))
 
         case let .attempt(block, rescue):
-            return .attempt(answering(block, at: place?.child(.held)), rescue: answering(rescue, at: place?.child(.rescue)))
+            return .attempt(answering(block), rescue: answering(rescue))
 
         case let .loop(condition, body):
-            return .loop(while: condition, body: answering(body, at: place?.child(.held)))
+            return .loop(while: condition, body: answering(body))
 
         default:
             break
@@ -2317,22 +2293,16 @@ indirect enum LoweredType: Sendable, Equatable {
 
         switch self {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.reaching(expression, at: place, in: table, replacing: replacing)
+            return inner.reaching(expression, in: table, replacing: replacing)
 
-        // A declared record is asked as itself before what it stands for, so
-        // what writes a literal there knows the name it is written into.
         case let .named(row):
-            if let standing = replacing(self, expression, place) {
-                return standing
-            }
-
-            return table.loweredTypes[row].reaching(expression, at: place, in: table, replacing: replacing)
+            return table.loweredTypes[row].reaching(expression, in: table, replacing: replacing)
 
         default:
             break
         }
 
-        if let standing = replacing(self, expression, place) {
+        if let standing = replacing(self, expression) {
             return standing
         }
 
@@ -2340,15 +2310,13 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(items):
             guard let element = element(in: table) else { return expression }
 
-            return .array(items.enumerated().map { position, item in
-                element.reaching(item, at: place?.child(.element(position)), in: table, replacing: replacing)
-            })
+            return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
 
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
                     (name, dotted(name, in: table).map { dotted in
-                        dotted.reaching(field, at: place?.child(.field(name)), in: table, replacing: replacing)
+                        dotted.reaching(field, in: table, replacing: replacing)
                     } ?? field)
                 })
             )
@@ -2356,10 +2324,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(entries):
             guard case let .dictionary(key, value) = slotUnwrapped else { return expression }
 
-            return .dictionary(entries.enumerated().map { position, entry in
+            return .dictionary(entries.map { entry in
                 (
-                    key: key.reaching(entry.key, at: place?.child(.entryKey(position)), in: table, replacing: replacing),
-                    value: value.reaching(entry.value, at: place?.child(.entryValue(position)), in: table, replacing: replacing)
+                    key: key.reaching(entry.key, in: table, replacing: replacing),
+                    value: value.reaching(entry.value, in: table, replacing: replacing)
                 )
             })
 

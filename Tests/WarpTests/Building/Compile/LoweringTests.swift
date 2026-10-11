@@ -396,14 +396,14 @@ struct LoweringTests {
 
     @Test("what is handed in place is held to the type the slot declares")
     func aHandedVariableIsTheSlotsOwnType() async throws {
-        // Given. A variable holding an unnamed record, handed in place to a
-        // slot declaring `Tag`. A nameless record is no value of a declared
-        // record, so it is refused, and the same record held as a `Tag`
-        // stands. The procedure writes through the caller's box, so what the
-        // caller reads back is what the procedure left there.
+        // Given. A variable holding an `Other`, handed in place to a slot
+        // declaring `Tag`. Two declared records are two types, so it is
+        // refused, and the same fields held as a `Tag` stand. The procedure
+        // writes through the caller's box, so what the caller reads back is
+        // what the procedure left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
-                types: ["Tag": .record(["a": .int])],
+                types: ["Other": .record(["a": .int]), "Tag": .record(["a": .int])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
@@ -428,13 +428,16 @@ struct LoweringTests {
             )
         }
 
-        // When / Then. The unnamed record is refused, and the same record held
-        // as a `Tag` stands
+        // When / Then. The `Other` is refused, and the same fields held as a
+        // `Tag` stand
         await #expect {
-            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
+            try await builder.build(
+                [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Other"), optional: false))]
+                    + Module.standard
+            )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'App.tag' with of, which holds { a: Int } where inout Tag is declared")
+                && "\(error)".contains("sending 'App.tag' with of, which holds Other where inout Tag is declared")
         }
 
         let image = try await builder.build(

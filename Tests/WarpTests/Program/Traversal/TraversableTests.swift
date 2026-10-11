@@ -111,7 +111,7 @@ struct TraversableTests {
                 ),
                 Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
                 Statement(binding: .constant("listed"), expression: .array([closure()])),
-                Statement(binding: .constant("fielded"), expression: .record(["held": closure()])),
+                Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .record(["held": closure()])),
                 Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
                 Statement(expression: .apply(name("bump"), arguments: [name("count")]))
             ],
@@ -119,7 +119,7 @@ struct TraversableTests {
         )
         let place = Place.procedure("entry", in: .assembled)
         let context = TypingContext(
-            types: try TypeTable(),
+            types: try TypeTable(types: ["App.Held": .record(["held": .procedure(nil)])]),
             linked: [],
             rows: [:],
             own: [:],

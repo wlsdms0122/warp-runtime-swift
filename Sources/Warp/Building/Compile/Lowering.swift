@@ -748,13 +748,10 @@ struct Lowering {
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
 
-        // A record is a value of a declared record, and a literal takes the
-        // name of the one its place reads.
+        // The type check read the literal as the declared record its place
+        // reads, which the record is built under.
         guard let name = context.judgements.name(ofRecordAt: place) else {
-            throw BuildError(
-                "a record literal is written where a declared record is read, and nothing here declares one",
-                at: place
-            )
+            throw BuildError.unjudged("a record literal", at: place)
         }
 
         return .record(

@@ -108,9 +108,9 @@ struct TypeChecker {
         var reading: LoweredType
         var flow = Flow()
 
-        // What a list or record literal holds where it is written into a
-        // slot, part by part, where its reading, joined across the parts, does
-        // not say. A block or a loop holds what its result holds, and an
+        // What a list or map literal holds where it is written into a slot,
+        // part by part, where its reading, joined across the parts, does not
+        // say. A block or a loop holds what its result holds, and an
         // attempt what each of its two ways answers.
         var literalShape: LiteralShape?
 
@@ -186,6 +186,7 @@ struct TypeChecker {
         // the type the declaration answers.
         let inner = try await inspected(
             block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
+            into: promised,
             at: place,
             in: environment,
             with: context,
@@ -202,21 +203,17 @@ struct TypeChecker {
             fulfillment: fulfillment
         )
 
-        var judgements = inner.judgements
-
-        if let promised {
-            judgements.record(names: promised.naming(inner.block, at: place, in: context.loweredTypes))
-        }
-
         let written = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
 
-        return (written, inner.calls, judgements)
+        return (written, inner.calls, inner.judgements)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
-    // is one rather than a block.
+    // is one rather than a block, and a variable's start is written into
+    // the type the variable declares.
     func resolvedSites(
         in expression: Expression,
+        into declared: LoweredType?,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -226,6 +223,7 @@ struct TypeChecker {
         let inner = try await inspected(
             expression,
             naming: nil,
+            into: declared,
             at: place,
             in: environment,
             with: context,
@@ -360,6 +358,7 @@ struct TypeChecker {
     ) async throws -> LoweredType {
         let walked = try await inspected(
             block: block,
+            into: nil,
             at: place,
             in: environment,
             with: context,
@@ -403,6 +402,79 @@ struct TypeChecker {
         ) {
             throw BuildError(refusal, at: place)
         }
+    }
+
+    // A record literal held to the declared record its place reads: exactly
+    // the declared fields, each holding what its field takes, and every
+    // composition a field mentions held to its bounds, with what leans on a
+    // claim this table cannot decide written down for the link.
+    private func refuseFields(
+        _ written: [Name: LiteralShape],
+        of declared: LoweredRecord,
+        named label: Name,
+        at place: Place,
+        in table: LoweredTypeTable,
+        fulfillment: Fulfillment
+    ) throws {
+        let fits = Set(written.keys) == Set(declared.names)
+            && declared.named.allSatisfy { name, field in
+                written[name].map { shape in shape.isHeld(by: field.fieldUnwrapped, inPlace: false, in: table) } ?? false
+            }
+
+        guard fits else {
+            let given = written.sorted { left, right in left.key < right.key }.map { name, shape in
+                (name: name, spelled: shape.rendered(in: table))
+            }
+            let asked = declared.named.map { name, field in (name: name, spelled: field.rendered(in: table)) }
+
+            throw BuildError(
+                "a record literal read as \(label) writes \(LoweredType.rendered(fields: given)),"
+                    + " and \(label) declares \(LoweredType.rendered(fields: asked))",
+                at: place
+            )
+        }
+
+        for (name, field) in declared.named {
+            guard let shape = written[name] else { continue }
+
+            if let refusal = refusal(
+                writing: shape,
+                to: field.fieldUnwrapped,
+                as: "'\(name)' holds",
+                in: table,
+                fulfillment: fulfillment,
+                at: place
+            ) {
+                throw BuildError(refusal, at: place.child(.field(name)))
+            }
+        }
+    }
+
+    // Whether what a cast reads, read on its own, where nothing reads a
+    // literal in it as a place does, is one of these types. A cast that is
+    // the place a literal in it is read as says what nothing else does.
+    // Asked only where judging has a refusal to state.
+    private func readsAlone(
+        _ value: Expression,
+        as types: [LoweredType],
+        at place: Place,
+        in environment: [Name: Binding],
+        with context: TypingContext,
+        when ask: Ask
+    ) async throws -> Bool {
+        guard case .judging = ask else { return false }
+
+        let alone = try await inspected(
+            value,
+            naming: nil,
+            into: nil,
+            at: place,
+            in: environment,
+            with: context,
+            ask: .probing
+        )
+
+        return types.contains(alone.reading.asHeld)
     }
 
     // Why what is written into a slot is provably outside it, part by part
@@ -519,7 +591,7 @@ struct TypeChecker {
             }
         }
 
-        // A list or record literal handed where a bounded parameter stands is
+        // A list or map literal handed where a bounded parameter stands is
         // held to the bounds part by part, as one written into a slot
         // declaring them is: its join may answer them while a part does not.
         // Only what stands at such a parameter is asked here; `check` judges
@@ -1207,10 +1279,13 @@ struct TypeChecker {
     // before it left behind, which is the environment the run gives it.
     // `name` is what the statement this expression is the value of
     // introduces, which a loop binds its round under and an attempt its
-    // failure.
+    // failure. `declared` is the type of the place the expression is written
+    // into, where one is: a record literal is read as the declared record
+    // it reads, and nil writes it into none.
     private func inspected(
         _ expression: Expression,
         naming name: Name?,
+        into declared: LoweredType?,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -1257,6 +1332,7 @@ struct TypeChecker {
             let carried = try await inspected(
                 answer.map { answer in answer.completing(value, in: context.loweredTypes) } ?? value,
                 naming: nil,
+                into: answer,
                 at: place.child(.held),
                 in: environment,
                 with: context,
@@ -1264,11 +1340,6 @@ struct TypeChecker {
             )
 
             let handed = answer.map { answer in answer.written(carried.rewritten, in: context.loweredTypes) } ?? carried.rewritten
-            var judgements = carried.judgements
-
-            if let answer {
-                judgements.record(names: answer.naming(carried.rewritten, at: place.child(.held), in: context.loweredTypes))
-            }
 
             return Inspection(
                 rewritten: ask.rewrites
@@ -1277,7 +1348,7 @@ struct TypeChecker {
                     )
                     : expression,
                 calls: carried.calls,
-                judgements: judgements,
+                judgements: carried.judgements,
                 reading: .never,
                 flow: answering(carried.flow, carrying: carried).leaving(to: Flow.Reach(leave))
             )
@@ -1329,11 +1400,17 @@ struct TypeChecker {
             var element: LoweredType?
             var first: LoweredType?
             var items: [LiteralShape]?
+            var declaredElement: LoweredType?
+
+            if case let .array(held)? = declared?.literalPlace {
+                declaredElement = held
+            }
 
             for (position, member) in array.enumerated() {
                 let inner = try await inspected(
                     member,
                     naming: nil,
+                    into: declaredElement,
                     at: place.child(.element(position)),
                     in: environment,
                     with: context,
@@ -1381,19 +1458,21 @@ struct TypeChecker {
         // `?.` is: the mark of a doubt where no doubt is left says nothing, and
         // a spelling that says nothing is a reading gone wrong.
         case let .cast(value, type, optional):
+            // The type the cast names is a place a record literal in what it
+            // reads is written into.
+            let claim = type.lowered(in: context.loweredTypes)
             let inner = try await inspected(
                 value,
                 naming: nil,
+                into: claim,
                 at: place.child(.subject(optional: optional)),
                 in: environment,
                 with: context,
                 ask: ask
             )
-            // A cast reads a value and is no place a literal is written into,
-            // so a whole literal in what it reads is the Int it is, at every
+            // A whole literal in what a cast reads is the Int it is, at every
             // depth.
             let read = inner.reading.asHeld
-            let claim = type.lowered(in: context.loweredTypes)
 
             // Both refusals ask the types themselves, whether or not the
             // reading is fully proven.
@@ -1401,10 +1480,7 @@ struct TypeChecker {
             // Needless means the claim and the reading are the same type, not
             // that one would accept the other. `accepts` holds between `Int?`
             // and `Int`, and a reading of `Int?` cast to `Int` still says
-            // something the run has to answer. Record names
-            // count at every depth: reading a nameless record as a declared
-            // one attaches the name, so it is never a cast of what the value
-            // already is.
+            // something the run has to answer.
             //
             // The claim is judged first, and on itself: a cast onto a type
             // that proves nothing opens no door, whatever it was written over.
@@ -1434,8 +1510,14 @@ struct TypeChecker {
                     at: place,
                     when: ask
                 )
-            } else if claim == read
-                || handed == read {
+            } else if claim == read || handed == read, try await readsAlone(
+                value,
+                as: [claim, handed],
+                at: place.child(.subject(optional: optional)),
+                in: environment,
+                with: context,
+                when: ask
+            ) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? Int` hands on `Int?` and `payload as?
                 // Maybe` hands on `Maybe`. The same type by two spellings, and
@@ -1457,12 +1539,6 @@ struct TypeChecker {
                 flow.fail()
             }
 
-            // A record literal the cast reads is written into the record the
-            // cast names, and takes its name there.
-            var judgements = inner.judgements
-
-            judgements.record(names: claim.naming(value, at: place.child(.subject(optional: optional)), in: context.loweredTypes))
-
             return Inspection(
                 // The author's spelling stands, so a document written back
                 // out keeps the declaration it leaned on.
@@ -1470,7 +1546,7 @@ struct TypeChecker {
                     ? .cast(inner.rewritten, as: type, optional: optional)
                     : expression,
                 calls: inner.calls,
-                judgements: judgements,
+                judgements: inner.judgements,
                 // `?` is asked of the fact: a type that already holds null is
                 // not wrapped again.
                 reading: handed,
@@ -1490,14 +1566,23 @@ struct TypeChecker {
             var keys: LoweredType = .never
             var values: LoweredType = .never
             var shapes: [(key: LiteralShape, value: LiteralShape)] = []
+            var declaredParts: (key: LoweredType?, value: LoweredType?) = (nil, nil)
+
+            if case let .dictionary(key, value)? = declared?.literalPlace {
+                declaredParts = (key, value)
+            }
 
             for (position, entry) in entries.enumerated() {
                 var parts: [Inspection] = []
 
-                for (part, child) in [(entry.key, Expression.Child.entryKey(position)), (entry.value, .entryValue(position))] {
+                for (part, child, into) in [
+                    (entry.key, Expression.Child.entryKey(position), declaredParts.key),
+                    (entry.value, .entryValue(position), declaredParts.value)
+                ] {
                     let inner = try await inspected(
                         part,
                         naming: nil,
+                        into: into,
                         at: place.child(child),
                         in: environment,
                         with: context,
@@ -1534,21 +1619,37 @@ struct TypeChecker {
                 literalShape: .map(shapes)
             )
 
-        // In name order. The order the run evaluates fields in, so what one
+        // A record literal is the declared record the place it is written
+        // into reads, judged there field by field, exactly the declared
+        // fields, and built under the record's name. Its fields are read in
+        // name order, the order the run evaluates them in, so what one
         // field's write means to the next is the same fact at the run.
         case let .record(record):
+            let row = declared?.row
+            var held: LoweredRecord?
+
+            if let row, case let .record(fields) = context.loweredTypes.loweredTypes[row] {
+                held = fields
+            } else {
+                try refuse(
+                    "a record literal is written where a declared record is read, and nothing here declares one",
+                    at: place,
+                    when: ask
+                )
+            }
+
             var environment = environment
             var rewritten: [Name: Expression] = [:]
             var calls: [CallSite] = []
             var judgements = JudgementTable()
             var flowed = Flow()
-            var fields: [Name: LoweredType] = [:]
             var shapes: [Name: LiteralShape] = [:]
 
             for (name, field) in record.sorted(by: { $0.key < $1.key }) {
                 let inner = try await inspected(
                     field,
                     naming: nil,
+                    into: held?[name]?.fieldUnwrapped,
                     at: place.child(.field(name)),
                     in: environment,
                     with: context,
@@ -1559,18 +1660,34 @@ struct TypeChecker {
                 flowed = flowed.followed(by: inner.flow)
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
-                fields[name] = inner.reading
-                shapes[name] = inner.literalShape
+                shapes[name] = inner.written
                 rewritten[name] = inner.rewritten
             }
+
+            guard let row, let held else {
+                return Inspection(
+                    rewritten: ask.rewrites ? .record(rewritten) : expression,
+                    calls: calls,
+                    judgements: judgements,
+                    reading: .any,
+                    flow: flowed
+                )
+            }
+
+            let label = context.loweredTypes.labels[row]
+
+            if case let .judging(_, fulfillment, _) = ask {
+                try refuseFields(shapes, of: held, named: label, at: place, in: context.loweredTypes, fulfillment: fulfillment)
+            }
+
+            judgements.record(label, ofRecordAt: place)
 
             return Inspection(
                 rewritten: ask.rewrites ? .record(rewritten) : expression,
                 calls: calls,
                 judgements: judgements,
-                reading: .record(fields),
-                flow: flowed,
-                literalShape: .record(fields.mapValues(LiteralShape.part).merging(shapes) { _, shape in shape })
+                reading: .named(row),
+                flow: flowed
             )
 
         // A closure literal carries the signature it declared, and running one
@@ -1620,6 +1737,7 @@ struct TypeChecker {
             let promised = procedure.signature.returns?.lowered(in: context.loweredTypes, bounds: procedure.signature.bounds)
             let inner = try await inspected(
                 block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
+                into: promised,
                 at: place.child(.closure),
                 in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
                     _, own in own
@@ -1703,10 +1821,6 @@ struct TypeChecker {
                 body = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
                 calls = inner.calls
                 judgements = inner.judgements
-
-                if let promised {
-                    judgements.record(names: promised.naming(inner.block, at: place.child(.closure), in: context.loweredTypes))
-                }
             }
 
             // A module variable the body reads strikes constness under either
@@ -1792,6 +1906,7 @@ struct TypeChecker {
             let called = try await inspected(
                 callee,
                 naming: nil,
+                into: nil,
                 at: place.child(.callee),
                 in: environment,
                 with: context,
@@ -1809,14 +1924,20 @@ struct TypeChecker {
                 answers = .any
             }
 
-            // A closure literal written here, at any depth, is completed by
-            // the type it is written into.
-            let arguments = arguments.enumerated().map { position, argument in
+            // What the callee's type takes at each position, where it says,
+            // which is the place each argument is written into.
+            let taken: [LoweredType?] = arguments.indices.map { position in
                 guard case let .procedure(signature?, _, _) = callee, signature.parameters.indices.contains(position) else {
-                    return argument
+                    return nil
                 }
 
-                return signature.parameters[position].completing(argument, in: context.loweredTypes)
+                return signature.parameters[position]
+            }
+
+            // A closure literal written here, at any depth, is completed by
+            // the type it is written into.
+            let arguments = zip(arguments, taken).map { argument, slot in
+                slot.map { slot in slot.completing(argument, in: context.loweredTypes) } ?? argument
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1839,6 +1960,7 @@ struct TypeChecker {
                     flow = flow.followed(by: try await inspected(
                         argument,
                         naming: nil,
+                        into: taken[position],
                         at: place.child(.argument(position)),
                         in: environment,
                         with: context,
@@ -1895,6 +2017,7 @@ struct TypeChecker {
                 let inner = try await inspected(
                     argument,
                     naming: nil,
+                    into: parameters[position],
                     at: place.child(.argument(position)),
                     in: environment,
                     with: context,
@@ -1912,12 +2035,7 @@ struct TypeChecker {
             // The arguments are handed by position the way a call's are, and
             // held to what the slot's type takes by the judgement a call to a
             // declaration is held by. What is written into a slot as a
-            // literal is read as the slot reads it, and a record built there
-            // is built as the record the slot reads.
-            for (position, (argument, slot)) in zip(rewritten, parameters).enumerated() {
-                judgements.record(names: slot.naming(argument, at: place.child(.argument(position)), in: context.loweredTypes))
-            }
-
+            // literal is read as the slot reads it.
             rewritten = zip(rewritten, parameters).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
 
             try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
@@ -1991,6 +2109,7 @@ struct TypeChecker {
                     let inner = try await inspected(
                         argument,
                         naming: nil,
+                        into: slots.indices.contains(position) ? slots[position].type : nil,
                         at: place.child(.argument(position)),
                         in: environment,
                         with: context,
@@ -2061,6 +2180,7 @@ struct TypeChecker {
                 let inner = try await inspected(
                     argument,
                     naming: nil,
+                    into: slots[position].type,
                     at: argumentPlaces[position],
                     in: environment,
                     with: context,
@@ -2104,12 +2224,7 @@ struct TypeChecker {
             }
 
             // What is written into each slot as a literal is read as the slot
-            // reads it, and a record built there is built as the record the
-            // slot reads.
-            for (position, (argument, slot)) in zip(arguments, taking).enumerated() {
-                judgements.record(names: slot.naming(argument, at: argumentPlaces[position], in: context.loweredTypes))
-            }
-
+            // reads it.
             let rewritten = Call(
                 selector: call.selector,
                 arguments: zip(arguments, taking).map { argument, slot in slot.written(argument, in: context.loweredTypes) }
@@ -2141,7 +2256,7 @@ struct TypeChecker {
             )
 
         case let .block(block):
-            let inner = try await inspected(block: block, at: place.child(.held), in: environment, with: context, ask: ask)
+            let inner = try await inspected(block: block, into: declared, at: place.child(.held), in: environment, with: context, ask: ask)
 
             return Inspection(
                 rewritten: ask.rewrites ? .block(inner.block) : expression,
@@ -2166,6 +2281,7 @@ struct TypeChecker {
             let head = try await inspected(
                 condition,
                 naming: nil,
+                into: nil,
                 at: place.child(.condition(of: .conditional)),
                 in: environment,
                 with: context,
@@ -2248,6 +2364,7 @@ struct TypeChecker {
                 let asked = try await inspected(
                     condition,
                     naming: nil,
+                    into: nil,
                     at: place.child(.condition(of: .loop)),
                     in: seeding,
                     with: context,
@@ -2281,6 +2398,7 @@ struct TypeChecker {
             let head = try await inspected(
                 condition,
                 naming: nil,
+                into: nil,
                 at: place.child(.condition(of: .loop)),
                 in: seeded,
                 with: context,
@@ -2338,6 +2456,7 @@ struct TypeChecker {
                 tail = try await inspected(
                     result,
                     naming: nil,
+                    into: declared,
                     at: place.child(.held).child(.result),
                     in: exit,
                     with: context,
@@ -2390,6 +2509,7 @@ struct TypeChecker {
 
             let attempted = try await inspected(
                 block: block,
+                into: declared,
                 at: place.child(.held),
                 in: environment,
                 with: context,
@@ -2402,6 +2522,7 @@ struct TypeChecker {
             let (failed, past) = try attempted.flow.gathered(where: { reach in reach == .failure }, meeting: meets)
             let rescued = try await inspected(
                 block: rescue,
+                into: declared,
                 at: place.child(.rescue),
                 in: caught(soaking: failed, failure: failure, in: environment, with: context),
                 with: context,
@@ -2439,10 +2560,12 @@ struct TypeChecker {
     }
 
     // A block: its body, then the result in the environment the body left
-    // visible. A result after a statement no run comes back from is judging's
-    // to refuse. The probing ask answers `Never` and moves on.
+    // visible, written into `declared`. A result after a statement no run
+    // comes back from is judging's to refuse. The probing ask answers `Never`
+    // and moves on.
     private func inspected(
         block: Block,
+        into declared: LoweredType?,
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
@@ -2484,6 +2607,7 @@ struct TypeChecker {
             let read = try await inspected(
                 result,
                 naming: nil,
+                into: declared,
                 at: place.child(.result),
                 in: body.environment,
                 with: context,
@@ -2545,6 +2669,7 @@ struct TypeChecker {
             let inner = try await inspected(
                 statement.expression,
                 naming: statement.binding?.introduced,
+                into: target,
                 at: here,
                 in: environment,
                 with: context,
@@ -2723,11 +2848,8 @@ struct TypeChecker {
                 break
             }
 
-            // Literals are read as the type they land in reads them, and a
-            // record built where it reads a declared record is built as that
-            // record.
+            // Literals are read as the type they land in reads them.
             if let into, ask.rewrites {
-                judgements.record(names: into.naming(inner.rewritten, at: here, in: context.loweredTypes))
                 rewritten = Body(
                     rewritten.statements.dropLast() + [
                         Statement(

@@ -591,8 +591,8 @@ struct InPlaceTests {
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
         // Given. `App.list` writes its own `some T` beside a value read as
-        // `Any`, and `App.records` a record of an empty list beside one of
-        // `Any`, into lists each was handed in place
+        // `Any`, and `App.maps` a map of an empty list beside one of `Any`,
+        // into lists each was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [
@@ -615,9 +615,9 @@ struct InPlaceTests {
                 )
             ]
         )
-        let records = try Module(
+        let maps = try Module(
             procedures: [
-                "App.records": Procedure(
+                "App.maps": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "ds", type: .inout(.array(.dictionary(key: .string, value: .array(generic))))),
@@ -629,8 +629,8 @@ struct InPlaceTests {
                         Statement(
                             binding: .assignment([.key("ds")]),
                             expression: .array([
-                                .record(["k": .array([])]),
-                                .record(["k": .array([.reference([.key("junk")])])])
+                                map(["k": .array([])]),
+                                map(["k": .array([.reference([.key("junk")])])])
                             ])
                         )
                     ],
@@ -643,13 +643,13 @@ struct InPlaceTests {
         let listRefusal = await #expect(throws: BuildError.self) {
             try await Builder().build([list] + Module.standard)
         }
-        let recordsRefusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([records] + Module.standard)
+        let mapsRefusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([maps] + Module.standard)
         }
 
         // Then
         #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<String, Array<some T>>>")
+        #expect(mapsRefusal?.message == "writes 'ds' as [[String: []], [String: Array<Any>]], and it holds Array<Dictionary<String, Array<some T>>>")
     }
 
     // MARK: - Public
