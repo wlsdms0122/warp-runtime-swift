@@ -9,6 +9,7 @@ warpt 1
       body [
         {
           let "data"
+          type "App.Data"
           value {
             record {
               a 1
@@ -58,6 +59,13 @@ warpt 1
         ref "seen"
       }
       returns "Int"
+    }
+  }
+  types {
+    "App.Data" {
+      record {
+        a "Int"
+      }
     }
   }
   warp 1

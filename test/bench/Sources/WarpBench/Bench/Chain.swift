@@ -52,7 +52,7 @@ struct Chain {
     // however many documents the procedures were dealt into.
     private static func document(_ held: Range<Int>) throws -> Module {
         let sent = try held.lowerBound > 0 ? [step(held.lowerBound - 1)] : []
-        var types: [Name: TypeExpression] = [:]
+        var types: [Name: TypeDeclaration] = [:]
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
@@ -65,7 +65,7 @@ struct Chain {
 
     private static func procedure(_ number: Int) throws -> Procedure {
         let ahead = number > 0 ? try step(number - 1) : nil
-        let held = Warp.Expression.reference([.key("held"), .key("value")])
+        let held = Warp.Expression.reference([.name("held"), .name("value")])
 
         return Procedure(
             signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
@@ -73,7 +73,7 @@ struct Chain {
                 Statement(
                     binding: .constant("held"),
                     expression: .cast(
-                        .record(["value": .reference([.key("value")])]),
+                        .record(["value": .reference([.name("value")])]),
                         as: .named(try type(number)),
                         optional: false
                     )
