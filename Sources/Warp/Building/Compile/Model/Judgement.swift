@@ -17,4 +17,9 @@ enum Judgement: Sendable {
     // A closure literal: what its row carries that the literal does not
     // write, derived from its body.
     case closure(constness: Constness, isolation: Isolation, failing: Failing)
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

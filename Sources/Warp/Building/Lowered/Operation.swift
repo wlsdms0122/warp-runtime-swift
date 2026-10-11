@@ -105,9 +105,10 @@ indirect enum Operation: Sendable {
             return call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
 
         // What a call through a contract hands over is its first and its
-        // `arguments`. The calls beside it are the link's copy of the same, so walking those
-        // too would read one fact twice. An argument handed in place is a
-        // place and not an operation, and a place is the node's own to read.
+        // `arguments`. The calls beside it are the link's copy of the same, so
+        // walking those too would read one fact twice. An argument handed in
+        // place is a place and not an operation, and a place is the node's own
+        // to read.
         case let .dispatch(dispatch):
             return dispatch.first.walk(visit)
                 && dispatch.arguments.allSatisfy { argument in

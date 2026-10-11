@@ -481,7 +481,7 @@ struct Compiler {
                     in: context
                 )
 
-                guard let declared = variable.declared, let holding = declaredTypes[name] else {
+                guard let declared = variable.declared, let holding = declaredType else {
                     let holding = LoweredType(of: settled, in: context.loweredTypes)
                         .refined(by: written.folded, fixed: false)
 
@@ -492,7 +492,8 @@ struct Compiler {
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type or casts its start",
+                                + " and declares no type, so nothing says what it holds."
+                                + " A variable starting empty declares its type or casts its start",
                             at: place
                         )
                     }

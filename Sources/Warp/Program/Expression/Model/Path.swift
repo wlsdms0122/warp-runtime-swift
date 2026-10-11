@@ -59,8 +59,7 @@ public struct Path: Sendable, Equatable {
     }
 
     // An index segment may itself name a binding. `items[i]` references both
-    // `items` and `i`. Static validation must see the nested path too, or a
-    // typo'd index escapes to runtime.
+    // `items` and `i`, and the load reads the nested path too.
     var expandingIndexReferences: [Path] {
         var paths: [Path] = [self]
 

@@ -210,7 +210,9 @@ struct TypeChecker {
             judgements.record(names: promised.naming(inner.block, at: place, in: context.loweredTypes))
         }
 
-        return (promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block, inner.calls, judgements)
+        let written = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
+
+        return (written, inner.calls, judgements)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -262,9 +264,8 @@ struct TypeChecker {
     // A body's answer may be another body's, so the order is the call graph's. Each
     // declaration read after everything its answer could come from. Bodies that
     // reach one another's answers in a cycle, a recursive one included, are read
-    // as `Any`: an answer worked out from itself is not one the text states, and a
-    // guess there would be a refusal an author cannot act on. Writing `returns` is
-    // what says more, and it removes the cycle by saying it.
+    // as `Any`: an answer worked out from itself is not one the text states.
+    // Writing `returns` is what says more, and it removes the cycle by saying it.
     //
     // Every unwritten answer, read off its body, one at a time in the order the
     // call graph allows. Each handed back as it is worked out, and the context
@@ -841,8 +842,9 @@ struct TypeChecker {
             }
 
             // What an index lands on, once the walk knows it is an array. An
-            // element past the end is a defect at the run, not an absence, so `?[` says nothing
-            // here unless it just unwrapped the array's own null.
+            // element past the end is a defect at the run, not an absence, so
+            // `?[` says nothing here unless it just unwrapped the array's own
+            // null.
             func indexed(_ element: LoweredType) -> PathReading? {
                 if let refusal = needless(.element) { return refusal }
 
@@ -3207,10 +3209,10 @@ struct TypeChecker {
     // judgement a call to a declaration and a call of a value share, once
     // each has refused another count. What each position takes, then every
     // composition it mentions held to its bounds, with what leans on a claim
-    // this table cannot settle written down for the link. What an argument holds is read
-    // from the body it was written in, so a name bound to a call carries that
-    // call's declared answer. A declaration's slots name each position; a
-    // value's type writes the positions alone.
+    // this table cannot settle written down for the link. What an argument
+    // holds is read from the body it was written in, so a name bound to a call
+    // carries that call's declared answer. A declaration's slots name each
+    // position; a value's type writes the positions alone.
     private func check(
         reading readings: [LoweredType],
         shaped shapes: [Int: LiteralShape],

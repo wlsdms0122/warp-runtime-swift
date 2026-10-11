@@ -26,12 +26,8 @@ public struct ReturnForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         let written = try ValueReader(from: decoder).value
 
-        // Nothing written answers with nothing. A procedure always answers
-        // something, so this is `null` rather than a procedure that does not.
-        // Through the reader and not around it: what a form refuses with is a
-        // refusal about a document, and only the `Decodable` boundary turns an
-        // expression's own into one. Reading the value here to see whether
-        // anything was written is not that boundary.
+        // Nothing written answers `null`. What is written is read through
+        // `ExpressionReader`, so what it refuses is refused about the document.
         self.value = written == .null ? nil : try ExpressionReader(from: decoder).expression
     }
 

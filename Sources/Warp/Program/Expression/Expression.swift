@@ -162,8 +162,7 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // The path of a plain reference. An effect that requires one names it
-    // through this.
+    // The path of a plain reference.
     public var referencePath: Path? {
         guard case let .reference(path) = self else { return nil }
 
@@ -231,7 +230,7 @@ public indirect enum Expression: Sendable {
     static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
     static let resultAfterWhatNeverFinishes = "follows a body that never finishes, and would never be reached"
     static let declarationOnABoundName =
-        "this construct binds the name. A loop's round or"
+        "this construct binds the name, a loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
 
     // Whether a construct (a form that runs a body, or leaves) sits anywhere
@@ -307,10 +306,7 @@ public indirect enum Expression: Sendable {
     // Whether every way through this expression leaves. Structural and
     // conservative: a loop may run no round and an attempt's rescue may finish
     // normally, so neither counts; a call is judged at the build, where its
-    // signature is known. The build's type walk reads the same fact over the
-    // full program, symbols included. This is the symbol-free half of that
-    // judgement, and what it buys is the stage: a document is refused at the
-    // load.
+    // signature is known. This is the half of that fact the load reads.
     var alwaysLeaves: Bool {
         switch self {
         case .leave:

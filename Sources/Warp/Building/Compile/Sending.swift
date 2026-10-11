@@ -18,12 +18,13 @@ import Foundation
 // it reaches, and which declaration answers a contract's procedure is a
 // call's first argument to say.
 //
-// Refused here are the two claims a procedure makes that sending can contradict. A
-// query is the claim that it answers without running, and running is not
-// something a caller can catch; an isolated procedure is the claim that it touches no name
-// another body could touch at the same time, and neither is that. A procedure
-// making either claim while sending something that breaks it is refused. So is
-// a send reaching a parameter handed in place, since a send hands values.
+// Refused here are the two claims a procedure makes that sending can
+// contradict. A query is the claim that it answers without running, and running
+// is not something a caller can catch; an isolated procedure is the claim that
+// it touches no name another body could touch at the same time, and neither is
+// that. A procedure making either claim while sending something that breaks it
+// is refused. So is a send reaching a parameter handed in place, since a send
+// hands values.
 struct Sending {
     // MARK: - Property
     private let numbering: Numbering

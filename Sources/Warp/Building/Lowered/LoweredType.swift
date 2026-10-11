@@ -539,9 +539,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // where this is not a type a call decides, which is where a walk has a
     // type to read the segments against and no need for one of these.
     //
-    // Asked of the type rather than assembled at the walk, because the root
-    // is the type's own fact: a parameter roots a projection at itself, and a
-    // projection already rooted extends the path it carries.
+    // A parameter roots a projection at itself, and a projection already
+    // rooted extends the path it carries.
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.

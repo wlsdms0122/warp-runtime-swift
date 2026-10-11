@@ -51,7 +51,9 @@ enum LiteralShape: Sendable {
     init?(literal value: Value, in table: LoweredTypeTable) {
         switch value {
         case let .array(elements):
-            self = .list(elements.map { element in LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table)) })
+            self = .list(elements.map { element in
+                LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table))
+            })
 
         case let .record(record) where record.name == nil:
             self = .record(
@@ -181,7 +183,6 @@ enum LiteralShape: Sendable {
 
     // How a refusal names it: written as the literal is, a list in brackets
     // and a record in braces, with each part spelled as the type it reads as.
-    // A list whose parts all read as one type is that type.
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case let .list(items):

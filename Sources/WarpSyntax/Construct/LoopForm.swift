@@ -42,9 +42,8 @@ public struct LoopForm: ConstructForm {
     }
 
     // MARK: - Public
-    // The round is bound under the name the statement introduces, which a
-    // document reads as `{ ref "<name>.index" }`. A loop whose statement
-    // introduces none binds none.
+    // The statement binds the round under the name it introduces, read as
+    // `{ ref "<name>.index" }`, so the loop is the same whatever that name is.
     public func expression(boundTo name: Name?) -> Warp.Expression {
         .loop(while: condition, body: body)
     }

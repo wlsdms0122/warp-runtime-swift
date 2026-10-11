@@ -149,9 +149,8 @@ public struct Place: Sendable, Hashable {
         // MARK: - Private
     }
 
-    // A construct that holds a condition. Two of them, and a third would be a
-    // third here, which is the point: whoever spells a condition for a document
-    // is asked about every one of these by name.
+    // A construct that holds a condition, each by name, so whoever spells a
+    // condition for a document is asked about every one.
     public enum ConditionHolder: Sendable, Hashable {
         case conditional
         case loop

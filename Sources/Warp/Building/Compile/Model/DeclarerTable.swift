@@ -12,14 +12,13 @@ import Foundation
 //
 // A document reaches outside itself through the procedures it calls and the
 // types it names and does not declare, which is what `Module.references`
-// holds. So what a document was
-// compiled against is read off the document rather than tracked through the
-// compile.
+// holds. So what a document was compiled against is read off the document
+// rather than tracked through the compile.
 //
-// It grows as the compile lays documents down, because a document laid here may
-// be what the next one is compiled against. The order the compile lays them in already
-// stands each one's needs before it, so a name is in here by the time anything
-// asks for it.
+// It grows as the compile lays documents down, because a document laid here
+// may be what the next one is compiled against. The order the compile lays
+// them in already stands each one's needs before it, so a name is in here by
+// the time anything asks for it.
 struct DeclarerTable {
     // MARK: - Property
     // Nothing for a document that has no fingerprint. The name is declared and

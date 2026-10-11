@@ -57,9 +57,6 @@ public struct Module: Sendable {
 
     // Contracts this module declares: a name bound to the procedures a value's
     // type must answer to stand under it.
-    //
-    // Kept apart from the types: a contract is an open set of types, and what
-    // puts a type in it is a claim that it answers the procedures.
     public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
@@ -103,8 +100,7 @@ public struct Module: Sendable {
 
     // What this declares, on its own and without the checking. It is what a
     // writing takes, so a module and a document that was never a module are
-    // written by one call, and `imports` here is the resolved list rather than
-    // the claim, since by now the two are the same.
+    // written by one call, and `imports` here is the resolved list.
     public var draft: Draft {
         source.resolving(imports)
     }
