@@ -1093,9 +1093,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // be null and record fields, a record read as a dictionary by each of its
     // fields. Which was read first says nothing. At each position a reading
     // of `Any` makes its position `Any`. Elsewhere it is the one that takes
-    // the other. Rigidly, because a parameter read in a body is
-    // that body's own and nothing fills it. Nil where neither takes the
-    // other.
+    // the other, asked rigidly. Nil where neither takes the other.
     func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
         guard self != given else { return self }
 

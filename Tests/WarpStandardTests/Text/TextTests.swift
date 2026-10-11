@@ -143,7 +143,7 @@ struct TextTests {
         await #expect {
             try await run(procedure("Standard.Text.decoded", on: .bytes([0xff])))
         } throws: { error in
-            "\(error)".contains("Standard.Text.decoded asks bytes that are text")
+            "\(error)".contains("Standard.Text.decoded asks an Array<Int> that is text")
         }
     }
 
@@ -226,7 +226,7 @@ struct TextTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            "\(error)".contains("Standard.Text.decoded asks bytes, and [1] is 300, which is no whole number from 0 to 255")
+            "\(error)".contains("Standard.Text.decoded asks an Array<Int> of bytes, and [1] is 300, which is no whole number from 0 to 255")
         }
     }
 
