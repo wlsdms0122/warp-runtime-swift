@@ -2883,7 +2883,7 @@ struct TypeChecker {
                 rewritten = Body(
                     rewritten.statements.dropLast() + [
                         Statement(
-                            binding: statement.binding,
+                            binding: binding,
                             expression: into.written(inner.rewritten, in: context.loweredTypes)
                         )
                     ]
