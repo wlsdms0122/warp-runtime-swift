@@ -71,7 +71,7 @@ struct BytesTests {
             ],
             contracts: ["Ordered": [:], "Textual": [:]],
             satisfying: ["Ordered": ["Int", "Double", "String"], "Textual": ["String"]],
-            settled: true,
+            holdsEveryClaim: true,
             of: Linkage()
         )
 

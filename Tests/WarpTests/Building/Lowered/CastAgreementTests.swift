@@ -43,7 +43,7 @@ struct CastAgreementTests {
         ],
         contracts: ["Comparable": [:]],
         satisfying: ["Comparable": ["Int", "Double", "String"]],
-        settled: true,
+        holdsEveryClaim: true,
         of: Linkage()
     )
 

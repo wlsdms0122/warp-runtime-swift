@@ -81,7 +81,7 @@ struct ClaimChecker {
         in namespace: TypeNamespace,
         among signatures: [Name: Placed<Declared>],
         concealed: Set<Name> = [],
-        unsettled: Fulfillment? = nil
+        fulfillment: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
         contractProcedures: [Name: LoweredContractProcedure],
@@ -108,7 +108,7 @@ struct ClaimChecker {
         // The table the last pass was judged against holds exactly what the
         // witnesses hold up, so it is the table the link reads.
         repeat {
-            table = declaring.satisfying(held, unsettled: unsettled)
+            table = declaring.satisfying(held, fulfillment: fulfillment)
             witnessed = try witnesses(
                 of: claims,
                 asking: contracts,

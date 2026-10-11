@@ -277,7 +277,7 @@ public struct Builder: Sendable {
         })
 
         // The compile's ledger, woven into the table its rows are built from.
-        // A body folded here runs against a table that cannot settle a
+        // A body folded here runs against a table that cannot decide a
         // contract, and what it hands over is written here rather than passed
         // over.
         let fulfillment = Fulfillment()
@@ -286,7 +286,7 @@ public struct Builder: Sendable {
             in: namespace,
             among: signatures,
             concealed: concealed,
-            unsettled: fulfillment
+            fulfillment: fulfillment
         )
 
         // A document never written down is told from another by this compile

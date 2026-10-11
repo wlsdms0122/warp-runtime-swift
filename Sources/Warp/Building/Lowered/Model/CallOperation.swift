@@ -113,10 +113,10 @@ struct CallOperation: Sendable {
                 guard case let .literal(value) = code else { return code }
 
                 guard picked else {
-                    return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
+                    return .literal(try slot.type.settling(value, at: "input '\(slot.name)'", in: loweredTypes))
                 }
 
-                return .literal((try? slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes)) ?? value)
+                return .literal((try? slot.type.settling(value, at: "input '\(slot.name)'", in: loweredTypes)) ?? value)
             })
         }
 

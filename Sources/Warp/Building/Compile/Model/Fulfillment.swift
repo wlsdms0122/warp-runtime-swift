@@ -74,7 +74,7 @@ final class Fulfillment: @unchecked Sendable {
         lock.withLock { write(claim, at: place) }
     }
 
-    // A pair a fold could not settle, which stands where the document does.
+    // A pair a fold could not decide, which stands where the document does.
     func require(folded claim: Claim) {
         lock.withLock { write(claim, at: folding) }
     }

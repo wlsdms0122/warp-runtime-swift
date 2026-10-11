@@ -92,6 +92,7 @@ struct CaseTests {
               }
               test 1
               vocabulary {
+                imports []
                 procedures {
                   "App.one" {
                     access "public"
@@ -124,7 +125,7 @@ struct CaseTests {
     }
 
     @Test("is refused where its vocabulary writes what a vocabulary does not declare", arguments: [
-        "warp 1", "imports []", "const {\n      k 1\n    }", "var {\n      v 2\n    }", "description \"d\""
+        "warp 1", "const {\n      k 1\n    }", "var {\n      v 2\n    }", "description \"d\""
     ])
     func aVocabularyKeyItDoesNotDeclare(key: String) throws {
         // When / Then. The runner builds the host's module from what a
@@ -156,7 +157,7 @@ struct CaseTests {
                 }
                 """), in: "broken")
         } throws: { error in
-            error is ConformanceError && "\(error)".contains("A vocabulary declares `types`")
+            error is ConformanceError && "\(error)".contains("A vocabulary writes `imports` and declares `types`")
         }
     }
 

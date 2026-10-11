@@ -250,11 +250,12 @@ struct Case: Sendable, CustomStringConvertible {
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
         // MARK: - Property
-        // What a vocabulary declares: what the host's procedures are, and the
-        // types, contracts and claims their signatures stand on. Which version
-        // it is read at and what it sends are the runner's to say, and what a
-        // program declares beside them (constants, variables) is a document's.
-        static let declaringKeys: Set<Name> = ["types", "contracts", "satisfies", "procedures"]
+        // What a vocabulary writes: what the host's procedures are, the types,
+        // contracts and claims their signatures stand on, and what it uses
+        // from other modules, as any module lists it. Which version it is read
+        // at is the runner's to say, and what a program declares beside them
+        // (constants, variables) is a document's.
+        static let declaringKeys: Set<Name> = ["imports", "types", "contracts", "satisfies", "procedures"]
 
         // The module as the reader takes it.
         let module: Value
@@ -615,8 +616,9 @@ struct Case: Sendable, CustomStringConvertible {
 
         if let taken = module.names.first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
-                "the vocabulary a case asks for writes '\(taken)'. A vocabulary declares `types`,"
-                    + " `contracts`, `satisfies` and `procedures`, and how it is read is the runner's"
+                "the vocabulary a case asks for writes '\(taken)'. A vocabulary writes `imports`"
+                    + " and declares `types`, `contracts`, `satisfies` and `procedures`, and how it is"
+                    + " read is the runner's"
             )
         }
 
@@ -645,15 +647,13 @@ struct Case: Sendable, CustomStringConvertible {
 
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
-        // document's, and the three the runner says for itself.
+        // document's, and the version the runner says for itself.
         var stripped = Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
 
         stripped["warp"] = .int(1)
-        stripped["imports"] = .array([])
         stripped["procedures"] = procedures.isEmpty
             ? nil
             : .dictionary(Dictionary(uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }))
-
 
         return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
     }

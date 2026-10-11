@@ -268,7 +268,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
-    private static let witnesses: [Value] = [
+    private static let samples: [Value] = [
         .null, .bool(false), .int(0), .double(0), .string(""),
         .array([]), .dictionary([:]), .bytes([])
     ]
@@ -540,7 +540,7 @@ indirect enum LoweredType: Sendable, Equatable {
     //
     // The marks come off on the way in: what a mark says is expected of the
     // value, and where the walk landed is the same field either way.
-    func reaching(_ path: Path) -> LoweredType? {
+    func projecting(along path: Path) -> LoweredType? {
         switch self {
         case let .parameter(name, _):
             return .projection(of: name, path: path.unmarked)
@@ -900,12 +900,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // A composition takes what answers each of its contracts, asked of
         // the table with the same rigidity and, where the slot takes null as
         // well, knowing it does. A value read as `Any` or along a path a call
-        // decides answers none until a cast says what it is.
+        // decides answers none until a cast says what it is, and one leaning
+        // on a claim passes, for the link to decide.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { contract in
-                table.satisfies(contract: contract, reading: other, rigid: rigid, orNull: orNull)
+                if case .decided(false) = table.answering(contract: contract, reading: other, rigid: rigid, orNull: orNull) { false } else { true }
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
@@ -1175,7 +1176,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 var fieldReadings = Substitution()
 
                 mine.binding(against: field, into: &fieldReadings, taking: &taking, holding: &holding, in: table)
-                fields.read(fieldReadings, joining: .partByPart, in: table)
+                fields.read(fieldReadings, joining: .joined, in: table)
             }
 
             substitution.read(fields, in: table)
@@ -1470,7 +1471,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // for all of them. A table that cannot say yet passes each byte as
         // it is, and so passes them all.
         case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.allSatisfy { contract in table.settles(contract: contract, arrived: TypeSpelling.int) != false }
+            return bounds.allSatisfy { contract in table.answers(contract: contract, arrived: TypeSpelling.int) != false }
 
         // `Double` takes no whole number and so no byte, and neither do the
         // rest. Named rather than left to a default, so that a kind added to
@@ -1974,9 +1975,9 @@ indirect enum LoweredType: Sendable, Equatable {
             guard mine.isDecidedKind, theirs.isDecidedKind else { return true }
 
             // Asked of the judge that will settle it, not of a second opinion
-            // about what it would say. One witness per kind is enough here.
-            return LoweredType.witnesses.contains { witness in
-                mine.settles(witness, in: table) && theirs.settles(witness, in: table)
+            // about what it would say. One sample per kind is enough here.
+            return LoweredType.samples.contains { sample in
+                mine.settles(sample, in: table) && theirs.settles(sample, in: table)
             }
         }
     }

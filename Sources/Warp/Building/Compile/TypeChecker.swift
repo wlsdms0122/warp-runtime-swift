@@ -241,8 +241,8 @@ struct TypeChecker {
     // written from is read rather than run. The same gate an operand passes:
     // an operand, a constant and a variable's start are where the build reads
     // an expression instead of running it.
-    func settles(
-        _ expression: Expression,
+    func refuseRunning(
+        in expression: Expression,
         at place: Place,
         given context: TypingContext,
         writing fulfillment: Fulfillment
@@ -433,8 +433,8 @@ struct TypeChecker {
 
     // Why what arrived is provably outside what a declaration holds it to,
     // wherever in the declaration a composition stands, or nothing. What
-    // leans on a claim this table cannot settle is written down for the
-    // link to settle.
+    // leans on a claim this table cannot decide is written down for the
+    // link to decide.
     private func refusal(
         holding given: LoweredType,
         to declared: LoweredType,
@@ -451,14 +451,12 @@ struct TypeChecker {
 
         for held in holding {
             for contract in held.bounds {
-                if let refusal = refusal(
+                if let refusal = table.refusal(
                     of: held.reading,
                     answering: contract,
                     orNull: held.orNull,
                     as: label,
-                    in: table,
-                    fulfillment: fulfillment,
-                    at: place
+                    leaning: { claim in fulfillment.require(claim, at: place) }
                 ) {
                     return refusal
                 }
@@ -466,36 +464,6 @@ struct TypeChecker {
         }
 
         return nil
-    }
-
-    // Why a reading provably does not answer a contract a bound names, or
-    // nothing where it is not. A contract asks a set of procedures the
-    // reading's own type answers.
-    private func refusal(
-        of reading: LoweredType,
-        answering name: Name,
-        orNull: Bool,
-        as label: String,
-        in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment,
-        at place: Place
-    ) -> String? {
-        switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
-        // What leans on a claim is written down for the link to settle.
-        case let .leansOn(types):
-            for type in types {
-                fulfillment.require(Claim(type: type, contract: name), at: place)
-            }
-
-            return nil
-
-        case .settled(true):
-            return nil
-
-        case .settled(false):
-            return "\(label) \(reading.rendered(in: loweredTypes)),"
-                + " which does not answer every procedure '\(name)' asks"
-        }
     }
 
     // Whether a write fits the slot it lands in, in the box `binding` holds.
@@ -512,38 +480,6 @@ struct TypeChecker {
         return written.isHeld(by: slot, inPlace: true, in: loweredTypes)
     }
 
-    // The one bounds judgement a call is held to, over the whole signature.
-    // Answers the refusal, or nil where every bounded parameter's readings
-    // answer each of its bounds. That a named bound is declared is the
-    // declaration's own fact, held where it is declared.
-    private func boundsRefusal(
-        bounds: [Name: Set<Name>],
-        substitution: Substitution,
-        in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment,
-        at place: Place
-    ) -> String? {
-        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
-            for reading in substitution.everyReading(of: parameter) {
-                for name in names.sorted() {
-                    if let refusal = refusal(
-                        of: reading,
-                        answering: name,
-                        orNull: false,
-                        as: "'\(parameter)' is read as",
-                        in: loweredTypes,
-                        fulfillment: fulfillment,
-                        at: place
-                    ) {
-                        return refusal
-                    }
-                }
-            }
-        }
-
-        return nil
-    }
-
     private func instantiated(
         _ declared: Signature,
         over slots: [Slot],
@@ -557,26 +493,30 @@ struct TypeChecker {
         guard declared.isGeneric else { return .fits(slots: slots) }
 
         guard substitution.disagreeing.isEmpty else {
-            let named = substitution.disagreeing.keys.sorted().map { parameter in
-                "'\(parameter)' is read as \(substitution.readings[parameter]?.rendered(in: loweredTypes) ?? "?")"
-                    + " and as \(substitution.disagreeing[parameter]?.rendered(in: loweredTypes) ?? "?")"
+            let named = substitution.disagreeing.keys.sorted().compactMap { parameter in
+                substitution.disagreement(of: parameter, in: loweredTypes)
             }
 
             return .refusal(named.joined(separator: ", "))
         }
 
-        if let refusal = boundsRefusal(
-            bounds: declared.bounds,
-            substitution: substitution,
-            in: loweredTypes,
-            fulfillment: fulfillment,
-            at: place
-        ) {
-            return .refusal(refusal)
+        let bounds = declared.bounds.sorted(by: { $0.key < $1.key })
+
+        for (parameter, names) in bounds {
+            if let refusal = substitution.unanswered(
+                parameter,
+                bounds: names,
+                in: loweredTypes,
+                leaning: { claim in fulfillment.require(claim, at: place) }
+            ) {
+                return .refusal(refusal)
+            }
         }
 
-        if let refusal = severalTypesRefusal(bounds: declared.bounds, over: slots, substitution: substitution, in: loweredTypes) {
-            return .refusal(refusal)
+        for (parameter, names) in bounds {
+            if let refusal = substitution.severalTypes(of: parameter, bounds: names, over: slots.map(\.type), in: loweredTypes) {
+                return .refusal(refusal)
+            }
         }
 
         // A list or record literal handed where a bounded parameter stands is
@@ -614,51 +554,6 @@ struct TypeChecker {
         }
 
         return .fits(slots: slots.map { slot in Slot(name: slot.name, type: slot.type.filling(substitution.readings)) })
-    }
-
-    // Why a value of more than one type fills a bounded parameter it cannot,
-    // or nil where none does. A bounded parameter is one type wherever it
-    // stands, and a value of a contract is of whichever type answers it, and
-    // one of what may be null of the type or `Null`, so two of them, or one
-    // inside a list or a record, are not known to be one type. Standing
-    // alone at one position, the value is the one thing the parameter stands
-    // for, and the call reads the parameter the way it read the value.
-    private func severalTypesRefusal(
-        bounds: [Name: Set<Name>],
-        over slots: [Slot],
-        substitution: Substitution,
-        in loweredTypes: LoweredTypeTable
-    ) -> String? {
-        for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) where !names.isEmpty {
-            guard let valueOfSeveral = substitution.everyReading(of: parameter).first(where: { reading in
-                switch reading {
-                case let .composition(read):
-                    return !read.isEmpty
-
-                case .nullable:
-                    return true
-
-                default:
-                    return false
-                }
-            }) else {
-                continue
-            }
-
-            let standing = slots.filter { slot in slot.type.boundedParameters[parameter] != nil }
-
-            if standing.count == 1, case let .parameter(alone, _) = standing[0].type.slotUnwrapped, alone == parameter {
-                continue
-            }
-
-            let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
-
-            return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: loweredTypes)), a value of more than one"
-                + " type, and \(spelled) is one type wherever it stands. A value of a contract or of what may"
-                + " be null fills a bounded parameter only where the parameter stands alone at one position"
-        }
-
-        return nil
     }
 
     // What a call put in its callee's type parameters, read by holding each
@@ -766,7 +661,7 @@ struct TypeChecker {
                 // neither `Any` nor the parameter itself, so a body naming a
                 // step on the way (`held = of.inner`, then `held.count`) reads
                 // the same field.
-                if let reached = current.reaching(rest()) {
+                if let reached = current.projecting(along: rest()) {
                     switch asWritten(rest(), in: environment, with: context, at: place) {
                     case let .refused(reason):
                         return .refused(reason)
@@ -1220,7 +1115,7 @@ struct TypeChecker {
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
-        guard let head = folding.settled(inner) else {
+        guard let head = folding.boundHead(of: inner) else {
             return .indexRef(inner, optional: optionally)
         }
 
@@ -1420,7 +1315,7 @@ struct TypeChecker {
                 // lowering binds the constant in the body for the run to read.
                 let settled = try await foldedIndexReferences(path, at: place, folding: folding)
 
-                guard let head = folding.settled(settled) else {
+                guard let head = folding.boundHead(of: settled) else {
                     return Inspection(rewritten: .reference(settled), reading: read, flow: reached)
                 }
 
