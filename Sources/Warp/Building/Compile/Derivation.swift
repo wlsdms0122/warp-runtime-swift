@@ -24,11 +24,6 @@ struct Derivation {
 
         // MARK: - Initializer
         // MARK: - Public
-        // Whether a slot of this type says the fact of the procedure it holds.
-        func isClaimed(by type: LoweredType) -> Bool {
-            claim(type)
-        }
-
         // MARK: - Private
     }
 
@@ -459,7 +454,7 @@ struct Derivation {
             guard
                 holds(callee),
                 let reached = reached(callee, given: { name in declared[name] }, in: fact.table),
-                fact.isClaimed(by: reached)
+                fact.claim(reached)
             else { return false }
 
             return handsOwned(arguments, at: reached.inPlacePositions, declaring: names)

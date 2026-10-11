@@ -556,18 +556,6 @@ struct TypeChecker {
         return .fits(slots: slots.map { slot in Slot(name: slot.name, type: slot.type.filling(substitution.readings)) })
     }
 
-    // What a call put in its callee's type parameters, read by holding each
-    // declared parameter beside what was actually sent at its position. The
-    // readings already in hand, so nothing is walked a second time for the
-    // asking.
-    private func substitution(
-        over slots: [Slot],
-        readings sent: [LoweredType],
-        in loweredTypes: LoweredTypeTable
-    ) -> Substitution {
-        Substitution(filling: slots.map(\.type), against: sent, in: loweredTypes)
-    }
-
     // Walking a path through types the way the resolver walks it through
     // values. Each dot is judged by the type the walk has reached: a type
     // with fields reads one, and a type without them has no name there to
@@ -1953,7 +1941,7 @@ struct TypeChecker {
                     reading: answered(
                         by: signature,
                         answering: context.answer(of: call.selector),
-                        filling: substitution(over: slots, readings: readings, in: context.loweredTypes).readings
+                        filling: Substitution(filling: slots.map(\.type), against: readings, in: context.loweredTypes).readings
                     ),
                     flow: flow
                 )
@@ -2000,8 +1988,7 @@ struct TypeChecker {
             for (position, written) in call.arguments.enumerated() {
                 // A closure literal written here, at any depth, is completed
                 // by the type it is written into.
-                let argument = signature.parameters[position].type.lowered(in: context.loweredTypes, bounds: signature.bounds)
-                    .completing(written, in: context.loweredTypes)
+                let argument = slots[position].type.completing(written, in: context.loweredTypes)
                 let inner = try await inspected(
                     argument,
                     naming: nil,
@@ -2019,7 +2006,7 @@ struct TypeChecker {
                 flow = flow.followed(by: inner.flow)
             }
 
-            let substitution = substitution(over: slots, readings: sent, in: context.loweredTypes)
+            let substitution = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes)
             let filled = substitution.readings
 
             let taking = slots.map { slot in slot.type.filling(filled) }
@@ -2076,8 +2063,7 @@ struct TypeChecker {
                         call: rewritten,
                         place: place,
                         readings: sent,
-                        shapes: shapes,
-                        substitution: substitution
+                        shapes: shapes
                     )
                 ] + calls,
                 judgements: judgements,
@@ -2518,8 +2504,10 @@ struct TypeChecker {
             // What the syntactic leaves get at the load, a call gets here, where
             // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
+                // What never finishes binds nothing, so a name on it
+                // promises a binding that cannot happen.
                 if statement.binding != nil {
-                    try refuseNeverBinding(at: here, when: ask)
+                    try refuse(Expression.nameOnWhatNeverFinishes, at: here, when: ask)
                 }
 
                 if position != body.statements.count - 1 {
@@ -2669,14 +2657,6 @@ struct TypeChecker {
         }
 
         return (ask.rewrites ? rewritten : body, calls, judgements, environment, .null, flowed, locals)
-    }
-
-    // What never finishes binds nothing, so a name on it promises a binding
-    // that cannot happen. Asked exactly where the sequence rule finds a
-    // statement that ends the body, so the two facts cannot part. The load
-    // refuses the leaves it can see, and the build the calls only it can see.
-    private func refuseNeverBinding(at place: Place, when ask: Ask) throws {
-        try refuse(Expression.nameOnWhatNeverFinishes, at: place, when: ask)
     }
 
     // The environment a loop's insides read: the enclosing names plus the
@@ -3050,12 +3030,13 @@ struct TypeChecker {
         // no answer, a bounded one takes only what answers its bounds) is
         // the one every call surface shares, so this only gathers what the call
         // wrote into each slot.
+        let declaredSlots = context.slots(of: call.selector)
         let slots: [Slot]
 
         switch instantiated(
             declared,
-            over: context.slots(of: call.selector),
-            substitution: site.substitution,
+            over: declaredSlots,
+            substitution: Substitution(filling: declaredSlots.map(\.type), against: site.readings, in: loweredTypes),
             shaped: site.shapes,
             in: loweredTypes,
             fulfillment: fulfillment,
