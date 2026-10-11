@@ -2297,8 +2297,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // A type parameter the procedure's own signature names is one a
         // closure took from the generic body that made it, filled by that
         // body's call, which no value says. A value arriving here gets its
-        // type whole, so it is no value of any procedure type.
-        guard !given.namesParameter else {
+        // type whole, so it is no value of a procedure type that writes a
+        // signature. `Procedure` writes none, and every procedure is one.
+        guard !given.namesParameter || (required == nil && returns == nil) else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table)),"
                     + " whose type parameter only the call that made it fills"
@@ -2316,8 +2317,8 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        // A slot takes a procedure as it is: a call of it answers what its
-        // body answers, which is judged where the call reads it.
+        // A slot takes a procedure as it is, and a call of it hands its
+        // answer on as it came.
         return value
     }
 
