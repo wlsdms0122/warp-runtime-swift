@@ -13,15 +13,4 @@ extension Parameter {
     func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>]) -> Slot {
         Slot(name: name, type: type.lowered(in: table, bounds: bounds))
     }
-
-    // The same, with what a call put in the type parameters written in. A
-    // parameter nothing filled reads `Any`, which is what the call said about
-    // it by saying nothing.
-    func lowered(
-        in table: LoweredTypeTable,
-        bounds: [Name: Set<Name>],
-        filling bound: [Name: LoweredType]
-    ) -> Slot {
-        Slot(name: name, type: type.lowered(in: table, bounds: bounds).filling(bound))
-    }
 }

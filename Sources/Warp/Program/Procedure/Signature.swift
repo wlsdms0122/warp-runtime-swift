@@ -101,20 +101,11 @@ public struct Signature: Sendable, Equatable {
         parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) }
     }
 
-    // The same, with what a call put in the type parameters written in. The
-    // filling happens on the lowered type rather than on the declaration,
-    // because what a call read is a type and a declaration is a document's
-    // spelling.
-    func lowered(in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> [Slot] {
-        parameters.map { parameter in parameter.lowered(in: table, bounds: bounds, filling: bound) }
-    }
-
     // Whether a value declared this way may stand where this is required.
     //
-    // The directions are opposite on purpose: what is given must accept
-    // everything that will be passed to it, and what is required must accept
-    // everything it will get back. A body promising less than the slot asks and
-    // returning more than the slot allows is the one that fits.
+    // The directions are opposite: what is given takes everything the slot
+    // hands it, and the slot takes everything the given answers. One taking
+    // more than the slot hands and answering less than the slot allows fits.
     func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
         let table = types.loweredTypes
 
