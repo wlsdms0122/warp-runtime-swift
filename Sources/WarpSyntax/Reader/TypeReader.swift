@@ -201,6 +201,14 @@ public struct TypeReader: Decodable {
         }
     }
 
+    // The contracts a bound names: the parts an `&` joins, or the one name
+    // where none does. Each part is read as a name, and which names a
+    // contract may be called is the load's, by `NameGrammar`, wherever the
+    // names came from.
+    static func contracts(_ written: String, in notation: Notation) throws -> Set<Name> {
+        try contracts(written) { name in notation.qualified(name, as: .type) }
+    }
+
     // A written type's name, said in this notation's own terms: every other
     // refusal a type's spelling earns is a `TypeFormError`.
     static func named(_ text: String) throws -> Name {
@@ -218,7 +226,7 @@ public struct TypeReader: Decodable {
         _ written: String,
         qualifying: (Name) -> Name
     ) throws -> TypeExpression {
-        let text = written.trimmingCharacters(in: .whitespaces)
+        let text = written.trimmingCharacters(in: Path.whiteSpace)
 
         guard !text.isEmpty else {
             throw TypeFormError("a type name must not be empty")
@@ -250,25 +258,16 @@ public struct TypeReader: Decodable {
             return .procedure(signature, constness, isolation)
         }
 
-        // `A & B`: the names a value answers, and nothing else, so every part
-        // is held to being a name.
-        if let parts = joined(text) {
-            return .composition(
-                Set(
-                    try parts.map { part -> Name in
-                        let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
+        // `A & B`: the names a value answers, and nothing else. Names joining
+        // to one name one contract, which is that name.
+        if joined(text) != nil {
+            let names = try contracts(text, qualifying: qualifying)
 
-                        guard case let .named(name) = parsed else {
-                            throw TypeFormError(
-                                "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                                    + " and `&` joins the names of contracts, each a bare name"
-                            )
-                        }
+            if names.count == 1, let only = names.first {
+                return .named(only)
+            }
 
-                        return name
-                    }
-                )
-            )
+            return .composition(names)
         }
 
         // A type parameter rather than a name: `some T` is worked out from the
@@ -276,7 +275,7 @@ public struct TypeReader: Decodable {
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
-            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: .whitespaces)))
+            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)))
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -306,6 +305,14 @@ public struct TypeReader: Decodable {
         }
 
         return holding.holding(try parse(inner, qualifying: qualifying))
+    }
+
+    // The names the parts an `&` at the top of a spelling joins are, or the
+    // one name the spelling is where it has no such `&`.
+    private static func contracts(_ text: String, qualifying: (Name) -> Name) throws -> Set<Name> {
+        try (joined(text) ?? [Substring(text)]).reduce(into: Set<Name>()) { names, part in
+            names.insert(qualifying(try named(part.trimmingCharacters(in: Path.whiteSpace))))
+        }
     }
 
     // The parts an `&` at the top of a spelling joins, or nothing where the

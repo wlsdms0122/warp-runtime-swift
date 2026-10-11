@@ -70,8 +70,7 @@ struct UnwritableTests {
         "a type whose spelling the reading refuses, or reads as another type, has no document",
         arguments: [
             TypeExpression.nullable(.variable(.int)),
-            .composition(["Foo", "Int"]),
-            .composition(["Foo", "Array<Int>"]),
+            .composition(["App.A"]),
             .named("Array<Int>"),
             .array(.named("Int"))
         ]
@@ -83,11 +82,9 @@ struct UnwritableTests {
         }
     }
 
-    @Test("one name composing is written as the name, and a composition's names are written in name order")
+    @Test("a composition's names are written in name order")
     func aCompositionIsWrittenInItsOneSpelling() throws {
         // When / Then
-        #expect(try sut.value(of: TypeExpression.composition(["App.A"])) == .string("App.A"))
-        #expect(try sut.value(of: TypeExpression.array(.composition(["App.A"]))) == .string("Array<App.A>"))
         #expect(try sut.value(of: TypeExpression.composition(["App.B", "App.A"])) == .string("App.A & App.B"))
     }
 

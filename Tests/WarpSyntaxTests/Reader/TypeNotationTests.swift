@@ -78,7 +78,20 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("App.B & App.A") == .composition(["App.A", "App.B"]))
         #expect(try TypeReader.parse("Array<App.A & App.B>") == .array(.composition(["App.A", "App.B"])))
         #expect(try Writer().value(of: .composition(["App.A", "App.B"])) == .string("App.A & App.B"))
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("App.A & Array<Int>") }
+        #expect(try TypeReader.parse("App.A & App.A") == .named("App.A"))
+
+        // And. Each part is read as a name, and which names a contract may
+        // be called is the load's
+        #expect(try TypeReader.parse("App.A & Int") == .composition(["App.A", "Int"]))
+        #expect {
+            try Loader().load([
+                "warp": 1,
+                "imports": ["App.A"],
+                "procedures": ["entry": ["parameters": [["name": "x", "type": "App.A & Int"]]]]
+            ])
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("'Int' is no type's name")
+        }
 
         // And. A document writes the set one way, in name order, and a name
         // written twice is one name, which `&` does not join
@@ -117,7 +130,7 @@ struct TypeNotationTests {
     @Test("a bound is the names of contracts, and a nested procedure type writes none")
     func aBoundBelongsToTheSignature() throws {
         // When / Then. A bound is a contract's name, never a type.
-        #expect(throws: ReadingError.self) {
+        #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
                 "bounds": ["T": "Array<Int>"],
                 "parameters": [["name": "of", "type": "some T"]],

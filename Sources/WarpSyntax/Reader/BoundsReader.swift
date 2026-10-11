@@ -31,33 +31,16 @@ struct BoundsReader {
         at steps: [Place.Step]
     ) throws -> [Name: Set<Name>] {
         // A bound is the names of contracts, one or several joined with `&`,
-        // and never a type. Read by the one reading every type spelling gets,
-        // so what `&` means here is what it means in a slot.
+        // read the way a slot's `&` is.
         var named: [Name: Set<Name>] = [:]
 
         for (parameter, bound) in (written ?? [:]).sorted(by: { one, other in one.key < other.key }) {
-            let here = steps + [.key(parameter.spelling)]
-            let parsed: TypeExpression
-
             do {
-                parsed = try TypeReader.parse(bound, in: notation)
+                named[parameter] = try TypeReader.contracts(bound, in: notation)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: here)
-            }
-
-            switch parsed {
-            case let .named(name):
-                named[parameter] = [name]
-
-            case let .composition(joined):
-                named[parameter] = joined
-
-            default:
                 throw ReadingError(
-                    "bounds bind '\(parameter)' to"
-                        + " '\(bound)', which is not a contract's name, nor"
-                        + " contracts' names joined with `&`",
-                    at: here
+                    "bounds bind '\(parameter)' to '\(bound)': \(refused.message)",
+                    at: steps + [.key(parameter.spelling)]
                 )
             }
         }

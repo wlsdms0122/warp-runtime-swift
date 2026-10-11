@@ -32,7 +32,7 @@ struct TypeWriter {
             throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
         }
 
-        guard read == canonical(type) else {
+        guard read == type else {
             throw WritingError(
                 "the type is written '\(spelling)', which the reading takes as \(read.rendered),"
                     + " and a document has no way to tell the two apart"
@@ -136,25 +136,6 @@ struct TypeWriter {
             }
 
             return .dictionary([try Name(spelling): .dictionary(written)])
-        }
-    }
-
-    // The type the reading gives back for this one's spelling. One name
-    // composing is spelled as the name, which the build reads back as the
-    // composition where the name is a contract's.
-    private func canonical(_ type: TypeExpression) -> TypeExpression {
-        switch type {
-        case let .composition(names):
-            guard names.count == 1, let name = names.first else { return type }
-
-            return .named(name)
-
-        case let .array(element): return .array(canonical(element))
-        case let .dictionary(element): return .dictionary(canonical(element))
-        case let .nullable(inner): return .nullable(canonical(inner))
-        case let .variable(inner): return .variable(canonical(inner))
-        case let .inout(inner): return .inout(canonical(inner))
-        default: return type
         }
     }
 
