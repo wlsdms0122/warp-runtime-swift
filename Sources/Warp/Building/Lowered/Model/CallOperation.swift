@@ -58,9 +58,10 @@ struct CallOperation: Sendable {
     // One rule, whether the callee is the one the call named or one of the
     // types the link found answering a contract's procedure. A call through a
     // contract is placed against every type answering it and the run picks
-    // one by the value, so a literal one of those types refuses is left as
-    // written, `picked`, for the run to refuse where that type is the one it
-    // picks.
+    // one by the value, so these are `picked`. A literal one of them refuses
+    // stands at a `Self` the contract writes, which the first argument and
+    // the literal fill as one type at the build, so that row is one the run
+    // never picks for this call, and the literal is left there as written.
     init(
         handing written: [Argument?],
         to callee: Linked,
