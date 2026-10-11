@@ -232,7 +232,7 @@ struct ModifierNotationTests {
                 "entry": Procedure(
                     access: .public,
                     body: [Statement(binding: .constant("x"), expression: .record(["loop": .literal(.int(1))]))],
-                    result: .reference([.key("x")])
+                    result: .reference([.name("x")])
                 )
             ]
         )
@@ -283,7 +283,7 @@ struct ModifierNotationTests {
         #expect(module.variables["total"]?.start.constantValue == .int(0))
         #expect(
             module.procedures["entry"]?.body.statements[1].binding
-                == .assignment([.key("p"), .key("x")])
+                == .assignment([.name("p"), .name("x")])
         )
         #expect(try Writer(registry: loader.registry).value(of: module) == written)
     }

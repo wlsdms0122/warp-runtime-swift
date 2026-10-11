@@ -129,7 +129,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .array(.int))]
                     ),
                     body: [],
-                    result: .reference([.key("data"), .index(1)])
+                    result: .reference([.name("data"), .index(1)])
                 )
             ]
         )
@@ -188,10 +188,10 @@ struct BytesTests {
                         Statement(
                             binding: .constant("walk"),
                             expression: walking(
-                                [.key("data")],
+                                [.name("data")],
                                 element: "element",
                                 body: [
-                                    Statement(binding: .assignment([.key("sum")]), expression: .call(Call(
+                                    Statement(binding: .assignment([.name("sum")]), expression: .call(Call(
                                         selector: "Standard.Numeric.plus",
                                         arguments: [reference("sum"), reference("element")]
                                     )))

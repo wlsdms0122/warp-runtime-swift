@@ -484,7 +484,7 @@ struct ObjectReadingTests {
                             body: Block(
                                 body: [
                                     Statement(
-                                        binding: .assignment([.key("n")]),
+                                        binding: .assignment([.name("n")]),
                                         expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
                                     ),
                                     Statement(binding: .constant("k"), expression: reference("n"))

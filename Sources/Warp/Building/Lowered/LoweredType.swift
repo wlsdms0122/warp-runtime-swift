@@ -586,15 +586,11 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a dot reading this name reaches: an entry, where this is a
-    // dictionary, whose names are data, or the field a record type declares
-    // under the name, as what the field holds. Nil where a dot reaches
-    // nothing the type declares.
+    // What a dot reading this name reaches: the field a record type
+    // declares under the name, as what the field holds. Nil where a dot
+    // reaches nothing the type declares.
     func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
         switch self {
-        case let .dictionary(_, value):
-            return value
-
         case let .named(row):
             return table.loweredTypes[row].dotted(name, in: table)
 
@@ -613,8 +609,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return element
 
-        // A dictionary's names are data, so a key the run computes reads an
-        // entry the way an index reads an element.
+        // Brackets on a map read an entry the way they read a list's
+        // element.
         case let .dictionary(_, value):
             return value
 
@@ -1327,7 +1323,11 @@ indirect enum LoweredType: Sendable, Equatable {
 
                         return (
                             key: try key.settling(written.key, at: at, in: table),
-                            value: try entry.settling(written.value, at: "\(path()).\(Rendering(written.key).text())", in: table)
+                            value: try entry.settling(
+                                written.value,
+                                at: "\(path())\(Path([.index(written.key)]).rendered)",
+                                in: table
+                            )
                         )
                     }
                 )
@@ -1490,7 +1490,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Spelled as `TypeExpression` spells it, for the message alone.
         case let .projection(of, path):
-            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
         case .never:
             return TypeSpelling.never.spelling

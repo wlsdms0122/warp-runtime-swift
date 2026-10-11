@@ -31,7 +31,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -57,7 +57,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -122,7 +122,7 @@ struct ReturnTypeTests {
 
         let written = try module(answering: .array([.record(["id": .literal(.string("a"))])]))
         let held = try module(
-            answering: .reference([.key("made")]),
+            answering: .reference([.name("made")]),
             holding: [Statement(binding: .constant("made"), expression: .array([.record(["id": .literal(.string("a"))])]))]
         )
 

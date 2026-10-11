@@ -86,7 +86,7 @@ struct TypeWriter {
         // holding one is said rather than written as something else.
         case let .projection(of, path):
             throw WritingError(
-                "`\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)` is a type"
+                "`\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"

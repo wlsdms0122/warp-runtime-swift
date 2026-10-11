@@ -24,11 +24,11 @@ public struct Path: Sendable, Equatable {
 
         for segment in segments {
             switch segment {
-            case let .key(key, optional):
+            case let .name(key, optional):
                 rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
 
             case let .index(index, optional):
-                rendered += (optional ? "?[" : "[") + "\(index)]"
+                rendered += (optional ? "?[" : "[") + spelling(of: index) + "]"
 
             case let .indexRef(indexPath, optional):
                 rendered += (optional ? "?[" : "[") + "\(indexPath.rendered)]"
@@ -66,7 +66,7 @@ public struct Path: Sendable, Equatable {
     // The root name this path reads from. Nil when the path doesn't start with
     // a name, which no scope can serve.
     public var head: Name? {
-        guard case let .key(head, _)? = segments.first else { return nil }
+        guard case let .name(head, _)? = segments.first else { return nil }
 
         return head
     }
@@ -105,4 +105,24 @@ public struct Path: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // A value between the brackets as a path writes it: a whole number in
+    // its digits and text between double quotes, `\"` a quote and `\\` a
+    // backslash inside them. A value of another kind has no spelling in a
+    // path, and shows the way `text` shows it.
+    private func spelling(of index: Value) -> String {
+        switch index {
+        case let .int(position):
+            return String(position)
+
+        case let .string(text):
+            let escaped = text
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+
+            return "\"\(escaped)\""
+
+        default:
+            return Rendering(index).text()
+        }
+    }
 }

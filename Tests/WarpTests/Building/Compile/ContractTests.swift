@@ -304,7 +304,7 @@ struct ContractTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("of"), .key("balance")])
+                    result: .reference([.name("of"), .name("balance")])
                 )
             ]
         )
@@ -625,7 +625,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("balance "),
-                        spelling(.reference([.key("of"), .key("balance")]))
+                        spelling(.reference([.name("of"), .name("balance")]))
                     )
                 ),
                 "Bank.Card.describe": Procedure(
@@ -636,7 +636,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("card "),
-                        spelling(.reference([.key("of"), .key("last")]))
+                        spelling(.reference([.name("of"), .name("last")]))
                     )
                 )
             ].merging(added) { _, given in given }

@@ -82,7 +82,7 @@ enum ObjectLayout {
     }
 
     enum SegmentTag: Int {
-        case key
+        case name
         case index
         case indexRef
     }
@@ -209,7 +209,7 @@ enum ObjectLayout {
     // A step of an address.
     enum StepTag: Int {
         case field
-        case key
+        case name
         case index
         case at
     }

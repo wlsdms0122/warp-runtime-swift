@@ -217,7 +217,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         // writes this, so the spelling answers to the message alone: a refusal
         // about `item.a` names where it came from.
         case let .projection(of, path):
-            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
         case let .variable(inner):
             return "\(TypeSpelling.variable) \(inner.rendered)"

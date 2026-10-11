@@ -14,7 +14,7 @@ extension Step: Equatable {
         case let (.field(mine, myName, myMark), .field(theirs, theirName, theirMark)):
             return mine == theirs && myName == theirName && myMark == theirMark
 
-        case let (.key(mine, myMark), .key(theirs, theirMark)):
+        case let (.name(mine, myMark), .name(theirs, theirMark)):
             return mine == theirs && myMark == theirMark
 
         case let (.index(mine, myMark), .index(theirs, theirMark)):

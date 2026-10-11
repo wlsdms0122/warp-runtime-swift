@@ -486,9 +486,9 @@ struct Derivation {
 
     // The type this reads, as the slot it came out of says it, and nil where
     // it came out of none. The head is a name a slot declared, and the walk
-    // follows that type past it: an index reads an element of an array or a
-    // dictionary, and a dot reads an entry of a dictionary or a field a record
-    // type declares. An array or a dictionary of them says it about every
+    // follows that type past it: brackets read an element of a list or an
+    // entry of a map, and a dot reads a field a record type declares. An
+    // array or a dictionary of them says it about every
     // element, and the value was settled against that type when it was handed
     // over, so what the type says of the part is what the slot said. A name no
     // slot declared says nothing, and anything that is not a name has no slot
@@ -505,7 +505,7 @@ struct Derivation {
             case .index, .indexRef:
                 return reached?.element(in: table)
 
-            case let .key(name, _):
+            case let .name(name, _):
                 return reached?.dotted(name, in: table)
             }
         }

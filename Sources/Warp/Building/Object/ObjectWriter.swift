@@ -147,13 +147,13 @@ struct ObjectWriter {
             return .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) })
 
         case .types:
-            return keyed(compiled.types, declaration)
+            return try keyed(compiled.types, declaration)
 
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
                 try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
                     .array([
-                        signature(asked.signature),
+                        try signature(asked.signature),
                         constness(asked.constness),
                         isolation(asked.isolation),
                         failing(.these(asked.failing))
@@ -183,7 +183,7 @@ struct ObjectWriter {
             })
 
         case .answers:
-            return keyed(compiled.answers, lowered)
+            return try keyed(compiled.answers, lowered)
 
         // What the bodies number their calls from, and their types.
         case .numbering:
@@ -237,17 +237,17 @@ struct ObjectWriter {
 
     // A declared type: a record under the record's tag, its fields by name,
     // and an alias as the type it stands for.
-    private func declaration(_ declared: TypeDeclaration) -> Value {
+    private func declaration(_ declared: TypeDeclaration) throws(ObjectUnwritable) -> Value {
         switch declared {
         case let .record(fields):
-            return tagged(ObjectLayout.TypeTag.record, keyed(fields, type))
+            return tagged(ObjectLayout.TypeTag.record, try keyed(fields, type))
 
         case let .alias(stands):
-            return type(stands)
+            return try type(stands)
         }
     }
 
-    private func type(_ expression: TypeExpression) -> Value {
+    private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
         switch expression {
@@ -273,27 +273,27 @@ struct ObjectWriter {
             return tagged(Tag.string)
 
         case let .array(element):
-            return tagged(Tag.array, type(element))
+            return tagged(Tag.array, try type(element))
 
         case let .dictionary(key, value):
-            return tagged(Tag.dictionary, type(key), type(value))
+            return tagged(Tag.dictionary, try type(key), try type(value))
 
         case let .procedure(written, constness, isolation):
             return tagged(
                 Tag.procedure,
-                ObjectWriter.maybe(written, procedureType),
+                try ObjectWriter.maybe(written, procedureType),
                 self.constness(constness),
                 self.isolation(isolation)
             )
 
         case let .variable(held):
-            return tagged(Tag.variable, type(held))
+            return tagged(Tag.variable, try type(held))
 
         case let .inout(held):
-            return tagged(Tag.`inout`, type(held))
+            return tagged(Tag.`inout`, try type(held))
 
         case let .nullable(held):
-            return tagged(Tag.nullable, type(held))
+            return tagged(Tag.nullable, try type(held))
 
         case let .named(spelling):
             return tagged(Tag.named, name(spelling))
@@ -302,7 +302,7 @@ struct ObjectWriter {
             return tagged(Tag.parameter, name(spelling))
 
         case let .projection(of: read, path: path):
-            return tagged(Tag.projection, name(read), self.path(path))
+            return tagged(Tag.projection, name(read), try self.path(path))
 
         case let .composition(names):
             return tagged(Tag.composition, .array(names.sorted().map(name)))
@@ -312,47 +312,47 @@ struct ObjectWriter {
         }
     }
 
-    private func path(_ path: Path) -> Value {
-        .array(path.segments.map(segment))
+    private func path(_ path: Path) throws(ObjectUnwritable) -> Value {
+        .array(try path.segments.map(segment))
     }
 
-    private func segment(_ segment: PathSegment) -> Value {
+    private func segment(_ segment: PathSegment) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.SegmentTag
 
         switch segment {
-        case let .key(spelling, optional):
-            return tagged(Tag.key, name(spelling), .bool(optional))
+        case let .name(spelling, optional):
+            return tagged(Tag.name, name(spelling), .bool(optional))
 
         case let .index(index, optional):
-            return tagged(Tag.index, .int(index), .bool(optional))
+            return tagged(Tag.index, try value(index), .bool(optional))
 
         case let .indexRef(path, optional):
-            return tagged(Tag.indexRef, self.path(path), .bool(optional))
+            return tagged(Tag.indexRef, try self.path(path), .bool(optional))
         }
     }
 
     // A procedure type is `[parameters, returns]`: the types it is applied
     // with, in position order, and what it answers or nothing.
-    private func procedureType(_ type: ProcedureType) -> Value {
+    private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
         .array([
-            .array(type.parameters.map(self.type)),
-            ObjectWriter.maybe(type.returns, self.type)
+            .array(try type.parameters.map(self.type)),
+            try ObjectWriter.maybe(type.returns, self.type)
         ])
     }
 
-    private func signature(_ signature: Signature) -> Value {
+    private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
-            .array(signature.parameters.map(parameter)),
-            ObjectWriter.maybe(signature.returns, type),
+            .array(try signature.parameters.map(parameter)),
+            try ObjectWriter.maybe(signature.returns, type),
             keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) }
         ])
     }
 
     // A parameter taking anything writes no type, as its document does.
-    private func parameter(_ parameter: Parameter) -> Value {
+    private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
         .array([
             name(parameter.name),
-            ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type),
+            try ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type),
             ObjectWriter.maybe(parameter.description, Value.string)
         ])
     }
@@ -516,7 +516,7 @@ struct ObjectWriter {
         .array([ObjectWriter.maybe(named, name), .array(fields.map(name))])
     }
 
-    private func lowered(_ type: LoweredType) -> Value {
+    private func lowered(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.LoweredTypeTag
 
         switch type {
@@ -544,31 +544,33 @@ struct ObjectWriter {
             return tagged(Tag.string)
 
         case let .array(element):
-            return tagged(Tag.array, lowered(element))
+            return tagged(Tag.array, try lowered(element))
 
         case let .dictionary(key, value):
-            return tagged(Tag.dictionary, lowered(key), lowered(value))
+            return tagged(Tag.dictionary, try lowered(key), try lowered(value))
 
         case let .record(record):
-            return tagged(Tag.record, loweredRecord(record))
+            return tagged(Tag.record, try loweredRecord(record))
 
         case let .procedure(signature, constness, isolation):
             return tagged(
                 Tag.procedure,
-                ObjectWriter.maybe(signature?.parameters) { written in .array(written.map(lowered)) },
-                ObjectWriter.maybe(signature?.returns, lowered),
+                try ObjectWriter.maybe(signature?.parameters) { (written) throws(ObjectUnwritable) -> Value in
+                    .array(try written.map(lowered))
+                },
+                try ObjectWriter.maybe(signature?.returns, lowered),
                 self.constness(constness),
                 self.isolation(isolation)
             )
 
         case let .variable(held):
-            return tagged(Tag.variable, lowered(held))
+            return tagged(Tag.variable, try lowered(held))
 
         case let .inout(held):
-            return tagged(Tag.`inout`, lowered(held))
+            return tagged(Tag.`inout`, try lowered(held))
 
         case let .nullable(held):
-            return tagged(Tag.nullable, lowered(held))
+            return tagged(Tag.nullable, try lowered(held))
 
         case let .named(row):
             return tagged(Tag.named, .int(row))
@@ -580,17 +582,17 @@ struct ObjectWriter {
             return tagged(Tag.composition, .array(bounds.sorted().map(name)))
 
         case let .projection(of: read, path: path):
-            return tagged(Tag.projection, name(read), self.path(path))
+            return tagged(Tag.projection, name(read), try self.path(path))
         }
     }
 
-    private func loweredRecord(_ record: LoweredRecord) -> Value {
-        .array([layout(named: record.name, record.names), .array(record.fields.map(lowered))])
+    private func loweredRecord(_ record: LoweredRecord) throws(ObjectUnwritable) -> Value {
+        .array([layout(named: record.name, record.names), .array(try record.fields.map(lowered))])
     }
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
         .array((spelled ? [name(row.label)] : []) + [
-            signature(row.signature),
+            try signature(row.signature),
             access(row.access),
             constness(row.constness),
             isolation(row.isolation),
@@ -634,13 +636,13 @@ struct ObjectWriter {
 
     private func instruction(_ instruction: Instruction) throws(ObjectUnwritable) -> Value {
         .array([
-            ObjectWriter.maybe(instruction.binding, binding),
+            try ObjectWriter.maybe(instruction.binding, binding),
             try operation(instruction.code),
             .string(instruction.label)
         ])
     }
 
-    private func binding(_ binding: Instruction.Binding) -> Value {
+    private func binding(_ binding: Instruction.Binding) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.BindingTag
 
         switch binding {
@@ -651,29 +653,29 @@ struct ObjectWriter {
             return tagged(Tag.declare, .int(slot))
 
         case let .assign(address):
-            return tagged(Tag.assign, self.address(address))
+            return tagged(Tag.assign, try self.address(address))
         }
     }
 
-    private func address(_ address: Address) -> Value {
-        .array([.int(address.slot), .array(address.steps.map(walk))])
+    private func address(_ address: Address) throws(ObjectUnwritable) -> Value {
+        .array([.int(address.slot), .array(try address.steps.map(walk))])
     }
 
-    private func walk(_ step: Step) -> Value {
+    private func walk(_ step: Step) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.StepTag
 
         switch step {
         case let .field(position, spelling, optional):
             return tagged(Tag.field, .int(position), name(spelling), .bool(optional))
 
-        case let .key(spelling, optional):
-            return tagged(Tag.key, name(spelling), .bool(optional))
+        case let .name(spelling, optional):
+            return tagged(Tag.name, name(spelling), .bool(optional))
 
         case let .index(index, optional):
-            return tagged(Tag.index, .int(index), .bool(optional))
+            return tagged(Tag.index, try value(index), .bool(optional))
 
         case let .at(address, optional):
-            return tagged(Tag.at, self.address(address), .bool(optional))
+            return tagged(Tag.at, try self.address(address), .bool(optional))
         }
     }
 
@@ -685,7 +687,7 @@ struct ObjectWriter {
             return tagged(Tag.literal, try self.value(value))
 
         case let .local(address):
-            return tagged(Tag.local, self.address(address))
+            return tagged(Tag.local, try self.address(address))
 
         case let .array(elements):
             return tagged(Tag.array, .array(try elements.map(self.operation)))
@@ -716,7 +718,7 @@ struct ObjectWriter {
             )
 
         case let .cast(read, as: type, optional: optional):
-            return tagged(Tag.cast, try self.operation(read), lowered(type), .bool(optional))
+            return tagged(Tag.cast, try self.operation(read), try lowered(type), .bool(optional))
 
         case let .block(body):
             return tagged(Tag.block, try self.body(body))
@@ -774,8 +776,8 @@ struct ObjectWriter {
             .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in
                 try ObjectWriter.maybe(argument, self.operation)
             }),
-            .array(call.handed.map { handed in
-                .array([.int(handed.position), address(handed.address)])
+            .array(try call.handed.map { (handed) throws(ObjectUnwritable) -> Value in
+                .array([.int(handed.position), try address(handed.address)])
             })
         ])
     }
@@ -800,7 +802,7 @@ struct ObjectWriter {
             return tagged(Tag.value, try self.operation(operation))
 
         case let .reference(address):
-            return tagged(Tag.reference, self.address(address))
+            return tagged(Tag.reference, try self.address(address))
         }
     }
 }

@@ -40,9 +40,9 @@ struct NullableTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)]))
+                        Statement(binding: .constant("read"), expression: .reference([.name("task"), .name("size", optional: true)]))
                     ],
-                    result: .call(Call(selector: "half", arguments: [.reference([.key("read")])]))
+                    result: .call(Call(selector: "half", arguments: [.reference([.name("read")])]))
                 )
             ]
         )
@@ -71,7 +71,7 @@ struct NullableTests {
                         returns: .nullable(.int)
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("size", optional: true)])
+                    result: .reference([.name("task"), .name("size", optional: true)])
                 )
             ]
         )
@@ -94,7 +94,7 @@ struct NullableTests {
                     body: [
                         Statement(binding: .constant("gone"), expression: .literal(.null))
                     ],
-                    result: .reference([.key("gone"), .key("name")])
+                    result: .reference([.name("gone"), .name("name")])
                 )
             ]
         )
@@ -120,7 +120,7 @@ struct NullableTests {
                         returns: .nullable(.int)
                     ),
                     body: [],
-                    result: .reference([.key("limit")])
+                    result: .reference([.name("limit")])
                 )
             ]
         )
@@ -145,7 +145,7 @@ struct NullableTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("limit")])
+                    result: .reference([.name("limit")])
                 )
             ]
         )
@@ -171,7 +171,7 @@ struct NullableTests {
                         returns: .string
                     ),
                     body: [],
-                    result: .reference([.key("of")])
+                    result: .reference([.name("of")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -182,10 +182,10 @@ struct NullableTests {
                     body: [
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
-                            arguments: [.reference([.key("text")])]
+                            arguments: [.reference([.name("text")])]
                         )))
                     ],
-                    result: .reference([.key("called")])
+                    result: .reference([.name("called")])
                 )
             ]
         )
@@ -210,7 +210,7 @@ struct NullableTests {
                     access: .public,
                     signature: Signature(),
                     body: [],
-                    result: .reference([.key("config"), .key("port")])
+                    result: .reference([.name("config"), .name("port")])
                 )
             ]
         )
@@ -292,7 +292,7 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("name", optional: true)])
+                    result: .reference([.name("task"), .name("name", optional: true)])
                 )
             ]
         )
@@ -320,7 +320,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("id", optional: true)])
+                    result: .reference([.name("task"), .name("id", optional: true)])
                 )
             ]
         )
@@ -347,7 +347,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0)])
+                    result: .reference([.name("items"), .index(0)])
                 )
             ]
         )
@@ -376,7 +376,7 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0, optional: true)])
+                    result: .reference([.name("items"), .index(0, optional: true)])
                 )
             ]
         )
@@ -404,7 +404,7 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(5, optional: true)])
+                    result: .reference([.name("items"), .index(5, optional: true)])
                 )
             ]
         )
@@ -429,7 +429,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0, optional: true)])
+                    result: .reference([.name("items"), .index(0, optional: true)])
                 )
             ]
         )
@@ -459,8 +459,8 @@ struct NullableTests {
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("i")], optional: true)
+                        .name("items"),
+                        .indexRef([.name("i")], optional: true)
                     ])
                 )
             ]

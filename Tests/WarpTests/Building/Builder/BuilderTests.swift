@@ -354,7 +354,7 @@ struct BuilderTests {
                             Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
                         ))
                     ],
-                    result: .reference([.key("got"), .key("field")])
+                    result: .reference([.name("got"), .name("field")])
                 )
             ]
         )
@@ -472,7 +472,7 @@ struct BuilderTests {
                     access: .public,
                     signature: Signature(),
                     body: [],
-                    result: .reference([.key("f")])
+                    result: .reference([.name("f")])
                 )
             ]
         )
@@ -499,7 +499,7 @@ struct BuilderTests {
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Text.uppercased",
-                        arguments: [.reference([.key("of")]), .literal(.bool(true))]
+                        arguments: [.reference([.name("of")]), .literal(.bool(true))]
                     ))
                 ),
                 entryName: Procedure(

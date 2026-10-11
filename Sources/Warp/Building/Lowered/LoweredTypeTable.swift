@@ -138,7 +138,7 @@ final class LoweredTypeTable: Sendable {
 
         case let .dictionary(entries):
             return .dictionary(try entries.mapValues { key, item in
-                try resolvingNames(in: item, at: "\(path()).\(Rendering(key).text())")
+                try resolvingNames(in: item, at: "\(path())\(Path([.index(key)]).rendered)")
             })
 
         case let .record(record):

@@ -381,7 +381,7 @@ struct ClosureTests {
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: []))
+            Statement(binding: .constant("picked"), expression: .apply(.reference([.name("table"), .index("yes")]), arguments: []))
         ]
 
         // When

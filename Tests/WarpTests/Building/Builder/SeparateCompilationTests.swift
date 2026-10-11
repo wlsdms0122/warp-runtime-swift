@@ -131,7 +131,7 @@ struct SeparateCompilationTests {
                 "Low.read": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("lowCount")])
+                    result: .reference([.name("lowCount")])
                 )
             ]
         )
@@ -191,7 +191,7 @@ struct SeparateCompilationTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("held")])
+                    result: .reference([.name("held")])
                 )
             ]
         )
@@ -529,7 +529,7 @@ struct SeparateCompilationTests {
                             )
                         )
                     ],
-                    result: .reference([.key("held"), .key("count")])
+                    result: .reference([.name("held"), .name("count")])
                 )
             ]
         )
@@ -540,7 +540,7 @@ struct SeparateCompilationTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("held")])
+                    result: .reference([.name("held")])
                 )
             ]
         )
@@ -905,7 +905,7 @@ struct SeparateCompilationTests {
                             expression: .call(Call(selector: "A.first", arguments: [reference("items")]))
                         )
                     ],
-                    result: .reference([.key("held"), .key("count")])
+                    result: .reference([.name("held"), .name("count")])
                 )
             ]
         )
@@ -1160,7 +1160,7 @@ struct SeparateCompilationTests {
                         body: [],
                         result: interpolated(
                             literal("balance "),
-                            spelling(.reference([.key("of"), .key("balance")]))
+                            spelling(.reference([.name("of"), .name("balance")]))
                         )
                     ),
                     "Bank.Card.describe": Procedure(
@@ -1171,7 +1171,7 @@ struct SeparateCompilationTests {
                         body: [],
                         result: interpolated(
                             literal("card "),
-                            spelling(.reference([.key("of"), .key("last")]))
+                            spelling(.reference([.name("of"), .name("last")]))
                         )
                     )
                 ]

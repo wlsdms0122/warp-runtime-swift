@@ -33,7 +33,7 @@ struct ExecutorTests {
                         Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
                     ],
                     result: map([
-                            "result": .reference([.key("loud")])
+                            "result": .reference([.name("loud")])
                         ])
                 )
             ]
@@ -63,12 +63,12 @@ struct ExecutorTests {
                                         body: [
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
-                                        result: .reference([.key("recovery")])
+                                        result: .reference([.name("recovery")])
                                     ))
                         )
                     ],
                     result: map([
-                            "result": .reference([.key("fragile")])
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -102,12 +102,12 @@ struct ExecutorTests {
                                                 )
                                             )
                                         ],
-                                        result: .reference([.key("reason")])
+                                        result: .reference([.name("reason")])
                                     ))
                         )
                     ],
                     result: map([
-                            "result": .reference([.key("fragile")])
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -183,9 +183,9 @@ struct ExecutorTests {
         }
     }
 
-    @Test("an entry the data does not carry reads as null where the author wrote ?.")
+    @Test("an entry the data does not carry reads as null where the author wrote ?[")
     func absentEntryReadsAsNullThroughOptional() async throws {
-        // Given. `?.` expects absence: it answers null, nothing is thrown,
+        // Given. `?[` expects absence: it answers null, nothing is thrown,
         // and the rescue never runs
         let spec = try Module(
             procedures: [
@@ -199,14 +199,14 @@ struct ExecutorTests {
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)]))
+                                        Statement(binding: .constant("fragile"), expression: .reference([.name("data"), .index("missing", optional: true)]))
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]))
                         )
                     ],
                     result: map([
-                            "result": .reference([.key("fragile")])
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -221,8 +221,8 @@ struct ExecutorTests {
 
     @Test("an entry the data does not carry refuses where nothing said it may be absent")
     func absentEntryWithoutOptionalIsUnfit() async throws {
-        // Given. The plain dot promises the entry is there, so an absent one is
-        // a defect the run refuses rather than a null it invents
+        // Given. The plain bracket promises the entry is there, so an absent
+        // one is a defect the run refuses rather than a null it invents
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
@@ -234,7 +234,7 @@ struct ExecutorTests {
                         returns: .any
                     ),
                     body: [],
-                    result: .reference([.key("data"), .key("missing")])
+                    result: .reference([.name("data"), .index("missing")])
                 )
             ]
         )
@@ -262,9 +262,9 @@ struct ExecutorTests {
                         Statement(binding: .variable("maybe"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                equals(.reference([.key("kind")]), .literal(.string("a"))),
+                                equals(.reference([.name("kind")]), .literal(.string("a"))),
                                 then: [
-                                    Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
+                                    Statement(binding: .assignment([.name("maybe")]), expression: .literal(.string("made")))
                                 ],
                                 else: nil
                             )
@@ -282,7 +282,7 @@ struct ExecutorTests {
                         )
                     ],
                     result: map([
-                            "result": .reference([.key("fragile")])
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -345,12 +345,12 @@ struct ExecutorTests {
                                         body: [
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
-                                        result: .reference([.key("recovery")])
+                                        result: .reference([.name("recovery")])
                                     ))
                         )
                     ],
                     result: map([
-                            "result": .reference([.key("bail")])
+                            "result": .reference([.name("bail")])
                         ])
                 )
             ]

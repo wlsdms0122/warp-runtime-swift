@@ -38,7 +38,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -59,7 +59,7 @@ struct FieldPlaceTests {
                     expression: .record(["b": .literal(.int(2)), "a": .literal(.int(1))])
                 )
             ],
-            result: .reference([.key("held"), .key("b")])
+            result: .reference([.name("held"), .name("b")])
         )
 
         // When
@@ -69,22 +69,22 @@ struct FieldPlaceTests {
         #expect(steps == [.field(1, "b", optional: false)])
     }
 
-    @Test("a dictionary's keys are the value's, so they are read by name")
-    func aDictionaryIsReadByName() async throws {
+    @Test("a map's keys are the value's, so an entry is read by its key between brackets")
+    func aMapIsReadByKey() async throws {
         // Given
         let sut = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))]
             ),
             body: [],
-            result: .reference([.key("entries"), .key("a")])
+            result: .reference([.name("entries"), .index("a")])
         )
 
         // When
         let steps = try await resultSteps(of: sut)
 
         // Then
-        #expect(steps == [.key("a", optional: false)])
+        #expect(steps == [.index("a", optional: false)])
     }
 
     @Test("a place is read at every depth the build laid out")
@@ -95,7 +95,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "outer", type: .named("App.Outer"))]
             ),
             body: [],
-            result: .reference([.key("outer"), .key("inner"), .key("deep")])
+            result: .reference([.name("outer"), .name("inner"), .name("deep")])
         )
 
         // When
@@ -115,7 +115,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -142,11 +142,11 @@ struct FieldPlaceTests {
                     expression: .record(["x": .literal(.int(1)), "y": .literal(.int(2))])
                 ),
                 Statement(
-                    binding: .assignment([PathSegment.key("point")]),
-                    expression: .cast(.reference([.key("given")]), as: .named("App.Point"), optional: false)
+                    binding: .assignment([PathSegment.name("point")]),
+                    expression: .cast(.reference([.name("given")]), as: .named("App.Point"), optional: false)
                 )
             ],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -172,11 +172,11 @@ struct FieldPlaceTests {
             body: [
                 Statement(binding: .variable("held"), expression: map(["y": .literal(.int(0))])),
                 Statement(
-                    binding: .assignment([PathSegment.key("held")]),
-                    expression: .reference([.key("given")])
+                    binding: .assignment([PathSegment.name("held")]),
+                    expression: .reference([.name("given")])
                 )
             ],
-            result: .reference([.key("held"), .key("y")])
+            result: .reference([.name("held"), .index("y")])
         )
 
         // When
@@ -187,29 +187,31 @@ struct FieldPlaceTests {
         )
 
         // Then
-        #expect(steps == [.key("y", optional: false)])
+        #expect(steps == [.index("y", optional: false)])
         #expect(answer == .int(2))
     }
 
     @Test("a place and a name answer the same field")
     func bothWaysAnswerTheSameField() async throws {
-        // Given. One reads a record the build laid out and one a map, whose
-        // keys are the value's
+        // Given. One reads a record the build laid out and one a record a
+        // call decides, read by the field's name
         let laid = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
         let named = Procedure(
-            signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(key: .string, value: .int))]),
+            signature: Signature(parameters: [Parameter(name: "point", type: .parameter(name: "T"))]),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
+        let point = Value.record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))
+
         // When
-        let byPlace = try await run(laid, arguments: ["point": .record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))])
-        let byName = try await run(named, arguments: ["point": .dictionary(["x": .int(1), "y": .int(2)])])
+        let byPlace = try await run(laid, arguments: ["point": point])
+        let byName = try await run(named, arguments: ["point": point])
 
         // Then
         #expect(byPlace == .int(2))

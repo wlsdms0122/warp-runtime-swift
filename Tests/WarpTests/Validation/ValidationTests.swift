@@ -148,7 +148,7 @@ struct ValidationTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .assignment([.key("limit")]), expression: .literal(.int(9)))
+                            Statement(binding: .assignment([.name("limit")]), expression: .literal(.int(9)))
                         ]
                     )
                 ]
@@ -411,7 +411,7 @@ struct ValidationTests {
     @Test("a document writes only the variables it declares")
     func aDocumentWritesOnlyItsOwnVariables() {
         // Given. One write of `total`
-        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
+        let write = Statement(binding: .assignment([.name("total")]), expression: .literal(.int(1)))
 
         // When / Then. Taken at the load of the document declaring
         // `total`, and refused at the load of one that does not
@@ -542,7 +542,7 @@ struct ValidationTests {
                             ]
                         ),
                         body: [],
-                        result: .reference([.key("items", optional: true), .index(0)])
+                        result: .reference([.name("items", optional: true), .index(0)])
                     )
                 ]
             )
@@ -565,7 +565,7 @@ struct ValidationTests {
         // Given. `items[cursor]` reads `cursor`, so a typo in it is the same
         // mistake as a typo anywhere else
         let sut = Warp.Expression.reference(
-            [.key("items"), .indexRef([.key("cursor")])]
+            [.name("items"), .indexRef([.name("cursor")])]
         )
 
         // When / Then
@@ -579,9 +579,9 @@ struct ValidationTests {
             [items, Statement(binding: .assignment(path), expression: .literal(.int(2)))]
         }
 
-        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor")])])))
-        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor", optional: true)])]), visible: ["cursor"]))
-        #expect(validates(body: write([.key("items"), .indexRef([.key("cursor")])]), visible: ["cursor"]))
+        #expect(!validates(body: write([.name("items"), .indexRef([.name("cursor")])])))
+        #expect(!validates(body: write([.name("items"), .indexRef([.name("cursor", optional: true)])]), visible: ["cursor"]))
+        #expect(validates(body: write([.name("items"), .indexRef([.name("cursor")])]), visible: ["cursor"]))
     }
 
     @Test("a reference inside a call's operand is checked like any other")
@@ -813,15 +813,17 @@ struct ValidationTests {
         }
     }
 
-    @Test("an index below zero is no position, however the path was made")
-    func anIndexBelowZeroIsRefused() throws {
+    @Test("what stands between the brackets is data, however the path was made")
+    func anIndexIsData() async throws {
         // Given
         let items = Statement(binding: .variable("items"), expression: .array([.literal(.int(1))]))
+        let carried = try await procedureValue()
 
-        // When / Then. A read and a write
-        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(-1)]))]))
-        #expect(!validates(body: [items, Statement(binding: .assignment([.key("items"), .index(-1)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
+        // When / Then. A read and a write. Which value is a position is the
+        // build's to judge, by what is indexed
+        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(carried)]))]))
+        #expect(!validates(body: [items, Statement(binding: .assignment([.name("items"), .index(carried)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(-1)]))]))
     }
 
     @Test("every name a path reads is a value's name, however the path was made", arguments: [
@@ -832,9 +834,9 @@ struct ValidationTests {
         let record = Statement(binding: .variable("d"), expression: .record(["a": .literal(.int(1))]))
 
         // When / Then. A read and a write
-        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key(step)]))]))
-        #expect(!validates(body: [record, Statement(binding: .assignment([.key("d"), .key(step)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key("a")]))]))
+        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name(step)]))]))
+        #expect(!validates(body: [record, Statement(binding: .assignment([.name("d"), .name(step)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name("a")]))]))
     }
 
     @Test("a literal holds no record, at whatever depth it holds one", arguments: [
@@ -1110,7 +1112,7 @@ struct ValidationTests {
                         expression: .closure(Procedure(implementation: .query(OneQuery())))
                     )
                 ],
-                result: .apply(.reference([.key("f")]), arguments: [])
+                result: .apply(.reference([.name("f")]), arguments: [])
             )])
         }
 
@@ -1136,7 +1138,7 @@ struct ValidationTests {
         #expect(
             !validates(body: [
                 Statement(binding: .variable("probe"), expression: .literal(.int(0))),
-                Statement(binding: .assignment([.key("probe")]), expression: sut)
+                Statement(binding: .assignment([.name("probe")]), expression: sut)
             ])
         )
     }
@@ -1154,7 +1156,7 @@ struct ValidationTests {
                             parameters: [Parameter(name: "greeting", type: .string)]
                         ),
                         body: [],
-                        result: .reference([.key("greeting")])
+                        result: .reference([.name("greeting")])
                     ))
                 )
             ],

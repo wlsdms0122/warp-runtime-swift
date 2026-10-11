@@ -32,7 +32,7 @@ struct NeverTests {
                         Statement(expression: aborting(literal("done"))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("after")])
+                    result: .reference([.name("after")])
                 )
             ]
         )
@@ -81,7 +81,7 @@ struct NeverTests {
             while: .literal(.bool(false)),
             body: Block(
                 body: [
-                    Statement(binding: .assignment([.key("x")]), expression: .literal(.string("s")))
+                    Statement(binding: .assignment([.name("x")]), expression: .literal(.string("s")))
                 ],
                 result: reference("x")
             )
@@ -96,7 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.cast(.reference([.key("kept")]), as: .int, optional: false)]
+                            arguments: [.cast(.reference([.name("kept")]), as: .int, optional: false)]
                         )))
                     ],
                     result: reference("kept")
@@ -125,7 +125,7 @@ struct NeverTests {
                     body: [
                         Statement(
                             expression: .leave(
-                                Leave(reach: .procedure, value: .reference([.key("C")]))
+                                Leave(reach: .procedure, value: .reference([.name("C")]))
                             )
                         )
                     ]
@@ -206,7 +206,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.reference([.name("kept")])]
                         )))
                     ]
                 ),

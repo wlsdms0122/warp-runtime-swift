@@ -46,7 +46,7 @@ struct CallTests {
                 result: map([
                     "counted": reference("counted"),
                     "shouted": reference("shouted"),
-                    "echoed": reference("echoed", "said")
+                    "echoed": .reference([.name("echoed"), .index("said")])
                 ])
             ),
             beside: ["echo": echo],
@@ -274,7 +274,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -310,7 +310,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -343,7 +343,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -356,7 +356,7 @@ struct CallTests {
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("text")])]
+                            arguments: [.reference([.name("text")])]
                         )))
                     ]
                 )

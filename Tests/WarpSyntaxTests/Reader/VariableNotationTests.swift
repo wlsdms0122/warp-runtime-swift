@@ -194,7 +194,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["dictionary": [["result", ["ref": "both.left"]]]]
+            "result": ["dictionary": [["result", ["ref": "both[\"left\"]"]]]]
         ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When

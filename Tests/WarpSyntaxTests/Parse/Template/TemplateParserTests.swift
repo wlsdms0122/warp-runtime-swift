@@ -26,9 +26,9 @@ struct TemplateParserTests {
         // Then
         #expect(segments == [
             .text("a="),
-            .ref(path: [.key("x"), .key("y")]),
+            .ref(path: [.name("x"), .name("y")]),
             .text(", b="),
-            .ref(path: [.key("z")])
+            .ref(path: [.name("z")])
         ])
     }
 
@@ -41,7 +41,7 @@ struct TemplateParserTests {
         let segments = try sut.parse("cost: $$5 and ${price}")
 
         // Then
-        #expect(segments == [.text("cost: $5 and "), .ref(path: [.key("price")])])
+        #expect(segments == [.text("cost: $5 and "), .ref(path: [.name("price")])])
     }
 
     @Test("render restores segments to the original text")
