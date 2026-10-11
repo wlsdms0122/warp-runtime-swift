@@ -62,7 +62,7 @@ struct ClosureNotationTests {
 
         // Then
         #expect(
-            outputs["result"] == .dictionary(["said": .array([.string("hi"), .string("hi")])])
+            outputs.map?["result"] == .dictionary(["said": .array([.string("hi"), .string("hi")])])
         )
     }
 
@@ -105,7 +105,7 @@ struct ClosureNotationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .dictionary(["said": .string("written")]))
+        #expect(outputs.map?["result"] == .dictionary(["said": .string("written")]))
     }
 
     @Test("a closure takes what it declares")
@@ -148,7 +148,7 @@ struct ClosureNotationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .string("n=3"))
+        #expect(outputs.map?["result"] == .string("n=3"))
     }
 
     @Test("a closure body is checked where it is written")

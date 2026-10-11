@@ -50,7 +50,7 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
-        #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
+        #expect(outputs.map?["result"] == .dictionary(["said": .string("from first")]))
     }
 
     @Test("a bare name for another module's procedure is refused at the build")
@@ -111,7 +111,7 @@ struct ModuleDeclarationTests {
         let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
-        #expect(outputs["result"] == .dictionary(["said": .string("from second")]))
+        #expect(outputs.map?["result"] == .dictionary(["said": .string("from second")]))
     }
 
     @Test("a constant is a name bound to a value, settled before any run")
@@ -131,8 +131,8 @@ struct ModuleDeclarationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .string("hello"))
-        #expect(outputs["cap"] == .int(3))
+        #expect(outputs.map?["result"] == .string("hello"))
+        #expect(outputs.map?["cap"] == .int(3))
     }
 
     @Test("a constant may name another declared beside it, but not one that names it back")
@@ -155,7 +155,7 @@ struct ModuleDeclarationTests {
         // When / Then
         let outputs = try await run(composed)
 
-        #expect(outputs["result"] == .string("https://example.com/api"))
+        #expect(outputs.map?["result"] == .string("https://example.com/api"))
 
         #expect(throws: ValidationError.self) {
             try loader.loadDocument([
@@ -230,7 +230,7 @@ struct ModuleDeclarationTests {
         // When / Then
         let outputs = try await run(sut, entry: "entry")
 
-        #expect(outputs["result"] == .string("a card"))
+        #expect(outputs.map?["result"] == .string("a card"))
     }
 
     // MARK: - Public

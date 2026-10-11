@@ -24,8 +24,7 @@ import Warp
 //
 // A mapping is one of these by its one key, so a field name is never a key
 // the grammar reads: a record is written under `record` whatever its fields
-// are called. A notation may read a bare mapping as a record, and the tags
-// stand alone there too.
+// are called.
 //
 // A string is never re-parsed into anything live.
 public struct ExpressionReader: Decodable {
@@ -125,16 +124,12 @@ public struct ExpressionReader: Decodable {
 
         if !Set(try record.named().map(\.name)).isDisjoint(with: Interpolation.keys) { return try template(in: record, at: steps, in: decoder) }
 
-        guard decoder.notation.readsBareRecords else {
-            throw ExpressionFormError(
-                "a mapping where a value is wanted is one of"
-                    + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
-                    + " under its one key. A record is written under `record`"
-                    + " (found keys: \(try record.named().map(\.name)))"
-            )
-        }
-
-        return try fields(in: record, at: steps, in: decoder)
+        throw ExpressionFormError(
+            "a mapping where a value is wanted is one of"
+                + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
+                + " under its one key. A record is written under `record`"
+                + " (found keys: \(try record.named().map(\.name)))"
+        )
     }
 
     // A mapping the notation spells, read by the notation. Asked only of a
@@ -156,7 +151,9 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    // `{ record: { … } }`: the fields, each an expression.
+    // `{ record: { … } }`: the fields, each an expression, in the record's
+    // order, so that a record with two bad fields refuses the same one every
+    // run.
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
@@ -172,17 +169,7 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("`record` takes a mapping of its fields")
         }
 
-        return try fields(in: record, at: steps, in: decoder)
-    }
-
-    // A record of expressions, in the record's order, so that a record with
-    // two bad fields refuses the same one every run.
-    private static func fields(
-        in record: Value.Dictionary,
-        at steps: [Place.Step],
-        in decoder: Decoder
-    ) throws -> Warp.Expression {
-        .record(
+        return .record(
             try record.named().reduce(into: [Name: Warp.Expression]()) { fields, entry in
                 fields[entry.name] = try read(
                     entry.value,

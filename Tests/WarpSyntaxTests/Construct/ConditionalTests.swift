@@ -42,8 +42,8 @@ struct ConditionalTests {
         let elseOutputs = try await run(spec, arguments: ["kind": .string("b")])
 
         // Then
-        #expect(thenOutputs["result"] == .string("took-then"))
-        #expect(elseOutputs["result"] == .string("took-else"))
+        #expect(thenOutputs.map?["result"] == .string("took-then"))
+        #expect(elseOutputs.map?["result"] == .string("took-else"))
     }
 
     @Test("a name on a conditional is refused at the load")
@@ -82,7 +82,7 @@ struct ConditionalTests {
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .null)
+        #expect(outputs.map?["result"] == .null)
     }
 
     // MARK: - Public

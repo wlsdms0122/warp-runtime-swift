@@ -335,7 +335,7 @@ struct TypeNotationTests {
         // When / Then
         let good = try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .string("a")]))])])
 
-        #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
+        #expect(good.map?["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
             try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .int(1)]))])])

@@ -51,7 +51,7 @@ struct BlockTests {
         let outputs = try await run(spec, arguments: ["who": .string("spec")])
 
         // Then. Inner bindings stay inside; the block speaks with one output
-        #expect(outputs["result"] == .string("hello, spec!"))
+        #expect(outputs.map?["result"] == .string("hello, spec!"))
     }
 
     @Test("a block with no declared result answers nothing")
@@ -75,7 +75,7 @@ struct BlockTests {
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .null)
+        #expect(outputs.map?["result"] == .null)
     }
 
     @Test("a block body reading its own id is rejected at load")

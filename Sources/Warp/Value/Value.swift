@@ -472,20 +472,15 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one field written: a field a record's layout names,
-    // where it stands, or a map's entry under the name's text. Any other
-    // name is not the declaration's, so a record refuses it rather than
-    // being quietly made something else.
+    // where it stands. Any other name is not the declaration's, so a record
+    // refuses it rather than being quietly made something else, and what is
+    // no record holds no fields.
     public func writing(_ name: Name, with value: Value) throws -> Value {
-        switch self {
-        case let .record(record):
-            return .record(try record.writing(name, with: value))
-
-        case let .dictionary(held):
-            return .dictionary(held.writing(name, with: value))
-
-        default:
+        guard case let .record(record) = self else {
             throw ValueRefused("\(nominal) holds no fields, so '\(name)' cannot be written into it")
         }
+
+        return .record(try record.writing(name, with: value))
     }
 
     // Whether a closure this value holds answers the predicate. Stops at the
@@ -550,11 +545,9 @@ public indirect enum Value: Sendable, Equatable {
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a host does with what a run gave it.
     public subscript(field: Name) -> Value? {
-        switch self {
-        case let .record(record): record[field]
-        case let .dictionary(dictionary): dictionary[field]
-        default: nil
-        }
+        guard case let .record(record) = self else { return nil }
+
+        return record[field]
     }
 
     // The elements at these positions, in the spelling this value is. Nil for

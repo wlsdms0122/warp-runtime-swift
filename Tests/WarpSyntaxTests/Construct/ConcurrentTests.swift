@@ -68,7 +68,7 @@ struct ConcurrentTests {
 
         // Then. Every piece walked through the environment's isolation boundary
         #expect(boundary.isolatedCount == 2)
-        #expect(outputs["result"] == .dictionary(["left": .int(1), "right": .int(2)]))
+        #expect(outputs.map?["result"] == .dictionary(["left": .int(1), "right": .int(2)]))
     }
 
     @Test("all-recoverable failures rescue")
@@ -109,7 +109,7 @@ struct ConcurrentTests {
         let outputs = try await run(spec, vocabulary: Module.standard + [.testing])
 
         // Then
-        #expect(outputs["result"] == .string("recovered"))
+        #expect(outputs.map?["result"] == .string("recovered"))
     }
 
     @Test("one piece's author mistake propagates the composite")
@@ -195,7 +195,7 @@ struct ConcurrentTests {
         )
 
         // Then
-        #expect(outputs["result"] == .array([.string("hello, a"), .string("hello, b")]))
+        #expect(outputs.map?["result"] == .array([.string("hello, a"), .string("hello, b")]))
     }
 
     @Test("first answers whichever piece succeeds")
@@ -228,7 +228,7 @@ struct ConcurrentTests {
         let outputs = try await run(sut, vocabulary: Module.standard + [.testing])
 
         // Then
-        #expect(outputs["result"] == .string("answered"))
+        #expect(outputs.map?["result"] == .string("answered"))
     }
 
     // MARK: - Public

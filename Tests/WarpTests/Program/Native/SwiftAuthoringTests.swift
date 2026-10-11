@@ -58,7 +58,7 @@ struct SwiftAuthoringTests {
         let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
-        #expect(outputs["greeting"] == .string("hello, world"))
+        #expect(outputs.map?["greeting"] == .string("hello, world"))
     }
 
     @Test("control flow and the signature are reachable from Swift alone")
@@ -110,7 +110,7 @@ struct SwiftAuthoringTests {
         )
 
         // Then
-        #expect(outputs["verdict"] == .string("counted to three"))
+        #expect(outputs.map?["verdict"] == .string("counted to three"))
     }
 
     @Test("a native effect needs no decoder to run")
@@ -133,7 +133,7 @@ struct SwiftAuthoringTests {
         let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
-        #expect(outputs["shout"] == .string("HEY"))
+        #expect(outputs.map?["shout"] == .string("HEY"))
     }
 
     @Test("a library procedure, a native procedure and a written one are all one expression")
@@ -184,9 +184,9 @@ struct SwiftAuthoringTests {
         let outputs = try await Executor().run(image, entry: "speak")
 
         // Then
-        #expect(outputs["counted"] == .int(1))
-        #expect(outputs["shouted"] == .string("HI"))
-        #expect(outputs["called"] == .string("yo"))
+        #expect(outputs.map?["counted"] == .int(1))
+        #expect(outputs.map?["shouted"] == .string("HI"))
+        #expect(outputs.map?["called"] == .string("yo"))
     }
 
     @Test("a native procedure reads its first argument by the parameter's own key")
@@ -212,7 +212,7 @@ struct SwiftAuthoringTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .int(20))
+        #expect(outputs.map?["result"] == .int(20))
     }
 
     @Test("a native procedure and a written one are declared the same way")
