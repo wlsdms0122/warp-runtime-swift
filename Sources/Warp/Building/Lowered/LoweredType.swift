@@ -197,15 +197,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a judgement sees. A projection says a path was taken through a type
-    // the call decides, which proves nothing about what it holds, and that is
-    // what `Any` says.
-    var judged: LoweredType {
-        if case .projection = self { return .any }
-
-        return self
-    }
-
     // Whether this type proves nothing about the value it holds.
     var provesNothing: Bool {
         self == .any || self == .never || decidedAtCall
@@ -499,13 +490,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // What a slot said about the procedure it holds. A body applying a name a
     // slot declared this way is judged on the slot's word, since the slot is
     // what says which values may arrive there.
-    func isConstProcedure(in table: LoweredTypeTable) -> Bool {
+    var isConstProcedure: Bool {
         guard case .procedure(_, _, .const, _)? = procedureHeld else { return false }
 
         return true
     }
 
-    func isIsolatedProcedure(in table: LoweredTypeTable) -> Bool {
+    var isIsolatedProcedure: Bool {
         guard case .procedure(_, _, _, .isolated)? = procedureHeld else { return false }
 
         return true
@@ -513,7 +504,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The positions a procedure a slot holding this holds takes in place.
     // Empty where the slot says nothing of the procedure's parameters.
-    func inPlacePositions(in table: LoweredTypeTable) -> Set<Int> {
+    var inPlacePositions: Set<Int> {
         guard case let .procedure(parameters?, _, _, _)? = procedureHeld else { return [] }
 
         return Set(parameters.indices.filter { position in parameters[position].isInout })
@@ -646,7 +637,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // signature. Null, and a list or a map showing no element, say nothing
     // the judged type does not, so what holds one is what the expression was
     // judged as, a cast's type among them.
-    func refined(by judged: LoweredType, fixed: Bool, in table: LoweredTypeTable) -> LoweredType {
+    func refined(by judged: LoweredType, fixed: Bool) -> LoweredType {
         guard self != .null, !holdsNoElement else { return judged }
 
         var written = judged
@@ -664,10 +655,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return .procedure(parameters: parameters, returns: returns, constness: constness, isolation: isolation)
 
         case let (.array(element), .array(judgedElement)):
-            return .array(element.refined(by: judgedElement, fixed: fixed, in: table))
+            return .array(element.refined(by: judgedElement, fixed: fixed))
 
         case let (.dictionary(entry), .dictionary(judgedEntry)):
-            return .dictionary(entry.refined(by: judgedEntry, fixed: fixed, in: table))
+            return .dictionary(entry.refined(by: judgedEntry, fixed: fixed))
 
         case let (.record(record), .record(judgedRecord)):
             return .record(
@@ -675,7 +666,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     layout: record.layout,
                     fields: record.named.map { name, field in
                         judgedRecord[name].map { judgedField in
-                            field.refined(by: judgedField.fieldUnwrapped, fixed: fixed, in: table)
+                            field.refined(by: judgedField.fieldUnwrapped, fixed: fixed)
                         } ?? field
                     }
                 )
@@ -773,7 +764,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // writes and `Value.nominal` answers once the value arrives: a declared
     // record by its name, bytes as the list they are, and a record with no
     // name as the map it is. Nil where the reading names no one type: a type
-    // only a value decides, `Never`, and a name that stands for no type.
+    // only a value decides, and `Never`.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
         case .null:
@@ -1301,7 +1292,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a value read as this type could be a procedure: the question a
     // call of a value asks before the run. A reading no procedure could stand in
     // is a call every run refuses.
-    func couldBeProcedure(in table: LoweredTypeTable) -> Bool {
+    var couldBeProcedure: Bool {
         switch self {
         // A type parameter or a contract stands for whichever type fills or
         // answers it, `Procedure` among them.
@@ -1309,7 +1300,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.couldBeProcedure(in: table)
+            return inner.couldBeProcedure
 
         case .null, .bool, .int, .wholeLiteral, .double, .string, .array, .dictionary, .record, .named:
             return false
@@ -1597,11 +1588,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.named(row), _):
             let written = table.loweredTypes[row].written(value, in: table)
 
-            guard let nominal = self.row, case let .record(record) = written, record.name == nil else {
-                return written
-            }
+            guard case let .record(record) = written, record.name == nil else { return written }
 
-            return .record(record.named(table.labels[nominal]))
+            return .record(record.named(table.labels[row]))
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.written(value, in: table)
@@ -2337,16 +2326,14 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.named(row), _):
             let shaped = table.loweredTypes[row].shaped(value, leavingOut: leavingOut, in: table)
 
-            guard let nominal = self.row else { return shaped }
-
             switch shaped {
             case let .record(record) where record.name == nil:
-                return .record(record.named(table.labels[nominal]))
+                return .record(record.named(table.labels[row]))
 
             case let .dictionary(entries):
                 return .record(
                     Record(
-                        name: table.labels[nominal],
+                        name: table.labels[row],
                         Dictionary(uniqueKeysWithValues: entries.names.compactMap { name in entries[name].map { held in (name, held) } })
                     )
                 )

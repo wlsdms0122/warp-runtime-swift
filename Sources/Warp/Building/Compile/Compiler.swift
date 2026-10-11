@@ -425,7 +425,7 @@ struct Compiler {
                 known[name] = (
                     value,
                     LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: true, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: true)
                 )
             }
         }
@@ -483,7 +483,7 @@ struct Compiler {
 
                 guard let declared = variable.declared, let holding = declaredTypes[name] else {
                     let holding = LoweredType(of: settled, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: false, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: false)
 
                     // A variable that declares nothing holds the type its
                     // start reads as, and an empty list or map holds no

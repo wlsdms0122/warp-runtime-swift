@@ -1911,7 +1911,7 @@ struct TypeChecker {
                 )
             }
 
-            guard callee.couldBeProcedure(in: context.loweredTypes) else {
+            guard callee.couldBeProcedure else {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
                         + " and only a procedure can be called",

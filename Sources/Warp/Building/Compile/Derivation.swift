@@ -18,7 +18,7 @@ struct Derivation {
     private struct Fact {
         // MARK: - Property
         let callee: (Name) -> Bool
-        let claim: (LoweredType) -> (LoweredTypeTable) -> Bool
+        let claim: (LoweredType) -> Bool
         let unread: Set<Name>
         let table: LoweredTypeTable
 
@@ -26,7 +26,7 @@ struct Derivation {
         // MARK: - Public
         // Whether a slot of this type says the fact of the procedure it holds.
         func isClaimed(by type: LoweredType) -> Bool {
-            claim(type)(table)
+            claim(type)
         }
 
         // MARK: - Private
@@ -60,7 +60,7 @@ struct Derivation {
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
             fact: { given in
-                Fact(callee: given, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table)
+                Fact(callee: given, claim: \.isConstProcedure, unread: variables, table: table)
             },
             beside: declared,
             taking: asked,
@@ -86,7 +86,7 @@ struct Derivation {
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
             fact: { given in
-                Fact(callee: given, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
+                Fact(callee: given, claim: \.isIsolatedProcedure, unread: [], table: table)
             },
             beside: declared,
             taking: asked,
@@ -236,7 +236,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: const, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table),
+            Fact(callee: const, claim: \.isConstProcedure, unread: variables, table: table),
             declaring: names,
             bound: declared,
             taking: asked
@@ -256,7 +256,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: isolated, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
+            Fact(callee: isolated, claim: \.isIsolatedProcedure, unread: [], table: table),
             declaring: parameters,
             bound: declared,
             taking: asked
@@ -462,7 +462,7 @@ struct Derivation {
                 fact.isClaimed(by: reached)
             else { return false }
 
-            return handsOwned(arguments, at: reached.inPlacePositions(in: fact.table), declaring: names)
+            return handsOwned(arguments, at: reached.inPlacePositions, declaring: names)
                 && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a
