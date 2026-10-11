@@ -846,13 +846,6 @@ indirect enum LoweredType: Sendable, Equatable {
     // because nothing was declared, and a value read as `Any` on the right
     // stands only where `Any` is declared, until a cast says what it is.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        accepts(other, in: table, rigid: false)
-    }
-
-    // The same question asked rigidly: a named type answers a contract by
-    // the claims the documents already say, rather than by one the link may
-    // still find. What a declaration answering for another is held to.
-    func accepts(_ other: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
         switch (self, other) {
         // What answers `Never` never arrives, so it cannot be the value that
         // disagrees with a declaration. The other way round it fits nowhere.
@@ -877,7 +870,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return mine == theirs
 
         case let (.parameter, .variable(inner)), let (.parameter, .inout(inner)):
-            return accepts(inner, in: table, rigid: rigid)
+            return accepts(inner, in: table)
 
         // A slot's own wrapping comes off before what stands for it is taken
         // apart, since a name or a composition there is what a contract
@@ -885,7 +878,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // its declared half takes from what cannot be null, and what can is
         // answered below.
         case let (.variable(inner), _):
-            return inner.accepts(other, in: table, rigid: rigid)
+            return inner.accepts(other, in: table)
 
         // A nullable slot takes null, whatever it declares besides.
         case (.nullable, .null):
@@ -898,22 +891,22 @@ indirect enum LoweredType: Sendable, Equatable {
             return Set(bounds).isSubset(of: theirs)
 
         // A composition takes what answers each of its contracts, asked of
-        // the table with the same rigidity and, where the slot takes null as
-        // well, knowing it does. A value read as `Any` or along a path a call
-        // decides answers none until a cast says what it is, and one leaning
-        // on a claim passes, for the link to decide.
+        // the table knowing, where the slot takes null as well, that it does.
+        // A value read as `Any` or along a path a call decides answers none
+        // until a cast says what it is, and one leaning on a claim passes,
+        // for the link to decide.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { contract in
-                if case .decided(false) = table.answering(contract: contract, reading: other, rigid: rigid, orNull: orNull) { false } else { true }
+                if case .decided(false) = table.answering(contract: contract, reading: other, orNull: orNull) { false } else { true }
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
-            return mine.accepts(other, in: table, rigid: rigid)
+            return mine.accepts(other, in: table)
 
         case let (_, .variable(inner)), let (_, .inout(inner)):
-            return accepts(inner, in: table, rigid: rigid)
+            return accepts(inner, in: table)
 
         case (.any, _), (.projection, _):
             return true
@@ -935,20 +928,20 @@ indirect enum LoweredType: Sendable, Equatable {
         // takes; null and what cannot be null were taken above. What may be
         // null does not stand where null was never declared.
         case let (.nullable(mine), .nullable(theirs)):
-            return mine.accepts(theirs, in: table, rigid: rigid)
+            return mine.accepts(theirs, in: table)
 
         case let (.array(mine), .array(theirs)):
-            return mine.accepts(theirs, in: table, rigid: rigid)
+            return mine.accepts(theirs, in: table)
 
         case let (.dictionary(mine), .dictionary(theirs)):
-            return mine.accepts(theirs, in: table, rigid: rigid)
+            return mine.accepts(theirs, in: table)
 
         // A record is a dictionary whose fields happen to be known: a record
         // whose every field is the entry type is such a mapping. Not the
         // other way round, since a `Dictionary<T>` promises nothing about which
         // fields exist.
         case let (.dictionary(mine), .record(theirs)):
-            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table, rigid: rigid) }
+            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table) }
 
         // A record type is its fields: what stands here declares exactly
         // these, each taking what stands at it. A place changes no value, so
@@ -956,7 +949,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.record(mine), .record(theirs)):
             return Set(mine.layout.fields) == Set(theirs.layout.fields)
                 && mine.named.allSatisfy { name, field in
-                    theirs[name].map { given in field.accepts(given, in: table, rigid: rigid) } ?? false
+                    theirs[name].map { given in field.accepts(given, in: table) } ?? false
                 }
 
         case let (.procedure(required, wanted, wantedConstness, wantedIsolation),
@@ -982,10 +975,10 @@ indirect enum LoweredType: Sendable, Equatable {
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
             for (parameter, taken) in zip(required, given) {
-                guard taken.takes(parameter, in: table, rigid: rigid) else { return false }
+                guard taken.takes(parameter, in: table) else { return false }
             }
 
-            return (wanted ?? .any).accepts(offered ?? .any, in: table, rigid: rigid)
+            return (wanted ?? .any).accepts(offered ?? .any, in: table)
 
         // A whole number written as a literal is an Int, or the fraction it
         // names where the place declares a Double.
@@ -1053,9 +1046,9 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a position taking this may stand where a position handing
     // `handed` is: it accepts what is handed there, and a position taking a
     // place is handed one. A position taking a value may stand where a place
-    // is handed, and reads what the place holds. Rigid as `accepts` is.
-    func takes(_ handed: LoweredType, in table: LoweredTypeTable, rigid: Bool) -> Bool {
-        accepts(handed, in: table, rigid: rigid) && (!isInout || handed.isInout)
+    // is handed, and reads what the place holds.
+    func takes(_ handed: LoweredType, in table: LoweredTypeTable) -> Bool {
+        accepts(handed, in: table) && (!isInout || handed.isInout)
     }
 
     // Whether some value read as `reading` could be one of this type, which
@@ -1081,13 +1074,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // be null and record fields, a record read as a dictionary by each of its
     // fields. Which was read first says nothing. At each position a reading
     // of `Any` makes its position `Any`. Elsewhere it is the one that takes
-    // the other, asked rigidly. Nil where neither takes the other.
+    // the other. Nil where neither takes the other.
     func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
         guard self != given else { return self }
 
-        let takesGiven = accepts(given, in: table, rigid: true)
+        let takesGiven = accepts(given, in: table)
 
-        guard takesGiven || given.accepts(self, in: table, rigid: true) else { return nil }
+        guard takesGiven || given.accepts(self, in: table) else { return nil }
 
         return merged(with: given, takingGiven: takesGiven, in: table)
     }
@@ -1873,7 +1866,7 @@ indirect enum LoweredType: Sendable, Equatable {
     private func merged(with given: LoweredType, in table: LoweredTypeTable) -> LoweredType {
         guard self != given else { return self }
 
-        return merged(with: given, takingGiven: accepts(given, in: table, rigid: true), in: table)
+        return merged(with: given, takingGiven: accepts(given, in: table), in: table)
     }
 
     // The record this stands for: a nameless one as it is, a declared one

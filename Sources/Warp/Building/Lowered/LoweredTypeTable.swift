@@ -18,8 +18,7 @@ final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone decides is decided here; a named type decides nothing,
     // since which types answer a contract is read off the claims of the whole
-    // list, so the names come back and the asker writes them down. Asked
-    // rigidly, the documents decide it.
+    // list, so the names come back and the asker writes them down.
     enum Answering {
         case decided(Bool)
         case leansOn([Name])
@@ -228,7 +227,6 @@ final class LoweredTypeTable: Sendable {
     func answering(
         contract name: Name,
         reading given: LoweredType,
-        rigid: Bool,
         orNull: Bool
     ) -> Answering {
         guard let reading = read(given, orNull: orNull) else { return .decided(true) }
@@ -251,16 +249,16 @@ final class LoweredTypeTable: Sendable {
         // What may be null is a value of the type or null, so it answers
         // where both do.
         case let .nullable(inner):
-            return answering(contract: name, reading: inner, rigid: rigid, orNull: false)
-                .and(answering(contract: name, reading: .null, rigid: rigid, orNull: false))
+            return answering(contract: name, reading: inner, orNull: false)
+                .and(answering(contract: name, reading: .null, orNull: false))
 
         // A reading of a type a value is an instance of answers as that type
         // does: by what the documents claim about it, so the type comes back
-        // and the asker writes it down. Asked rigidly, or where the table
-        // holds every claim there is, it is held to what the documents say.
+        // and the asker writes it down. Where the table holds every claim
+        // there is, it is held to what the documents say.
         default:
             guard let type = reading.nominal(in: self) else { return .decided(true) }
-            guard !rigid, !holdsEveryClaim else { return .decided(answers(contract: name, arrived: type) != false) }
+            guard !holdsEveryClaim else { return .decided(answers(contract: name, arrived: type) != false) }
 
             return .leansOn([type])
         }
@@ -277,7 +275,7 @@ final class LoweredTypeTable: Sendable {
         as label: String,
         leaning: (Claim) -> Void
     ) -> String? {
-        switch answering(contract: name, reading: reading, rigid: false, orNull: orNull) {
+        switch answering(contract: name, reading: reading, orNull: orNull) {
         case let .leansOn(types):
             for type in types {
                 leaning(Claim(type: type, contract: name))

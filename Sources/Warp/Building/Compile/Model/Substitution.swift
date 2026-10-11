@@ -158,7 +158,7 @@ struct Substitution: Sendable {
     }
 
     // A parameter read once more, joined with what it is already read as by
-    // `join`: holding both, only where one rigidly takes the other (a whole
+    // `join`: holding both, only where one takes the other (a whole
     // literal and a fraction, and the same through lists, maps, `?` and
     // fields), with the table, because a reading may stand on a row and the
     // type that row holds; or part by part, as two readings of one place

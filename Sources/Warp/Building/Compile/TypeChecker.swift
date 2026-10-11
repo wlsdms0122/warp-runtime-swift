@@ -3021,7 +3021,7 @@ struct TypeChecker {
         guard slot.namesParameter, !slot.isInout else { return }
 
         let holds = written.everyPart(along: slot, inPlace: false, in: loweredTypes) { slot, part, _ in
-            !slot.namesParameter || slot.accepts(part.folded, in: loweredTypes, rigid: true)
+            !slot.namesParameter || slot.accepts(part.folded, in: loweredTypes)
         }
 
         guard !holds else { return }
