@@ -755,19 +755,14 @@ struct ObjectReader {
         return read
     }
 
-    // A record type's layout may write no name, for a record literal's
-    // reading no place named.
+    // A record type's layout is a declared record's, as a record built from
+    // parts is.
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")
-        var layout = try FieldCursor(cursor.next(), of: "layout")
-        let named = try layout.field().maybe(name)
-        let names = try layout.field().list(name)
-
-        try layout.end()
-
+        let layout = try self.layout(cursor.next())
         let read = try LoweredRecord(
-            name: named,
-            names: names,
+            name: layout.name,
+            names: layout.fields,
             judging: try cursor.field().list(lowered)
         )
 

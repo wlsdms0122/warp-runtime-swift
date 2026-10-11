@@ -7,16 +7,13 @@
 
 import Foundation
 
-// A record's fields as the build laid them out: the declared record's name,
+// A declared record's fields as the build laid them out: the record's name,
 // the field names in the order a value's fields stand, and the type of the
 // field at each of those places. One type per field, checked where the pair is
 // made, so every reading may take the two together.
-//
-// The name is a declared record's. A record literal reads under none until
-// the place it is written into names it.
 struct LoweredRecord: Sendable, Equatable {
     // MARK: - Property
-    let name: Name?
+    let name: Name
 
     // In ascending byte order, as `Name`'s `<` orders them.
     let names: [Name]
@@ -28,17 +25,16 @@ struct LoweredRecord: Sendable, Equatable {
         zip(names, fields)
     }
 
-    // The layout a value of the declared record is built on, and nil for a
-    // literal's reading no place has named.
-    var layout: Layout? {
-        name.map { name in Layout(name: name, ordered: names) }
+    // The layout a value of the record is built on.
+    var layout: Layout {
+        Layout(name: name, ordered: names)
     }
 
     // MARK: - Initializer
     // The same, where the two were read apart and the pairing is what has to be
     // true. The inner door is reached with a pairing this proved, which is what
     // makes its promise a fact rather than an assumption.
-    init(name: Name?, names: [Name], judging fields: [LoweredType]) throws {
+    init(name: Name, names: [Name], judging fields: [LoweredType]) throws {
         guard names.ordered else {
             throw ObjectRefused("a record's fields are not in name order")
         }
@@ -53,7 +49,7 @@ struct LoweredRecord: Sendable, Equatable {
     }
 
     // The inner door: the maker already put the names in order, one type each.
-    init(name: Name?, names: [Name], fields: [LoweredType]) {
+    init(name: Name, names: [Name], fields: [LoweredType]) {
         assert(names.ordered && names.count == fields.count, "a record has one type per field it names, in name order")
 
         self.name = name

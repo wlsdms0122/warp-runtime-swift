@@ -15,8 +15,8 @@ struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
 
-    // The name a record built at a place takes: one written where a declared
-    // record is read is built as that record.
+    // The name a record literal at a place is built under: the declared
+    // record the place it is written into reads.
     private(set) var names: [Place: Name] = [:]
 
     // MARK: - Initializer
@@ -37,17 +37,17 @@ struct JudgementTable: Sendable {
         judgements[place] = judgement
     }
 
-    // The name the record built at this place takes, or nil where it is
-    // built under none.
+    // The name the record literal at this place is built under, or nil
+    // where the type check judged none there.
     func name(ofRecordAt place: Place) -> Name? {
         names[place]
     }
 
-    // The names records built at these places take.
-    mutating func record(names: [Place: Name]) {
-        guard !names.isEmpty else { return }
+    // The name the record literal at this place is built under.
+    mutating func record(_ name: Name, ofRecordAt place: Place) {
+        assert(names[place] == nil, "one place stands for one expression")
 
-        self.names.merge(names) { _, theirs in theirs }
+        names[place] = name
     }
 
     // The other's entries beside this table's own, the other's standing

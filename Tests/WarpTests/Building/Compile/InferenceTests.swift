@@ -1862,12 +1862,16 @@ struct InferenceTests {
         // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
                     body: [
-                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))]))
+                        Statement(
+                            binding: .constant("task", declared: .named("App.Task")),
+                            expression: .record(["id": .literal(.string("a"))])
+                        )
                     ],
                     result: .reference([.key("task"), .key("absolute")])
                 )

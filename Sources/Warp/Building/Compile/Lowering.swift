@@ -617,20 +617,14 @@ struct Lowering {
     }
 
     // What lowered code stands as, for the readings the build can prove
-    // without judging anything: a record literal stands on the layout this
-    // walk made for it, a call on what its row answers, a cast on what it
-    // casts to, and a path on what it reaches. Nil everywhere else, which
-    // leaves the fields below it to be read by name.
+    // without judging anything: a record literal stands as the declared
+    // record it was built under, a call on what its row answers, a cast on
+    // what it casts to, and a path on what it reaches. Nil everywhere else,
+    // which leaves the fields below it to be read by name.
     private func standing(_ code: Operation, on slots: SlotAllocator) -> LoweredType? {
         switch code {
         case let .record(held):
-            return .record(
-                LoweredRecord(
-                    name: held.layout.name,
-                    names: held.layout.fields,
-                    fields: held.fields.map { field in standing(field, on: slots) ?? .any }
-                )
-            )
+            return loweredTypes.record(named: held.layout.name).map(LoweredType.named)
 
         case let .local(address):
             return address.steps.reduce(slots.held(at: address.slot)) { reached, step in
@@ -748,13 +742,10 @@ struct Lowering {
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
 
-        // A record is a value of a declared record, and a literal takes the
-        // name of the one its place reads.
+        // The type check read the literal as the declared record its place
+        // reads, which the record is built under.
         guard let name = context.judgements.name(ofRecordAt: place) else {
-            throw BuildError(
-                "a record literal is written where a declared record is read, and nothing here declares one",
-                at: place
-            )
+            throw BuildError.unjudged("a record literal", at: place)
         }
 
         return .record(

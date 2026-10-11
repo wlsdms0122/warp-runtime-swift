@@ -31,10 +31,6 @@ struct Substitution: Sendable {
         // Only where one holds the other, and a disagreement otherwise.
         case holdingBoth
 
-        // Part by part, as `joined` joins a list literal's elements, and never
-        // a disagreement.
-        case joined
-
         // What procedures handed take, where one takes the other: the one
         // both take, which is the one the other accepts, and a disagreement
         // otherwise.
@@ -52,8 +48,8 @@ struct Substitution: Sendable {
     private(set) var disagreeing: [Name: LoweredType] = [:]
 
     // The readings of each parameter that what it is read as does not say,
-    // as they were read: a join with `Any` is `Any`, and a record's fields
-    // joined say nothing of each field.
+    // as they were read: a join with `Any` is `Any`, and a whole literal
+    // beside a fraction is held as the fraction the call hands on.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
     // MARK: - Initializer
@@ -163,10 +159,10 @@ struct Substitution: Sendable {
 
     // A parameter read once more, joined with what it is already read as by
     // `join`: holding both, only where one takes the other (a whole
-    // literal and a fraction, and the same through lists, maps, `?` and
-    // fields), with the table, because a reading may stand on a row and the
-    // type that row holds; or part by part, as two readings of one place
-    // join. A parameter read as `Any` anywhere is `Any` there.
+    // literal and a fraction, and the same through lists, maps and `?`),
+    // with the table, because a reading may stand on a row and the type that
+    // row holds; or, for what procedures handed take, the one both take. A
+    // parameter read as `Any` anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer
@@ -198,9 +194,6 @@ struct Substitution: Sendable {
         let both = switch join {
         case .holdingBoth:
             already.holdingBoth(given, in: table)
-
-        case .joined:
-            already.joined(given)
 
         case .takenByBoth:
             already.accepts(given, in: table) ? given : given.accepts(already, in: table) ? already : nil
