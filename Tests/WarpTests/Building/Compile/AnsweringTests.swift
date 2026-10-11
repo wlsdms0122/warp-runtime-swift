@@ -274,7 +274,7 @@ struct AnsweringTests {
     }
 
     @Test("what no body settles reads Any, which a typed slot takes only through a cast")
-    func anAnswerNothingSettlesReadsAny() async throws {
+    func anAnswerNothingDecidesReadsAny() async throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
         // from its own is not one the text states, so nothing is known about

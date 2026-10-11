@@ -127,7 +127,7 @@ struct DeclaredNameTests {
     }
 
     @Test("what a name says it holds is what the run puts in it")
-    func aDeclarationSettlesTheValue() async throws {
+    func aDeclarationHoldsTheValue() async throws {
         // Given. The value is a whole number and the name says it holds a
         // fraction. A declaration is a boundary like a parameter's, so what
         // crosses it is settled

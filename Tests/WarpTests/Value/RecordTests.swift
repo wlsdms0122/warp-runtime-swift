@@ -65,7 +65,7 @@ struct RecordTests {
     }
 
     @Test("a value that settled to a name keeps it, and is refused a field that name does not declare")
-    func writingHoldsASettledNameToItsDeclaration() throws {
+    func writingHoldsARecordNameToItsDeclaration() throws {
         // Given
         let sut = Value.record(Record(name: "App.Point", ["a": .int(1)]))
 

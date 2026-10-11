@@ -19,7 +19,7 @@ struct ReturnTypeTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a declared answer is settled before the caller sees it")
-    func answerIsSettled() async throws {
+    func answerIsHeldToItsDeclaration() async throws {
         // Given
         let sut = try Module(
             procedures: [

@@ -1578,7 +1578,7 @@ struct InferenceTests {
     }
 
     @Test("a chain of writes settles link by link, however long")
-    func aChainOfWritesSettles() async throws {
+    func aChainOfWritesConverges() async throws {
         // Given. Each round moves the null one link up the chain, so the head
         // only reads nullable after as many settles as the chain is long.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
