@@ -19,7 +19,8 @@ public struct CastRefused: RecoverableFailure {
     // MARK: - Property
     public let message: String
 
-    // The type the cast named, spelled the way the author wrote it.
+    // The type the cast reads as, rendered the way a refusal renders it, so
+    // a cast to an alias names the type the alias stands for.
     public let expected: String
 
     // The type the value arrived as an instance of. The other half of the

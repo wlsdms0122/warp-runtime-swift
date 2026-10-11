@@ -7,8 +7,8 @@
 
 import Foundation
 
-// One of a native procedure's declared sends, worked out: which row it reaches
-// and how many arguments it hands over, from that row's first position.
+// One of a native procedure's declared sends, worked out: which row it
+// reaches. What it hands comes in through the door at that row's slots.
 //
 // The row is an answer a build has and a run would otherwise look for. It is
 // numbered by the sending document until the link answers it, the way a call
@@ -17,20 +17,16 @@ struct Sent: Sendable, Equatable {
     // MARK: - Property
     let row: Int
 
-    // How many arguments the send hands over.
-    let handing: Int
-
     // MARK: - Initializer
-    init(row: Int, handing: Int) {
+    init(row: Int) {
         self.row = row
-        self.handing = handing
     }
 
     // MARK: - Public
     // The same send reaching another row, which is what relocating a document's
     // number to this link's row leaves.
     func reaching(_ row: Int) -> Sent {
-        Sent(row: row, handing: handing)
+        Sent(row: row)
     }
 
     // MARK: - Private

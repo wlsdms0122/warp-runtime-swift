@@ -72,6 +72,47 @@ struct HostDoorTests {
         // MARK: - Private
     }
 
+    // A failure carrying a record under a name, the way a procedure the host
+    // answers fills `details` with whatever it holds.
+    private struct CarryingFailure: RecoverableFailure {
+        // MARK: - Property
+        let message = "carried"
+
+        let held: Value
+
+        let trace: Trace? = nil
+
+        var type: String { Self.type }
+
+        static let type = "carried"
+
+        var details: [Name: Value] { ["held": held] }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func tracing(_ trace: Trace) -> CarryingFailure { self }
+
+        // MARK: - Private
+    }
+
+    // A procedure the host answers failing with what it is built holding.
+    private struct CarryingEffect: Effect {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        let held: Value
+
+        let failing = Failing.these([CarryingFailure.type])
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func run(_ invocation: Invocation<Self>) async throws -> Value {
+            throw CarryingFailure(held: held)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private var sut: Module {
         get throws {
@@ -214,6 +255,38 @@ struct HostDoorTests {
         }
     }
 
+    @Test("what a failure carries comes in through the door, a record under an alias's name as its record")
+    func aFailuresPayloadComesInThroughTheDoor() async throws {
+        // Given. `App.carry` fails carrying `App.Q { a: 1 }`, `App.Q` an alias
+        // of the record `App.P`, and the rescue answers what it carried
+        let image = try await Builder().build(try carrying(.record(Record(name: "App.Q", ["a": .int(1)]))))
+
+        // When
+        let answer = try await Executor().run(image)
+
+        // Then
+        guard case let .record(record) = answer else {
+            Issue.record("the rescue answered \(answer), not the record")
+
+            return
+        }
+
+        #expect(record.name == "App.P")
+    }
+
+    @Test("what a failure carries under a name no document declares refuses at the door")
+    func aFailuresPayloadUnderAnUndeclaredNameRefuses() async throws {
+        // Given
+        let image = try await Builder().build(try carrying(.record(Record(name: "App.Z", ["a": .int(1)]))))
+
+        // When / Then. The rescue never reads it
+        await #expect {
+            try await Executor().run(image)
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("'failed'.details.held: is a App.Z, which no document declares as a record")
+        }
+    }
+
     @Test("what the entry answers reaches the host as the build held it, a closure over a type parameter its call filled included")
     func theEntrysAnswerLeavesAsItIs() async throws {
         // Given. `App.mk` answers a closure over its own `some T`, and the
@@ -348,6 +421,40 @@ struct HostDoorTests {
 
     // MARK: - Public
     // MARK: - Private
+    // A link whose entry rescues `App.carry` failing with `held` in its
+    // details and answers what the failure carried there.
+    private func carrying(_ held: Value) throws -> [Module] {
+        let carry = try Module(
+            types: ["App.P": .record(["a": .int]), "App.Q": .named("App.P")],
+            procedures: [
+                "App.carry": Procedure(
+                    signature: Signature(of: CarryingEffect.self),
+                    implementation: .effect(CarryingEffect(held: held))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.carry"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("failed"),
+                            expression: .attempt(
+                                Block(body: [Statement(expression: .call(Call(selector: "App.carry")))]),
+                                rescue: Block(body: [], result: .reference([.key("failed"), .key("details"), .key("held")]))
+                            )
+                        )
+                    ],
+                    result: .reference([.key("failed")])
+                )
+            ]
+        )
+
+        return [document, carry]
+    }
+
     // The entry's door over no table, answered by name.
     private func settled(_ signature: Signature, given: [Name: Value]) throws -> [Name: Value] {
         let entry = Linked.unlowered(

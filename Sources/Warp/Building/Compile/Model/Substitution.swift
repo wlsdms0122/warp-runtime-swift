@@ -144,7 +144,7 @@ struct Substitution: Sendable {
 
         guard let valueOfSeveral else { return nil }
 
-        let standing = slots.filter { slot in slot.boundedParameters[parameter] != nil }
+        let standing = slots.filter { slot in slot.typeParameters[parameter] != nil }
 
         if standing.count == 1, case let .parameter(alone, _) = standing[0].slotUnwrapped, alone == parameter {
             return nil

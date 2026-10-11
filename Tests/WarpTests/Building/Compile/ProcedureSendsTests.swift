@@ -892,8 +892,7 @@ struct ProcedureSendsTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ExecutionError
-                && "\(error)".contains("'App.pick' is handed 3 here, and the procedure sending it declares it hands 2")
+            error is ArgumentError && "\(error)".contains("'App.pick' was given 3 arguments, and it takes 2")
         }
     }
 

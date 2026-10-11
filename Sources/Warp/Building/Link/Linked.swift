@@ -279,11 +279,10 @@ public final class Linked: Sendable {
 
     // What a procedure the host answers hands back, a value from outside at
     // the door it comes through: fitted to what the row declares and judged
-    // against it.
+    // against it, `Any` where it declares nothing, which is what the build
+    // reads such a call's answer as.
     func settling(answered value: Value) throws -> Value {
-        guard let returns else { return value }
-
-        return try returns.settling(outside: value, at: "returns", in: table)
+        try (returns ?? .any).settling(outside: value, at: "returns", in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made
@@ -343,25 +342,29 @@ public final class Linked: Sendable {
     private func refuseInPlace() throws {
         guard let slot = slots.first(where: { slot in slot.type.isInout }) else { return }
 
-        throw ExecutionError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
+        throw ArgumentError("'\(rendered)' takes '\(slot.name)' in place, and a value from outside is no variable")
     }
 
-    // Values from outside, one at each slot, settled together: the type
-    // parameters the slots name filled by what the values read as, and each
-    // value fitted and judged by the door rule at its slot so filled.
+    // Values from outside, one at each slot, settled together in the door's
+    // one order: each value's record names held and the value fitted to its
+    // slot, the type parameters the slots name filled by what the fitted
+    // values read as, and each value judged at its slot so filled.
     private func settled(_ values: [Value]) throws -> [Value] {
-        let filling = try filling(by: values)
+        let fitted = try zip(slots, values).map { slot, value in
+            try slot.type.fitted(outside: value, at: "input '\(slot.name)'", in: table)
+        }
+        let filling = try filling(by: fitted)
 
-        return try zip(slots, values).map { slot, value in
-            try slot.type.filling(filling).settling(outside: value, at: "input '\(slot.name)'", in: table)
+        return try zip(slots, fitted).map { slot, value in
+            try slot.type.filling(filling).settling(value, at: "input '\(slot.name)'", in: table)
         }
     }
 
     // What the type parameters this row's slots name stand for where values
-    // cross the door at them, as the call the door is. What each value reads
-    // as fills them the way a call's readings fill a declaration's, so the
-    // door judges a value as the build judges a reading there, in the
-    // build's words. A type parameter is one type: one filled by two types
+    // cross the door at them, as the call the door is. What each fitted
+    // value reads as fills them the way a call's readings fill a
+    // declaration's, so the door judges a value as the build judges a
+    // reading there, in the build's words. A type parameter is one type: one filled by two types
     // refuses, and so does a bounded one filled by a value of more than one
     // type. What fills a bounded one is then held to its bounds, and `Any`,
     // what values of several types join to, answers none. A parameter only a
@@ -374,7 +377,7 @@ public final class Linked: Sendable {
     private func filling(by values: [Value]) throws -> [Name: LoweredType] {
         let types = slots.map(\.type)
         let parameters = types.reduce(into: [Name: [Name]]()) { found, type in
-            found.merge(type.boundedParameters) { first, _ in first }
+            found.merge(type.typeParameters) { first, _ in first }
         }
 
         guard closure == nil, !parameters.isEmpty else { return [:] }
@@ -394,7 +397,7 @@ public final class Linked: Sendable {
 
             if let refusal {
                 let standing = slots
-                    .filter { slot in slot.type.boundedParameters[parameter] != nil }
+                    .filter { slot in slot.type.typeParameters[parameter] != nil }
                     .map { slot in "input '\(slot.name)'" }
                     .joined(separator: ", ")
 
