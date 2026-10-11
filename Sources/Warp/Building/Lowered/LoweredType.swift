@@ -123,21 +123,21 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Every type parameter this names, by label, with the bounds it is held
-    // to.
-    var boundedParameters: [Name: [Name]] {
+    // to, none for one no bound holds.
+    var typeParameters: [Name: [Name]] {
         switch self {
         case let .parameter(label, bounds):
             return [label: bounds]
 
         case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.boundedParameters
+            return inner.typeParameters
 
         case let .record(record):
-            return record.fields.reduce(into: [:]) { found, field in found.merge(field.boundedParameters) { first, _ in first } }
+            return record.fields.reduce(into: [:]) { found, field in found.merge(field.typeParameters) { first, _ in first } }
 
         case let .procedure(parameters, returns, _, _):
             return ((parameters ?? []) + [returns].compactMap { $0 }).reduce(into: [:]) { found, part in
-                found.merge(part.boundedParameters) { first, _ in first }
+                found.merge(part.typeParameters) { first, _ in first }
             }
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
@@ -1211,7 +1211,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // What arrives as `Never` holds no value at any depth, so every
         // parameter the slot names there is read only by what holds none.
         case (_, .never):
-            for name in boundedParameters.keys.sorted() {
+            for name in typeParameters.keys.sorted() {
                 substitution.read(name, as: .never, in: table)
             }
 

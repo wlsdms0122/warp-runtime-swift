@@ -377,7 +377,7 @@ public final class Linked: Sendable {
     private func filling(by values: [Value]) throws -> [Name: LoweredType] {
         let types = slots.map(\.type)
         let parameters = types.reduce(into: [Name: [Name]]()) { found, type in
-            found.merge(type.boundedParameters) { first, _ in first }
+            found.merge(type.typeParameters) { first, _ in first }
         }
 
         guard closure == nil, !parameters.isEmpty else { return [:] }
@@ -397,7 +397,7 @@ public final class Linked: Sendable {
 
             if let refusal {
                 let standing = slots
-                    .filter { slot in slot.type.boundedParameters[parameter] != nil }
+                    .filter { slot in slot.type.typeParameters[parameter] != nil }
                     .map { slot in "input '\(slot.name)'" }
                     .joined(separator: ", ")
 
