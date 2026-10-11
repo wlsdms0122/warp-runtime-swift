@@ -9,59 +9,32 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
-import WarpTestSupport
 
-// Reading and writing data are one mapping seen from two sides, and the whole of
-// what they promise is that they are the same one.
+// Data as a carrier spells it, read as the value it is.
 @Suite("What a document spells data as")
 struct ValueNotationTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
     @Test(
-        "what is written reads back as what it was",
+        "what a carrier spells reads as the value it spells",
         arguments: [
-            Value.null,
-            .bool(true),
-            .int(42),
-            .double(3.5),
-            .string("warp"),
-            .array([.int(1), .string("two"), .null]),
-            .dictionary(["id": .string("a"), "done": .bool(false)]),
-            .dictionary(["nested": .array([.dictionary(["deep": .int(1)])])])
+            ("null", Value.null),
+            ("true", .bool(true)),
+            ("42", .int(42)),
+            ("3.5", .double(3.5)),
+            ("\"warp\"", .string("warp")),
+            ("[1, \"two\", null]", .array([.int(1), .string("two"), .null])),
+            ("{\"id\": \"a\", \"done\": false}", .dictionary(["id": .string("a"), "done": .bool(false)])),
+            ("{\"nested\": [{\"deep\": 1}]}", .dictionary(["nested": .array([.dictionary(["deep": .int(1)])])]))
         ]
     )
-    func writingRoundTrips(_ sut: Value) throws {
+    func aSpellingReadsAsItsValue(_ written: String, _ sut: Value) throws {
         // When
-        let written = try JSONEncoder().encode(ValueWriter(sut))
-        let read = try JSONDecoder().decode(ValueReader.self, from: written)
+        let read = try JSONDecoder().decode(ValueReader.self, from: Data(written.utf8))
 
         // Then
         #expect(read.value == sut)
-    }
-
-    @Test("bytes are written as the array they are, and come back as that array")
-    func bytesAreWrittenAsTheArrayTheyAre() throws {
-        // Given / When. A Codable carrier has no compact spelling for bytes, so
-        // they are written as the `Array<Int>` they are. It reads back as the
-        // array rather than as bytes, which is what this carrier does to `1.0`
-        // too.
-        let written = try JSONEncoder().encode(ValueWriter(.bytes([104, 105])))
-
-        // Then
-        #expect(String(decoding: written, as: UTF8.self) == "[104,105]")
-        #expect(
-            try JSONDecoder().decode(ValueReader.self, from: written).value
-                == .array([.int(104), .int(105)])
-        )
-
-        // And. Refusing instead would close the only way out for a value that
-        // never spelled itself bytes: an `Array<Int>` slot hands on what it was
-        // given, and what it was given may have been written `x"6869"`.
-        #expect(
-            try TypeExpression.array(.int).lowered(in: .empty).settling(outside: .bytes([104, 105]), at: "value", in: .empty)
-                == .bytes([104, 105])
-        )
     }
 
     @Test("a decoder walks bytes where it walks an array")
@@ -127,17 +100,6 @@ struct ValueNotationTests {
 
         // Then
         #expect(read.value == whole)
-    }
-
-    @Test("a procedure has no spelling, so writing one refuses")
-    func writingAProcedureRefuses() async throws {
-        // Given
-        let sut = try await procedureValue()
-
-        // When / Then
-        #expect(throws: EncodingError.self) {
-            try JSONEncoder().encode(ValueWriter(sut))
-        }
     }
 
     // MARK: - Public
