@@ -29,7 +29,7 @@ struct ObjectReader {
     // MARK: - Public
     func compiled(from value: Value) throws -> Compiled {
         guard case .dictionary = value else {
-            throw ObjectRefused("'object' is not written as a record")
+            throw ObjectRefused("'object' is not written as a map")
         }
 
         // A document says `warp` where an object says `object`, and one handed
@@ -39,7 +39,7 @@ struct ObjectReader {
         }
 
         // The layout first, and before anything laid out by it, the keys
-        // included: what this number says is whether the rest of the record
+        // included: what this number says is whether the rest of the map
         // means what this reading takes it to mean.
         guard let stamped = Keyed.peek(value, ObjectLayout.Key.object.name) else {
             throw ObjectRefused("'object' writes no '\(ObjectLayout.Key.object.name)'")
@@ -73,7 +73,7 @@ struct ObjectReader {
 
         for (key, part) in try Keyed(value).parts {
             switch key {
-            // Read above, before the record is held to the layout.
+            // Read above, before the map is held to the layout.
             case .object:
                 continue
 

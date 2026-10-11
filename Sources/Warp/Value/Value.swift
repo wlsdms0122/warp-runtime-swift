@@ -185,7 +185,7 @@ public indirect enum Value: Sendable, Equatable {
         // fraction that is not a number stands after every number, and a
         // procedure after everything, each at one place it shares with its
         // own kind and is the same as nothing there.
-        static func order(_ left: Value, _ right: Value) -> ComparisonResult {
+        public static func order(_ left: Value, _ right: Value) -> ComparisonResult {
             let ranks = (rank(of: left), rank(of: right))
 
             guard ranks.0 == ranks.1 else { return ranks.0 < ranks.1 ? .orderedAscending : .orderedDescending }
@@ -451,12 +451,12 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // What a reading of fields under names makes: a record of the declared
-    // record a name says, and a map keyed by the names' text where it says
-    // none. Either way one name holds one field, and a name written twice is
-    // refused. The name is a declared type's, so it holds a type's grammar.
+    // record the name says. One name holds one field, and a name written
+    // twice is refused. The name is a declared record's, so it is one a
+    // mention writes: a type's name, or a name the language declares.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
-        named name: Name?
+        named name: Name
     ) throws -> Value {
         let ordered = Array(fields).sorted { one, other in one.name < other.name }
 
@@ -464,14 +464,8 @@ public indirect enum Value: Sendable, Equatable {
             throw ValueRefused("'\(repeated.0.name)' is written twice")
         }
 
-        guard let name else {
-            return .dictionary(
-                Value.Dictionary(ordered: ordered.map { field in (key: .string(field.name.spelling), value: field.value) })
-            )
-        }
-
-        guard NameGrammar.type.holds(name) else {
-            throw ValueRefused(NameGrammar.type.refusal(of: name))
+        guard NameGrammar.mention.holds(name) else {
+            throw ValueRefused(NameGrammar.mention.refusal(of: name))
         }
 
         return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))

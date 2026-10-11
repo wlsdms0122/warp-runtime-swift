@@ -7,7 +7,7 @@
 
 import Foundation
 
-// The parts of an object, each under its key. The record is held to the
+// The parts of an object, each under its key. The map is held to the
 // layout's keys as it is opened, none missing and none the layout does not
 // name, so every key hands over its part.
 struct Keyed {
@@ -18,7 +18,7 @@ struct Keyed {
     // MARK: - Initializer
     init(_ value: Value) throws {
         guard case let .dictionary(written) = value else {
-            throw ObjectRefused("'object' is not written as a record")
+            throw ObjectRefused("'object' is not written as a map")
         }
 
         if let stray = written.keys.first(where: { key in !ObjectLayout.keys.contains { name in key == .string(name.spelling) } }) {
@@ -35,8 +35,8 @@ struct Keyed {
     }
 
     // MARK: - Public
-    // What stands under a key, asked before the record is held to the layout:
-    // what the record says it is decides whether it is an object, and which
+    // What stands under a key, asked before the map is held to the layout:
+    // what the map says it is decides whether it is an object, and which
     // format, so both are read raw.
     static func peek(_ value: Value, _ key: Name) -> Value? {
         guard case let .dictionary(written) = value else { return nil }
