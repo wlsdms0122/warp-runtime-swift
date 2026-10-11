@@ -266,6 +266,34 @@ final class LoweredTypeTable: Sendable {
         }
     }
 
+    // Why a reading provably does not answer a contract, after `label`, which
+    // says what was read, or nil where it answers. What leans on a claim goes
+    // to `leaning`, for the asker to write down where it stands. The one
+    // sentence the build and a door refuse such a reading in.
+    func refusal(
+        of reading: LoweredType,
+        answering name: Name,
+        orNull: Bool,
+        as label: String,
+        leaning: (Claim) -> Void
+    ) -> String? {
+        switch answering(contract: name, reading: reading, rigid: false, orNull: orNull) {
+        case let .leansOn(types):
+            for type in types {
+                leaning(Claim(type: type, contract: name))
+            }
+
+            return nil
+
+        case .decided(true):
+            return nil
+
+        case .decided(false):
+            return "\(label) \(reading.rendered(in: self)),"
+                + " which does not answer every procedure '\(name)' asks"
+        }
+    }
+
     // The declarations as the run reads them. A link says which order its rows
     // stand in, so a document's types take a run of rows the way its
     // declarations do; where nothing says, the declared spellings order them.

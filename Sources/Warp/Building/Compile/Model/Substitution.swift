@@ -77,6 +77,86 @@ struct Substitution: Sendable {
         (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 
+    // Why a parameter read two ways has no answer, both readings named, or
+    // nil where it was read one way. The build refuses a call in these words
+    // and a door the values it fills a declaration's parameters from.
+    func disagreement(of parameter: Name, in table: LoweredTypeTable) -> String? {
+        guard let first = readings[parameter], let second = disagreeing[parameter] else { return nil }
+
+        return "'\(parameter)' is read as \(first.rendered(in: table)) and as \(second.rendered(in: table))"
+    }
+
+    // Why a reading of a parameter does not answer a contract its bounds
+    // name, or nil where every reading answers each or leans on a claim,
+    // which goes to `leaning` for the asker to write down. That a named bound
+    // is declared is the declaration's own fact, held where it is declared.
+    func unanswered(
+        _ parameter: Name,
+        bounds: Set<Name>,
+        in table: LoweredTypeTable,
+        leaning: (Claim) -> Void
+    ) -> String? {
+        for reading in everyReading(of: parameter) {
+            for name in bounds.sorted() {
+                if let refusal = table.refusal(
+                    of: reading,
+                    answering: name,
+                    orNull: false,
+                    as: "'\(parameter)' is read as",
+                    leaning: leaning
+                ) {
+                    return refusal
+                }
+            }
+        }
+
+        return nil
+    }
+
+    // Why a value of more than one type fills a bounded parameter it cannot,
+    // or nil where none does. A bounded parameter is one type wherever it
+    // stands, and a value of a contract is of whichever type answers it, and
+    // one of what may be null of the type or `Null`, so two of them, or one
+    // inside a list or a record, are not known to be one type. Standing
+    // alone at one position of `slots`, the value is the one thing the
+    // parameter stands for, and the call reads the parameter the way it read
+    // the value.
+    func severalTypes(
+        of parameter: Name,
+        bounds: Set<Name>,
+        over slots: [LoweredType],
+        in table: LoweredTypeTable
+    ) -> String? {
+        guard !bounds.isEmpty else { return nil }
+
+        let valueOfSeveral = everyReading(of: parameter).first { reading in
+            switch reading {
+            case let .composition(read):
+                return !read.isEmpty
+
+            case .nullable:
+                return true
+
+            default:
+                return false
+            }
+        }
+
+        guard let valueOfSeveral else { return nil }
+
+        let standing = slots.filter { slot in slot.boundedParameters[parameter] != nil }
+
+        if standing.count == 1, case let .parameter(alone, _) = standing[0].slotUnwrapped, alone == parameter {
+            return nil
+        }
+
+        let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
+
+        return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: table)), a value of more than one"
+            + " type, and \(spelled) is one type wherever it stands. A value of a contract or of what may"
+            + " be null fills a bounded parameter only where the parameter stands alone at one position"
+    }
+
     // A parameter read once more, joined with what it is already read as by
     // `join`: holding both, only where one rigidly takes the other (a whole
     // literal and a fraction, and the same through lists, maps, `?` and

@@ -360,10 +360,10 @@ public final class Linked: Sendable {
     // What the type parameters this row's slots name stand for where values
     // cross the door at them, as the call the door is. What each value reads
     // as fills them the way a call's readings fill a declaration's, so the
-    // door judges a value as the build judges a reading there. A type
-    // parameter is one type: one filled by two types refuses, and so does a
-    // bounded one filled with what may be null, a value of the type or of
-    // `Null`. What fills a bounded one is then held to its bounds, and `Any`,
+    // door judges a value as the build judges a reading there, in the
+    // build's words. A type parameter is one type: one filled by two types
+    // refuses, and so does a bounded one filled by a value of more than one
+    // type. What fills a bounded one is then held to its bounds, and `Any`,
     // what values of several types join to, answers none. A parameter only a
     // procedure's own signature reaches is left standing, for the judgement
     // of that procedure to fill.
@@ -386,35 +386,19 @@ public final class Linked: Sendable {
         )
 
         for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
-            let standing = slots
-                .filter { slot in slot.type.boundedParameters[parameter] != nil }
-                .map { slot in "input '\(slot.name)'" }
-                .joined(separator: ", ")
-
-            func refusal(_ first: LoweredType, _ second: LoweredType) -> ArgumentError {
-                ArgumentError(
-                    "\(standing): '\(parameter)' is read as \(first.rendered(in: table))"
-                        + " and as \(second.rendered(in: table))"
-                )
-            }
-
-            if let first = substitution.readings[parameter], let second = substitution.disagreeing[parameter] {
-                throw refusal(first, second)
-            }
-
-            for reading in substitution.everyReading(of: parameter) where !bounds.isEmpty && reading != .never {
-                if case let .nullable(inner) = reading {
-                    throw refusal(inner, .null)
+            let refusal = substitution.disagreement(of: parameter, in: table)
+                ?? substitution.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
+                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: table) { claim in
+                    table.fulfillment?.require(folded: claim)
                 }
 
-                for bound in bounds {
-                    guard let type = reading.nominal(in: table), table.stands(type, answering: bound) else {
-                        throw ArgumentError(
-                            "\(standing): '\(parameter)' is read as \(reading.rendered(in: table)),"
-                                + " which does not answer every procedure '\(bound)' asks"
-                        )
-                    }
-                }
+            if let refusal {
+                let standing = slots
+                    .filter { slot in slot.type.boundedParameters[parameter] != nil }
+                    .map { slot in "input '\(slot.name)'" }
+                    .joined(separator: ", ")
+
+                throw ArgumentError("\(standing): \(refusal)")
             }
         }
 
