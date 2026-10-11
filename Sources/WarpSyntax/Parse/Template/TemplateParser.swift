@@ -40,7 +40,7 @@ struct TemplateParser: Sendable {
                 if let close = matchingBraceClose(text, from: innerStart) {
                     let inner = text[innerStart..<close]
 
-                    if inner.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if inner.trimmingCharacters(in: Path.whiteSpace).isEmpty {
                         buffer.append(character)
                         index = next
 

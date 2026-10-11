@@ -65,18 +65,10 @@ public struct Loader: Sendable {
         let draft = try reading(by: .standard) { try spelled(value, in: document, by: .standard) }
         let module = try reading(by: .standard) { try Module(draft, identity: identity) }
 
-        // What a document imports is read before the program it belongs to, so
-        // a host decides whether to grant before it decides whether to link.
-        // A document that leaves the list out is asking to be trusted about the
-        // one thing that was worth checking, and silence is not a claim a
-        // host can act on, so the door a program arrives through wants it
-        // said. Whether the list is *right* is the reader's, and it refuses
-        // there.
-        //
-        // After the reading and not before it: a document that will not even
-        // read is refused for that. A missing list is the least specific thing
-        // that can be wrong with a document, and going first would make it the
-        // only thing an author ever heard about.
+        // A document says what it imports, which a host reads to decide what
+        // to grant before it links. Whether the list is right is the
+        // Validator's. Asked after the reading, so a document that does not
+        // read is refused for that first.
         guard draft.imports != nil else {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
@@ -126,27 +118,18 @@ public struct Loader: Sendable {
             .value(of: try spelled(stamped, in: Place.Document(identity: nil), from: notation))
     }
 
-    // One procedure, for a caller holding a procedure's worth of data rather than a
-    // document. A module is how a *file* declares procedures; a caller that has
-    // exactly one and already knows what to call it does not have to write an
-    // document around it to say so.
-    //
-    // A fragment is in no document. What it will be part of is the caller's,
-    // and a refusal from here says so rather than naming a document it cannot
-    // know. The steps still lead to what was wrong inside what was handed in.
-    //
-    // Which notation it is written in is the caller's to say, the same as it is
-    // for a whole text. A caller holding a fragment of a document says nothing
-    // and gets the document's reading. What the fragment is held to is the
-    // module's, where it is checked beside the module's own names.
+    // One procedure, read from a procedure's worth of data rather than a
+    // document. A fragment is in no document, so a refusal from here names
+    // none, and its steps lead to what was wrong inside what was handed in.
+    // Which notation it is written in is the caller's to say; what it is held
+    // to is the module's it is declared in.
     public func procedure(from value: Value, in notation: Notation = .canonical) throws -> Procedure {
         try read(ProcedureReader.self, from: value, in: .assembled, from: notation).procedure
     }
 
     // A body read on its own, for a caller assembling a procedure rather than a
-    // document. Deliberately not `load`: a fragment is not a module and carries
-    // no signature of its own, so what comes back still has to reach a link
-    // inside something that does.
+    // document. A fragment is no module, so what comes back reaches a link
+    // inside one.
     public func body(from value: Value, in notation: Notation = .canonical) throws -> Body {
         try read(BodyReader.self, from: value, in: .assembled, from: notation).body
     }

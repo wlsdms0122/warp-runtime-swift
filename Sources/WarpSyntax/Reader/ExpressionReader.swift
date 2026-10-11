@@ -43,28 +43,18 @@ public struct ExpressionReader: Decodable {
     }
 
     // MARK: - Public
-    // The decoder comes along because one form needs more than the value: a
-    // closure carries statements, and which construct keys a statement may
-    // write is the registry's answer, which travels in the decoder rather than
-    // in the data. A form reading an expression goes through `init(from:)`,
-    // where a refusal from this grammar is given the address of the walk that
-    // asked for it.
+    // The decoder comes along because a closure carries statements, and which
+    // construct keys a statement may write is the registry's answer, which
+    // travels in the decoder.
     static func read(_ value: Value, in decoder: Decoder) throws -> Warp.Expression {
         try read(value, at: decoder.steps, in: decoder)
     }
 
     // MARK: - Private
-    // An expression is a value with a value inside it, so reading one is a walk
-    // like any other and it records where it is like any other. The decoder
-    // stops at the key the expression is written under and everything below
-    // that is this walk's own descent, which is why the steps travel here as
-    // well as in the decoder. A walk that carried only the decoder's would
-    // answer for a record ten fields deep with the address of the record.
-    //
-    // This is also where the grammar's refusal is given an address. It is
-    // written wherever an expression is spelled, so it carries none of its own,
-    // and the innermost walk that was reading is the one that knows. A refusal
-    // that already has an address is deeper than this one and passes.
+    // A walk down an expression's value. The decoder stops at the key the
+    // expression is written under, and the steps below it are this walk's, so
+    // they travel here. A grammar refusal is given the innermost walk's
+    // address here; one that already has an address is deeper and passes.
     private static func read(
         _ value: Value,
         at steps: [Place.Step],
@@ -104,9 +94,7 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    // One form, one function. What a form refuses with is written in that
-    // function alone, so the walk down through a nested call carries the
-    // frame of the call form and not the sentences of the five it is not.
+    // One form, one function, each with its own refusals.
     private static func read(
         record: Value.Dictionary,
         at steps: [Place.Step],

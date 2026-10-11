@@ -14,9 +14,6 @@ import Warp
 // at the load to what a contract's procedure may say.
 struct ContractProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case parameters
-        case returns
-        case bounds
         case const
         case isolated
         case failing
@@ -30,6 +27,7 @@ struct ContractProcedureReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: SignatureFieldsReader.CodingKeys.allCases.map(\.stringValue),
             context: "contract procedure"
         )
 

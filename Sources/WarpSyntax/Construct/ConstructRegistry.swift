@@ -72,9 +72,8 @@ public struct ConstructRegistry: Sendable {
         }
     }
 
-    // Passing a key spells this form differently in this notation. Registering
-    // one form twice is an alias rather than a mistake. The table maps keys to
-    // forms, and nothing says two keys cannot mean the same thing.
+    // Passing a key spells this form differently in this notation. One form
+    // registered under two keys is an alias.
     public func registering(
         _ form: any ConstructForm.Type,
         as key: Name? = nil
@@ -86,10 +85,8 @@ public struct ConstructRegistry: Sendable {
         return registry
     }
 
-    // Giving up a key. A notation that wants `conditional` to mean something
-    // of its own has to be able to stop meaning ours by it, so respelling a
-    // built-in is this followed by `registering(_:as:)`: a rename is a change to
-    // a table here, and not to the language.
+    // Giving up a key. Respelling a built-in is this followed by
+    // `registering(_:as:)`.
     public func removing(_ key: Name) -> ConstructRegistry {
         var registry = self
 
@@ -104,16 +101,10 @@ public struct ConstructRegistry: Sendable {
 
     // The table read backwards, for writing a document rather than reading one.
     //
-    // A form registered under two keys is spelled with whichever sorts first.
-    // An alias says the keys mean the same thing and not which one is meant,
-    // so there is nothing here to prefer, and a table is unordered anyway,
-    // which makes "the one registered first" a thing this cannot know. What
-    // matters is that the answer is the same every time, since a document
-    // written twice has to come out the same both times.
-    //
-    // Nothing where the form is not registered: a notation that gave up a key
-    // cannot write what that key said, and answering with the built-in spelling
-    // would put a key in the document that reading it back would refuse.
+    // A form registered under two keys is spelled with whichever sorts first,
+    // so a document written twice comes out the same. Nothing where the form
+    // is not registered: a notation that gave up a key cannot write what that
+    // key said.
     public func key(for form: any ConstructForm.Type) -> Name? {
         forms.filter { _, registered in
             ObjectIdentifier(registered) == ObjectIdentifier(form)
@@ -123,10 +114,7 @@ public struct ConstructRegistry: Sendable {
     }
 
     // MARK: - Private
-    // A key is claimed once. Silently replacing a form would let a host swap
-    // out the language's own control structures without a trace. Deliberately
-    // replacing one is `removing(_:)` first, which leaves the intent written
-    // down.
+    // A key is claimed once. Replacing a form is `removing(_:)` first.
     private mutating func insert(_ form: any ConstructForm.Type, as key: Name) throws {
         guard forms[key] == nil else {
             throw ConstructRegistryError("construct key '\(key)' is already registered")

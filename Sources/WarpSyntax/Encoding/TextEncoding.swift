@@ -523,9 +523,6 @@ public struct TextEncoding {
         }
     }
 
-    // What a bare token names. Everything unquoted is one of five things, and a
-    // number is whole or a fraction by grammar. A point or an exponent, not a
-    // reader's guess.
     // Whether a bare token is written as a scalar: a keyword, or what starts
     // as a number.
     private func writesScalar(_ bare: String) -> Bool {
@@ -535,37 +532,35 @@ public struct TextEncoding {
         return first == "-" || first.isNumber
     }
 
+    // What a bare token names. Everything unquoted is one of five things, and a
+    // number is whole or a fraction by grammar: a point or an exponent.
     private func scalar(from bare: String, at offset: Int) throws -> Value {
         if let scalar = Name.scalarKeywords[bare] { return scalar }
 
-        do {
-            guard writesScalar(bare) else {
-                throw refused("nothing is written \(bare)", at: offset)
-            }
-
-            // One value, one writing. The reader takes exactly the spelling the
-            // writer produces, for the values as for the containers, so `007`
-            // and `1e0` are not documents even though a looser parse would read
-            // a number out of them.
-            guard bare.contains(where: { character in ".eE".contains(character) }) else {
-                switch IntSpelling(bare) {
-                case let .int(int):
-                    return .int(int)
-
-                case .notOneSpelling:
-                    throw refused("\(bare) is not a whole number's one writing", at: offset)
-
-                case .overflow:
-                    throw refused("\(bare) is a whole number past what an Int holds", at: offset)
-                }
-            }
-
-            guard let double = Double(spelling: bare) else {
-                throw refused("\(bare) is not a fraction's one writing", at: offset)
-            }
-
-            return .double(double)
+        guard writesScalar(bare) else {
+            throw refused("nothing is written \(bare)", at: offset)
         }
+
+        // One value, one writing. The reader takes exactly the spelling the
+        // writer produces, so `007` and `1e0` are not documents.
+        guard bare.contains(where: { character in ".eE".contains(character) }) else {
+            switch IntSpelling(bare) {
+            case let .int(int):
+                return .int(int)
+
+            case .notOneSpelling:
+                throw refused("\(bare) is not a whole number's one writing", at: offset)
+
+            case .overflow:
+                throw refused("\(bare) is a whole number past what an Int holds", at: offset)
+            }
+        }
+
+        guard let double = Double(spelling: bare) else {
+            throw refused("\(bare) is not a fraction's one writing", at: offset)
+        }
+
+        return .double(double)
     }
 
     // A key's spelling as the name it stands for, said in this reader's own

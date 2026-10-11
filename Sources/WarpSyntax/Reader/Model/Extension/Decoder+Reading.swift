@@ -18,19 +18,10 @@ extension Decoder {
     // document, which has no spellings.
     var notation: Notation { userInfo[.notation] as? Notation ?? .canonical }
 
-    // Read what is written here, standing on it.
-    //
-    // For a reader that has to judge a value after reading it: what is judged
-    // and what is refused are then one place, and the address is where the
-    // reading is rather than a key the guard below remembered to name. An
-    // address assembled from a remembered key is a second answer to a question
-    // the walk already answers, and the two go apart the first time a reader
-    // is written that forgets to assemble one.
-    //
-    // The boundary is not a second one. This is the same door
+    // Read what is written here, standing on it, so a reader judging a value
+    // after reading it refuses at the place it read. The same door
     // `ValueDecoder.decode` is, reached from a decoder handed over as the
-    // protocol, and where the decoder is somebody else's there is no door of
-    // ours to go through.
+    // protocol; a decoder that is somebody else's reads as itself.
     func read<T: Decodable>(_ type: T.Type) throws -> T {
         guard let decoder = self as? ValueDecoder else { return try T(from: self) }
 

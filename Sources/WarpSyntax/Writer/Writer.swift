@@ -42,17 +42,9 @@ public struct Writer: Sendable {
     // writing it back out, and that answer is owed for a text whose program does
     // not hold together. Nothing here judges.
     public func value(of draft: Draft) throws -> Value {
-        // Written every time, because a document that travels is the only kind
-        // worth writing and neither question can be asked of it later. What it
-        // costs is two keys; what it buys is that a reader too old for it, or
-        // without the procedures it calls, says so instead of finding out part of the
-        // way through.
-        //
-        // The version is this writer's and the imports are the program's: which
-        // types were used is a fact about the writing, and what a program takes
-        // from its link is a fact about the program. A draft that claimed
-        // nothing is written with what it sends, since a document that says
-        // nothing is not one and there is nobody left to ask.
+        // The version and the imports are written every time: the version is
+        // this writer's, and the imports are what the program takes from its
+        // link. A draft that claimed none is written with what it uses.
         var written: [Name: Value] = [
             Module.versionKey: .int(ModuleReader.version),
             ModuleReader.CodingKeys.imports.name: .array(

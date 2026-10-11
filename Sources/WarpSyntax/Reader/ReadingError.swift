@@ -10,24 +10,14 @@ import Warp
 
 // What a document is refused with while it is being read.
 //
-// It carries the two halves of a place separately, because they are known at
-// different moments. The steps are known where the refusal happens (the walk is
-// there, and only there) and which document is being read is known at the door
-// the value came through. So the reading says where it got to, the door says
-// what it was reading, and neither has to hold the other's answer to say its
-// own.
+// It carries the two halves of a place apart: the steps, known where the
+// refusal happens, and the document, known at the door the value came
+// through. Until a door says, there is no document and the place is nothing.
 //
-// Until a door says, there is no document and the place is nothing rather than
-// an empty one: a refusal that has not reached a door has not been told, and a
-// reader guessing would be answering the one question it was never given.
-//
-// Three readers say something about a place a refusal is already carrying, and
-// one rule is behind all three: a place only ever becomes more exact. What is
-// deeper wins over what is shallower, what was said wins over what is guessed,
-// and nothing anybody adds later can take an address back to where it was.
-// `read(in:)` keeps the first document it was told; `asked(at:)` keeps the
-// deeper of two addresses; `addressed(from:)` lets a caller spell its own part
-// better and never touches what is past it.
+// A place only becomes more exact: `read(in:)` keeps the first document it
+// was told, `asked(at:)` keeps the deeper of two addresses, and
+// `addressed(from:)` lets a caller spell its own part and never touches what
+// is past it.
 public struct ReadingError: WarpError {
     // MARK: - Property
     public let message: String

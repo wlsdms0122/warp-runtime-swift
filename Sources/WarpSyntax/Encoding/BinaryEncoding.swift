@@ -308,7 +308,7 @@ public struct BinaryEncoding {
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = try .holding([], named: name)
+                    settled = try record([], named: name)
                 } else {
                     var held: [(name: Name, value: Value)] = []
 
@@ -347,7 +347,7 @@ public struct BinaryEncoding {
                     held.append((name: key, value: value))
 
                     if expecting == 1 {
-                        settled = try .holding(held, named: name)
+                        settled = try record(held, named: name)
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 
@@ -378,6 +378,16 @@ public struct BinaryEncoding {
         do {
             return (try Name(key), raw)
         } catch let refusal as NameRefused {
+            throw EncodingRefused(refusal.message)
+        }
+    }
+
+    // A record of these fields under that name, or the refusal the value
+    // model makes of one said in this reading's words.
+    private func record(_ held: [(name: Name, value: Value)], named name: Name?) throws -> Value {
+        do {
+            return try .holding(held, named: name)
+        } catch let refusal as ValueRefused {
             throw EncodingRefused(refusal.message)
         }
     }

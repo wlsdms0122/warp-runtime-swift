@@ -51,9 +51,9 @@ public extension Place {
         case .satisfies: [.key(ModuleReader.CodingKeys.satisfies.stringValue)]
         case .imports: [.key(ModuleReader.CodingKeys.imports.stringValue)]
 
-        case .parameters: [.key(ProcedureReader.CodingKeys.parameters.stringValue)]
-        case .returns: [.key(ProcedureReader.CodingKeys.returns.stringValue)]
-        case .bounds: [.key(ProcedureReader.CodingKeys.bounds.stringValue)]
+        case .parameters: [.key(SignatureFieldsReader.CodingKeys.parameters.stringValue)]
+        case .returns: [.key(SignatureFieldsReader.CodingKeys.returns.stringValue)]
+        case .bounds: [.key(SignatureFieldsReader.CodingKeys.bounds.stringValue)]
         case .body: [.key(BlockReader.CodingKeys.body.stringValue)]
         case .result: [.key(BlockReader.CodingKeys.result.stringValue)]
 
