@@ -238,6 +238,37 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // What a box a write may fill again holds where its start reads as this:
+    // a literal whole number an Int, wherever in it one stands, and every
+    // procedure in it without the constness or isolation the build derived
+    // for the one value judged, since a write may put another procedure
+    // there.
+    var boxed: LoweredType {
+        switch self {
+        case .wholeLiteral:
+            return .int
+
+        case let .array(element):
+            return .array(element.boxed)
+
+        case let .dictionary(entry):
+            return .dictionary(entry.boxed)
+
+        case let .nullable(inner):
+            return .nullable(inner.boxed)
+
+        case let .record(record):
+            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.boxed)))
+
+        case let .procedure(parameters, returns, _, _):
+            return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
+
+        case .any, .never, .null, .bool, .int, .double, .string, .variable, .inout,
+            .named, .parameter, .composition, .projection:
+            return self
+        }
+    }
+
     // What a reading that went past a possible absence holds, and what `T?`
     // reads as: `T` or null. Wrapping what already admits null would say the
     // one fact twice, so `Null?` is `Null`.
@@ -622,17 +653,15 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // A settled value's type with each procedure it holds read by the type
-    // the value's expression was judged at in that position (an element, an
-    // entry, a field). A procedure value says nothing about its signature, and
-    // the expression that made it wrote one; everything else is the value's.
-    // The constness and isolation the build derived are facts of the one
-    // value judged, so they come along only where the name holding it is
-    // `fixed` and keeps that value; a box a write may fill again takes the
-    // signature. Null, and a list or a map showing no element, say nothing
-    // the judged type does not, so what holds one is what the expression was
-    // judged as, a cast's type among them.
-    func refined(by judged: LoweredType, fixed: Bool) -> LoweredType {
+    // A constant's type: its settled value's, with each procedure it holds
+    // read by the type the value's expression was judged at in that position
+    // (an element, an entry, a field), the constness and isolation the build
+    // derived for that one value included. A procedure value says nothing
+    // about its signature, and the expression that made it wrote one;
+    // everything else is the value's. Null, and a list or a map showing no
+    // element, say nothing the judged type does not, so what holds one is
+    // what the expression was judged as, a cast's type among them.
+    func refined(by judged: LoweredType) -> LoweredType {
         guard self != .null, !holdsNoElement else { return judged }
 
         var written = judged
@@ -642,18 +671,14 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, written) {
-        case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
-            guard fixed else {
-                return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
-            }
-
-            return .procedure(parameters: parameters, returns: returns, constness: constness, isolation: isolation)
+        case (.procedure(nil, nil, .unstated, .unstated), .procedure):
+            return written
 
         case let (.array(element), .array(judgedElement)):
-            return .array(element.refined(by: judgedElement, fixed: fixed))
+            return .array(element.refined(by: judgedElement))
 
         case let (.dictionary(entry), .dictionary(judgedEntry)):
-            return .dictionary(entry.refined(by: judgedEntry, fixed: fixed))
+            return .dictionary(entry.refined(by: judgedEntry))
 
         case let (.record(record), .record(judgedRecord)):
             return .record(
@@ -661,7 +686,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     layout: record.layout,
                     fields: record.named.map { name, field in
                         judgedRecord[name].map { judgedField in
-                            field.refined(by: judgedField.fieldUnwrapped, fixed: fixed)
+                            field.refined(by: judgedField.fieldUnwrapped)
                         } ?? field
                     }
                 )

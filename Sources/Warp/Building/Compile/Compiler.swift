@@ -424,8 +424,7 @@ struct Compiler {
 
                 known[name] = (
                     value,
-                    LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: true)
+                    LoweredType(of: value, in: context.loweredTypes).refined(by: written.folded)
                 )
             }
         }
@@ -438,8 +437,7 @@ struct Compiler {
     // and no variable; the starting value is a fact the link reads. A variable
     // that declares what it holds has its start held to that at the build,
     // the way an argument is held to its slot, and holds that type; one that
-    // declares nothing holds the type of the settled value, read the way a
-    // constant's is.
+    // declares nothing holds the type its start reads as.
     private func variables(
         of module: Module,
         at origin: Int,
@@ -482,13 +480,10 @@ struct Compiler {
                 )
 
                 guard let declared = variable.declared, let holding = declaredType else {
-                    let holding = LoweredType(of: settled, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: false)
+                    let holding = written.folded.boxed
 
-                    // A variable that declares nothing holds the type its
-                    // start reads as, and an empty list or map holds no
-                    // element, so a start of one says nothing of what the box
-                    // will hold.
+                    // An empty list or map holds no element, so a start of
+                    // one says nothing of what the box will hold.
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
