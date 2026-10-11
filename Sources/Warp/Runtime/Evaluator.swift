@@ -85,7 +85,7 @@ struct Evaluator: Sendable {
     // door. What the entry answers the build held to the `returns` it
     // declares, so it reaches the host as it is.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
+        try await answer(entry, arguments: ArgumentList(values: try entry.settle(arguments)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
@@ -124,7 +124,7 @@ struct Evaluator: Sendable {
 
         return try await answer(
             callee,
-            settled: try settled(callee, sending: sending, handing: values),
+            arguments: try settled(callee, sending: sending, handing: values),
             at: trace.appending(callee.hop)
         )
     }
@@ -407,23 +407,23 @@ struct Evaluator: Sendable {
                 values[handed.position] = try activation.value(at: handed.address)
             }
 
-            return try await answer(callee, with: Settled(values: values), at: trace)
+            return try await answer(callee, with: ArgumentList(values: values), at: trace)
 
         case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
+            let arguments = ArgumentList(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
-            return try await run(effect, of: callee, settled: settled, holds: holds, trace: trace)
+            return try await run(effect, of: callee, arguments: arguments, holds: holds, trace: trace)
 
         case let .body(body, frame):
             let holds = try holds(call.handed, of: callee, in: activation)
-            let settled = Settled(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
+            let arguments = ArgumentList(values: try await given(call, to: callee, first: first, in: &activation, at: trace))
 
             return try await answer(
                 callee,
                 running: body,
                 in: frame,
-                settled: settled,
+                arguments: arguments,
                 holding: holds,
                 at: trace.appending(callee.hop)
             )
@@ -535,14 +535,14 @@ struct Evaluator: Sendable {
     // and every other row answers the way it does as data.
     private func answer(
         _ callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         guard case let .native(.effect(effect), _) = callee.implementation else {
-            return try await answer(callee, with: settled, at: trace)
+            return try await answer(callee, with: arguments, at: trace)
         }
 
-        return try await run(effect, of: callee, settled: settled, holds: [], trace: trace)
+        return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
     }
 
     // The one way a written procedure is called: its frame, the settled
@@ -552,7 +552,7 @@ struct Evaluator: Sendable {
         _ callee: Linked,
         running body: LoweredBody,
         in frame: Frame,
-        settled arguments: Settled,
+        arguments: ArgumentList,
         holding holds: [(position: Int, handle: Handle)],
         at trace: Trace
     ) async throws -> Value {
@@ -780,19 +780,19 @@ struct Evaluator: Sendable {
     // of its own. An effect answers only by running, so it is not read here.
     private func answer(
         _ callee: Linked,
-        with arguments: Settled,
+        with arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         switch callee.implementation {
         case let .native(.query(query), _):
-            return try await evaluate(query, of: callee, settled: arguments, at: trace)
+            return try await evaluate(query, of: callee, arguments: arguments, at: trace)
 
         case let .body(body, frame):
             return try await answer(
                 callee,
                 running: body,
                 in: frame,
-                settled: arguments,
+                arguments: arguments,
                 holding: [],
                 at: trace
             )
@@ -819,13 +819,13 @@ struct Evaluator: Sendable {
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
         try callee.settling(
             answered: try await query.evaluate(
                 Question(
-                    settled: settled,
+                    arguments: arguments,
                     of: callee,
                     evaluator: self,
                     at: trace
@@ -837,7 +837,7 @@ struct Evaluator: Sendable {
     private func run<W: Effect>(
         _ effect: W,
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         holds: [(position: Int, handle: Handle)],
         trace: Trace
     ) async throws -> Value {
@@ -845,7 +845,7 @@ struct Evaluator: Sendable {
             answered: try await effect.run(
                 Invocation(
                     of: callee,
-                    settled: settled,
+                    arguments: arguments,
                     holds: holds,
                     trace: trace,
                     evaluator: self
@@ -871,7 +871,7 @@ struct Evaluator: Sendable {
         _ callee: Linked,
         sending: Sent,
         handing values: [Value]
-    ) throws -> Settled {
+    ) throws -> ArgumentList {
         // How many a Swift body builds is the body's, so this is the one thing
         // about a send the build cannot read.
         guard values.count == sending.handing else {
@@ -881,6 +881,6 @@ struct Evaluator: Sendable {
             )
         }
 
-        return Settled(values: try callee.settle(outside: values))
+        return ArgumentList(values: try callee.settle(outside: values))
     }
 }

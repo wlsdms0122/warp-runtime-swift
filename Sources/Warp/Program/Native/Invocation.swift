@@ -18,7 +18,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // document's numbers.
     private let callee: Linked
 
-    private let settled: Settled
+    private let arguments: ArgumentList
 
     // Where the run was when this was sent, as everything it went through to
     // get here. Provenance, not meaning: a procedure does not know the statement it
@@ -38,13 +38,13 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Initializer
     init(
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
         evaluator: Evaluator
     ) {
         self.callee = callee
-        self.settled = settled
+        self.arguments = arguments
         self.holds = holds
         self.trace = trace
         self.evaluator = evaluator
@@ -53,7 +53,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Public
     // What an argument holds, named by the procedure's own key.
     public subscript(key: P.Parameters) -> Value {
-        settled[key.position]
+        arguments[key.position]
     }
 
     // What a parameter handed in place holds now.

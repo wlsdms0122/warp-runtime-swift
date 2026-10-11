@@ -12,7 +12,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // The arguments a procedure reads, settled by the row a run sent. The row
     // being asked travels with the run: the sends it declared are its
     // document's numbers, and only a run can say which rows they are.
-    private let settled: Settled
+    private let arguments: ArgumentList
     private let callee: Linked
     private let evaluator: Evaluator
 
@@ -21,8 +21,8 @@ public struct Question<P: NativeProcedure>: Sendable {
     private let trace: Trace
 
     // MARK: - Initializer
-    init(settled: Settled, of callee: Linked, evaluator: Evaluator, at trace: Trace) {
-        self.settled = settled
+    init(arguments: ArgumentList, of callee: Linked, evaluator: Evaluator, at trace: Trace) {
+        self.arguments = arguments
         self.callee = callee
         self.evaluator = evaluator
         self.trace = trace
@@ -33,7 +33,7 @@ public struct Question<P: NativeProcedure>: Sendable {
     // key stands at, since the run ordered the arguments by the declaration
     // this key belongs to.
     public subscript(key: P.Parameters) -> Value {
-        settled[key.position]
+        arguments[key.position]
     }
 
     // Sending a procedure this procedure declared it sends, the way
