@@ -14,7 +14,7 @@ import Foundation
 //
 // The walk is structural: a call's arguments are expressions whose insides
 // this reads, so validation never consults the procedure table.
-public struct Validator: Sendable {
+struct Validator: Sendable {
     // MARK: - Property
     // What a declared name that comes back to itself is refused with, by a
     // document's load and by an object's reading alike.
@@ -22,14 +22,14 @@ public struct Validator: Sendable {
         + " A type that holds itself is a declared record"
 
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
     // Every declaration a module makes, in name order so the first refusal is
     // stable across runs. Whether its names collide with another module's is a
     // link question, and there is no other module in sight from inside one.
-    public func validate(_ module: Module) throws {
+    func validate(_ module: Module) throws {
         try hosted(module)
 
         let constants = Set(module.constants.keys)
@@ -160,17 +160,6 @@ public struct Validator: Sendable {
         try declared(module)
     }
 
-    // A parameter is a name the body can read, so it is visible from the first
-    // statement, and no name the body introduces, at any depth, takes its
-    // spelling.
-    public func validate(
-        _ procedure: Procedure,
-        constants: Set<Name> = [],
-        variables: Set<Name> = []
-    ) throws {
-        try validate(procedure, constants: constants, variables: variables, at: .given("procedure"))
-    }
-
     // Whether a declared name that is no record comes back to itself through
     // the names it mentions, at any depth: a spelling that reaches itself
     // spells no type, and a type that holds itself is a declared record. A
@@ -299,6 +288,9 @@ public struct Validator: Sendable {
         }
     }
 
+    // A parameter is a name the body can read, so it is visible from the first
+    // statement, and no name the body introduces, at any depth, takes its
+    // spelling.
     private func validate(
         _ procedure: Procedure,
         constants: Set<Name>,

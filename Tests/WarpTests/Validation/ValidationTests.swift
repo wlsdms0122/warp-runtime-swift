@@ -296,12 +296,12 @@ struct ValidationTests {
         for (body, place) in places {
             // When
             let error = #expect(throws: ValidationError.self) {
-                try Validator().validate(Procedure(body: body))
+                try Module(procedures: [entryName: Procedure(body: body)])
             }
 
             // Then
             #expect(error?.message == Expression.constructWhereAValueIsWanted)
-            #expect(error?.place?.rendered == "procedure.\(place)")
+            #expect(error?.place?.rendered == "procedures.entry.\(place)")
         }
 
         // And a constant's and a variable's start, which a module holds
@@ -471,10 +471,10 @@ struct ValidationTests {
         )
 
         // When / Then
-        try Validator().validate(readsIt)
+        _ = try Module(procedures: [entryName: readsIt])
 
         #expect {
-            try Validator().validate(redeclaresIt)
+            try Module(procedures: [entryName: redeclaresIt])
         } throws: { error in
             error is ValidationError && "\(error)".contains("'name' is a parameter of the procedure")
         }
@@ -492,7 +492,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(twice)
+            try Module(procedures: [entryName: twice])
         } throws: { error in
             error is ValidationError && "\(error)".contains("parameters[1]: declares 'x' twice")
         }
@@ -511,7 +511,7 @@ struct ValidationTests {
         // When / Then
         for procedure in [statement, parameter] {
             #expect {
-                try Validator().validate(procedure)
+                try Module(procedures: [entryName: procedure])
             } throws: { error in
                 error is ValidationError && "\(error)".contains("is no name a path reads")
             }
@@ -607,13 +607,13 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(read)
+            try Module(procedures: [entryName: read])
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("reference { ref: run.id } names 'run', which is not visible here")
         }
 
-        try Validator().validate(taken)
+        _ = try Module(procedures: [entryName: taken])
     }
 
     @Test("a list wrong in both directions says which procedures moved, not which lists")
@@ -872,7 +872,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(Procedure(body: [], result: .closure(closure)))
+            try Module(procedures: [entryName: Procedure(body: [], result: .closure(closure))])
         } throws: { error in
             error is ValidationError && "\(error)".contains("a closure writes no bounds")
         }
@@ -890,7 +890,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(procedure)
+            try Module(procedures: [entryName: procedure])
         } throws: { error in
             error is ValidationError && "\(error)".contains("bounds name T, and no slot writes `some T`")
         }
@@ -968,7 +968,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(sut)
+            try Module(procedures: [entryName: sut])
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("reference { ref: never } names 'never', which is not visible here")
@@ -1076,7 +1076,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(sut)
+            try Module(procedures: [entryName: sut])
         } throws: { error in
             "\(error)".contains("never be reached")
         }

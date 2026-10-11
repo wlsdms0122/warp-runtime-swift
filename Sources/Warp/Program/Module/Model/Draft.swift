@@ -132,7 +132,7 @@ public struct Draft: Sendable {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable] = [:],
-        procedures: [Name: Procedure]
+        procedures: [Name: Procedure] = [:]
     ) {
         self.description = description
         self.imports = imports
