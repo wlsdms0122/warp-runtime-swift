@@ -11,10 +11,12 @@ extension TypeExpression {
     // This type as the run reads it, with every declared name resolved: a
     // record to its row, and an alias to what it stands for. A name nothing
     // declares, a bound naming no contract and `Self` outside a contract
-    // stand for no type, so each lowers to `Never`; a build refuses every
-    // such mention before it reads a lowering, and a table a host builds is
-    // held to the same judge. `bounds` are what the signature this type is
-    // written in holds each type parameter to, by its name.
+    // stand for no type, so each lowers to `Never`. A build refuses the first
+    // two in every document and object before it reads a lowering, and a
+    // table a host builds is held to the same judge; the load refuses the
+    // third in a document, and an object writing it there reads it as
+    // `Never`. `bounds` are what the signature this type is written in holds
+    // each type parameter to, by its name.
     func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>] = [:]) -> LoweredType {
         switch self {
         case .any:

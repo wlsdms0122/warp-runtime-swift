@@ -745,6 +745,84 @@ struct SeparateCompilationTests {
         }
     }
 
+    @Test("two objects whose types name each other have no order, so the build refuses them")
+    func objectsNamingEachOthersTypesAreRefused() async throws {
+        // Given. Each document compiled beside a counterpart declaring the
+        // name it mentions as `Int`, so each compile stands, and the two
+        // objects laid together name each other's types.
+        let naming = try Module(types: ["App.A": .array(.named("Lib.B"))])
+        let named = try Module(types: ["Lib.B": .named("App.A")])
+        let first = try await builder.compile([naming, try Module(types: ["Lib.B": .int])])
+        let second = try await builder.compile([named, try Module(types: ["App.A": .int])])
+        let objects = [first[0], second[0]]
+
+        // When / Then. Refused as two documents that need each other, before
+        // any alias is read through the other.
+        #expect {
+            try builder.lay(objects, supplying: .none)
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+
+        #expect {
+            try builder.link(objects, supplying: .none)
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+    }
+
+    @Test("an object's types written to name another object's are held to what stands before it")
+    func objectsWrittenToNameEachOtherAreRefused() async throws {
+        // Given. Two documents declaring a type each, written down and read
+        // back with each type naming the other's.
+        let library = try Module(types: ["Lib.B": .int])
+        let program = try Module(
+            types: ["App.A": .int],
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+        )
+        let compiled = try await builder.compile([library, program] + Module.standard)
+        let standard = Array(compiled[2...])
+        let libraryNaming = try written(compiled[0], types: [.array([.string("Lib.B"), .array([.int(14), .string("App.A")])])])
+        let programNaming = try written(compiled[1], types: [.array([.string("App.A"), .array([.int(14), .string("Lib.B")])])])
+
+        // When / Then. One naming what the other declares links and runs, in
+        // whichever order the host hands them over.
+        let image = try builder.link([libraryNaming, compiled[1]] + standard, supplying: Supplying(Module.standard))
+
+        #expect(try await Executor().run(image) == .int(1))
+
+        // And two naming each other are refused.
+        #expect {
+            try builder.link([libraryNaming, programNaming] + standard, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+    }
+
+    @Test("an object's signature naming a type nothing in the link declares is refused at the build")
+    func anObjectsSignatureNamingNothingIsRefused() async throws {
+        // Given. A document whose declaration takes a type its counterpart
+        // declares, linked without the counterpart.
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "a", type: .named("Lib.B"))], returns: .int),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+        let compiled = try await builder.compile([program, try Module(types: ["Lib.B": .int])])
+
+        // When / Then
+        #expect {
+            try builder.link([compiled[0]], supplying: .none)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Lib.B', which no module in this link declares")
+        }
+    }
+
     @Test("a path reads into what another document's body answers")
     func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
         // Given. A document declaring a procedure that writes no `returns`, and
@@ -796,6 +874,17 @@ struct SeparateCompilationTests {
 
     // MARK: - Public
     // MARK: - Private
+    // An object written down and read back with its declared types replaced
+    // by the ones given, as a cache holding a document compiled beside other
+    // counterparts would hand it over.
+    private func written(_ object: Compiled, types: [Value]) throws -> Compiled {
+        guard case let .dictionary(parts) = try object.object() else {
+            throw Unheld(description: "an object is written as a map of its parts")
+        }
+
+        return try Compiled(written: .dictionary(parts.writing("types", with: .array(types))), of: object.identity)
+    }
+
     // A type, a contract, a claim about the two in a third document, and a
     // program handing the type where the contract is asked. The program names
     // the type and the procedure it sends and has no reason to name the third, so
