@@ -257,7 +257,7 @@ struct TypeChecker {
 
     // What a declaration answers when nobody wrote it down, read off its body.
     // Not into the declaration: what the author wrote is what the image
-    // carries and what the boundary checks, and an answer worked out here is
+    // carries and what a door checks, and an answer worked out here is
     // the build's own reading rather than anybody's promise. It reaches
     // exactly as far as the readings do.
     //

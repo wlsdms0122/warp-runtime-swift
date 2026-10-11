@@ -10,8 +10,8 @@ import Foundation
 // A type as the run reads it: the declaration's type with every name the
 // build resolved written in as a row of the lowered type table. What a document
 // spells stays `TypeExpression`; this is the build's product, the way `Operation`
-// is the product of an `Expression`. Every judgement over a value or a
-// reading lives here, and the document's type reaches it by lowering.
+// is the product of an `Expression`, and the document's type reaches it by
+// lowering.
 indirect enum LoweredType: Sendable, Equatable {
     case any
     case never
@@ -924,7 +924,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A declared record is nominal: a value of it fits only its own
         // name, whatever the structure, and nothing else is a value of it. A
         // place changes no value, so a record and a nameless one meet only
-        // where a literal is written into one, or at a boundary.
+        // where a literal is written into one, or at a door.
         case (.named, _), (_, .named):
             return self == other
 
@@ -1533,9 +1533,9 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether null is one of this type's values rather than an absence: the
-    // fact `T?` exists to declare, and the boundary reads it. `Any` is not
-    // this: a type that declares nothing accepts a null that arrives, but it
-    // does not spell null as a value.
+    // fact `T?` exists to declare. `Any` is not this: a type that declares
+    // nothing accepts a null that arrives, but it does not spell null as a
+    // value.
     func declaresNull(in table: LoweredTypeTable) -> Bool {
         switch self {
         case .null, .nullable:
@@ -1548,7 +1548,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether every byte settles into this element declaration as itself,
     // unchanged and with nothing asked of any one of them. This is what lets
-    // a compact spelling cross a boundary whole. It says the same thing
+    // a compact spelling be judged whole. It says the same thing
     // `settling` says one byte at a time, and a test holds the two together.
     func holdsEveryByte(in table: LoweredTypeTable) -> Bool {
         switch self {
@@ -2193,7 +2193,7 @@ indirect enum LoweredType: Sendable, Equatable {
         guard case let .procedure(closure) = value else { throw mismatch(value, at: path(), in: table) }
 
         // Its rows are numbered by the table of the build that made it, and a
-        // closure no build answered is refused here in this door's words.
+        // closure no build answered is refused here, at a door or a cast.
         guard let linked = closure.linked else {
             throw ArgumentError("\(path()): a closure no link answered")
         }

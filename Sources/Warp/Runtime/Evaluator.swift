@@ -24,8 +24,8 @@ struct Evaluator: Sendable {
     // says.
     let naming: [Closure.Document]
 
-    // The types the link declared, by row. Every boundary that settles a
-    // value reads it.
+    // The types the link declared, by row. Every door and every cast reads
+    // it.
     let loweredTypes: LoweredTypeTable
 
     // One box per module variable, made when the run starts, by the document
