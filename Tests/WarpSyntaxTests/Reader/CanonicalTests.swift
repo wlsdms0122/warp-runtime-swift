@@ -99,8 +99,8 @@ struct CanonicalTests {
     @Test("a spelling and the call it stands for are the same program")
     func aSpellingMeansTheCallItStandsFor() async throws {
         // Given. The same question asked both ways. This is what makes the
-        // spellings a layer rather than a part of the language: what they lower
-        // to is writable, so nothing is only reachable by spelling it.
+        // spellings a layer rather than a part of the language: what they are
+        // spent into is writable, so nothing is only reachable by spelling it.
         func picking(on condition: Value) throws -> Module {
             try loader.loadProcedure([
                 "parameters": [["name": "word", "type": "String"]],

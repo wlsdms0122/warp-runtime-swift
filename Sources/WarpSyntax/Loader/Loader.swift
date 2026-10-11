@@ -11,9 +11,8 @@ import Warp
 // Data in, IR out, and the two questions kept apart.
 //
 // Reading takes a document, which has no spellings, so nothing here holds a
-// notation, and a reader that did would be a reader with a notation's opinions
-// about a text that has none. Lowering takes a notation's own text and the
-// table it is written with, and answers with the document it spells.
+// notation. Spending takes a notation's own text and the table it is written
+// with, and answers with the document it spells.
 //
 // A front end with a document stops at `Value`. A YAML or JSON parser produces
 // data; turning that data into a procedure is this one path, and what every

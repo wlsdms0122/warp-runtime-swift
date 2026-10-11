@@ -358,9 +358,8 @@ public struct ExpressionReader: Decodable {
     // than a thing the language has: each piece becomes a literal or a value
     // asked how it reads, and the pieces are written one after another.
     //
-    // Lowering here is what makes a placeholder an ordinary reference. It is
-    // checked, linked and refused the way every other reference is, instead of
-    // being a type only the template walk knew how to read.
+    // Spent here, a placeholder is an ordinary reference, checked, linked and
+    // refused the way every other reference is.
     private static func lowered(
         _ segments: [TemplateSegment],
         over bindings: [Name: Warp.Expression],
