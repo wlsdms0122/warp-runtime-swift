@@ -264,38 +264,9 @@ final class LoweredTypeTable: Sendable {
             if case .record = loweredTypes[row] { true } else { false }
         })
 
-        // Whether an alias comes back to itself through the aliases it
-        // mentions, at any depth. A record on the way is a row of its own,
-        // so the walk stops there.
-        func comesBack(from start: Int) -> Bool {
-            var walked: Set<Int> = []
-            var waiting = [start]
-
-            while let row = waiting.popLast() {
-                var mentioned: Set<Int> = []
-
-                loweredTypes[row].standing(into: &mentioned)
-
-                for next in mentioned.subtracting(records) {
-                    guard next != start else { return true }
-
-                    if walked.insert(next).inserted {
-                        waiting.append(next)
-                    }
-                }
-            }
-
-            return false
-        }
-
-        // Such an alias spells no type, which the load refuses; one an object
-        // carries stands for no type here, so the expansion below is finite.
-        // Marked before any is replaced, so each is found as itself.
-        for row in loweredTypes.indices.filter({ row in !records.contains(row) && comesBack(from: row) }) {
-            loweredTypes[row] = .never
-        }
-
-        // Every other alias is what it stands for, worked out once each.
+        // An alias is what it stands for, worked out once each. None comes
+        // back to itself, which the load and an object's reading refuse, so
+        // the expansion ends.
         var expanded: [Int: LoweredType] = [:]
 
         func mention(of row: Int) -> LoweredType {

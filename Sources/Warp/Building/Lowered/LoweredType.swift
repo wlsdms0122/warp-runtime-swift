@@ -1490,7 +1490,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Spelled as `TypeExpression` spells it, for the message alone.
         case let .projection(of, path):
-            return "some \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
 
         case .never:
             return TypeSpelling.never.spelling
@@ -1511,21 +1511,23 @@ indirect enum LoweredType: Sendable, Equatable {
             return TypeSpelling.string.spelling
 
         case let .parameter(label, bounds):
-            return bounds.isEmpty ? "some \(label)" : "some \(label): \(Self.rendered(bounds))"
+            return bounds.isEmpty
+                ? "\(TypeSpelling.some) \(label)"
+                : "\(TypeSpelling.some) \(label): \(Self.rendered(bounds))"
 
         case let .composition(bounds):
             return Self.rendered(bounds)
 
         case let .variable(inner):
-            return "var \(inner.rendered(in: table))"
+            return "\(TypeSpelling.variable) \(inner.rendered(in: table))"
 
         case let .inout(inner):
-            return "inout \(inner.rendered(in: table))"
+            return "\(TypeSpelling.inout) \(inner.rendered(in: table))"
 
         case let .procedure(parameters, returns, constness, isolation):
             let spelling = [
-                constness == .const ? "const" : nil,
-                isolation == .isolated ? "isolated" : nil,
+                constness == .const ? TypeSpelling.const.spelling : nil,
+                isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
                 TypeSpelling.procedure.spelling
             ]
             .compactMap { part in part }

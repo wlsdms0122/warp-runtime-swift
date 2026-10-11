@@ -8,10 +8,10 @@
 import Foundation
 
 // What the compile refuses about declarations once their names resolve: a
-// name reaching only names, a mention no module in the link declares, a bound
-// or a composition naming what is no contract, a `?` behind a name where it
-// says nothing, a cast naming nothing to read, and a parameter a procedure the
-// host answers could never call.
+// mention no module in the link declares, a bound or a composition naming what
+// is no contract, a `?` behind a name where it says nothing, a cast naming
+// nothing to read, and a parameter a procedure the host answers could never
+// call.
 struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
@@ -158,9 +158,9 @@ struct DeclarationChecker {
     }
 
     // Everything a cast's type is held to on its spelling alone: the names it
-    // mentions resolve, and it names a type there is something to read. Both
-    // are answered without knowing what the value reads as, so every cast is
-    // held to both, reached or not.
+    // mentions resolve, and what it lowers to is a type there is something to
+    // read. Both are answered without knowing what the value reads as, so
+    // every cast is held to both, reached or not.
     private func judge(
         cast named: TypeExpression,
         at place: Place,
@@ -168,8 +168,25 @@ struct DeclarationChecker {
     ) throws {
         try mentioned(in: named, at: place, resolve: table)
 
-        if let refusal = named.resolved(in: table).unreadableCast {
-            throw BuildError(refusal, at: place)
+        switch named.lowered(in: table.loweredTypes) {
+        case .any:
+            throw BuildError(
+                "reads as \(TypeSpelling.any), which declares nothing."
+                    + " A cast names the type a value is read as, and `Any` is"
+                    + " the absence of one",
+                at: place
+            )
+
+        case .never:
+            throw BuildError(
+                "reads as \(TypeSpelling.never), which no value is."
+                    + " A cast names the type a value turns out to have, and"
+                    + " nothing arrives to have this one",
+                at: place
+            )
+
+        default:
+            return
         }
     }
 
@@ -192,7 +209,7 @@ struct DeclarationChecker {
                 try mentioned(in: parameter.slotUnwrapped, at: place.index(position), resolve: table)
             }
 
-            try mentioned(in: type.returns ?? .any, at: place, resolve: table)
+            try mentioned(in: type.returns ?? .any, at: place.part(.returns), resolve: table)
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some
@@ -223,25 +240,23 @@ struct DeclarationChecker {
 
         // The load held a `?` to saying something new on what it wraps as
         // written. A name may stand for what it says nothing on, and that is
-        // known here, where names resolve.
+        // known here, where names resolve: what the name lowers to, spelled.
         case let .nullable(inner):
-            var resolved = inner
+            try mentioned(in: inner, at: place, resolve: table)
 
-            while case let .named(next) = resolved, let underneath = table.types[next] {
-                resolved = underneath
-            }
+            guard case .named = inner else { return }
 
-            if case .named = inner, !resolved.takesQuestionMark {
+            let stands = inner.lowered(in: table.loweredTypes).spelled(in: table.loweredTypes)
+
+            guard stands.takesQuestionMark else {
                 throw BuildError(
                     "writes `?` on \(inner.rendered), which"
-                        + " stands for `\(resolved.rendered)`. A `?` says"
+                        + " stands for `\(stands.rendered)`. A `?` says"
                         + " nothing there, the same rule the spelling"
-                        + " `\(resolved.rendered)?` is refused by",
+                        + " `\(stands.rendered)?` is refused by",
                     at: place
                 )
             }
-
-            try mentioned(in: inner, at: place, resolve: table)
 
         case let .record(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {

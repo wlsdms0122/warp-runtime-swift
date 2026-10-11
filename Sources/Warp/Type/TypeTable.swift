@@ -15,7 +15,8 @@ public struct TypeTable: Sendable {
     public let types: [Name: TypeExpression]
 
     // Contracts declared in this link: a name bound to the procedures a value's
-    // type must answer.
+    // type must answer. A contract is an open set of types, and a claim puts a
+    // type in it.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every

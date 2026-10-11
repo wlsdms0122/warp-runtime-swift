@@ -351,6 +351,27 @@ struct Lowering {
         documents[origin].named = documents[origin].numbering.resolved(rows: rows, own: own(origin))
     }
 
+    // Every call a document's lowered bodies stand, held to the row its
+    // number now stands for. A document compiled already is laid with its
+    // bodies, and a fold may run one before any link counts it.
+    func refuseMiscountedCalls(of origin: Int, at document: Place.Document) throws {
+        let held = documents[origin]
+        let resolved = held.resolved
+
+        for row in held.owned.values.sorted() + held.closureRows {
+            guard case let .body(body, _) = table[row].implementation else { continue }
+
+            for call in body.standing.calls {
+                guard resolved.indices.contains(call.number), let callee = resolved[call.number] else { continue }
+
+                try table[callee].refuseCall(
+                    standing: call.arguments,
+                    at: .procedure(table[row].label.spelling, in: document)
+                )
+            }
+        }
+    }
+
     // The same rows, answered. One per row, in place: what stands in the
     // table is what every number of it already reaches.
     mutating func replace(table answered: [Linked]) {

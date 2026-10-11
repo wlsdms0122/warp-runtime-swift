@@ -294,16 +294,7 @@ final class Relocating {
     ) throws -> CallOperation {
         let procedure = try row(call.procedure, in: context)
 
-        // What a call hands over fills the slots the row it reaches declares.
-        // The row is this link's answer and is known here, so every call is
-        // counted once, here, rather than at every call the run makes of it.
-        guard call.arguments.count == table[procedure].slots.count else {
-            throw BuildError(
-                "a call stands \(call.arguments.count) argument(s) where the"
-                    + " \(table[procedure].slots.count) its callee declares stand",
-                at: context.place
-            )
-        }
+        try table[procedure].refuseCall(standing: call.arguments.count, at: context.place)
 
         return CallOperation(
             procedure: procedure,

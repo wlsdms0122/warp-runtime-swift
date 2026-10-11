@@ -14,17 +14,22 @@ import Foundation
 //
 // The walk is structural: a call's arguments are expressions whose insides
 // this reads, so validation never consults the procedure table.
-public struct Validator: Sendable {
+struct Validator: Sendable {
     // MARK: - Property
+    // What a declared name that comes back to itself is refused with, by a
+    // document's load and by an object's reading alike.
+    static let comingBack = "names itself through what it stands for, and no type spells itself."
+        + " A type that holds itself is a declared record"
+
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
     // Every declaration a module makes, in name order so the first refusal is
     // stable across runs. Whether its names collide with another module's is a
     // link question, and there is no other module in sight from inside one.
-    public func validate(_ module: Module) throws {
+    func validate(_ module: Module) throws {
         try hosted(module)
 
         let constants = Set(module.constants.keys)
@@ -32,8 +37,7 @@ public struct Validator: Sendable {
         let bound = constants.union(variables)
 
         // A constant sees no scope, so it may name another constant and nothing
-        // else. Which is also why it is checked here rather than per procedure:
-        // what it can see is a fact about the module.
+        // else.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
             try held(expression, asOperand: .constant(name.spelling, in: .of(module)))
@@ -82,7 +86,10 @@ public struct Validator: Sendable {
         for (name, type) in module.types.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .type, at: .type(name.spelling, in: .of(module)))
             try written(type, in: .declaration, at: .type(name.spelling, in: .of(module)))
-            try refuseComingBack(name, in: module.types, at: .type(name.spelling, in: .of(module)))
+
+            guard !comesBack(name, in: module.types) else {
+                throw ValidationError(Self.comingBack, at: .type(name.spelling, in: .of(module)))
+            }
         }
 
         for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
@@ -146,61 +153,45 @@ public struct Validator: Sendable {
             )
         }
 
-        // Last, because it is the least specific thing that can be wrong: a
-        // module whose bodies do not even check is refused for that, and going
-        // first would make the list the only thing an author ever heard about.
+        // Last, so a module whose declarations refuse is refused for them
+        // before its list.
         try declared(module)
     }
 
-    // A parameter is a name the body can read, so it is visible from the first
-    // statement, and no name the body introduces, at any depth, takes its
-    // spelling.
-    public func validate(
-        _ procedure: Procedure,
-        constants: Set<Name> = [],
-        variables: Set<Name> = []
-    ) throws {
-        try validate(procedure, constants: constants, variables: variables, at: .given("procedure"))
-    }
-
-    // MARK: - Private
-    // A declared name that is no record and comes back to itself through the
-    // names it mentions, at any depth: a spelling that reaches itself spells
-    // no type, and a type that holds itself is a declared record. A record on
-    // the way stands as its own name, so the walk stops there. The names a
-    // document mentions and declares are all its own text.
-    private func refuseComingBack(_ name: Name, in types: [Name: TypeExpression], at place: Place) throws {
+    // Whether a declared name that is no record comes back to itself through
+    // the names it mentions, at any depth: a spelling that reaches itself
+    // spells no type, and a type that holds itself is a declared record. A
+    // record on the way stands as its own name, so the walk stops there. Asked
+    // of every module's types here and of every object's where it is read, so
+    // no later stage meets one.
+    func comesBack(_ name: Name, in types: [Name: TypeExpression]) -> Bool {
         func standsAsAName(_ mentioned: Name) -> Bool {
             if case .record = types[mentioned] { true } else { false }
         }
 
-        guard let declared = types[name], !standsAsAName(name) else { return }
+        guard let declared = types[name], !standsAsAName(name) else { return false }
 
         var walked: Set<Name> = []
         var waiting = [declared]
 
         while let type = waiting.popLast() {
             for mentioned in type.mentions where !standsAsAName(mentioned) {
-                guard mentioned != name else {
-                    throw ValidationError(
-                        "names itself through what it stands for, and no type spells itself."
-                            + " A type that holds itself is a declared record",
-                        at: place
-                    )
-                }
+                guard mentioned != name else { return true }
 
                 if walked.insert(mentioned).inserted, let next = types[mentioned] {
                     waiting.append(next)
                 }
             }
         }
+
+        return false
     }
 
+    // MARK: - Private
     // What a module says it imports against what it uses: the procedures it
     // sends and the types and contracts it names. A host reads the list to
     // decide what to grant and what to lay in the link before it links
-    // anything, so a list allowed to drift would be worse than none: it would
-    // be trusted and wrong.
+    // anything.
     private func declared(_ module: Module) throws {
         let used = Set(module.references.map(\.name))
 
@@ -212,12 +203,8 @@ public struct Validator: Sendable {
 
         guard !undisclosed.isEmpty || !unspent.isEmpty else { return }
 
-        // The two differences and not the two lists. They are different
-        // mistakes with different fixes (a name used and not listed is the
-        // dependency the list existed to disclose, and a name listed and not
-        // used asks for one the program has no use for) and a module using
-        // thirty names would otherwise leave an author diffing two of them by
-        // eye to find the one that moved.
+        // The two differences, each its own mistake: a name used and not
+        // listed, and a name listed and not used.
         let said = [
             undisclosed.isEmpty ? nil : "uses \(undisclosed), which it does not import",
             unspent.isEmpty ? nil : "imports \(unspent), which it does not use"
@@ -251,10 +238,8 @@ public struct Validator: Sendable {
                     "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
                         + " cycle. A constant may name another declared beside it, but"
                         + " not one that names it back",
-                    // Any of them is where the fix can be made, so the one
-                    // walked to is the first in sorted order: a cycle has no
-                    // first member, and reading one off the walk would name a
-                    // different constant depending on where the walk started.
+                    // The first in name order, so the refusal names one
+                    // constant wherever the walk started.
                     at: .constant(cycle[0].spelling, in: .of(module))
                 )
             }
@@ -294,6 +279,9 @@ public struct Validator: Sendable {
         }
     }
 
+    // A parameter is a name the body can read, so it is visible from the first
+    // statement, and no name the body introduces, at any depth, takes its
+    // spelling.
     private func validate(
         _ procedure: Procedure,
         constants: Set<Name>,
@@ -432,11 +420,11 @@ public struct Validator: Sendable {
                 // path read like any other. The rest of the path is judged at
                 // the build, where the variable's type is known.
                 case let .assignment(path):
-                    if let refusal = path.markedHead {
+                    if let refusal = path.markedHead ?? path.writtenThroughAbsence {
                         throw ValidationError(refusal, at: named)
                     }
 
-                    try refuseBelowZero(in: path, at: named)
+                    try held(steps: path, at: named)
                     try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: named)
 
                     guard let head = path.head else {
@@ -603,6 +591,14 @@ public struct Validator: Sendable {
                 )
             }
 
+            // The row a closure is lifted into is its document's alone.
+            guard procedure.access == .internal else {
+                throw ValidationError(
+                    "a closure writes no access. Access says who may name a declaration, and nothing names a closure",
+                    at: inside
+                )
+            }
+
             try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
 
             // The same rule the top-level signature gets. A closure's parameter
@@ -713,9 +709,8 @@ public struct Validator: Sendable {
             )
 
             guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-                // An empty rescue would swallow a failure into null without a
-                // trace. If the alternate path produces nothing, the author's
-                // honest form is no rescue at all.
+                // A rescue answers for the failure it caught, and an empty
+                // one answers nothing.
                 throw ValidationError("must not be empty", at: place.child(.rescue))
             }
 
@@ -853,35 +848,40 @@ public struct Validator: Sendable {
                 throw ValidationError(refusal, at: place)
             }
 
-            try refuseBelowZero(in: path, at: place)
+            try held(steps: path, at: place)
 
             guard let head = path.head else {
-                throw ValidationError(
-                    "reference { ref: \(path.rendered) } does not"
-                        + " start with a name",
-                    at: place
-                )
+                throw ValidationError("'\(path.rendered)' starts with no name, and a path reads from one", at: place)
             }
 
             guard visible.contains(head) else {
                 throw ValidationError(
-                    "reference { ref: \(path.rendered) } names"
-                        + " '\(head)', which is not visible here. Declare it earlier"
-                        + " or check the spelling",
+                    "reads '\(head)', which is not visible here. Declare it earlier or check the spelling",
                     at: place
                 )
             }
         }
     }
 
-    // A whole number written between the brackets is a position, and one
-    // below zero is no position.
-    private func refuseBelowZero(in path: Path, at place: Place) throws {
-        for case let .index(index, _) in path.segments where index < 0 {
-            throw ValidationError(
-                "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
-                at: place
-            )
+    // What a path's steps are held to wherever it is written: a name it
+    // reads is a value's, the one name a path reads back as one key, and a
+    // whole number written between the brackets is a position, which one
+    // below zero is not.
+    private func held(steps path: Path, at place: Place) throws {
+        for segment in path.segments {
+            switch segment {
+            case let .key(name, _):
+                try held(name, as: .value, at: place)
+
+            case let .index(index, _) where index < 0:
+                throw ValidationError(
+                    "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
+                    at: place
+                )
+
+            case .index, .indexRef:
+                continue
+            }
         }
     }
 
@@ -1034,7 +1034,7 @@ public struct Validator: Sendable {
                 try written(parameter.slotUnwrapped, in: context.nested, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context.nested, at: place)
+            try written(procedure.returns ?? .any, in: context.nested, at: place.part(.returns))
 
         case .inout:
             throw ValidationError(

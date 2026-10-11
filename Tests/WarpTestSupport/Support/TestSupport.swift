@@ -93,9 +93,9 @@ public func answer(
 
 // MARK: - Judging
 
-// What an expression reads is not a property it carries. The validator walks
-// structure and knows which names a body introduces. Asking it is how a test
-// asks the same question.
+// What an expression reads is not a property it carries. The load walks
+// structure and knows which names a body introduces, and a module is what it
+// holds. Making one around the body is how a test asks the same question.
 public func validates(
     _ expression: Warp.Expression,
     visible: Set<Name> = []
@@ -105,7 +105,10 @@ public func validates(
 
 public func validates(body: Body, visible: Set<Name> = []) -> Bool {
     do {
-        try Validator().validate(Procedure(body: body), constants: visible)
+        _ = try Module(
+            constants: Dictionary(uniqueKeysWithValues: visible.map { name in (name, Warp.Expression.literal(.int(0))) }),
+            procedures: [entryName: Procedure(body: body)]
+        )
 
         return true
     } catch {

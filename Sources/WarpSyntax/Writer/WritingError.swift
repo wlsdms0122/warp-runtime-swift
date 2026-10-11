@@ -14,7 +14,7 @@ public struct WritingError: WarpError {
     public let message: String
 
     // MARK: - Initializer
-    public init(_ message: String) {
+    init(_ message: String) {
         self.message = message
     }
 

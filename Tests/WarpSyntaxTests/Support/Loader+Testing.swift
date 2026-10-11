@@ -23,7 +23,7 @@ extension Loader {
     }
 
     // A document as a front end hands one over: written in this notation's
-    // spellings, lowered, and only then read. The two calls are the two
+    // spellings, spent, and only then read. The two calls are the two
     // questions (what a text spells, and whether its program holds) and the
     // reading is handed a document with no spellings left in it.
     //

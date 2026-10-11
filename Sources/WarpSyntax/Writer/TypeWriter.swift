@@ -32,7 +32,7 @@ struct TypeWriter {
             throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
         }
 
-        guard read == canonical(type) else {
+        guard read == type else {
             throw WritingError(
                 "the type is written '\(spelling)', which the reading takes as \(read.rendered),"
                     + " and a document has no way to tell the two apart"
@@ -74,7 +74,7 @@ struct TypeWriter {
         // holding one is said rather than written as something else.
         case let .projection(of, path):
             throw WritingError(
-                "`some \(Path([.key(of)] + path.segments).rendered)` is a type"
+                "`\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"
@@ -82,7 +82,7 @@ struct TypeWriter {
 
         // Bare: a slot names the parameter, and its bound is the signature's.
         case let .parameter(name):
-            return .string("some \(name)")
+            return .string("\(TypeSpelling.some) \(name)")
 
         case let .composition(names):
             return .string(names.sorted().map(\.spelling).joined(separator: " & "))
@@ -139,25 +139,6 @@ struct TypeWriter {
         }
     }
 
-    // The type the reading gives back for this one's spelling. One name
-    // composing is spelled as the name, which the build reads back as the
-    // composition where the name is a contract's.
-    private func canonical(_ type: TypeExpression) -> TypeExpression {
-        switch type {
-        case let .composition(names):
-            guard names.count == 1, let name = names.first else { return type }
-
-            return .named(name)
-
-        case let .array(element): return .array(canonical(element))
-        case let .dictionary(element): return .dictionary(canonical(element))
-        case let .nullable(inner): return .nullable(canonical(inner))
-        case let .variable(inner): return .variable(canonical(inner))
-        case let .inout(inner): return .inout(canonical(inner))
-        default: return type
-        }
-    }
-
     // A built-in holding another type, under the reading's own key for it.
     private func value(of element: TypeExpression, in holding: TypeReader.Holding) throws -> Value {
         guard case let .string(spelling) = try form(of: element) else {
@@ -182,7 +163,7 @@ struct TypeWriter {
             // record whose field is named after them.
             if let inside = SlotMark.marked(inner) {
                 throw WritingError(
-                    "`\(inside.rawValue)` is written inside `\(mark.rawValue)`, and a procedure's key"
+                    "`\(inside.word)` is written inside `\(mark.word)`, and a procedure's key"
                         + " carries one mark"
                 )
             }
@@ -193,9 +174,9 @@ struct TypeWriter {
 
         default:
             throw WritingError(
-                "`\(mark.rawValue)` is written in front of a type name, and"
+                "`\(mark.word)` is written in front of a type name, and"
                     + " \(inner.rendered) is not written as one. Declare it under a"
-                    + " name and write `\(mark.rawValue)` on the name"
+                    + " name and write `\(mark.word)` on the name"
             )
         }
     }

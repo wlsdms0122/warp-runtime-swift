@@ -10,12 +10,12 @@ import Warp
 
 // Data as a document spells it. `Value` is the language's data type and knows
 // nothing about being written down; this is the one place that mapping lives.
-public struct ValueReader: Decodable {
+struct ValueReader: Decodable {
     // MARK: - Property
-    public let value: Value
+    let value: Value
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         // A value that came over the bridge is already the answer. Working it
         // out instead asks the value whether it is each kind in turn, and
         // every kind it is not is a refusal built to be thrown away.

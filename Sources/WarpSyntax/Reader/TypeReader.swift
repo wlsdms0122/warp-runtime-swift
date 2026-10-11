@@ -23,7 +23,7 @@ import Warp
 //
 // A mapping is one of these by its one key, so a record's field names are
 // never keys the grammar reads.
-public struct TypeReader: Decodable {
+struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
     // position order, and what it answers. No names, since a value carries
     // none.
@@ -102,7 +102,7 @@ public struct TypeReader: Decodable {
     }
 
     // MARK: - Property
-    public let type: TypeExpression
+    let type: TypeExpression
 
     // The one key a record type is written under.
     static let recordKey: Name = "record"
@@ -116,7 +116,7 @@ public struct TypeReader: Decodable {
     // A type's own refusals do not know where in a document they happened, and
     // every one of them arrives here, so the place is put on them in one
     // statement rather than in whichever branch threw.
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         do {
             self.type = try Self.read(from: decoder)
         } catch let error as TypeFormError {
@@ -127,7 +127,7 @@ public struct TypeReader: Decodable {
     // MARK: - Public
     // A type from its spelling, a declared name written short standing for
     // what the notation reads it as.
-    public static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
+    static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
         try parse(written) { name in notation.qualified(name, as: .type) }
     }
 
@@ -168,9 +168,13 @@ public struct TypeReader: Decodable {
     // The one spelling of a procedure type's head: `const` before `isolated`,
     // both before the head.
     static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
-        [constness == .const ? "const" : nil, isolation == .isolated ? "isolated" : nil, head == .name ? TypeSpelling.procedure.spelling : "procedure"]
-            .compactMap { part in part }
-            .joined(separator: " ")
+        [
+            constness == .const ? TypeSpelling.const.spelling : nil,
+            isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
+            head == .name ? TypeSpelling.procedure.spelling : "procedure"
+        ]
+        .compactMap { part in part }
+        .joined(separator: " ")
     }
 
     // The modifiers at the front of a type's text, in either order, and the
@@ -183,11 +187,11 @@ public struct TypeReader: Decodable {
         var isolation = Isolation.unstated
 
         while true {
-            if let bare = dropPrefixed("const ", from: rest) {
+            if let bare = dropPrefixed("\(TypeSpelling.const) ", from: rest) {
                 guard constness == .unstated else { return nil }
                 constness = .const
                 rest = String(bare)
-            } else if let bare = dropPrefixed("isolated ", from: rest) {
+            } else if let bare = dropPrefixed("\(TypeSpelling.isolated) ", from: rest) {
                 guard isolation == .unstated else { return nil }
                 isolation = .isolated
                 rest = String(bare)
@@ -195,6 +199,14 @@ public struct TypeReader: Decodable {
                 return (constness, isolation, rest)
             }
         }
+    }
+
+    // The contracts a bound names: the parts an `&` joins, or the one name
+    // where none does. Each part is read as a name, and which names a
+    // contract may be called is the load's, by `NameGrammar`, wherever the
+    // names came from.
+    static func contracts(_ written: String, in notation: Notation) throws -> Set<Name> {
+        try contracts(written) { name in notation.qualified(name, as: .type) }
     }
 
     // A written type's name, said in this notation's own terms: every other
@@ -214,7 +226,7 @@ public struct TypeReader: Decodable {
         _ written: String,
         qualifying: (Name) -> Name
     ) throws -> TypeExpression {
-        let text = written.trimmingCharacters(in: .whitespaces)
+        let text = written.trimmingCharacters(in: Path.whiteSpace)
 
         guard !text.isEmpty else {
             throw TypeFormError("a type name must not be empty")
@@ -246,33 +258,24 @@ public struct TypeReader: Decodable {
             return .procedure(signature, constness, isolation)
         }
 
-        // `A & B`: the names a value answers, and nothing else, so every part
-        // is held to being a name.
-        if let parts = joined(text) {
-            return .composition(
-                Set(
-                    try parts.map { part -> Name in
-                        let parsed = try parse(part.trimmingCharacters(in: .whitespaces), qualifying: qualifying)
+        // `A & B`: the names a value answers, and nothing else. Names joining
+        // to one name one contract, which is that name.
+        if joined(text) != nil {
+            let names = try contracts(text, qualifying: qualifying)
 
-                        guard case let .named(name) = parsed else {
-                            throw TypeFormError(
-                                "type '\(text)' joins '\(part.trimmingCharacters(in: .whitespaces))' with `&`,"
-                                    + " and `&` joins the names of contracts, each a bare name"
-                            )
-                        }
+            if names.count == 1, let only = names.first {
+                return .named(only)
+            }
 
-                        return name
-                    }
-                )
-            )
+            return .composition(names)
         }
 
         // A type parameter rather than a name: `some T` is worked out from the
         // call, where `T` alone would be looked up in the table of declared
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
-        if text == "some" || text.hasPrefix("some ") {
-            return .parameter(name: try named(text.dropFirst("some".count).trimmingCharacters(in: .whitespaces)))
+        if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
+            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)))
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -302,6 +305,14 @@ public struct TypeReader: Decodable {
         }
 
         return holding.holding(try parse(inner, qualifying: qualifying))
+    }
+
+    // The names the parts an `&` at the top of a spelling joins are, or the
+    // one name the spelling is where it has no such `&`.
+    private static func contracts(_ text: String, qualifying: (Name) -> Name) throws -> Set<Name> {
+        try (joined(text) ?? [Substring(text)]).reduce(into: Set<Name>()) { names, part in
+            names.insert(qualifying(try named(part.trimmingCharacters(in: Path.whiteSpace))))
+        }
     }
 
     // The parts an `&` at the top of a spelling joins, or nothing where the

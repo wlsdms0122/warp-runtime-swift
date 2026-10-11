@@ -80,11 +80,7 @@ public struct Draft: Sendable {
     // the type. A type answers a contract because a document says it does: the
     // link holds the claim to the declarations that back it, and a declaration
     // named for a type and a procedure nobody claimed is that document's procedure and
-    // nothing more.
-    //
-    // Said here, since the type may be another document's: a document that
-    // arrives later gives a type it did not declare the procedures a contract
-    // asks.
+    // nothing more. The type may be another document's.
     public let claims: [Name: Set<Name>]
 
     public let constants: [Name: Expression]

@@ -140,7 +140,7 @@ struct NamelessTests {
 
         // When / Then
         #expect {
-            try Validator().validate(Procedure(body: [statement]))
+            try Module(procedures: [entryName: Procedure(body: [statement])])
         } throws: { error in
             "\(error)".contains("takes no name")
         }

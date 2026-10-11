@@ -8,15 +8,11 @@
 import Foundation
 import Warp
 
+// A procedure: its own keys, the signature's and the block's.
 struct ProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case description
         case access
-        case parameters
-        case returns
-        case bounds
-        case body
-        case result
     }
 
     // MARK: - Property
@@ -27,6 +23,8 @@ struct ProcedureReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: SignatureFieldsReader.CodingKeys.allCases.map(\.stringValue)
+                + BlockReader.CodingKeys.allCases.map(\.stringValue),
             context: "procedure"
         )
 

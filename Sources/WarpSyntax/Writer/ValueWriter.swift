@@ -16,17 +16,17 @@ import Warp
 // trip, and the kind survives where the carrier can say it. The warp encodings
 // are where the kind and the name are the text's own facts at every value. A
 // procedure has no spelling, so writing one refuses.
-public struct ValueWriter: Encodable {
+struct ValueWriter: Encodable {
     // MARK: - Property
-    public let value: Value
+    let value: Value
 
     // MARK: - Initializer
-    public init(_ value: Value) {
+    init(_ value: Value) {
         self.value = value
     }
 
     // MARK: - Public
-    public func encode(to encoder: Encoder) throws {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
         switch value {

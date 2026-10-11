@@ -967,18 +967,15 @@ struct TypeChecker {
         with context: TypingContext,
         at place: Place
     ) -> Writable {
+        if let refusal = path.writtenThroughAbsence {
+            return .refused(refusal)
+        }
+
         var current = box.type
         var walked = Path(Array(path.segments.prefix(1)))
 
         for segment in path.segments.dropFirst() {
             walked.append(segment)
-
-            if segment.optional {
-                return .refused(
-                    "\(walked.rendered) writes through `\(segment.mark)`, and a write"
-                        + " reads no absence. Write the whole, or write what is there"
-                )
-            }
 
             // Whether the container being entered is a declared type's, which
             // is asked of this segment alone: a record written inline under a
@@ -2704,8 +2701,7 @@ struct TypeChecker {
                     let held = try refuseUnfit(
                         written,
                         writtenTo: path,
-                        of: binding,
-                        holding: binding.heldType,
+                        into: binding,
                         in: environment,
                         with: context,
                         at: here,
@@ -2736,8 +2732,7 @@ struct TypeChecker {
                         if let reached = try refuseUnfit(
                             written,
                             writtenTo: path,
-                            of: binding,
-                            holding: nil,
+                            into: binding,
                             in: environment,
                             with: context,
                             at: here,
@@ -3058,8 +3053,7 @@ struct TypeChecker {
     private func refuseUnfit(
         _ written: LiteralShape,
         writtenTo path: Path,
-        of box: Binding,
-        holding fixed: LoweredType?,
+        into box: Binding,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
@@ -3067,7 +3061,7 @@ struct TypeChecker {
     ) throws -> LoweredType? {
         let slot: LoweredType
 
-        if path.segments.count == 1, let fixed {
+        if path.segments.count == 1, let fixed = box.heldType {
             slot = fixed
         } else {
             switch writable(path, from: box, in: environment, with: context, at: place) {

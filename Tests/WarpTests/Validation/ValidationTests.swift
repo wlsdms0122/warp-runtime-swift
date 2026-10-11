@@ -296,12 +296,12 @@ struct ValidationTests {
         for (body, place) in places {
             // When
             let error = #expect(throws: ValidationError.self) {
-                try Validator().validate(Procedure(body: body))
+                try Module(procedures: [entryName: Procedure(body: body)])
             }
 
             // Then
             #expect(error?.message == Expression.constructWhereAValueIsWanted)
-            #expect(error?.place?.rendered == "procedure.\(place)")
+            #expect(error?.place?.rendered == "procedures.entry.\(place)")
         }
 
         // And a constant's and a variable's start, which a module holds
@@ -471,10 +471,10 @@ struct ValidationTests {
         )
 
         // When / Then
-        try Validator().validate(readsIt)
+        _ = try Module(procedures: [entryName: readsIt])
 
         #expect {
-            try Validator().validate(redeclaresIt)
+            try Module(procedures: [entryName: redeclaresIt])
         } throws: { error in
             error is ValidationError && "\(error)".contains("'name' is a parameter of the procedure")
         }
@@ -492,7 +492,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(twice)
+            try Module(procedures: [entryName: twice])
         } throws: { error in
             error is ValidationError && "\(error)".contains("parameters[1]: declares 'x' twice")
         }
@@ -511,7 +511,7 @@ struct ValidationTests {
         // When / Then
         for procedure in [statement, parameter] {
             #expect {
-                try Validator().validate(procedure)
+                try Module(procedures: [entryName: procedure])
             } throws: { error in
                 error is ValidationError && "\(error)".contains("is no name a path reads")
             }
@@ -607,13 +607,13 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(read)
+            try Module(procedures: [entryName: read])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("reference { ref: run.id } names 'run', which is not visible here")
+                && "\(error)".contains("reads 'run', which is not visible here")
         }
 
-        try Validator().validate(taken)
+        _ = try Module(procedures: [entryName: taken])
     }
 
     @Test("a list wrong in both directions says which procedures moved, not which lists")
@@ -833,6 +833,19 @@ struct ValidationTests {
         #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
     }
 
+    @Test("every name a path reads is a value's name, however the path was made", arguments: [
+        Name("a.b"), Name(" a"), Name("a?"), Name("a[0]")
+    ])
+    func aPathReadsValueNames(step: Name) throws {
+        // Given
+        let record = Statement(binding: .variable("d"), expression: .record(["a": .literal(.int(1))]))
+
+        // When / Then. A read and a write
+        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key(step)]))]))
+        #expect(!validates(body: [record, Statement(binding: .assignment([.key("d"), .key(step)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key("a")]))]))
+    }
+
     @Test("a literal names no record, at whatever depth it holds one", arguments: [
         Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
         .array([.record(Record(name: "Int", ["x": .int(1)]))])
@@ -859,7 +872,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(Procedure(body: [], result: .closure(closure)))
+            try Module(procedures: [entryName: Procedure(body: [], result: .closure(closure))])
         } throws: { error in
             error is ValidationError && "\(error)".contains("a closure writes no bounds")
         }
@@ -877,7 +890,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(procedure)
+            try Module(procedures: [entryName: procedure])
         } throws: { error in
             error is ValidationError && "\(error)".contains("bounds name T, and no slot writes `some T`")
         }
@@ -955,10 +968,10 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(sut)
+            try Module(procedures: [entryName: sut])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("reference { ref: never } names 'never', which is not visible here")
+                && "\(error)".contains("reads 'never', which is not visible here")
         }
     }
 
@@ -1063,7 +1076,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(sut)
+            try Module(procedures: [entryName: sut])
         } throws: { error in
             "\(error)".contains("never be reached")
         }
@@ -1170,7 +1183,7 @@ struct ValidationTests {
     }
 
     @Test("a name that is no record and comes back to itself refuses at the load")
-    func aNameComingBackRefusesAtTheLoad() {
+    func aNameComingBackRefusesAtTheLoad() async throws {
         // Given. A record may name itself, and a name that is no record
         // spells no type where it reaches itself, through names or a structure
         let cycles: [[Name: TypeExpression]] = [
@@ -1199,18 +1212,20 @@ struct ValidationTests {
         }
 
         // A recursive type passes: the name reaches a type on the way back.
-        #expect(throws: Never.self) {
-            try Module(
-                types: ["Tree": .record(["children": .array(.named("Tree"))])],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
-            )
+        let tree = try Module(
+            types: ["Tree": .record(["children": .array(.named("Tree"))])],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(),
+                    body: [],
+                    result: .literal(.int(1))
+                )
+            ]
+        )
+
+        await #expect(throws: Never.self) {
+            try await Builder().build([tree] + Module.standard)
         }
     }
 

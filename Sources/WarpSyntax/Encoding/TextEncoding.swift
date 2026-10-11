@@ -533,8 +533,7 @@ public struct TextEncoding {
     }
 
     // What a bare token names. Everything unquoted is one of five things, and a
-    // number is whole or a fraction by grammar. A point or an exponent, not a
-    // reader's guess.
+    // number is whole or a fraction by grammar: a point or an exponent.
     private func scalar(from bare: String, at offset: Int) throws -> Value {
         if let scalar = Name.scalarKeywords[bare] { return scalar }
 
@@ -543,9 +542,7 @@ public struct TextEncoding {
         }
 
         // One value, one writing. The reader takes exactly the spelling the
-        // writer produces, for the values as for the containers, so `007`
-        // and `1e0` are not documents even though a looser parse would read
-        // a number out of them.
+        // writer produces, so `007` and `1e0` are not documents.
         guard bare.contains(where: { character in ".eE".contains(character) }) else {
             switch IntSpelling(bare) {
             case let .int(int):

@@ -17,7 +17,7 @@ import WarpStandard
 // Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
 // loop around it. A procedure could be handed the value and could not be told either
-// thing. A rescue is for what the world did, so a leave is no failure.
+// thing. A leave is not a failure: a rescue is for what the world did.
 @Suite("A body can stop before its end")
 struct LeaveTests {
     // MARK: - Property
@@ -319,7 +319,7 @@ struct LeaveTests {
     }
 
     @Test("a body naming no result is worth nothing to the build too")
-    func theCheckerAgreesAboutWhatABodyAnswers() async throws {
+    func theBuildAgreesAboutWhatABodyAnswers() async throws {
         // Given. A block naming no result answers null at the run, so the
         // build reads it as `Null` too, and handing it where `Int` is declared
         // does not build.

@@ -56,7 +56,8 @@ public struct Module: Sendable {
     public var types: [Name: TypeExpression] { source.types }
 
     // Contracts this module declares: a name bound to the procedures a value's
-    // type must answer to stand under it.
+    // type must answer to stand under it. A contract is an open set of types,
+    // and a claim puts a type in it.
     public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a

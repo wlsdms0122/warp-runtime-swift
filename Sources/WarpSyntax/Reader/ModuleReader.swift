@@ -32,7 +32,7 @@ public struct ModuleReader: Decodable {
     // questions and only one of them is about the program: a text nobody can
     // run is still a text, and still that one, so the reading answers for it
     // and `Module` is where it is held to anything.
-    public let draft: Draft
+    let draft: Draft
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {

@@ -8,14 +8,10 @@
 import Foundation
 import Warp
 
-// `return:`, `break:` and `continue:`.
-//
-// Three forms, one to a key, since the table maps a key to a form and back,
-// and each key may be dropped on its own.
+// `return:`. Leaves the procedure, with what it answers. The other two leave
+// forms are `BreakForm` and `ContinueForm`.
 //
 //     { value { return { ref "answer" } } }
-//     { value { break null } }
-//     { value { continue "outer" } }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "return"

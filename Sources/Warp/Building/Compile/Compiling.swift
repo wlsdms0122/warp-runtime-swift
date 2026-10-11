@@ -160,6 +160,7 @@ struct Compiling {
     mutating func resolveEvery() throws {
         for origin in documents.indices {
             lowering.resolve(origin)
+            try lowering.refuseMiscountedCalls(of: origin, at: documents[origin])
 
             for (number, row) in (lowering.documents[origin].named ?? []).enumerated() where row == nil {
                 guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(

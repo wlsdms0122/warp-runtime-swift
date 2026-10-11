@@ -100,9 +100,11 @@ public struct ConstructRegistry: Sendable {
     }
 
     // The table read backwards, for writing a document rather than reading one.
+    //
     // A form registered under two keys is spelled with whichever sorts first,
     // so a document written twice comes out the same. Nothing where the form
-    // is not registered: the built-in key there is one reading back refuses.
+    // is not registered: a notation that gave up a key cannot write what that
+    // key said.
     public func key(for form: any ConstructForm.Type) -> Name? {
         forms.filter { _, registered in
             ObjectIdentifier(registered) == ObjectIdentifier(form)

@@ -29,7 +29,7 @@ struct NotationTests {
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
         // When / Then. A canonical notation offers no spellings and registers
-        // no construct that lowers to a procedure, so every type it can still
+        // no construct spent into a procedure, so every type it can still
         // write is one the language already has, and it owes no vocabulary at
         // all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
@@ -223,7 +223,7 @@ struct NotationTests {
 
     @Test("a template is spelled with the procedures the notation names")
     func aTemplateSpendsTheNotationsProcedures() throws {
-        // Given / When. Which procedures a template lowers to is the notation's
+        // Given / When. Which procedures a template is spent into is the notation's
         // answer, and the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "word", "type": "String"]],
@@ -281,7 +281,7 @@ struct NotationTests {
 
     @Test("reading a document is not a place a notation can reach")
     func readingCarriesNoNotation() throws {
-        // Given. The spelling these tests read with, left unlowered in a
+        // Given. The spelling these tests read with, left unspent in a
         // document. `load` takes a document, and a document has no spellings,
         // so the mapping is not the call some table would have made of it:
         // standing bare it is refused, and under `record` it is a record.
