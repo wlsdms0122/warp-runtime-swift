@@ -184,7 +184,6 @@ enum ObjectLayout {
         case string = 6
         case array = 7
         case dictionary = 8
-        case record = 9
         case procedure = 10
         case variable = 11
         case `inout` = 12

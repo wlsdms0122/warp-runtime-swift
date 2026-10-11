@@ -152,7 +152,8 @@ struct TypeReader: Decodable {
     // What a type that is neither a spelling nor a form is refused with.
     static let unread = "a type is a name like `String`, `Array<String>` or"
         + " `Task`, or a mapping under one of `procedure`, `array`"
-        + " and `dictionary`. A record is declared under `types` and named"
+        + " and `dictionary`. A record is declared under its name in `types`"
+        + " as `{ record: { … } }`, and named everywhere else"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and

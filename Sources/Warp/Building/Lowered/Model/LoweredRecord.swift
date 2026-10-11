@@ -31,20 +31,7 @@ struct LoweredRecord: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    // A layout and the types read apart from it, where the pairing is what
-    // has to be true. The inner door is reached with a pairing this proved,
-    // which is what makes its promise a fact rather than an assumption.
-    init(layout: Layout, judging fields: [LoweredType]) throws {
-        guard layout.fields.count == fields.count else {
-            throw ObjectRefused(
-                "a record names \(layout.fields.count) field(s) and holds \(fields.count)"
-            )
-        }
-
-        self.init(name: layout.name, names: layout.fields, fields: fields)
-    }
-
-    // The inner door: the maker already put the names in order, one type each.
+    // The maker already put the names in order, one type each.
     init(name: Name, names: [Name], fields: [LoweredType]) {
         assert(names.ordered && names.count == fields.count, "a record has one type per field it names, in name order")
 

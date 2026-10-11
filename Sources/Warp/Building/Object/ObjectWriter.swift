@@ -46,9 +46,10 @@ struct ObjectWriter {
     }
 
     // Every part by the key it stands under. What this cannot write is a
-    // closure: one holding a box of the run that made it, or one a document
-    // nobody wrote down wrote. Either is the one error thrown on the way
-    // down, and an object of what holds it is not written.
+    // closure holding a box of the run that made it or written by a document
+    // nobody wrote down, a dependency no fingerprint was worked out for, and
+    // a lowered type holding a record's fields. Each is the one error thrown
+    // on the way down, and an object of what holds it is not written.
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
         let parts = try ObjectLayout.Key.allCases.map { (key) throws(ObjectUnwritable) -> (Name, Value) in
             (key.name, try part(key, of: compiled))
@@ -545,8 +546,13 @@ struct ObjectWriter {
         case let .dictionary(key, value):
             return tagged(Tag.dictionary, try lowered(key), try lowered(value))
 
-        case let .record(record):
-            return tagged(Tag.record, try loweredRecord(record))
+        // A declared record's fields are its declaration's, written under
+        // `types`; a body stands on the record by its name alone.
+        case .record:
+            throw ObjectUnwritable(
+                "a lowered type holds a record's fields, and an object names a record"
+                    + " by its place in 'typeNumbering'"
+            )
 
         case let .procedure(signature, constness, isolation):
             return tagged(
@@ -580,10 +586,6 @@ struct ObjectWriter {
         case let .projection(of: read, path: path):
             return tagged(Tag.projection, name(read), try self.path(path))
         }
-    }
-
-    private func loweredRecord(_ record: LoweredRecord) throws(ObjectUnwritable) -> Value {
-        .array([layout(record.layout), .array(try record.fields.map(lowered))])
     }
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
