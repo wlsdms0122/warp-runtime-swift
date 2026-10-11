@@ -166,7 +166,7 @@ struct LoweredTypeTests {
     @Test("a record named at an alias slot takes the canonical name, settles again by comparison, and a nameless one is refused")
     func aRecordSettlesUnderTheCanonicalName() throws {
         // Given. A slot spelled with the alias, a nameless record a cast or a
-        // door names, and one already named by the alias
+        // door names, and one a door is handed under the alias's name
         let table = types.loweredTypes
         let slot = TypeExpression.named("Bank.Acct").lowered(in: table)
         let owner = Value.dictionary(["name": .string("a")])
@@ -175,7 +175,7 @@ struct LoweredTypeTests {
         let settled = try slot.settling(slot.named(.dictionary(["balance": .int(1), "owner": owner]), in: table), at: "input", in: table)
         let again = try slot.settling(settled, at: "input", in: table)
         let spelled = try slot.settling(
-            slot.named(.record(Record(name: "Bank.Acct", ["balance": .int(1), "owner": owner])), in: table),
+            outside: .record(Record(name: "Bank.Acct", ["balance": .int(1), "owner": owner])),
             at: "input",
             in: table
         )

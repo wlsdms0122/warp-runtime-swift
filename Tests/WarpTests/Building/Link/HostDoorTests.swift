@@ -214,6 +214,45 @@ struct HostDoorTests {
         }
     }
 
+    @Test("what the entry answers reaches the host as the build held it, a closure over a type parameter its call filled included")
+    func theEntrysAnswerLeavesAsItIs() async throws {
+        // Given. `App.mk` answers a closure over its own `some T`, and the
+        // entry answers `App.mk(5)` as the procedure type the call filled
+        let document = try Module(
+            procedures: [
+                "App.mk": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
+                        returns: .procedure(ProcedureType(parameters: [.parameter(name: "T")], returns: .parameter(name: "T")))
+                    ),
+                    body: [],
+                    result: .closure(Procedure(
+                        signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], returns: .parameter(name: "T")),
+                        body: [],
+                        result: .reference([.key("y")])
+                    ))
+                ),
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .procedure(ProcedureType(parameters: [.int], returns: .int))),
+                    body: [],
+                    result: .call(Call(selector: "App.mk", arguments: [.literal(.int(5))]))
+                )
+            ]
+        )
+        let image = try await Builder().build([document])
+
+        // When
+        let answer = try await Executor().run(image)
+
+        // Then
+        guard case .procedure = answer else {
+            Issue.record("the entry answered \(answer), not the closure")
+
+            return
+        }
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

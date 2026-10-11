@@ -25,9 +25,9 @@ public struct Image: Sendable {
     // to say which refusal it is.
     let concealed: Set<Name>
 
-    // Every type the linked modules declared. A named type survives into the
-    // run as a row of the table's lowering rather than being expanded at
-    // link, so the run needs the table that answers it.
+    // Every type the linked modules declared. A declared record survives
+    // into the run as a row of the table's lowering, so the run needs the
+    // table that answers it.
     public let types: TypeTable
 
     var loweredTypes: LoweredTypeTable { types.loweredTypes }

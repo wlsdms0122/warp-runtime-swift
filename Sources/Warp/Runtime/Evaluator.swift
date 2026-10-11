@@ -81,12 +81,11 @@ struct Evaluator: Sendable {
     }
 
     // MARK: - Public
-    // A run starting from an entry, its arguments by name. Both ends are
-    // doors: what the host hands in and what the entry hands back.
+    // A run starting from an entry, its arguments by name, which cross the
+    // door. What the entry answers the build held to the `returns` it
+    // declares, so it reaches the host as it is.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try entry.settling(
-            answered: try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
-        )
+        try await answer(entry, settled: Settled(values: try entry.settle(arguments)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
@@ -327,9 +326,9 @@ struct Evaluator: Sendable {
 
         // The run's whole share of a cast: the build already decided what every
         // dot after this means, and the one thing it could not know is what
-        // actually arrived. A plain cast lets the refusal out as a failure like
-        // any other; an optional one reads the mismatch as null, which is the
-        // author saying they expected it.
+        // actually arrived. A plain cast lets a mismatch out as `cast_refused`,
+        // a failure like any other; an optional one reads it as null, which is
+        // the author saying they expected it.
         case let .cast(value, type, optional):
             return try type.reading(
                 await evaluate(value, in: &activation, at: trace),

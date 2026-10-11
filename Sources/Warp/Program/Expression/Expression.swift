@@ -46,14 +46,15 @@ public indirect enum Expression: Sendable {
     case apply(Expression, arguments: [Expression])
 
     // Reading a value as a type the text names. `Any` declares nothing, so a
-    // dot on one is refused at the build. This is the door: the author says what
-    // they expect, the build judges every dot after it against that, and the run
-    // asks the arriving value the one question the build could not.
+    // dot on one is refused at the build. A cast is where a value the build
+    // could not type is held to one: the author says what they expect, the
+    // build judges every dot after it against that, and the run asks the
+    // arriving value the one question the build could not.
     //
-    // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
-    // did not arrive as the named type, and an optional one reads that
-    // mismatch as null the way `?.` reads an absence, so the reading is `T?`
-    // and the author says which of the two they meant.
+    // The `?` axis is `?.`'s, on a cast: a plain one fails with
+    // `cast_refused` where the value did not arrive as the named type, and an
+    // optional one reads that mismatch as null the way `?.` reads an absence,
+    // so the reading is `T?` and the author says which of the two they meant.
     case cast(Expression, as: TypeExpression, optional: Bool)
 
     case block(Block)

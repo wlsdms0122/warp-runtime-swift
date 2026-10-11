@@ -7,16 +7,11 @@
 
 import Foundation
 
-// A value that did not arrive as the type a cast named.
-//
-// Recoverable, and that is the whole reason it exists apart from the refusal a
-// parameter's boundary raises. The two doors mean different things: an argument
-// that does not fit the slot it was passed to is the *program* being wrong.
-// Nobody could have expected it, and an `attempt` around it would swallow an
-// author's mistake. A cast is the author saying "I expect this type here",
-// about data that arrived from outside, and being wrong about that is exactly
-// what the world does. So it is a failure like any other, and an `attempt`
-// catches it.
+// A value that did not arrive as the type a cast named. A cast is the author
+// saying what they expect of a value the build could not type, and a value
+// being otherwise is what the world does, so it is a failure like any other,
+// and an `attempt` catches it. A value from outside that does not fit a door
+// refuses the run instead.
 //
 // `as?` reads the same mismatch as null instead. The two spellings are the
 // two ways to say what should happen, and this is what the plain one does.
