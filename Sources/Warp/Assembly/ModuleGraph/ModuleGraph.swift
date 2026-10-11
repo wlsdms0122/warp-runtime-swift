@@ -88,12 +88,12 @@ public struct ModuleGraph: Sendable {
         // host handed the modules over, and needs in name order, so which
         // cycle is found first is a fact of the modules and not of a hash seed.
         var standing: [Int] = []
-        var settled = [Bool](repeating: false, count: modules.count)
+        var stood = [Bool](repeating: false, count: modules.count)
         var walking = [Bool](repeating: false, count: modules.count)
         var route: [(position: Int, name: Name)] = []
 
         func stand(_ position: Int) throws {
-            if settled[position] { return }
+            if stood[position] { return }
 
             guard !walking[position] else {
                 let cycle = route.drop { step in step.position != position }.map { step in
@@ -121,7 +121,7 @@ public struct ModuleGraph: Sendable {
             }
 
             walking[position] = false
-            settled[position] = true
+            stood[position] = true
 
             standing.append(position)
         }

@@ -405,7 +405,7 @@ public struct TextEncoding {
             let token = placed.token
             let at = placed.offset
 
-            var settled: Value?
+            var completed: Value?
 
             // A record waits for a key where everything else waits for a value,
             // and a closing brace is only honest in that position.
@@ -415,7 +415,7 @@ public struct TextEncoding {
                     opened.removeLast()
 
                     do {
-                        settled = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
+                        completed = try .holding(held.map { field in (name: field.key, value: field.value) }, named: name)
                     } catch let refusal as ValueRefused {
                         throw refused(refusal.message, at: at)
                     }
@@ -466,19 +466,19 @@ public struct TextEncoding {
 
                     opened.removeLast()
 
-                    settled = .array(held)
+                    completed = .array(held)
 
                 case .recordClose:
                     throw refused("nothing here is a record to close", at: at)
 
                 case let .string(string):
-                    settled = .string(string)
+                    completed = .string(string)
 
                 case let .bytes(bytes):
-                    settled = .bytes(bytes)
+                    completed = .bytes(bytes)
 
                 // A bare token in front of a record is the record's name, the
-                // declared type the value settled to, where it is no scalar's
+                // declared type the value names, where it is no scalar's
                 // writing; what a record's name may be is the value's to hold.
                 // A scalar is a scalar, the record after it the next value.
                 case let .bare(bare):
@@ -490,13 +490,13 @@ public struct TextEncoding {
                         continue
                     }
 
-                    settled = try scalar(from: bare, at: at)
+                    completed = try scalar(from: bare, at: at)
                 }
             }
 
-            // Closing is a token here, not a count, so a settled value climbs
+            // Closing is a token here, not a count, so a completed value climbs
             // one step at most: into whatever holds it, or out.
-            if let value = settled {
+            if let value = completed {
                 guard let open = opened.popLast() else { return value }
 
                 switch open {

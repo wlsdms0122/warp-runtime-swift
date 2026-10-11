@@ -256,20 +256,20 @@ public struct BinaryEncoding {
                 throw EncodingRefused("nothing in this format begins with \(raw)")
             }
 
-            var settled: Value?
+            var completed: Value?
 
             switch tag {
             case .null:
-                settled = .null
+                completed = .null
 
             case .false:
-                settled = .bool(false)
+                completed = .bool(false)
 
             case .true:
-                settled = .bool(true)
+                completed = .bool(true)
 
             case .int:
-                settled = .int(unzigzagged(try unsigned(from: &reading)))
+                completed = .int(unzigzagged(try unsigned(from: &reading)))
 
             case .double:
                 guard let raw = reading.take(8) else {
@@ -283,10 +283,10 @@ public struct BinaryEncoding {
                     throw EncodingRefused("a document has no way to carry \(double)")
                 }
 
-                settled = .double(double)
+                completed = .double(double)
 
             case .string:
-                settled = .string(try text(from: &reading))
+                completed = .string(try text(from: &reading))
 
             case .bytes:
                 let count = try length(from: &reading, of: "bytes", costing: 1)
@@ -294,7 +294,7 @@ public struct BinaryEncoding {
                     throw EncodingRefused("the bytes end inside bytes")
                 }
 
-                settled = .bytes(Array(raw))
+                completed = .bytes(Array(raw))
 
             case .array:
                 try opening(opened)
@@ -302,7 +302,7 @@ public struct BinaryEncoding {
                 let count = try length(from: &reading, of: "an array", costing: 1)
 
                 if count == 0 {
-                    settled = .array([])
+                    completed = .array([])
                 } else {
                     var held: [Value] = []
 
@@ -318,7 +318,7 @@ public struct BinaryEncoding {
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
-                    settled = try record([], named: name)
+                    completed = try record([], named: name)
                 } else {
                     var held: [(name: Name, value: Value)] = []
 
@@ -330,12 +330,12 @@ public struct BinaryEncoding {
                 }
             }
 
-            // Hand what settled to whatever is waiting for it, closing every
+            // Hand what completed to whatever is waiting for it, closing every
             // container it completes on the way up.
-            while let value = settled {
+            while let value = completed {
                 guard let open = opened.popLast() else { return value }
 
-                settled = nil
+                completed = nil
 
                 switch open {
                 case let .array(expecting, held):
@@ -343,7 +343,7 @@ public struct BinaryEncoding {
                     held.append(value)
 
                     if expecting == 1 {
-                        settled = .array(held)
+                        completed = .array(held)
                     } else {
                         opened.append(.array(expecting: expecting - 1, held: held))
                     }
@@ -357,7 +357,7 @@ public struct BinaryEncoding {
                     held.append((name: key, value: value))
 
                     if expecting == 1 {
-                        settled = try record(held, named: name)
+                        completed = try record(held, named: name)
                     } else {
                         let (next, raw) = try field(from: &reading, after: previous)
 
