@@ -140,7 +140,7 @@ struct Validator: Sendable {
             }
 
             for contract in contracts.sorted() {
-                try held(contract, as: .type, at: place)
+                try held(contract, as: .mention, at: place)
             }
         }
 
@@ -901,7 +901,7 @@ struct Validator: Sendable {
             try held(parameter, as: .typeParameter, at: here)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .type, at: here)
+                try held(contract, as: .mention, at: here)
             }
         }
 
@@ -961,7 +961,7 @@ struct Validator: Sendable {
             return
 
         case let .named(name):
-            try held(name, as: .type, at: place)
+            try held(name, as: .mention, at: place)
 
         // One contract is written by its name, so a composition joins two
         // or more.
@@ -975,7 +975,7 @@ struct Validator: Sendable {
             }
 
             for name in names.sorted() {
-                try held(name, as: .type, at: place)
+                try held(name, as: .mention, at: place)
             }
 
         // The build's own note to itself: a type it read out of a body, which
@@ -1009,8 +1009,12 @@ struct Validator: Sendable {
 
             try held(name, as: .typeParameter, at: place)
 
-        case let .array(inner), let .dictionary(inner):
+        case let .array(inner):
             try written(inner, in: context.nested, at: place)
+
+        case let .dictionary(key, value):
+            try written(key, in: context.nested, at: place)
+            try written(value, in: context.nested, at: place)
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):

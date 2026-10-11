@@ -20,6 +20,6 @@ public enum FailurePayload {
     public static let declared = TypeExpression.record([
         type: .string,
         message: .string,
-        details: .dictionary(.any)
+        details: .dictionary(key: .string, value: .any)
     ])
 }

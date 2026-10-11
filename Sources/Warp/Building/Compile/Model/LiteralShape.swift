@@ -127,8 +127,8 @@ enum LiteralShape: Sendable {
                 item.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
             }
 
-        case let .dictionary(element):
-            guard case let .record(fields) = self else { break }
+        case let .dictionary(key, element):
+            guard case let .record(fields) = self, key.accepts(.string, in: table) else { break }
 
             return fields.values.allSatisfy { field in
                 field.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)

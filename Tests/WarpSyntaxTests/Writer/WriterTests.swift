@@ -135,7 +135,7 @@ struct WriterTests {
                     ["name": "names", "type": "Array<String>"],
                     ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "Dictionary<Any>",
+                "returns": "Dictionary<String, Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -246,7 +246,7 @@ struct WriterTests {
                         ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "Dictionary<Any>",
+                    "returns": "Dictionary<String, Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],

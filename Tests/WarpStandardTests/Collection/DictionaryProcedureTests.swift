@@ -72,7 +72,7 @@ struct DictionaryProcedureTests {
     private static func asking(_ result: Warp.Expression) -> Procedure {
         Procedure(
             signature: Signature(parameters: [
-                Parameter(name: "held", type: .dictionary(.int)),
+                Parameter(name: "held", type: .dictionary(key: .string, value: .int)),
                 Parameter(name: "key", type: .string)
             ]),
             body: [],

@@ -227,7 +227,7 @@ struct TypePlacementTests {
     @Test("var stands on a field of the record a declared type is, and on no record inside it", arguments: [
         TypeExpression.array(.record(["a": .variable(.int)])),
         .record(["b": .record(["c": .variable(.int)])]),
-        .dictionary(.record(["a": .variable(.int)]))
+        .dictionary(key: .string, value: .record(["a": .variable(.int)]))
     ])
     func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
         // When / Then. An inline record's fields are written through as they

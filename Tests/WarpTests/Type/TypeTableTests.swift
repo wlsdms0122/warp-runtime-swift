@@ -31,7 +31,7 @@ struct TypeTableTests {
         for types: [Name: TypeExpression] in [
             ["App.A": .named("App.B"), "App.B": .named("App.A"), "App.C": .int],
             ["App.M": .nullable(.named("App.M"))],
-            ["App.L": .dictionary(.named("App.L"))]
+            ["App.L": .dictionary(key: .string, value: .named("App.L"))]
         ] {
             #expect {
                 try TypeTable(types: types)

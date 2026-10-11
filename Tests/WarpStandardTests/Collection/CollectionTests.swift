@@ -262,7 +262,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(key: .string, value: .int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
                             selector: "Standard.Collection.keys",

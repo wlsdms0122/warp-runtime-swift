@@ -156,7 +156,7 @@ struct TypeTests {
     func typesRenderAsWritten() {
         // When / Then
         #expect(TypeExpression.array(.string).rendered == "Array<String>")
-        #expect(TypeExpression.dictionary(.named("Task")).rendered == "Dictionary<Task>")
+        #expect(TypeExpression.dictionary(key: .string, value: .named("Task")).rendered == "Dictionary<String, Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "Array<Array<Int>>")
         #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
     }
@@ -243,12 +243,12 @@ struct TypeTests {
     func aDictionaryTakesAKnownRecord() {
         // Given. A record is a dictionary whose fields happen to be known, and
         // knowing them is not a reason to refuse it
-        let sut = TypeExpression.dictionary(.any)
+        let sut = TypeExpression.dictionary(key: .string, value: .any)
 
         // When / Then
         #expect(sut.accepts(.record(["axes": .string, "depth": .int])))
-        #expect(TypeExpression.dictionary(.string).accepts(.record(["axes": .string])))
-        #expect(!TypeExpression.dictionary(.int).accepts(.record(["axes": .string])))
+        #expect(TypeExpression.dictionary(key: .string, value: .string).accepts(.record(["axes": .string])))
+        #expect(!TypeExpression.dictionary(key: .string, value: .int).accepts(.record(["axes": .string])))
     }
 
     @Test("a record slot does not take a bare dictionary")
@@ -256,7 +256,7 @@ struct TypeTests {
         // Given. A record names fields it requires; a dictionary promises none
 
         // When / Then
-        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
+        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(key: .string, value: .string)))
     }
 
     @Test("a nullable slot takes its value, null, and nothing else")
@@ -356,12 +356,12 @@ struct TypeTests {
         let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
 
         // When
-        let settled = try TypeExpression.dictionary(.any).settling(nameless, at: "held")
+        let settled = try TypeExpression.dictionary(key: .string, value: .any).settling(nameless, at: "held")
 
         // Then
         #expect(settled == .dictionary(["balance": .int(1)]))
         #expect(throws: ArgumentError.self) {
-            try TypeExpression.dictionary(.any).settling(named, at: "held")
+            try TypeExpression.dictionary(key: .string, value: .any).settling(named, at: "held")
         }
     }
 

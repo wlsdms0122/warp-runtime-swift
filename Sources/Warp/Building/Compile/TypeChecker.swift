@@ -755,7 +755,7 @@ struct TypeChecker {
             // A dictionary's names are data, so a key the run reads finds an
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
-            case let (.indexRef(inner, optionally), .dictionary(entry)):
+            case let (.indexRef(inner, optionally), .dictionary(_, entry)):
                 if let refusal = keyReference(inner, in: environment, with: context, at: place) {
                     return .refused(refusal)
                 }
@@ -779,7 +779,7 @@ struct TypeChecker {
             // rule is asked here like everywhere else and always answers yes:
             // the mark has an absence to expect on an entry, unwrapped or not,
             // and that fact lives in the rule rather than in this landing.
-            case let (.key, .dictionary(entry)):
+            case let (.key, .dictionary(_, entry)):
                 if let refusal = needless(.entry) { return refusal }
 
                 if segment.optional { optional = true }
@@ -887,13 +887,13 @@ struct TypeChecker {
 
                 current = field.fieldUnwrapped
 
-            case let (.key, .dictionary(entry)):
+            case let (.key, .dictionary(_, entry)):
                 current = entry
 
             // A name between the brackets is a path of its own, judged as
             // what the container reads it as: a position in a list and a key
             // in a map.
-            case let (.indexRef(inner, _), .dictionary(entry)):
+            case let (.indexRef(inner, _), .dictionary(_, entry)):
                 if let refusal = keyReference(inner, in: environment, with: context, at: place) {
                     return .refused(refusal)
                 }

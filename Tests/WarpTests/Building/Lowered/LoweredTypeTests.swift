@@ -48,7 +48,7 @@ struct LoweredTypeTests {
         }
 
         #expect(TypeExpression.array(.named("Bank.Acct")).lowered(in: table).rendered(in: table) == "Array<Bank.Account>")
-        #expect(TypeExpression.dictionary(.named("App.Maybe")).lowered(in: table).rendered(in: table) == "Dictionary<Int?>")
+        #expect(TypeExpression.dictionary(key: .string, value: .named("App.Maybe")).lowered(in: table).rendered(in: table) == "Dictionary<String, Int?>")
     }
 
     @Test("a lowered type spells back to a type that lowers to it")
@@ -62,7 +62,7 @@ struct LoweredTypeTests {
             .parameter(name: "T"),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
             .procedure(nil),
-            .record(["a": .variable(.int), "b": .dictionary(.named("App.Maybe"))]),
+            .record(["a": .variable(.int), "b": .dictionary(key: .string, value: .named("App.Maybe"))]),
             .named("App.Ordered")
         ]
 
@@ -79,7 +79,7 @@ struct LoweredTypeTests {
         // Given. A record read as a dictionary whose first field reads `T` as
         // a whole number and as text, and whose second reads it as truth
         let table = types.loweredTypes
-        let slot = TypeExpression.dictionary(.record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])).lowered(in: table)
+        let slot = TypeExpression.dictionary(key: .string, value: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])).lowered(in: table)
         let handed = TypeExpression.record([
             "x": .record(["a": .int, "b": .string]),
             "y": .record(["a": .bool, "b": .bool])

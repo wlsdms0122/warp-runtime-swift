@@ -13,7 +13,8 @@ import Warp
 //
 //   String / Any / Procedure  . A built-in, by its own name
 //   Array<String>             . A built-in applied to another type
-//   Dictionary<Task>          . The same, for a map of string keys
+//   Dictionary<String, Task>  . The same, for a map: its key's type and its
+//                                value's
 //   Task                      . A name some module declares
 //   { record: { id: String } }. A record, its fields under `record`
 //   { procedure: { parameters: [], returns: } }
@@ -60,7 +61,38 @@ struct TypeReader: Decodable {
         // MARK: - Private
     }
 
-    // A built-in taking another type, written under its own key where the
+    // The inside of a map type written as a form: its key's type and its
+    // value's, each under its own key.
+    struct DictionaryTypeReader: Decodable {
+        enum CodingKeys: String, CodingKey, CaseIterable {
+            case key
+            case value
+        }
+
+        // MARK: - Property
+        let type: TypeExpression
+
+        // MARK: - Initializer
+        init(from decoder: Decoder) throws {
+            try KeyGate().rejectUnknownKeys(
+                in: decoder,
+                known: CodingKeys.self,
+                context: "map type"
+            )
+
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+
+            self.type = .dictionary(
+                key: try container.decode(TypeReader.self, forKey: .key).type,
+                value: try container.decode(TypeReader.self, forKey: .value).type
+            )
+        }
+
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // A built-in taking other types, written under its own key where an
     // inner type has no spelling of its own. `Array<String>` is a name; an
     // array of procedures is not, and this is the form that carries it. The
     // key is the raw value, and the name is spelled like every type's.
@@ -76,6 +108,14 @@ struct TypeReader: Decodable {
             }
         }
 
+        // What its spelling writes between the brackets.
+        var arguments: String {
+            switch self {
+            case .array: "one type, its element's: `Array<String>`"
+            case .dictionary: "two types, its key's and its value's: `Dictionary<String, Int>`"
+            }
+        }
+
         // MARK: - Initializer
         init?(spelling: String) {
             guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else { return nil }
@@ -84,10 +124,13 @@ struct TypeReader: Decodable {
         }
 
         // MARK: - Public
-        func holding(_ inner: TypeExpression) -> TypeExpression {
-            switch self {
-            case .array: .array(inner)
-            case .dictionary: .dictionary(inner)
+        // The type holding these, or nil where they are not as many as it
+        // takes.
+        func holding(_ inner: [TypeExpression]) -> TypeExpression? {
+            switch (self, inner.count) {
+            case (.array, 1): .array(inner[0])
+            case (.dictionary, 2): .dictionary(key: inner[0], value: inner[1])
+            default: nil
             }
         }
 
@@ -305,7 +348,11 @@ struct TypeReader: Decodable {
             )
         }
 
-        return holding.holding(try parse(inner, qualifying: qualifying))
+        guard let held = holding.holding(try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }) else {
+            throw TypeFormError("type '\(text)' is written with another count of types, and `\(holding.spelling)` takes \(holding.arguments)")
+        }
+
+        return held
     }
 
     // The names the parts an `&` at the top of a spelling joins are, or the
@@ -314,6 +361,28 @@ struct TypeReader: Decodable {
         try (joined(text) ?? [Substring(text)]).reduce(into: Set<Name>()) { names, part in
             names.insert(qualifying(try named(part.trimmingCharacters(in: Path.whiteSpace))))
         }
+    }
+
+    // The types a spelling's brackets hold, split at each comma that stands
+    // outside every inner bracket.
+    private static func arguments(_ text: String) -> [String] {
+        var depth = 0
+        var parts: [String] = []
+        var start = text.startIndex
+
+        for index in text.indices {
+            switch text[index] {
+            case "<": depth += 1
+            case ">": depth -= 1
+            case "," where depth == 0:
+                parts.append(String(text[start ..< index]))
+                start = text.index(after: index)
+
+            default: break
+            }
+        }
+
+        return parts + [String(text[start...])]
     }
 
     // The parts an `&` at the top of a spelling joins, or nothing where the
@@ -365,8 +434,11 @@ struct TypeReader: Decodable {
 
         // An array or a dictionary of something with no spelling of its own:
         // an array of procedures has no name, so it is written here.
-        case let .one(.holding(holding), key):
-            return holding.holding(try keyed.decode(TypeReader.self, forKey: key).type)
+        case let .one(.holding(.array), key):
+            return .array(try keyed.decode(TypeReader.self, forKey: key).type)
+
+        case let .one(.holding(.dictionary), key):
+            return try keyed.decode(DictionaryTypeReader.self, forKey: key).type
 
         case let .one(.record, key):
             return try record(from: try keyed.superDecoder(forKey: key))

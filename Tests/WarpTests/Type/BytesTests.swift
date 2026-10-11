@@ -82,7 +82,7 @@ struct BytesTests {
             .named("Whole"),
             .named("Nobody"),
             .array(.int),
-            .dictionary(.int),
+            .dictionary(key: .string, value: .int),
             .record([:])
         ]
         let bounded: [(TypeExpression, [Name: Set<Name>])] = [

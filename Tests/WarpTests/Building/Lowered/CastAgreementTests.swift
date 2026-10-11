@@ -56,7 +56,7 @@ struct CastAgreementTests {
         // Elements with nothing in common, because an empty list is of every
         // element type there is and the pair is not impossible for it.
         .array(.string),
-        .dictionary(.string), .dictionary(.any), .dictionary(.int),
+        .dictionary(key: .string, value: .string), .dictionary(key: .string, value: .any), .dictionary(key: .string, value: .int),
         .record(["name": .string]),
         .record(["age": .int]),
         .record([:]),
@@ -159,7 +159,7 @@ struct CastAgreementTests {
     func aCastNamesAndNeverUnnames() {
         // Given. A declared record, a nameless record of its fields and a map
         let named = TypeExpression.named("Person")
-        let structures: [TypeExpression] = [.record(["name": .string]), .dictionary(.string)]
+        let structures: [TypeExpression] = [.record(["name": .string]), .dictionary(key: .string, value: .string)]
 
         // When / Then
         for structure in structures {

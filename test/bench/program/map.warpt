@@ -11,7 +11,7 @@ warpt 1
       access "public"
       body [
         {
-          type "Dictionary<Int>"
+          type "Dictionary<String, Int>"
           value {
             record {}
           }
@@ -81,7 +81,7 @@ warpt 1
       result {
         ref "held"
       }
-      returns "Dictionary<Int>"
+      returns "Dictionary<String, Int>"
     }
   }
   warp 1

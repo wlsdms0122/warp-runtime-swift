@@ -155,7 +155,7 @@ struct LoweringTests {
             constants: [
                 "digits": .cast(
                     .record(["0": .literal(.int(0)), "1": .literal(.int(1))]),
-                    as: .dictionary(.int),
+                    as: .dictionary(key: .string, value: .int),
                     optional: false
                 )
             ],

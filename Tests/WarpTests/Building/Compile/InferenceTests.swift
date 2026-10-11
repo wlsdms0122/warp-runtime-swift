@@ -752,7 +752,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("reason"), expression: .cast(
                                 .reference([.key("failed")]),
-                                as: .record(["failures": .dictionary(.string)]),
+                                as: .record(["failures": .dictionary(key: .string, value: .string)]),
                                 optional: false
                             )
                         )
@@ -1067,7 +1067,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "payload", type: .dictionary(.string))
+                            Parameter(name: "payload", type: .dictionary(key: .string, value: .string))
                         ]
                     ),
                     body: [

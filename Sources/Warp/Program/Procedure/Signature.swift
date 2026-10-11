@@ -78,9 +78,14 @@ public struct Signature: Sendable, Equatable {
 
     // A native procedure's declaration, read off the procedure itself. What it takes is
     // its own type's to say, so a registration names the procedure once and the
-    // parameters come with it, in the order its cases stand.
-    public init<P: NativeProcedure>(of procedure: P.Type, returns: TypeExpression? = nil) {
-        self.init(parameters: P.Parameters.allCases.map(\.declared), returns: returns)
+    // parameters come with it, in the order its cases stand. `bounds` are what
+    // its type parameters are held to, as a document's signature writes them.
+    public init<P: NativeProcedure>(
+        of procedure: P.Type,
+        returns: TypeExpression? = nil,
+        bounds: [Name: Set<Name>] = [:]
+    ) {
+        self.init(parameters: P.Parameters.allCases.map(\.declared), returns: returns, bounds: bounds)
     }
 
     // MARK: - Public

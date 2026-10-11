@@ -193,7 +193,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "data", type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(key: .string, value: .any))
                         ]
                     ),
                     body: [
@@ -229,7 +229,7 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "data", type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(key: .string, value: .any))
                         ],
                         returns: .any
                     ),

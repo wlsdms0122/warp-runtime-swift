@@ -65,7 +65,7 @@ struct FieldPlaceTests {
         // Given
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "entries", type: .dictionary(.int))]
+                parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))]
             ),
             body: [],
             result: .reference([.key("entries"), .key("a")])
@@ -186,7 +186,7 @@ struct FieldPlaceTests {
         // Given. Nothing was declared, so there is nothing for a write to
         // be held to and nothing the build laid out
         let sut = Procedure(
-            signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(.int))]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(key: .string, value: .int))]),
             body: [
                 Statement(binding: .variable("held"), expression: .record(["y": .literal(.int(0))])),
                 Statement(
@@ -253,7 +253,7 @@ struct FieldPlaceTests {
             result: .reference([.key("point"), .key("y")])
         )
         let named = Procedure(
-            signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(.int))]),
+            signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(key: .string, value: .int))]),
             body: [],
             result: .reference([.key("point"), .key("y")])
         )

@@ -10,9 +10,11 @@ import Foundation
 // Which names may be written where. Each place below holds a name to its own
 // grammar:
 //
-// - a type's name: a type or a contract a module declares, every mention of
-//   one in a type, a bound or a claim, and a record's name. Identifiers joined
-//   by dots, a dot being a character of the name.
+// - a type's name: a type or a contract a module declares, the type a claim
+//   is about, and a record's name. Identifiers joined by dots, a dot being a
+//   character of the name.
+// - a mention: a type or a contract named in a type, a bound or a claim. A
+//   type's name, or a contract the language names.
 // - a type parameter's name: the `T` of `some T` and a key of `bounds`. One
 //   identifier, since the signature that names it is the only place it means
 //   anything.
@@ -29,13 +31,19 @@ import Foundation
 // writes in front of a type, and the scalars a value is written as bare.
 public enum NameGrammar: Sendable {
     case type
+    case mention
     case typeParameter
     case value
     case contractProcedure
 
     // MARK: - Property
+    // The contracts the language names: a mention of one is that contract,
+    // and no module declares one.
+    public static let contracts: Set<Name> = [TypeSpelling.hashable]
+
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
         .union(TypeExpression.nominalTypes.keys)
+        .union(contracts)
         .union([TypeSpelling.some, TypeSpelling.const, TypeSpelling.isolated, TypeSpelling.inout, TypeSpelling.variable])
         .union(Name.scalarKeywords.keys.map(Name.init(normal:)))
 
@@ -50,6 +58,9 @@ public enum NameGrammar: Sendable {
         switch self {
         case .type:
             return !NameGrammar.reserved.contains(name) && NameGrammar.joinsIdentifiers(name)
+
+        case .mention:
+            return NameGrammar.contracts.contains(name) || NameGrammar.type.holds(name)
 
         case .typeParameter:
             return !NameGrammar.reserved.contains(name) && name.isIdentifier
@@ -87,7 +98,7 @@ public enum NameGrammar: Sendable {
     // wrote the name.
     public func refusal(of name: Name) -> String {
         switch self {
-        case .type:
+        case .type, .mention:
             return "'\(name)' is no name a module gives a type or a contract: such a name is identifiers"
                 + " joined by dots, and a word the language writes itself (`Int`, `some`, `null` and the rest)"
                 + " is the language's"

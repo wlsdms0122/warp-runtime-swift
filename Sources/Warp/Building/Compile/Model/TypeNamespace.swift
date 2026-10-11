@@ -9,7 +9,9 @@ import Foundation
 
 // The type namespace of a list of documents: every type and contract they
 // declare, each at the place it was written, and what they claim about the
-// names in it.
+// names in it, beside what the language declares itself: the contract a
+// map's key answers, which asks nothing, and its claims about the types the
+// language names that answer it.
 //
 // Types and contracts share the namespace, so no name in it is both and none
 // is declared twice. Each space is gathered whole before the spaces are held
@@ -26,10 +28,27 @@ struct TypeNamespace {
     // the pair, so the second says what the first said.
     let claims: [Placed<Claim>]
 
+    // The types the language names that answer `Hashable`: every kind a
+    // value is but a procedure, which is the same as no value.
+    static let hashable: [Name] = [
+        TypeSpelling.null,
+        TypeSpelling.bool,
+        TypeSpelling.int,
+        TypeSpelling.double,
+        TypeSpelling.string,
+        TypeSpelling.array,
+        TypeSpelling.dictionary
+    ]
+
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
+        // The language's own stand as no document's, ahead of every one.
+        let language = Place.Document.assembled
+
         var types: [Name: Placed<TypeExpression>] = [:]
-        var contracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
+        var contracts: [Name: Placed<[Name: ContractProcedure]>] = [
+            TypeSpelling.hashable: Placed([:], at: .contract(TypeSpelling.hashable.spelling, in: language), of: -1)
+        ]
 
         for (handed, held) in documents.enumerated() {
             for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {
@@ -71,8 +90,10 @@ struct TypeNamespace {
             }
         }
 
-        var claimed: Set<Claim> = []
-        var claims: [Placed<Claim>] = []
+        var claims: [Placed<Claim>] = Self.hashable.map { type in
+            Placed(Claim(type: type, contract: TypeSpelling.hashable), at: .satisfies(type.spelling, in: language), of: -1)
+        }
+        var claimed = Set(claims.map(\.held))
 
         for (handed, held) in documents.enumerated() {
             for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {

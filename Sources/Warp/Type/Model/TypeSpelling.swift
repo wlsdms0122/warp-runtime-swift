@@ -36,8 +36,13 @@ public enum TypeSpelling {
     public static let `inout`: Name = "inout"
     public static let variable: Name = "var"
 
-    // What a claim about `Array` or `Dictionary` reads an element as: a type
-    // parameter nothing fills, spelled with a dot, which no document's `some`
-    // writes, so it is no parameter a declaration names.
+    // The contract the language names: the one a map's key answers.
+    public static let hashable: Name = "Hashable"
+
+    // What a claim about `Array` or `Dictionary` reads an element, and a
+    // map's key, as: a type parameter nothing fills, spelled with a dot,
+    // which no document's `some` writes, so it is no parameter a declaration
+    // names.
     public static let selfElement: Name = "Self.Element"
+    public static let selfKey: Name = "Self.Key"
 }

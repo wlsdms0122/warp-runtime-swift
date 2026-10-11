@@ -269,8 +269,8 @@ struct ObjectWriter {
         case let .array(element):
             return tagged(Tag.array, type(element))
 
-        case let .dictionary(element):
-            return tagged(Tag.dictionary, type(element))
+        case let .dictionary(key, value):
+            return tagged(Tag.dictionary, type(key), type(value))
 
         case let .record(fields):
             return tagged(Tag.record, keyed(fields, type))
@@ -535,8 +535,8 @@ struct ObjectWriter {
         case let .array(element):
             return tagged(Tag.array, lowered(element))
 
-        case let .dictionary(element):
-            return tagged(Tag.dictionary, lowered(element))
+        case let .dictionary(key, value):
+            return tagged(Tag.dictionary, lowered(key), lowered(value))
 
         case let .record(record):
             return tagged(Tag.record, loweredRecord(record))

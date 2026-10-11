@@ -108,7 +108,7 @@ struct InPlaceTests {
         // names it holds them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .cast(.record(["x": .literal(.int(0))]), as: .dictionary(.int), optional: false)],
+            variables: ["seen": .cast(.record(["x": .literal(.int(0))]), as: .dictionary(key: .string, value: .int), optional: false)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -162,11 +162,11 @@ struct InPlaceTests {
         // start says nothing about what the box will hold, the declaration
         // does, and a write of something else is held to it.
         let sut = try Module(
-            variables: ["seen": ModuleVariable(.record([:]), declared: .dictionary(.int))],
+            variables: ["seen": ModuleVariable(.record([:]), declared: .dictionary(key: .string, value: .int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .dictionary(.int)),
+                    signature: Signature(returns: .dictionary(key: .string, value: .int)),
                     body: [
                         Statement(binding: .assignment([.key("seen")]), expression: .literal(.string("not a dictionary")))
                     ],
@@ -179,7 +179,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<Int>")
+            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<String, Int>")
         }
     }
 
@@ -321,7 +321,7 @@ struct InPlaceTests {
                     body: [
                         Statement(
                             binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
+                            expression: .cast(.record([:]), as: .dictionary(key: .string, value: .int), optional: false)
                         ),
                         Statement(
                             expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))
@@ -560,7 +560,7 @@ struct InPlaceTests {
             "plain": taking,
             "nullable": .nullable(.named("App.Hook")),
             "array": .array(taking),
-            "dictionary": .dictionary(taking),
+            "dictionary": .dictionary(key: .string, value: taking),
             "record field": .record(["hook": taking]),
             "declared name": .named("App.Hook")
         ]
@@ -620,7 +620,7 @@ struct InPlaceTests {
                 "App.records": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "ds", type: .inout(.array(.dictionary(.array(generic))))),
+                            Parameter(name: "ds", type: .inout(.array(.dictionary(key: .string, value: .array(generic))))),
                             Parameter(name: "junk", type: .any)
                         ],
                         returns: .int
@@ -649,7 +649,7 @@ struct InPlaceTests {
 
         // Then
         #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<Array<some T>>>")
+        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<String, Array<some T>>>")
     }
 
     // MARK: - Public

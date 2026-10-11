@@ -325,7 +325,7 @@ struct ObjectReader {
         case .double: read = .double
         case .string: read = .string
         case .array: read = .array(try expression(cursor.next()))
-        case .dictionary: read = .dictionary(try expression(cursor.next()))
+        case .dictionary: read = .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
         case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
         case .procedure:
             read = .procedure(
@@ -664,7 +664,7 @@ struct ObjectReader {
         case .double: read = .double
         case .string: read = .string
         case .array: read = .array(try lowered(cursor.next()))
-        case .dictionary: read = .dictionary(try lowered(cursor.next()))
+        case .dictionary: read = .dictionary(key: try lowered(cursor.next()), value: try lowered(cursor.next()))
         case .record: read = .record(try loweredRecord(cursor.next()))
         // A type that writes no parameters writes no signature, so it says
         // nothing of an answer either.

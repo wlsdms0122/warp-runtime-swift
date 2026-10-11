@@ -91,10 +91,23 @@ struct TypeWriter {
         // own key where the element has none. An array of procedures is the
         // case with none.
         case let .array(element):
-            return try value(of: element, in: .array)
+            guard case let .string(spelling) = try form(of: element) else {
+                return .dictionary([Name(normal: TypeReader.Holding.array.rawValue): try value(of: element)])
+            }
 
-        case let .dictionary(element):
-            return try value(of: element, in: .dictionary)
+            return .string("\(TypeReader.Holding.array.spelling)<\(spelling)>")
+
+        case let .dictionary(key, value):
+            guard case let .string(keySpelling) = try form(of: key), case let .string(valueSpelling) = try form(of: value) else {
+                return .dictionary([
+                    Name(normal: TypeReader.Holding.dictionary.rawValue): .dictionary([
+                        TypeReader.DictionaryTypeReader.CodingKeys.key.name: try self.value(of: key),
+                        TypeReader.DictionaryTypeReader.CodingKeys.value.name: try self.value(of: value)
+                    ])
+                ])
+            }
+
+            return .string("\(TypeReader.Holding.dictionary.spelling)<\(keySpelling), \(valueSpelling)>")
 
         // Spelled with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
@@ -137,15 +150,6 @@ struct TypeWriter {
 
             return .dictionary([try Name(spelling): .dictionary(written)])
         }
-    }
-
-    // A built-in holding another type, under the reading's own key for it.
-    private func value(of element: TypeExpression, in holding: TypeReader.Holding) throws -> Value {
-        guard case let .string(spelling) = try form(of: element) else {
-            return .dictionary([Name(normal: holding.rawValue): try value(of: element)])
-        }
-
-        return .string("\(holding.spelling)<\(spelling)>")
     }
 
     // A marked slot is written with the mark in front of the inner type,

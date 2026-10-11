@@ -43,8 +43,8 @@ extension TypeExpression {
         case let .array(element):
             return .array(element.lowered(in: table, bounds: bounds))
 
-        case let .dictionary(entry):
-            return .dictionary(entry.lowered(in: table, bounds: bounds))
+        case let .dictionary(key, value):
+            return .dictionary(key: key.lowered(in: table, bounds: bounds), value: value.lowered(in: table, bounds: bounds))
 
         case let .record(fields):
             let ordered = fields.sorted { left, right in left.key < right.key }

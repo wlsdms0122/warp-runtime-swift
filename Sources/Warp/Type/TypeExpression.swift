@@ -44,9 +44,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // reads differently from one that has not been written yet.
     case array(TypeExpression)
 
-    // Names to one type: a record whose field names are data rather than
-    // declaration, which a `Value.dictionary` holds.
-    case dictionary(TypeExpression)
+    // A map: keys of one type to values of one type, which a
+    // `Value.dictionary` holds. The key's type answers `Hashable`.
+    case dictionary(key: TypeExpression, value: TypeExpression)
 
     // Named fields with types, exactly the ones a value holds.
     case record([Name: TypeExpression])
@@ -140,6 +140,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case projection(of: Name, path: Path)
 
     // MARK: - Property
+    // What a claim about a type the language names holds that type's own
+    // parameters to: a map's key answers `Hashable`.
+    static let nominalBounds: [Name: Set<Name>] = [TypeSpelling.selfKey: [TypeSpelling.hashable]]
+
     // The types the language names, by the spelling a document writes each
     // under. A spelling here is never a declaration's: what a document
     // declares stands beside these, and a reader answers one of these before
@@ -172,7 +176,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         TypeSpelling.double: .double,
         TypeSpelling.string: .string,
         TypeSpelling.array: .array(.parameter(name: TypeSpelling.selfElement)),
-        TypeSpelling.dictionary: .dictionary(.parameter(name: TypeSpelling.selfElement))
+        TypeSpelling.dictionary: .dictionary(
+            key: .parameter(name: TypeSpelling.selfKey),
+            value: .parameter(name: TypeSpelling.selfElement)
+        )
     ]
 
     // How the type reads in a message: a declaration an author wrote comes
@@ -243,8 +250,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .array(element):
             return "Array<\(element.rendered)>"
 
-        case let .dictionary(entry):
-            return "Dictionary<\(entry.rendered)>"
+        case let .dictionary(key, value):
+            return "Dictionary<\(key.rendered), \(value.rendered)>"
 
         case let .record(fields):
             let written = fields
@@ -274,8 +281,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .array(element):
             element.mentions
 
-        case let .dictionary(entry):
-            entry.mentions
+        case let .dictionary(key, value):
+            key.mentions.union(value.mentions)
 
         case let .record(fields):
             fields.values.reduce(into: Set()) { mentioned, field in
@@ -308,8 +315,11 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .projection, .composition, .selfType:
             return []
 
-        case let .array(element), let .dictionary(element), let .nullable(element):
+        case let .array(element), let .nullable(element):
             return element.parameterNames
+
+        case let .dictionary(key, value):
+            return key.parameterNames.union(value.parameterNames)
 
         case let .record(fields):
             return fields.values.reduce(into: Set()) { named, field in named.formUnion(field.parameterNames) }
@@ -334,8 +344,11 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .parameter, .projection:
             return true
 
-        case let .array(element), let .dictionary(element), let .nullable(element):
+        case let .array(element), let .nullable(element):
             return element.isGeneric
+
+        case let .dictionary(key, value):
+            return key.isGeneric || value.isGeneric
 
         case let .record(fields):
             return fields.values.contains { field in field.isGeneric }
@@ -399,7 +412,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .record:
             return false
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner),
+        case let .dictionary(key, value):
+            return key.hasSpelling && value.hasSpelling
+
+        case let .array(inner), let .nullable(inner), let .variable(inner),
             let .inout(inner):
             return inner.hasSpelling
         }
@@ -444,8 +460,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .array(element):
             return .array(element.replacingSelf(with: type))
 
-        case let .dictionary(entry):
-            return .dictionary(entry.replacingSelf(with: type))
+        case let .dictionary(key, value):
+            return .dictionary(key: key.replacingSelf(with: type), value: value.replacingSelf(with: type))
 
         case let .record(fields):
             return .record(fields.mapValues { field in field.replacingSelf(with: type) })
