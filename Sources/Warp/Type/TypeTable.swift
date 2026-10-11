@@ -65,8 +65,8 @@ public struct TypeTable: Sendable {
         types: [Name: TypeExpression],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: Set<Name>] = [:],
-        settled: Bool = false,
-        unsettled: Fulfillment? = nil,
+        holdsEveryClaim: Bool = false,
+        fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
@@ -82,8 +82,8 @@ public struct TypeTable: Sendable {
             satisfying: satisfying.merging(
                 contracts.keys.map { contract in (contract, Set<Name>()) }
             ) { held, _ in held },
-            settled: settled,
-            unsettled: unsettled,
+            holdsEveryClaim: holdsEveryClaim,
+            fulfillment: fulfillment,
             standing: standing,
             of: linkage
         )
@@ -95,18 +95,18 @@ public struct TypeTable: Sendable {
     // after this table is first built, so the table is remade rather than
     // holding an answer it did not have. The rows are numbered from the
     // declarations alone, so they are the rows the first table had. The
-    // answer is settled where every document is in, which is where nothing
-    // is left unsettled to write down.
+    // table holds every claim where every document is in, which is where
+    // nothing is left to write down.
     func satisfying(
         _ satisfying: [Name: Set<Name>],
-        unsettled: Fulfillment? = nil
+        fulfillment: Fulfillment? = nil
     ) -> TypeTable {
         TypeTable(
             types: types,
             contracts: contracts,
             satisfying: satisfying,
-            settled: unsettled == nil,
-            unsettled: unsettled,
+            holdsEveryClaim: fulfillment == nil,
+            fulfillment: fulfillment,
             standing: standing,
             of: linkage
         )

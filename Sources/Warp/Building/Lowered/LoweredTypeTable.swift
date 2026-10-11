@@ -72,12 +72,12 @@ final class LoweredTypeTable: Sendable {
     // may be what answers, so it says nothing about a contract and writes the
     // pair down instead. A table with nowhere to write is the link's, which
     // has every claim there is.
-    let settled: Bool
+    let holdsEveryClaim: Bool
 
-    // Where a value this table cannot settle is written down, so the pair goes
-    // to the list that can answer it. Nothing at the run, where the table is
-    // the whole list's and settles everything it is asked.
-    let unsettled: Fulfillment?
+    // Where a pair this table cannot decide is written down, so it goes to
+    // the list that can answer it. Nothing at the run, where the table is
+    // the whole list's and decides everything it is asked.
+    let fulfillment: Fulfillment?
 
     private let rows: [Name: Int]
 
@@ -94,15 +94,15 @@ final class LoweredTypeTable: Sendable {
         loweredTypes: [LoweredType],
         labels: [Name],
         satisfying: [Name: Set<Name>] = [:],
-        settled: Bool = true,
-        unsettled: Fulfillment? = nil,
+        holdsEveryClaim: Bool = true,
+        fulfillment: Fulfillment? = nil,
         of linkage: Linkage
     ) {
         self.loweredTypes = loweredTypes
         self.labels = labels
         self.satisfying = satisfying
-        self.settled = settled
-        self.unsettled = unsettled
+        self.holdsEveryClaim = holdsEveryClaim
+        self.fulfillment = fulfillment
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
     }
@@ -187,7 +187,7 @@ final class LoweredTypeTable: Sendable {
     // table does not hold every claim there is.
     func answers(contract name: Name, arrived type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
-        guard settled else { return nil }
+        guard holdsEveryClaim else { return nil }
 
         return claimed.contains(type)
     }
@@ -203,8 +203,8 @@ final class LoweredTypeTable: Sendable {
         case true?:
             return true
 
-        case nil where unsettled != nil:
-            unsettled?.require(folded: Claim(type: type, contract: contract))
+        case nil where fulfillment != nil:
+            fulfillment?.require(folded: Claim(type: type, contract: contract))
 
             return true
 
@@ -245,8 +245,8 @@ final class LoweredTypeTable: Sendable {
     static func lowering(
         _ types: [Name: TypeExpression],
         satisfying: [Name: Set<Name>] = [:],
-        settled: Bool,
-        unsettled: Fulfillment? = nil,
+        holdsEveryClaim: Bool,
+        fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) -> LoweredTypeTable {
@@ -287,8 +287,8 @@ final class LoweredTypeTable: Sendable {
             loweredTypes: loweredTypes,
             labels: labels,
             satisfying: satisfying,
-            settled: settled,
-            unsettled: unsettled,
+            holdsEveryClaim: holdsEveryClaim,
+            fulfillment: fulfillment,
             of: linkage
         )
     }
@@ -351,7 +351,7 @@ final class LoweredTypeTable: Sendable {
         // holds every claim there is, it is held to what the documents say.
         default:
             guard let type = reading.nominal(in: self) else { return .decided(true) }
-            guard !rigid, !settled else { return .decided(answers(contract: name, arrived: type) != false) }
+            guard !rigid, !holdsEveryClaim else { return .decided(answers(contract: name, arrived: type) != false) }
 
             return .leansOn([type])
         }

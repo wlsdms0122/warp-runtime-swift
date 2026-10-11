@@ -717,7 +717,7 @@ struct Evaluator: Sendable {
         // What it ran on is the claim, which the link still holds to the
         // declarations behind it, so the pair is written down for the link.
         if dispatch.calls.isEmpty, let row = witnesses[spelling]?[first.nominal] {
-            loweredTypes.unsettled?.require(folded: Claim(type: first.nominal, contract: dispatch.contract))
+            loweredTypes.fulfillment?.require(folded: Claim(type: first.nominal, contract: dispatch.contract))
 
             let call = try CallOperation(
                 handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
