@@ -2163,7 +2163,7 @@ indirect enum LoweredType: Sendable, Equatable {
             )
         }
 
-        let extra = Set(value.asDictionary?.names ?? []).subtracting(held.layout.fields)
+        let extra = Set(((try? value.asDictionary?.named()) ?? []).map(\.name)).subtracting(held.layout.fields)
 
         if let field = extra.min() {
             throw ArgumentError(
@@ -2299,7 +2299,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A map read as a record type holds its entries as the record's
         // fields.
         case let (.record(declared), .dictionary(entries)):
-            return .record(Record(name: nil, fields(entries.names, of: { name in entries[name] }, along: declared, leavingOut: leavingOut, in: table)))
+            return .record(Record(name: nil, fields(((try? entries.named()) ?? []).map(\.name), of: { name in entries[name] }, along: declared, leavingOut: leavingOut, in: table)))
 
         default:
             return value

@@ -20,7 +20,11 @@ struct ValueDecoder: Decoder {
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            record.names.compactMap { key in Key(stringValue: key.spelling) }
+            record.keys.compactMap { key in
+                guard case let .string(text) = key else { return nil }
+
+                return Key(stringValue: text)
+            }
         }
 
         // MARK: - Initializer
@@ -400,7 +404,7 @@ struct ValueDecoder: Decoder {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
-        return try record.entries
+        return try record.named()
             .sorted { left, right in left.name.spelling < right.name.spelling }
             .reduce(into: [Name: T]()) { read, entry in
                 read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)

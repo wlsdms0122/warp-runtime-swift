@@ -80,7 +80,7 @@ struct TextPinTests {
             elements.forEach { element in walk(element, visit) }
 
         case let .dictionary(entries):
-            entries.entries.forEach { entry in
+            ((try? entries.named()) ?? []).forEach { entry in
                 visit(.name(entry.name))
                 walk(entry.value, visit)
             }

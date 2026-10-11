@@ -99,7 +99,7 @@ public struct Mutator: Sendable {
         case let .dictionary(dictionary):
             var mutations: [Value] = [.dictionary(Value.Dictionary([:])), .array([]), .int(0)]
 
-            if let first = dictionary.names.first { mutations.append(.dictionary(dictionary.removing(first))) }
+            if let first = dictionary.keys.first { mutations.append(.dictionary(dictionary.removing(key: first))) }
 
             mutations.append(.dictionary(dictionary.writing("mutated", with: .null)))
 
@@ -129,7 +129,7 @@ public struct Mutator: Sendable {
             }
 
         case let .dictionary(dictionary):
-            for entry in dictionary.entries {
+            for entry in (try? dictionary.named()) ?? [] {
                 walk(entry.value, at: steps + [.key(entry.name)], visit)
             }
 

@@ -93,12 +93,18 @@ struct ObjectWriter {
                 .array(try record.values.map(self.value))
             )
 
-        // Names as data are a record with no name, written as one.
+        // A map keyed by text is a record with no name, written as one.
         case let .dictionary(dictionary):
             return tagged(
                 Tag.record,
                 Self.maybe(nil, name),
-                .array(dictionary.names.map(name)),
+                .array(try dictionary.keys.map { (key) throws(ObjectUnwritable) -> Value in
+                    guard case let .string(text) = key, let field = try? Name(text) else {
+                        throw ObjectUnwritable("a value holds a map keyed by what is no name")
+                    }
+
+                    return name(field)
+                }),
                 .array(try dictionary.values.map(self.value))
             )
 

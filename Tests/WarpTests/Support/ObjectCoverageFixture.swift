@@ -70,7 +70,7 @@ enum ObjectCoverageFixture {
                         .bytes([1, 2]),
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
                         .record(Record(name: nil, ["c": .null])),
-                        .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
+                        .dictionary(Value.Dictionary(ordered: [(key: "k", value: .int(3))])),
                         .procedure(Closure(writer: Closure.Writer(document: .written(Identity([4])), declaration: .procedure("a.ten")), nth: 0, linked: nil, captured: []))
                     ])
                 )

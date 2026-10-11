@@ -377,7 +377,7 @@ struct Case: Sendable, CustomStringConvertible {
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
-            let (held, expected) = expect.entries.first
+            let (held, expected) = try expect.named().first
         else {
             throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells`, `builds` and `refuses`")
         }
@@ -539,7 +539,7 @@ struct Case: Sendable, CustomStringConvertible {
 
         let every: Set<Name> = [versionKey, "name", "note", "expect"]
 
-        if let (key, _) = fields.entries.first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
+        if let (key, _) = try fields.named().first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
             throw ConformanceError("a case about \(named) writes `\(key)`, which it does not read")
         }
     }
@@ -614,7 +614,7 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the vocabulary a case asks for declares its procedures as a record, and not as \(other)")
         }
 
-        if let taken = module.names.first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
+        if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
                 "the vocabulary a case asks for writes '\(taken)'. A vocabulary writes `imports`"
                     + " and declares `types`, `contracts`, `satisfies` and `procedures`, and how it is"
@@ -622,14 +622,14 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        let procedures: [Supplied] = try entries.entries.map { entry in
+        let procedures: [Supplied] = try entries.named().map { entry in
             guard case let .dictionary(record) = entry.value else {
                 throw ConformanceError("'\(entry.name)' is written the way a procedure is")
             }
 
             let declaration = Value.dictionary(
                 Dictionary(
-                    uniqueKeysWithValues: record.entries
+                    uniqueKeysWithValues: try record.named()
                         .filter { field in !Supplied.ownKeys.contains(field.name) }
                         .map { field in (field.name, field.value) }
                 )
@@ -648,7 +648,7 @@ struct Case: Sendable, CustomStringConvertible {
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
         // document's, and the version the runner says for itself.
-        var stripped = Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
+        var stripped = Dictionary(uniqueKeysWithValues: try module.named().map { field in (field.name, field.value) })
 
         stripped["warp"] = .int(1)
         stripped["procedures"] = procedures.isEmpty
@@ -667,7 +667,7 @@ struct Case: Sendable, CustomStringConvertible {
             return [:]
 
         case let .dictionary(given)?:
-            return Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
+            return Dictionary(uniqueKeysWithValues: try given.named().map { entry in (entry.name, entry.value) })
 
         case let other?:
             throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")

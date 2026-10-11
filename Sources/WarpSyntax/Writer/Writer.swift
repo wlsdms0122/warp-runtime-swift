@@ -473,11 +473,13 @@ public struct Writer: Sendable {
             )
 
         case .record:
-            let fields = try (value.asDictionary?.entries ?? []).map { entry in
+            let fields = try (value.asDictionary?.named() ?? []).map { entry in
                 (name: entry.name, value: try literal(entry.value))
             }
 
-            return .dictionary([ExpressionTag.record.key: .dictionary(try Value.Dictionary(fields))])
+            return .dictionary([
+                ExpressionTag.record.key: .dictionary(Value.Dictionary(Swift.Dictionary(uniqueKeysWithValues: fields.map { field in (field.name, field.value) })))
+            ])
 
         case .procedure:
             throw WritingError(

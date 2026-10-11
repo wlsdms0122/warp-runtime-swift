@@ -884,7 +884,7 @@ struct WriterTests {
             }
 
         case let .dictionary(record):
-            return record.entries.reduce(into: Set(record.names)) { found, entry in
+            return ((try? record.named()) ?? []).reduce(into: Set(((try? record.named()) ?? []).map(\.name))) { found, entry in
                 found.formUnion(keys(in: entry.value))
             }
 

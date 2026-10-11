@@ -130,8 +130,16 @@ struct ValueWalk {
     private mutating func opening(_ held: Value.Dictionary, named name: Name?) throws -> Step {
         try opening()
 
-        if !held.isEmpty {
-            opened.append(.fields(held.entries[...]))
+        let fields: [(name: Name, value: Value)]
+
+        do {
+            fields = try held.named()
+        } catch let refused as ValueRefused {
+            throw EncodingRefused(refused.message)
+        }
+
+        if !fields.isEmpty {
+            opened.append(.fields(fields[...]))
         }
 
         return .record(name: name, count: held.count)

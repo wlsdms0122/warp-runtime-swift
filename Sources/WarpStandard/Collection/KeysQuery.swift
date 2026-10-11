@@ -35,7 +35,7 @@ struct KeysQuery: Query {
         // In name order, the order both spellings hold: a walk that answered a
         // different order each run would make a program that reads it depend on
         // nothing an author wrote.
-        return .array(held.names.map { name in .string(name.spelling) })
+        return .array(held.keys)
     }
 
     // MARK: - Private

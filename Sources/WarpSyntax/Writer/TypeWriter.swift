@@ -158,7 +158,7 @@ struct TypeWriter {
             return .string(mark.marking(written))
 
         case let .dictionary(form) where form.count == 1
-            && TypeReader.readsAsAProcedure(form.entries[0].name):
+            && ((try? form.named()[0].name).map(TypeReader.readsAsAProcedure) ?? false):
             // A key carries one mark, and a key carrying two reads back as a
             // record whose field is named after them.
             if let inside = SlotMark.marked(inner) {
@@ -169,7 +169,7 @@ struct TypeWriter {
             }
 
             return .dictionary([
-                try Name(mark.marking(form.entries[0].name.spelling)): form.entries[0].value
+                try Name(mark.marking(try form.named()[0].name.spelling)): form.entries[0].value
             ])
 
         default:

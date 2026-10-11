@@ -42,15 +42,19 @@ public indirect enum Value: Sendable, Equatable {
 
     case procedure(Closure)
 
-    // The entries stand in ascending byte order of their names, the order the
-    // canonical writing uses, and a name is found by comparing bytes.
+    // Entries under keys that are values. They stand in the key order, the
+    // order the canonical writing and `keys` walk a map in, and a key is found
+    // by that order and then by sameness, so two keys that are the same value
+    // are one key: `1` and `1.0`, two spellings of one text, bytes and the
+    // array of their numbers. A key that is the same as no value, a fraction
+    // that is not a number or one holding a procedure, is never found again.
     public struct Dictionary: Sendable, Equatable {
         // MARK: - Property
-        // In ascending byte order of `name`, as `Name`'s `<` orders them.
-        public let entries: [(name: Name, value: Value)]
+        // In ascending key order, no key the same as another.
+        public let entries: [(key: Value, value: Value)]
 
-        public var names: [Name] {
-            entries.map(\.name)
+        public var keys: [Value] {
+            entries.map(\.key)
         }
 
         public var values: [Value] {
@@ -66,58 +70,85 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         // MARK: - Initializer
-        // Entries in any order under names none of which repeats.
-        public init(_ entries: [(name: Name, value: Value)]) throws {
-            let sorted = entries.sorted { one, other in one.name < other.name }
+        // Entries in any order under keys none of which is the same as
+        // another.
+        public init(_ entries: [(key: Value, value: Value)]) throws {
+            let sorted = entries.sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
 
-            if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one.name == other.name }) {
-                throw ValueRefused("'\(repeated.0.name)' is written twice")
+            if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one.key.matches(other.key) }) {
+                throw ValueRefused("'\(Rendering(repeated.0.key).text())' is written twice")
             }
 
             self.entries = sorted
         }
 
+        // A map keyed by text, the way a document's mappings are keyed by
+        // the names it writes.
         public init(_ fields: [Name: Value]) {
-            self.entries = fields.map { field in (name: field.key, value: field.value) }
-                .sorted { one, other in one.name < other.name }
+            self.entries = fields
+                .map { field in (key: Value.string(field.key.spelling), value: field.value) }
+                .sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
         }
 
-        // The inner door: entries in the order a name puts them, under names
-        // none of which repeats. A layout carries both facts, and so does an
-        // object's list of entries once its reading judged the order, so what
-        // stands on either comes through here rather than being sorted again.
-        // A value born outside a link has neither behind it and comes through
-        // the door above.
-        init(ordered entries: [(name: Name, value: Value)]) {
+        // The inner door: entries in the key order, under keys none of which
+        // is the same as another. An object's list of entries carries both
+        // facts once its reading judged the order, so what stands on it comes
+        // through here rather than being sorted again. A value born outside a
+        // link has neither behind it and comes through the door above.
+        init(ordered entries: [(key: Value, value: Value)]) {
             self.entries = entries
         }
 
         // MARK: - Public
-        public subscript(name: Name) -> Value? {
-            let (position, found) = place(of: name)
+        public subscript(key key: Value) -> Value? {
+            let (position, found) = place(of: key)
 
             return found ? entries[position].value : nil
         }
 
-        // This dictionary with one entry written: the value replaced where the
-        // name is held, and the entry put where it sorts where it is not.
-        public func writing(_ name: Name, with value: Value) -> Dictionary {
+        // The entry under a text key, the way a document's mapping is read
+        // by a name.
+        public subscript(name: Name) -> Value? {
+            self[key: .string(name.spelling)]
+        }
+
+        // The entries under the names their keys are, in the same order: how
+        // a document's mapping, keyed by the names it writes, is read. A key
+        // that is no name is refused.
+        public func named() throws -> [(name: Name, value: Value)] {
+            try entries.map { entry in
+                guard case let .string(text) = entry.key, let name = try? Name(text) else {
+                    throw ValueRefused("'\(Rendering(entry.key).text())' is no name, and a mapping a document writes is keyed by names")
+                }
+
+                return (name: name, value: entry.value)
+            }
+        }
+
+        // This map with one entry written: the value replaced where the key is
+        // held, and the entry put where it orders where it is not.
+        public func writing(key: Value, with value: Value) -> Dictionary {
             var written = entries
-            let (position, found) = place(of: name)
+            let (position, found) = place(of: key)
 
             if found {
                 written[position].value = value
             } else {
-                written.insert((name: name, value: value), at: position)
+                written.insert((key: key, value: value), at: position)
             }
 
             return Dictionary(ordered: written)
         }
 
-        // This dictionary without the entry of this name, or as it is where none
+        // The same under a text key.
+        public func writing(_ name: Name, with value: Value) -> Dictionary {
+            writing(key: .string(name.spelling), with: value)
+        }
+
+        // This map without the entry under this key, or as it is where none
         // is held.
-        public func removing(_ name: Name) -> Dictionary {
-            let (position, found) = place(of: name)
+        public func removing(key: Value) -> Dictionary {
+            let (position, found) = place(of: key)
 
             guard found else { return self }
 
@@ -127,39 +158,178 @@ public indirect enum Value: Sendable, Equatable {
             return Dictionary(ordered: written)
         }
 
-        // This dictionary with every value put through `transform`, under the
-        // same names in the same order.
-        public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Dictionary {
+        // The same under a text key.
+        public func removing(_ name: Name) -> Dictionary {
+            removing(key: .string(name.spelling))
+        }
+
+        // This map with every value put through `transform`, under the same
+        // keys in the same order.
+        public func mapValues(_ transform: (Value, Value) throws -> Value) rethrows -> Dictionary {
             Dictionary(
-                ordered: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+                ordered: try entries.map { entry in (key: entry.key, value: try transform(entry.key, entry.value)) }
             )
         }
 
         public static func == (lhs: Dictionary, rhs: Dictionary) -> Bool {
             lhs.entries.count == rhs.entries.count
                 && zip(lhs.entries, rhs.entries).allSatisfy { mine, theirs in
-                    mine.name == theirs.name && mine.value == theirs.value
+                    mine.key == theirs.key && mine.value == theirs.value
                 }
         }
 
+        // How two keys stand in the key order: by kind first (null, bool,
+        // number, text, list, map, record, and a procedure last), then false
+        // before true, numbers by worth, text as `String` orders it, which is
+        // its scalars in normal form C, lists element by element with a
+        // shorter one first on a common start, maps entry by entry, and
+        // records by name and then field by field. Bytes are the list of
+        // their numbers. Two keys the same value stand at one place; a
+        // fraction that is not a number stands after every number, and a
+        // procedure after everything, each at one place it shares with its
+        // own kind and is the same as nothing there.
+        static func order(_ left: Value, _ right: Value) -> ComparisonResult {
+            let ranks = (rank(of: left), rank(of: right))
+
+            guard ranks.0 == ranks.1 else { return ranks.0 < ranks.1 ? .orderedAscending : .orderedDescending }
+
+            switch (left, right) {
+            case let (.bool(mine), .bool(theirs)):
+                return mine == theirs ? .orderedSame : (theirs ? .orderedAscending : .orderedDescending)
+
+            case (.int, _), (.double, _):
+                return worth(left, right)
+
+            case let (.string(mine), .string(theirs)):
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.dictionary(mine), .dictionary(theirs)):
+                return sequenced(
+                    mine.entries.lazy.flatMap { entry in [entry.key, entry.value] },
+                    theirs.entries.lazy.flatMap { entry in [entry.key, entry.value] }
+                )
+
+            case let (.record(mine), .record(theirs)):
+                guard mine.name == theirs.name else {
+                    return Self.order(.string(mine.name?.spelling ?? ""), .string(theirs.name?.spelling ?? ""))
+                }
+
+                return sequenced(
+                    zip(mine.names, mine.values).lazy.flatMap { name, value in [Value.string(name.spelling), value] },
+                    zip(theirs.names, theirs.values).lazy.flatMap { name, value in [Value.string(name.spelling), value] }
+                )
+
+            default:
+                guard let mine = left.elements, let theirs = right.elements else { return .orderedSame }
+
+                return sequenced(mine, theirs)
+            }
+        }
+
         // MARK: - Private
-        // Where a name is, or where it would go: the first position whose name
-        // does not precede it, and whether the name there is it.
-        private func place(of name: Name) -> (Int, Bool) {
+        // Where a key is, or where it would go: the first position whose key
+        // does not precede it, and whether the key there is it.
+        private func place(of key: Value) -> (Int, Bool) {
             var low = 0
             var high = entries.count
 
             while low < high {
                 let middle = (low + high) / 2
 
-                if entries[middle].name < name {
+                if Self.order(entries[middle].key, key) == .orderedAscending {
                     low = middle + 1
                 } else {
                     high = middle
                 }
             }
 
-            return (low, low < entries.count && entries[low].name == name)
+            return (low, low < entries.count && entries[low].key.matches(key))
+        }
+
+        // Where a kind stands in the key order.
+        private static func rank(of value: Value) -> Int {
+            switch value {
+            case .null: 0
+            case .bool: 1
+            case .int, .double: 2
+            case .string: 3
+            case .array, .bytes: 4
+            case .dictionary: 5
+            case .record: 6
+            case .procedure: 7
+            }
+        }
+
+        // Two numbers by what they are worth, exactly: a whole number and a
+        // fraction are compared without converting the whole number, which
+        // would round past 2^53. A fraction that is not a number stands after
+        // every number.
+        private static func worth(_ left: Value, _ right: Value) -> ComparisonResult {
+            switch (left, right) {
+            case let (.int(mine), .int(theirs)):
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.double(mine), .double(theirs)):
+                if mine.isNaN || theirs.isNaN {
+                    return mine.isNaN == theirs.isNaN ? .orderedSame : (theirs.isNaN ? .orderedAscending : .orderedDescending)
+                }
+
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.int(whole), .double(fraction)):
+                return worth(whole: whole, fraction: fraction)
+
+            case let (.double(fraction), .int(whole)):
+                switch worth(whole: whole, fraction: fraction) {
+                case .orderedAscending: return .orderedDescending
+                case .orderedDescending: return .orderedAscending
+                case .orderedSame: return .orderedSame
+                }
+
+            default:
+                return .orderedSame
+            }
+        }
+
+        // A whole number against a fraction: ascending where the whole number
+        // is worth less.
+        private static func worth(whole: Int, fraction: Double) -> ComparisonResult {
+            guard !fraction.isNaN else { return .orderedAscending }
+            guard fraction >= -0x1p63 else { return .orderedDescending }
+            guard fraction < 0x1p63 else { return .orderedAscending }
+
+            let floor = fraction.rounded(.down)
+            let truncated = Int(floor)
+
+            if whole < truncated { return .orderedAscending }
+            if whole > truncated { return .orderedDescending }
+
+            return floor == fraction ? .orderedSame : .orderedAscending
+        }
+
+        // Two sequences of keys element by element, a shorter one first on a
+        // common start.
+        private static func sequenced(_ left: some Sequence<Value>, _ right: some Sequence<Value>) -> ComparisonResult {
+            var mine = left.makeIterator()
+            var theirs = right.makeIterator()
+
+            while true {
+                switch (mine.next(), theirs.next()) {
+                case (nil, nil):
+                    return .orderedSame
+
+                case (nil, _):
+                    return .orderedAscending
+
+                case (_, nil):
+                    return .orderedDescending
+
+                case let (one?, other?):
+                    let ordered = order(one, other)
+
+                    guard ordered == .orderedSame else { return ordered }
+                }
+            }
         }
     }
 
@@ -191,7 +361,7 @@ public indirect enum Value: Sendable, Equatable {
             return elements.contains { element in element.holdsName }
 
         case let .dictionary(held):
-            return held.entries.contains { _, value in value.holdsName }
+            return held.entries.contains { key, value in key.holdsName || value.holdsName }
 
         case let .record(record):
             return record.name != nil || record.values.contains { value in value.holdsName }
@@ -337,17 +507,23 @@ public indirect enum Value: Sendable, Equatable {
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
     ) throws -> Value {
-        // The dictionary proved the order and that no name repeats, so the
-        // layout is built rather than checked again.
-        let held = try Value.Dictionary(Array(fields))
+        let ordered = Array(fields).sorted { one, other in one.name < other.name }
 
-        guard let name else { return .dictionary(held) }
+        if let repeated = zip(ordered, ordered.dropFirst()).first(where: { one, other in one.name == other.name }) {
+            throw ValueRefused("'\(repeated.0.name)' is written twice")
+        }
+
+        guard let name else {
+            return .dictionary(
+                Value.Dictionary(ordered: ordered.map { field in (key: .string(field.name.spelling), value: field.value) })
+            )
+        }
 
         guard NameGrammar.type.holds(name) else {
             throw ValueRefused(NameGrammar.type.refusal(of: name))
         }
 
-        return .record(Record(layout: Layout(name: name, ordered: held.names), values: held.values))
+        return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
     }
 
     // This value with one field written. A field a record's layout names is
@@ -423,7 +599,7 @@ public indirect enum Value: Sendable, Equatable {
             return .dictionary(
                 Value.Dictionary(
                     ordered: try dictionary.entries.map { entry in
-                        (entry.name, try entry.value.rewritten(closures: body))
+                        (entry.key, try entry.value.rewritten(closures: body))
                     }
                 )
             )
@@ -632,7 +808,7 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(left), .dictionary(right)):
             return left.count == right.count
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
-                    mine.name == theirs.name && mine.value.matches(theirs.value)
+                    mine.key.matches(theirs.key) && mine.value.matches(theirs.value)
                 }
 
         case let (.record(record), .dictionary(dictionary)),
@@ -793,7 +969,7 @@ public indirect enum Value: Sendable, Equatable {
             return record.values.allSatisfy { value in value.walk(body) }
 
         case let .dictionary(dictionary):
-            return dictionary.entries.allSatisfy { entry in entry.value.walk(body) }
+            return dictionary.entries.allSatisfy { entry in entry.key.walk(body) && entry.value.walk(body) }
 
         case .null, .bool, .int, .double, .string, .bytes:
             return true
@@ -836,7 +1012,7 @@ public indirect enum Value: Sendable, Equatable {
         guard record.name == nil, record.count == dictionary.count else { return false }
 
         return dictionary.entries.indices.allSatisfy { place in
-            record.names[place] == dictionary.entries[place].name
+            dictionary.entries[place].key == .string(record.names[place].spelling)
                 && held(record.values[place], dictionary.entries[place].value)
         }
     }
