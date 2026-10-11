@@ -53,7 +53,7 @@ struct ModuleNotationTests {
     func aModuleDeclaringNoProcedureIsRead() throws {
         // Given. A module declaring only a type, which the documents beside it
         // name
-        let fixture: Value = ["procedures": [:], "types": ["Geo.Point": ["record": ["x": "Int"]]]]
+        let fixture: Value = ["types": ["Geo.Point": ["record": ["x": "Int"]]]]
 
         // When
         let sut = try loader.loadDocument(fixture)

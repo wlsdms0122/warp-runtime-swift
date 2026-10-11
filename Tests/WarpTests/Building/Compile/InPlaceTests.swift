@@ -201,21 +201,6 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a name is a constant or a variable, and not both")
-    func aNameIsBoundOnce() {
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                constants: ["limit": .literal(.int(1))],
-                variables: ["limit": .literal(.int(2))],
-                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
-            )
-        } throws: { error in
-            "\(error)".contains("one name holds one thing")
-        }
-    }
-
     @Test("a path handed in place is written as it is made, so a failing call has written")
     func handedPathIsWrittenBeforeFailure() async throws {
         // Given. The callee writes through the path and then aborts; the write
@@ -605,7 +590,9 @@ struct InPlaceTests {
 
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
-        // Given. `App.g` writes its own `some T` beside a value read as `Any`, and a record of an empty list beside one of `Any`, into lists it was handed in place
+        // Given. `App.list` writes its own `some T` beside a value read as
+        // `Any`, and `App.records` a record of an empty list beside one of
+        // `Any`, into lists each was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [

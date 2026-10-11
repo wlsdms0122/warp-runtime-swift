@@ -125,10 +125,10 @@ struct Compiling {
     // Its rows and what it settled are cut by where the document says its
     // declarations stand, which is the one place that boundary is drawn.
     //
-    // What it proved about its own bodies and what the build read off one that
-    // declared no answer are read off what it settled rather than off the rows
-    // it stands as. A row is a declaration lowered against a link's types,
-    // and none of those is a type.
+    // What the build read off a body that declared no answer is read off what
+    // it settled rather than off the rows it stands as. A row is a
+    // declaration lowered against a link's types, and none of those is a
+    // type.
     mutating func lay(
         _ document: Compiled,
         at origin: Int,

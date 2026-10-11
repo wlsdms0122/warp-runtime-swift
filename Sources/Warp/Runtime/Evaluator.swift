@@ -129,23 +129,6 @@ struct Evaluator: Sendable {
         )
     }
 
-    // The same send, where the sender answers without running. The build
-    // refused a query sending anything that runs, so what reaches here answers
-    // as data.
-    func send(
-        _ sending: Sent,
-        from origin: Int,
-        handing values: [Value]
-    ) async throws -> Value {
-        let callee = linked[try row(sending.row, from: origin)]
-
-        return try await answer(
-            callee,
-            with: try settled(callee, sending: sending, handing: values),
-            at: Trace()
-        )
-    }
-
     // MARK: - Private
     // A body run as a procedure: what it answers is caught here. The build
     // held every way out to what the body declares, so it is handed on as it
@@ -802,7 +785,7 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         switch callee.implementation {
         case let .native(.query(query), _):
-            return try await evaluate(query, of: callee, settled: arguments)
+            return try await evaluate(query, of: callee, settled: arguments, at: trace)
 
         case let .body(body, frame):
             return try await answer(
@@ -823,7 +806,7 @@ struct Evaluator: Sendable {
 
     private func bool(_ value: Value) throws -> Bool {
         guard case let .bool(answer) = value else {
-            throw ExecutionError("a condition must answer Bool, got \(value.nominal)")
+            throw ExecutionError("a condition answers \(value.nominal), expected Bool")
         }
 
         return answer
@@ -836,14 +819,16 @@ struct Evaluator: Sendable {
     private func evaluate<W: Query>(
         _ query: W,
         of callee: Linked,
-        settled: Settled
+        settled: Settled,
+        at trace: Trace
     ) async throws -> Value {
         try callee.settling(
             answered: try await query.evaluate(
                 Question(
                     settled: settled,
                     of: callee,
-                    evaluator: self
+                    evaluator: self,
+                    at: trace
                 )
             )
         )

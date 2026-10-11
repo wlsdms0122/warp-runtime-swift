@@ -15,9 +15,7 @@ public struct TypeTable: Sendable {
     public let types: [Name: TypeExpression]
 
     // Contracts declared in this link: a name bound to the procedures a value's
-    // type must answer. Beside the types rather than among them: a contract is
-    // the open set of types that answer some procedures, and what puts a type
-    // in it is a claim, not the type language.
+    // type must answer.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every
@@ -36,7 +34,7 @@ public struct TypeTable: Sendable {
 
     // A table declaring nothing, for a judgement asked with no declarations
     // behind it.
-    public static let empty = TypeTable(types: [:], of: Linkage())
+    static let empty = TypeTable(types: [:], of: Linkage())
 
     // MARK: - Initializer
     // A table a caller assembled: declarations and not a link, so no row
@@ -44,7 +42,7 @@ public struct TypeTable: Sendable {
     // declaring them is held to, by the same judges, so a name nothing
     // declares and a name that is no record and comes back to itself are
     // refused here, in the words a document is refused in.
-    public init(
+    init(
         types: [Name: TypeExpression] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) throws {

@@ -65,7 +65,9 @@ struct Activation: Sendable {
                 return .index(index)
 
             case let .at(inner, _):
-                switch try value(at: inner) {
+                let index = try value(at: inner)
+
+                switch index {
                 case let .int(index):
                     return .index(index)
 
@@ -83,7 +85,7 @@ struct Activation: Sendable {
                 default:
                     throw ExecutionError(
                         "'\(spelled(address).rendered)' indexes with"
-                            + " '\(spelled(inner).rendered)', which is not an Int or a String"
+                            + " '\(spelled(inner).rendered)', which is \(index.nominal), expected Int or String"
                     )
                 }
             }
@@ -220,12 +222,12 @@ struct Activation: Sendable {
     // defect, not absence: the array is there and says how long it is.
     private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
         guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected an Array")
+            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected Array")
         }
 
         guard index >= 0, index < elements.count else {
             return .unfit(
-                "\(walked().rendered) indexes past the end of \(elements.count) element(s)"
+                "\(walked().rendered) indexes past the end of a list of \(elements.count)"
             )
         }
 

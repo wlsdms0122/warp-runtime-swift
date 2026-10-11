@@ -348,7 +348,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether anything in here is a type parameter. A declaration without one
-    // is read as written, so nothing pays for a feature it does not use.
+    // is read as written.
     var isGeneric: Bool {
         switch self {
         // Both are types a call decides, and the deep question is only
@@ -501,7 +501,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     //
     // `Any` is not this. A slot declaring nothing accepts a null that arrives,
     // but it does not *spell* null as a value.
-    public func declaresNull(in types: TypeTable) -> Bool {
+    func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }
 
@@ -514,7 +514,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // This is the half of checking the builder can do. What a body computes is
     // not readable from the text, but what a *call* answers is: it is the
     // callee's declaration, and a declaration is text.
-    public func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
+    func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
         lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 

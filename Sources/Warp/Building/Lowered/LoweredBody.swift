@@ -16,9 +16,8 @@ struct LoweredBody: Sendable {
         // MARK: - Initializer
         // MARK: - Public
         // Whether this one node reads a slot of the range, apart from what nests
-        // in it. A further question over the same structure as `stand`, and it stays
-        // apart: this counts only the slots a body's value depends on, and leaves
-        // out the ones it binds.
+        // in it. Unlike `stand`, it counts only the slots a body's value
+        // depends on, and leaves out the ones it binds.
         func reads(_ slots: Range<Int>) -> Bool {
             switch self {
             case let .instruction(instruction):

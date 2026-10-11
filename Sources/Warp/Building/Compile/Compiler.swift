@@ -381,9 +381,7 @@ struct Compiler {
     // document is read.
     //
     // One may name another declared beside it, so they are settled in the order
-    // they read each other and that order is worked out first. What is wrong
-    // with a set of constants is a fact about that order, and asking the order
-    // is the whole of finding it.
+    // they read each other, and that order is worked out first.
     private func constants(
         of module: Module,
         at origin: Int,
@@ -427,7 +425,7 @@ struct Compiler {
                 known[name] = (
                     value,
                     LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: true, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: true)
                 )
             }
         }
@@ -483,9 +481,9 @@ struct Compiler {
                     in: context
                 )
 
-                guard let declared = variable.declared, let holding = declaredTypes[name] else {
+                guard let declared = variable.declared, let holding = declaredType else {
                     let holding = LoweredType(of: settled, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: false, in: context.loweredTypes)
+                        .refined(by: written.folded, fixed: false)
 
                     // A variable that declares nothing holds the type its
                     // start reads as, and an empty list or map holds no
@@ -494,7 +492,8 @@ struct Compiler {
                     guard !holding.holdsNoElement else {
                         throw BuildError(
                             "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type or casts its start",
+                                + " and declares no type, so nothing says what it holds."
+                                + " A variable starting empty declares its type or casts its start",
                             at: place
                         )
                     }

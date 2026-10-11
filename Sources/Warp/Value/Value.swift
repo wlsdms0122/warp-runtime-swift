@@ -16,9 +16,9 @@ import Foundation
 // handed data from outside a run is handed data alone, which is why the
 // writings say so where a caller can reach them with a procedure directly.
 //
-// Equality is written by hand because a procedure has no honest one: two
-// procedures are never equal, and identity is not a question this language lets
-// you ask.
+// Equality is strict, kind and spelling included, and written by hand: two
+// procedures are never equal, since identity is not a question this language
+// lets you ask, and a nameless record equals the map of its fields.
 public indirect enum Value: Sendable, Equatable {
     case null
     case bool(Bool)
@@ -606,10 +606,10 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The equality conditions test with. Strict except that worth unifies
-    // a whole number with the fraction of the same worth, and bytes, being an
+    // Sameness as `equal` answers it. Strict except that worth unifies a
+    // whole number with the fraction of the same worth, and bytes, being an
     // array, equal the array of the same elements, applied recursively
-    // through arrays and records.
+    // through arrays, records and maps.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
         case let (.int(whole), .double(fraction)), let (.double(fraction), .int(whole)):

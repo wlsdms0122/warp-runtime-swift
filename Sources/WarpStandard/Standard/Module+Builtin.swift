@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-public extension Module {
+extension Module {
     // The procedures an implementation writes in its own language, the ones
     // the standard vocabulary's page says the language cannot express: what
     // the bundles' builtin halves declare.

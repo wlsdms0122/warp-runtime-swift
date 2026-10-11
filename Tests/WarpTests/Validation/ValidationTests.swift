@@ -357,7 +357,7 @@ struct ValidationTests {
     }
 
     @Test("a closure a constant holds may not introduce a sibling's name")
-    func aClosureConstantMayNotShadowASibling() async throws {
+    func aClosureConstantMayNotShadowASibling() {
         // Given. The rule a body is held to at load, met here from the caller's
         // side. Neither module is made, and both are the same mistake: a name the
         // module bound, introduced again where it would take the constant's
@@ -383,8 +383,8 @@ struct ValidationTests {
 
         // When / Then. The two ways a closure introduces a name of its own
         for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            await #expect {
-                try await run(module(introducing: introduced))
+            #expect {
+                try module(introducing: introduced)
             } throws: { error in
                 error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
             }
@@ -1051,7 +1051,7 @@ struct ValidationTests {
         ]))
     }
 
-    @Test("a result after a leaving statement is refused at the check")
+    @Test("a result after a leaving statement is refused at the load")
     func aResultAfterLeavingIsRefused() {
         // Given. The syntactic half of the same rule, held where leaves are
         let sut = Procedure(
@@ -1166,6 +1166,66 @@ struct ValidationTests {
             )
         } throws: { error in
             "\(error)".contains("take the place of")
+        }
+    }
+
+    @Test("a name that is no record and comes back to itself refuses at the load")
+    func aNameComingBackRefusesAtTheLoad() {
+        // Given. A record may name itself, and a name that is no record
+        // spells no type where it reaches itself, through names or a structure
+        let cycles: [[Name: TypeExpression]] = [
+            ["Loop": .named("Loop")],
+            ["A": .named("B"), "B": .named("A")],
+            ["List": .array(.named("List"))]
+        ]
+
+        for types in cycles {
+            // When / Then
+            #expect {
+                try Module(
+                    types: types,
+                    procedures: [
+                        entryName: Procedure(
+                            access: .public,
+                            signature: Signature(),
+                            body: [],
+                            result: .literal(.int(1))
+                        )
+                    ]
+                )
+            } throws: { error in
+                error is ValidationError && "\(error)".contains("names itself through what it stands for")
+            }
+        }
+
+        // A recursive type passes: the name reaches a type on the way back.
+        #expect(throws: Never.self) {
+            try Module(
+                types: ["Tree": .record(["children": .array(.named("Tree"))])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
+        }
+    }
+
+    @Test("a name is a constant or a variable, and not both")
+    func aNameIsBoundOnce() {
+        // When / Then
+        #expect {
+            try Module(
+                imports: [],
+                constants: ["limit": .literal(.int(1))],
+                variables: ["limit": .literal(.int(2))],
+                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
+            )
+        } throws: { error in
+            "\(error)".contains("one name holds one thing")
         }
     }
 

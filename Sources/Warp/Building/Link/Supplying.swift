@@ -60,17 +60,21 @@ public struct Supplying: Sendable {
         self.hidden = [:]
     }
 
-    // A spelling two of them bring is refused here, for the reason a link
-    // refuses a name two documents declare: a table with two answers for one
-    // name has no answer, and which of the two a run would get is the order
-    // the host happened to write.
+    // A spelling two of them bring is refused here, in the words a link
+    // refuses a name two documents declare in: a table with two answers for
+    // one name has no answer, and which of the two a run would get is the
+    // order the host happened to write.
     public init(_ modules: [Module]) throws {
         var procedures: [Name: Brought] = [:]
         var hidden: [Identity: [Name: Brought]] = [:]
+        var bringing: [Name: String] = [:]
+        var bringingHidden: [Identity: [Name: String]] = [:]
 
-        for module in modules {
-            for (name, procedure) in module.procedures {
+        for (position, module) in modules.enumerated() {
+            for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 guard let native = procedure.implementation.native else { continue }
+
+                let declaration = Placed(procedure, at: .procedure(name.spelling, in: .of(module)), of: position)
 
                 let brought = Brought(
                     native: native,
@@ -86,28 +90,22 @@ public struct Supplying: Sendable {
                         continue
                     }
 
-                    guard hidden[identity]?[name] == nil else {
-                        throw BuildError(
-                            "'\(name)' is brought by two of the modules handed over under one document."
-                                + " Two procedures under one spelling have no way to be told apart",
-                            at: .procedure(name.spelling, in: .of(module))
-                        )
+                    if let first = bringingHidden[identity]?[name] {
+                        throw BuildError.declaredTwice(name, by: first, and: declaration.spelled, at: declaration.place)
                     }
 
                     hidden[identity, default: [:]][name] = brought
+                    bringingHidden[identity, default: [:]][name] = declaration.spelled
 
                     continue
                 }
 
-                guard !procedures.keys.contains(name) else {
-                    throw BuildError(
-                        "'\(name)' is brought by two of the modules handed over."
-                            + " Two procedures under one spelling have no way to be told apart",
-                        at: .procedure(name.spelling, in: .of(module))
-                    )
+                if let first = bringing[name] {
+                    throw BuildError.declaredTwice(name, by: first, and: declaration.spelled, at: declaration.place)
                 }
 
                 procedures[name] = brought
+                bringing[name] = declaration.spelled
             }
         }
 

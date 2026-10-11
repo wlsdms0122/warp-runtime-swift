@@ -455,7 +455,7 @@ struct InferenceTests {
     func aMapAnswerCarriesItsElementType() async throws {
         // Given. `map` declares its answer through type parameters: the
         // closure's declared answer fills `Answer`, so handing the fan-out's
-        // answer to a procedure that wants another kind is refused before anything
+        // answer to a procedure that wants another type is refused before anything
         // runs
         let sut = try Module(
             procedures: [
@@ -807,7 +807,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
+    @Test("a cast whose outer type cannot match is refused even where the inside is unproven")
     func aCastOntoAMismatchedKindIsRefusedThroughUnprovenInsides() async throws {
         // Given. `Array<Any>` proves an array is there. Nothing it holds is
         // proven, but that says nothing about whether the whole could be a

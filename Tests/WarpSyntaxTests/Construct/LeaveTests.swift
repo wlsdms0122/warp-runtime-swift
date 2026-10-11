@@ -17,11 +17,7 @@ import WarpStandard
 // Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
 // loop around it. A procedure could be handed the value and could not be told either
-// thing.
-//
-// Before these existed the only way out was to fail on purpose and catch it,
-// which meant a successful early exit had to travel down the failure channel.
-// These do not: a rescue is for what the world did.
+// thing. A rescue is for what the world did, so a leave is no failure.
 @Suite("A body can stop before its end")
 struct LeaveTests {
     // MARK: - Property
@@ -322,13 +318,11 @@ struct LeaveTests {
         #expect(try await answer(sut) == .string("the outer answer"))
     }
 
-    @Test("a body naming no result is worth nothing to the checker too")
+    @Test("a body naming no result is worth nothing to the build too")
     func theCheckerAgreesAboutWhatABodyAnswers() async throws {
-        // Given. The run answers nothing here, so the checker has to say the
-        // same. While it still read the last statement, this passed the block's
-        // answer as an int and then handed null over at the run. A program that
-        // linked and could never work, which is the one thing linking promises
-        // does not happen.
+        // Given. A block naming no result answers null at the run, so the
+        // build reads it as `Null` too, and handing it where `Int` is declared
+        // does not build.
         let sut: Value = [
             "procedures": [
                 "entry": [
@@ -361,8 +355,8 @@ struct LeaveTests {
     @Test("a body watched by a rescue is still inside the loop around it")
     func anAttemptDoesNotHideTheLoop() async throws {
         // Given. An `attempt` runs in step with the body around it, so a loop
-        // around the attempt is a loop around its body. The run always allowed
-        // this: a leaving is not a failure, so a rescue lets it past.
+        // around the attempt is a loop around its body. A leaving is not a
+        // failure, so a rescue lets it past.
         let sut = try loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],

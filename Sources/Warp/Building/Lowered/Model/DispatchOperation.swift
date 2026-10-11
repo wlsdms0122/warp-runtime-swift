@@ -11,15 +11,11 @@ import Foundation
 // what else the call was written with, and one lowered call for every type
 // that answers the procedure.
 //
-// Apart from `CallOperation` because the two are different facts. A call names
-// the row the link settled; this names a contract's procedure and leaves which
-// rows answer it to the link, because which types answer a contract is a fact
-// of the graph rather than of the document holding the call. A document's own
-// text cannot say it: a type declared in a document this one never names can
-// answer a contract this one calls through.
-//
-// So `calls` is empty in what compiling a document answers, and the link fills
-// it from the types it found. The run picks and does nothing else: every call
+// A call names the row the link settled; this names a contract's procedure,
+// and which types answer it is a fact of the link: a type declared in a
+// document this one never names can answer a contract this one calls through.
+// So `calls` is empty in what compiling a document answers, and the link
+// fills it from the types it found. The run picks and does nothing else: every call
 // in there is placed against its own row, arguments in that row's slot order.
 struct DispatchOperation: Sendable {
     // MARK: - Property

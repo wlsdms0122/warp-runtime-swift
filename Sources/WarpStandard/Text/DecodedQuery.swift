@@ -44,7 +44,7 @@ struct DecodedQuery: Query {
         let encoding = try CharacterEncoding(question[.encoding], for: "Standard.Text.decoded")
 
         guard let text = encoding.text(of: bytes) else {
-            throw ExecutionError("Standard.Text.decoded asks bytes that are text in the encoding named")
+            throw ExecutionError("Standard.Text.decoded asks an Array<Int> that is text in the encoding named")
         }
 
         return .string(text)
@@ -58,7 +58,7 @@ struct DecodedQuery: Query {
 
         for (position, element) in elements.enumerated() {
             guard case let .int(number) = element, UInt8(exactly: number) != nil else {
-                return "Standard.Text.decoded asks bytes, and [\(position)] is \(Rendering(element).text()), which is no whole number from 0 to 255"
+                return "Standard.Text.decoded asks an Array<Int> of bytes, and [\(position)] is \(Rendering(element).text()), which is no whole number from 0 to 255"
             }
         }
 

@@ -398,13 +398,13 @@ struct LoweringTests {
         }
     }
 
-    @Test("what is handed in place is the type the slot declares, and not one that fits it")
+    @Test("what is handed in place is held to the type the slot declares")
     func aHandedVariableIsTheSlotsOwnType() async throws {
-        // Given. A variable holding an unnamed record, handed to a slot
-        // declaring `Tag`. By value the boundary would settle it and the procedure
-        // would answer it named; in place there is nothing to settle into. The
-        // procedure writes through the caller's box, so what the caller reads back
-        // is whatever the procedure left there.
+        // Given. A variable holding an unnamed record, handed in place to a
+        // slot declaring `Tag`. A nameless record is no value of a declared
+        // record, so it is refused, and the same record held as a `Tag`
+        // stands. The procedure writes through the caller's box, so what the
+        // caller reads back is what the procedure left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
                 types: ["Tag": .record(["a": .int])],

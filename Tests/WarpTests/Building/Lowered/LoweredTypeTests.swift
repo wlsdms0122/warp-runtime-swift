@@ -134,12 +134,10 @@ struct LoweredTypeTests {
         let table = types.loweredTypes
 
         // When
-        let alias = try #require(table.row(named: "Bank.Acct"))
         let account = try #require(table.row(named: "Bank.Account"))
-        let whole = try #require(table.row(named: "App.Whole"))
 
-        // Then. The alias is the account's record, and a name for a kind
-        // names none
+        // Then. The alias is the account's record, and a name for a type the
+        // language names names none
         #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(account))
         #expect(TypeExpression.named("App.Whole").lowered(in: table) == .int)
         #expect(table.record(named: "Bank.Acct") == account)

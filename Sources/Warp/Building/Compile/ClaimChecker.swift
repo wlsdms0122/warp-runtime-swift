@@ -390,7 +390,7 @@ struct ClaimChecker {
 
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
-                        + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
+                        + " where its bounds \(bounds.map(\.spelling).joined(separator: " & ")) do not take it"
             }
         }
 
@@ -414,7 +414,7 @@ struct ClaimChecker {
         // What the declaration wrote is rendered as lowered, so a type
         // parameter names the bound its signature holds it to.
         let declared = given.returns?.lowered(in: loweredTypes, bounds: given.bounds)
-        let answered = (declared ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+        let answered = (declared ?? read ?? .any)
             .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes, rigid: true) else {

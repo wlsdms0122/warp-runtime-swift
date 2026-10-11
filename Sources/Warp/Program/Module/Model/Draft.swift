@@ -22,9 +22,7 @@ public struct Draft: Sendable {
     // another document for, and how many closures each of its declarations
     // wrote.
     //
-    // One value rather than one question at a time, because every one of these
-    // is answered by walking the same text and the same tables. Asking for them
-    // apart walks the document once for each.
+    // One value, since every one of these is read by one walk of the text.
     struct Reading: Sendable {
         // MARK: - Property
         let sends: Set<Name>
@@ -84,10 +82,9 @@ public struct Draft: Sendable {
     // named for a type and a procedure nobody claimed is that document's procedure and
     // nothing more.
     //
-    // Said here rather than beside the type, because the type may be another
-    // document's. A document that arrives later gives a type it did not
-    // declare the procedures a contract asks, and saying it beside the type would
-    // leave that document nowhere to say it.
+    // Said here, since the type may be another document's: a document that
+    // arrives later gives a type it did not declare the procedures a contract
+    // asks.
     public let claims: [Name: Set<Name>]
 
     public let constants: [Name: Expression]
@@ -132,7 +129,7 @@ public struct Draft: Sendable {
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable] = [:],
-        procedures: [Name: Procedure]
+        procedures: [Name: Procedure] = [:]
     ) {
         self.description = description
         self.imports = imports

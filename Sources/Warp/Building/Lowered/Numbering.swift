@@ -40,10 +40,8 @@ struct Numbering: Sendable {
 
     // How many closures this document numbers. A link resolves them by the rows
     // they took, and a list shorter than this is a document whose bodies are
-    // not all lowered yet. A count and not a list: a closure's reference is
-    // the position it stands at, so a row per closure would hold nothing the
-    // count does not already say, and a number read off an object would
-    // decide how many of them to stand up.
+    // not all lowered yet. A closure's reference is the position it stands at,
+    // so the count says all a list would.
     let closureCount: Int
 
     private let called: [Name: Int]
@@ -141,16 +139,12 @@ struct Numbering: Sendable {
 
     // MARK: - Public
     // What this counts from, said as a value, so an object carries the
-    // numbering its bodies were lowered against.
+    // numbering its bodies were lowered against: what a reading uses and
+    // cannot work out. The numbers a name stands at are arithmetic over the
+    // spellings, so they are not written; how many closures each declaration
+    // wrote is, since lowering a closure literal in a dependency's body asks
+    // where that declaration's run begins.
     //
-    // What is written is what a reading will use and cannot work out. The
-    // numbers a name stands at and what counts from what are one arithmetic
-    // over the spellings, so writing them down would make a numbering whose
-    // parts disagree something an object can hold.
-    //
-    // How many closures each declaration wrote is neither: folding runs a
-    // dependency's body against this, and lowering a closure literal there
-    // asks where that declaration's run begins.
     // The spellings this document declares are written once, beside the
     // table, so only what it sends and what it counted stand here.
     func written(dropping declared: Int) -> Value {

@@ -7,14 +7,13 @@
 
 import Foundation
 
-// The declared types as the run reads them: by row. A declared record
-// survives into the run as a row rather than being expanded, since it is
-// nominal and may name itself, and a row is read by number. An alias is a
-// spelling: a mention of it lowers to what it stands for, so no judgement
-// meets one, and a row a type stands on is always a record's. The
-// spellings ride along for a refusal and for a record's name. A class, so a judgement that
-// recurses passes one reference down rather than a copy of every array the
-// table holds.
+// The declared types as the run reads them: by row. A declared record survives
+// into the run as a row rather than being expanded, since it is nominal and may
+// name itself, and a row is read by number. An alias is a spelling: a mention
+// of it lowers to what it stands for, so no judgement meets one, and a row a
+// type stands on is always a record's. The spellings ride along for a refusal
+// and for a record's name. A class, so a judgement that recurses passes one
+// reference down rather than a copy of every array the table holds.
 final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
     // type alone settles is settled here; a named type settles nothing,

@@ -204,6 +204,7 @@ final class Relocating {
             place: .procedure(row.label.spelling, in: documents[row.origin]),
             typeRows: typeRows[row.origin]
         )
+
         switch row.implementation {
         case let .body(body, frame):
             return Linked(row, implementation: .body(try filled(body, in: context), frame))
