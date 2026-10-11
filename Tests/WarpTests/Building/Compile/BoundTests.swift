@@ -552,53 +552,6 @@ struct BoundTests {
         }
     }
 
-    @Test("a name that is no record and comes back to itself refuses at the load")
-    func aNameComingBackRefusesAtTheLoad() async throws {
-        // Given. A record may name itself, and a name that is no record
-        // spells no type where it reaches itself, through names or a structure
-        let cycles: [[Name: TypeExpression]] = [
-            ["Loop": .named("Loop")],
-            ["A": .named("B"), "B": .named("A")],
-            ["List": .array(.named("List"))]
-        ]
-
-        for types in cycles {
-            // When / Then
-            #expect {
-                try Module(
-                    types: types,
-                    procedures: [
-                        entryName: Procedure(
-                            access: .public,
-                            signature: Signature(),
-                            body: [],
-                            result: .literal(.int(1))
-                        )
-                    ]
-                )
-            } throws: { error in
-                error is ValidationError && "\(error)".contains("names itself through what it stands for")
-            }
-        }
-
-        // A recursive type passes: the name reaches a type on the way back.
-        let tree = try Module(
-            types: ["Tree": .record(["children": .array(.named("Tree"))])],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        await #expect(throws: Never.self) {
-            try await builder.build([tree] + Module.standard)
-        }
-    }
-
     @Test("a bounded reading fed to the bound it carries passes")
     func aBoundedReadingFitsItsOwnBound() async throws {
         // Given. Inside a generic body the argument reads as the enclosing

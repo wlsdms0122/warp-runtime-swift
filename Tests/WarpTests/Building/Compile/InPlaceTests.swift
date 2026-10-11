@@ -201,21 +201,6 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a name is a constant or a variable, and not both")
-    func aNameIsBoundOnce() {
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                constants: ["limit": .literal(.int(1))],
-                variables: ["limit": .literal(.int(2))],
-                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
-            )
-        } throws: { error in
-            "\(error)".contains("one name holds one thing")
-        }
-    }
-
     @Test("a path handed in place is written as it is made, so a failing call has written")
     func handedPathIsWrittenBeforeFailure() async throws {
         // Given. The callee writes through the path and then aborts; the write

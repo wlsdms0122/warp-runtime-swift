@@ -95,13 +95,18 @@ struct TypeNotationTests {
 
         // And. A document writes the set one way, in name order, and a name
         // written twice is one name, which `&` does not join
-        for (written, imports) in [("App.B & App.A", ["App.A", "App.B"]), ("App.A & App.A", ["App.A"])] as [(String, Value)] {
-            #expect(throws: (any Error).self) {
+        for (written, imports, one) in [
+            ("App.B & App.A", ["App.A", "App.B"], "App.A & App.B"),
+            ("App.A & App.A", ["App.A"], "App.A")
+        ] as [(String, Value, String)] {
+            #expect {
                 try Loader().load([
                     "warp": 1,
                     "imports": imports,
                     "procedures": ["entry": ["parameters": [["name": "x", "type": .string(written)]]]]
                 ])
+            } throws: { error in
+                "\(error)".contains("says each thing one way") && "\(error)".contains("The one way writes \"\(one)\"")
             }
         }
     }
