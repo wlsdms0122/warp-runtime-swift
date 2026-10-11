@@ -195,13 +195,28 @@ struct ObjectReader {
         // A value the model refuses is one the writing could not have laid
         // down, and so one this reading refuses as an object.
         case .record:
-            let named = try cursor.field().maybe(name)
+            let named = try name(cursor.next())
             let names = try cursor.field().list(name)
             let values = try cursor.field().list(self.value)
 
             read = try refusing {
                 .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
             }
+
+        // The keys in the key order, none the same as another, which is how
+        // the writing lays a map down.
+        case .dictionary:
+            let keys = try cursor.field().list(self.value)
+            let values = try cursor.field().list(self.value)
+
+            guard
+                keys.count == values.count,
+                zip(keys, keys.dropFirst()).allSatisfy({ one, other in Value.Dictionary.order(one, other) == .orderedAscending })
+            else {
+                throw ObjectRefused("'map' writes its keys out of the key order, one twice, or another count than its values")
+            }
+
+            read = .dictionary(Value.Dictionary(ordered: Array(zip(keys, values)).map { key, value in (key: key, value: value) }))
 
         case .closure:
             let writer = Closure.Writer(
@@ -663,6 +678,10 @@ struct ObjectReader {
 
         try cursor.end()
 
+        guard let named else {
+            throw ObjectRefused("'layout' writes no name, and a record is a declared record's")
+        }
+
         // Through the door that judges rather than the one that orders. What
         // stands beside a layout here is a list of values read on its own, and
         // a reading that put the names in order would pair them with values
@@ -736,11 +755,19 @@ struct ObjectReader {
         return read
     }
 
+    // A record type's layout may write no name, for a record literal's
+    // reading no place named.
     private func loweredRecord(_ value: Value) throws -> LoweredRecord {
         var cursor = try FieldCursor(value, of: "record")
-        let held = try layout(cursor.next())
+        var layout = try FieldCursor(cursor.next(), of: "layout")
+        let named = try layout.field().maybe(name)
+        let names = try layout.field().list(name)
+
+        try layout.end()
+
         let read = try LoweredRecord(
-            layout: held,
+            name: named,
+            names: names,
             judging: try cursor.field().list(lowered)
         )
 

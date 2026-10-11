@@ -18,7 +18,7 @@ extension Value {
     func divergence(from other: Value) -> (steps: [Place.Step], held: Value?)? {
         guard nominal == other.nominal else { return ([], other) }
 
-        if let mine = asDictionary, let theirs = other.asDictionary {
+        if case let .dictionary(mine) = self, case let .dictionary(theirs) = other {
             let keys = theirs.keys.reduce(mine) { both, key in both.writing(key: key, with: .null) }.keys
 
             for key in keys {

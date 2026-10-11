@@ -327,18 +327,18 @@ struct TypeNotationTests {
                 "entry": [
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
-                    "result": ["record": ["result": ["ref": "seen"]]]
+                    "result": ["dictionary": [["result", ["ref": "seen"]]]]
                 ]
             ]
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .string("a")])])])
+        let good = try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .string("a")]))])])
 
         #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .int(1)])])])
+            try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .int(1)]))])])
         }
     }
 

@@ -76,18 +76,12 @@ public struct ExpressionReader: Decodable {
                 return try read(record: fields, at: steps, in: decoder)
 
             // A form is keys the notation reserved, and a name under which a
-            // value stands is not one of them. So a value the document named
+            // value stands is not one of them. So a record the document named
             // is read as the literal it spells, name included, and a procedure
             // as the value it is, for the `Validator` to refuse; reading
             // either as a form would drop what it is refused for.
-            case let .record(record) where record.name != nil:
+            case .record, .procedure:
                 return .literal(value)
-
-            case .procedure:
-                return .literal(value)
-
-            case let .record(record):
-                return try read(record: record.asDictionary, at: steps, in: decoder)
             }
         } catch let error as ExpressionFormError {
             throw ReadingError(error.message, at: steps)
@@ -169,12 +163,12 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         // A named record is data written as itself, so it reads as the literal
-        // it writes, and the load holds a literal to writing no record's name.
-        if case let .record(named) = written, named.name != nil {
+        // it writes, and the load holds a literal to holding no record.
+        if case .record = written {
             return .literal(written)
         }
 
-        guard let record = written.asDictionary else {
+        guard case let .dictionary(record) = written else {
             throw ExpressionFormError("`record` takes a mapping of its fields")
         }
 
@@ -243,7 +237,7 @@ public struct ExpressionReader: Decodable {
         let key = (optional ? ExpressionTag.optionalCast : ExpressionTag.cast).key
 
         guard
-            let cast = written.asDictionary,
+            case let .dictionary(cast) = written,
             cast.count == 2,
             let subject = cast[Self.subjectKey],
             let spelled = cast[Self.typeKey]

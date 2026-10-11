@@ -66,7 +66,7 @@ struct LoweredBodyWalkTests {
                 return [.array([leaf])]
 
             case .record:
-                return [.record(RecordOperation(layout: try Layout(fields: ["a"]), fields: [leaf]))]
+                return [.record(RecordOperation(layout: Layout(name: "App.A", ordered: ["a"]), fields: [leaf]))]
 
             case .dictionary:
                 return [.dictionary([(key: leaf, value: .literal(.null))]), .dictionary([(key: .literal(.null), value: leaf)])]

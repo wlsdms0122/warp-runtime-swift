@@ -17,10 +17,7 @@ extension TypeDeclaration {
             let ordered = fields.sorted { left, right in left.key < right.key }
 
             return .record(
-                LoweredRecord(
-                    layout: Layout(name: label, ordered: ordered.map(\.key)),
-                    fields: ordered.map { _, field in field.lowered(in: table) }
-                )
+                LoweredRecord(name: label, names: ordered.map(\.key), fields: ordered.map { _, field in field.lowered(in: table) })
             )
 
         case let .alias(type):

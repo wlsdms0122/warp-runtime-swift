@@ -153,11 +153,7 @@ struct LoweringTests {
         // names, so the body reads the constant the way it reads any name
         let module = try Module(
             constants: [
-                "digits": .cast(
-                    .record(["0": .literal(.int(0)), "1": .literal(.int(1))]),
-                    as: .dictionary(key: .string, value: .int),
-                    optional: false
-                )
+                "digits": map(["0": .literal(.int(0)), "1": .literal(.int(1))])
             ],
             procedures: [
                 entryName: Procedure(

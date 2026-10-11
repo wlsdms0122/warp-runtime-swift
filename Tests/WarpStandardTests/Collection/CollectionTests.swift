@@ -70,7 +70,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "doubled": reference("doubled"),
                         "kept": reference("kept"),
                         "total": reference("total")
@@ -228,7 +228,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "grown": reference("grown"),
                         "moved": reference("moved")
                     ])
@@ -280,7 +280,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "changed": reference("changed"),
                         "held": reference("held"),
                         "named": reference("named")

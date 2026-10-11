@@ -139,7 +139,7 @@ struct SharedGroundTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "product": reference("product"),
                         "quotient": reference("quotient"),
                         "sum": reference("sum")

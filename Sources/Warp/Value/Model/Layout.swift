@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Where a record's fields are: the name it carries, where it has one, and
+// Where a record's fields are: the name of the declared record it is, and
 // the field names in the order the values stand. The order is the language's,
 // not a maker's (ascending by the names' bytes) so a layout built by a link, a
 // reader or a host is the same layout for the same fields.
@@ -23,31 +23,16 @@ import Foundation
 // through `Any` is the spelling it was written as.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
-    public let name: Name?
+    public let name: Name
 
     // In ascending byte order, as `Name`'s `<` orders them.
     public let fields: [Name]
 
     // MARK: - Initializer
-    // Fields in any order, none of which repeats, under no name: a name says
-    // a declaration, and a declaration is the link's. `Value.holding(_:named:)`
-    // carries one an encoding read, and `Image.settling(_:as:)` one the link
-    // declared.
-    public init(fields: [Name]) throws {
-        let sorted = fields.sorted()
-
-        if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one == other }) {
-            throw ValueRefused("a layout names '\(repeated.0)' twice")
-        }
-
-        self.name = nil
-        self.fields = sorted
-    }
-
     // Fields already in order, where that is a claim about what was handed
     // rather than something to put right. A reading that sorted them would
     // pair them with values it read somewhere else.
-    init(name: Name?, judging fields: [Name]) throws {
+    init(name: Name, judging fields: [Name]) throws {
         guard fields.ordered else {
             throw ValueRefused("a layout's fields are not in name order")
         }
@@ -57,7 +42,7 @@ public struct Layout: Sendable, Hashable {
 
     // The inner door: names already in order, none repeating, where the maker
     // sorted them itself.
-    init(name: Name?, ordered fields: [Name]) {
+    init(name: Name, ordered fields: [Name]) {
         assert(fields.ordered, "a layout's fields are ordered by name")
 
         self.name = name

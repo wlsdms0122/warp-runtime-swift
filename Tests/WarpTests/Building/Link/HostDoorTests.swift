@@ -135,7 +135,7 @@ struct HostDoorTests {
         let image = try await Builder().build([sut])
 
         // When
-        let settled = try image.settling(.dictionary(["balance": .int(1)]), as: "Bank.Account")
+        let settled = try image.settling(.record(Record(name: "Bank.Account", ["balance": .int(1)])), as: "Bank.Account")
 
         // Then
         guard case let .record(record) = settled else {
@@ -166,7 +166,7 @@ struct HostDoorTests {
 
         // When / Then
         #expect {
-            try image.settling(.dictionary(["balance": .string("much")]), as: "Bank.Account")
+            try image.settling(.record(Record(name: "Bank.Account", ["balance": .string("much")])), as: "Bank.Account")
         } throws: { error in
             error is ArgumentError && "\(error)".contains("expected Int, got String")
         }
@@ -179,7 +179,7 @@ struct HostDoorTests {
 
         // When
         let settled = try image.settling(
-            .dictionary(["balance": .int(1), "note": .string("x")]),
+            .record(Record(name: "Bank.Account", ["balance": .int(1), "note": .string("x")])),
             as: "Bank.Account"
         )
 

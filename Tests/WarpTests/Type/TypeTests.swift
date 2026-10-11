@@ -80,14 +80,12 @@ struct TypeTests {
         let sut = TypeExpression.named("Someone")
 
         // When
-        let bare = try sut.settling(.dictionary(["name": .string("a")]), at: "who", in: types)
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
-        // Then. Every one settles under the record's own name
-        #expect(bare == .record(Record(name: "Person", ["name": .string("a")])))
-        #expect(aliased == bare)
-        #expect(named == bare)
+        // Then. Either settles under the record's own name
+        #expect(aliased == .record(Record(name: "Person", ["name": .string("a")])))
+        #expect(named == aliased)
     }
 
     @Test("a named type resolves through the table it was declared in")
@@ -98,7 +96,7 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .array([.dictionary(["id": .string("a")])]),
+            .array([.record(Record(name: "Task", ["id": .string("a")]))]),
             at: "tasks",
             in: types
         )
@@ -107,7 +105,7 @@ struct TypeTests {
         #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.array([.dictionary(["id": .int(1)])]), at: "tasks", in: types)
+            try sut.settling(.array([.record(Record(name: "Task", ["id": .int(1)]))]), at: "tasks", in: types)
         }
     }
 
@@ -122,10 +120,10 @@ struct TypeTests {
 
         // When
         let settled = try sut.settling(
-            .dictionary([
+            .record(Record(name: "Tree", [
                 "value": .int(1),
-                "children": .array([.dictionary(["value": .int(2), "children": .array([])])])
-            ]),
+                "children": .array([.record(Record(name: "Tree", ["value": .int(2), "children": .array([])]))])
+            ])),
             at: "tree",
             in: types
         )
@@ -346,20 +344,18 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a nameless record as the map it is, and no declared record")
-    func aRecordSettlesIntoADictionaryAsData() throws {
-        // Given. A nameless record holds its names as data, and a declared
-        // record is a value of its name, which nothing takes off
-        let nameless = Value.record(Record(name: nil, ["balance": .int(1)]))
+    @Test("a map slot takes a map and no record")
+    func aRecordDoesNotSettleIntoAMap() throws {
+        // Given. A record is a value of its declared record, and no map
+        let types = try TypeTable(types: ["Bank.Account": .record(["balance": .int])])
+        let map = Value.dictionary(["balance": .int(1)])
         let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
+        let sut = TypeExpression.dictionary(key: .string, value: .any)
 
-        // When
-        let settled = try TypeExpression.dictionary(key: .string, value: .any).settling(nameless, at: "held")
-
-        // Then
-        #expect(settled == .dictionary(["balance": .int(1)]))
+        // When / Then
+        #expect(try sut.settling(map, at: "held", in: types) == map)
         #expect(throws: ArgumentError.self) {
-            try TypeExpression.dictionary(key: .string, value: .any).settling(named, at: "held")
+            try sut.settling(named, at: "held", in: types)
         }
     }
 

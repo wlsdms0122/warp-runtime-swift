@@ -82,7 +82,7 @@ struct IsolationTests {
                         Call(
                             selector: "Standard.Concurrent.allKeyed",
                             arguments: [
-                                .record([
+                                map([
                                     "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                                     "right": .closure(
                                         Procedure(body: [], result: .call(Call(selector: "App.ticket")))
@@ -100,7 +100,7 @@ struct IsolationTests {
             try await run([sut, .ticketing])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("right: const Procedure<() -> Int> } where Dictionary<String, isolated Procedure<() -> Int>> is declared")
+                && "\(error)".contains("String: const Procedure<() -> Int>] where Dictionary<String, isolated Procedure<() -> Int>> is declared")
         }
     }
 

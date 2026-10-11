@@ -55,7 +55,7 @@ struct VariableTests {
                     Call(
                         selector: "Standard.Concurrent.allKeyed",
                         arguments: [
-                            .record([
+                            map([
                                 "left": .closure(
                                     Procedure(
                                         body: [

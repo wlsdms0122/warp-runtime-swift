@@ -321,7 +321,7 @@ struct ValueDecoder: Decoder {
 
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard let record = value.asDictionary else {
+        guard case let .dictionary(record) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
@@ -400,7 +400,7 @@ struct ValueDecoder: Decoder {
     // Sorted rather than as-written because a document is a value by then and a
     // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
-        guard let record = value.asDictionary else {
+        guard case let .dictionary(record) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
@@ -444,15 +444,13 @@ struct ValueDecoder: Decoder {
     }
 
     // MARK: - Private
-    // Looked up where the value keeps it, so that a reader asking for its
-    // keys one after another does not rebuild a record as a dictionary once
-    // per key.
+    // Looked up where the map keeps it, under the key's text.
     private func held(_ key: String) throws -> Value? {
-        guard value.holdsFields else {
+        guard case let .dictionary(held) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
-        return (try? Name(key)).flatMap { name in value[name] }
+        return held[key: .string(key)]
     }
 
     private func descending(to key: String, holding held: Value) -> ValueDecoder {

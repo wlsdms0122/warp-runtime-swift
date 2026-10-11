@@ -150,22 +150,21 @@ struct LoweredTypeTests {
         #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
     }
 
-    @Test("a record named at an alias slot takes the canonical name, settles again by comparison, and a nameless one is refused")
+    @Test("a record handed in under an alias's name takes its record's name, settles again by comparison, and a map is refused")
     func aRecordSettlesUnderTheCanonicalName() throws {
-        // Given. A slot spelled with the alias, a nameless record a cast or a
-        // door names, and one a door is handed under the alias's name
+        // Given. A slot spelled with the alias, and a record a door is handed
+        // under the alias's name
         let table = types.loweredTypes
         let slot = TypeExpression.named("Bank.Acct").lowered(in: table)
-        let owner = Value.dictionary(["name": .string("a")])
+        let owner = Value.record(Record(name: "Bank.Owner", ["name": .string("a")]))
 
         // When
-        let settled = try slot.settling(slot.named(.dictionary(["balance": .int(1), "owner": owner]), in: table), at: "input", in: table)
-        let again = try slot.settling(settled, at: "input", in: table)
-        let spelled = try slot.settling(
+        let settled = try slot.settling(
             outside: .record(Record(name: "Bank.Acct", ["balance": .int(1), "owner": owner])),
             at: "input",
             in: table
         )
+        let again = try slot.settling(settled, at: "input", in: table)
 
         // Then
         #expect(
@@ -174,7 +173,6 @@ struct LoweredTypeTests {
             )
         )
         #expect(again == settled)
-        #expect(spelled == settled)
         #expect {
             try slot.settling(.record(Record(name: "Bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
         } throws: { error in

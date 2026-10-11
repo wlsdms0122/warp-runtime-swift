@@ -125,9 +125,6 @@ struct Fanout: Sendable {
         of invocation: Invocation<P>
     ) throws -> ([Piece], keyed: Bool) where P.Parameters == FanoutOperand {
         switch invocation[.pieces] {
-        case let .record(record):
-            return (try pieces(of: record.asDictionary), keyed: true)
-
         case let .dictionary(held):
             return (try pieces(of: held), keyed: true)
 

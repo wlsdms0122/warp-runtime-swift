@@ -1457,6 +1457,12 @@ struct TypeChecker {
                 flow.fail()
             }
 
+            // A record literal the cast reads is written into the record the
+            // cast names, and takes its name there.
+            var judgements = inner.judgements
+
+            judgements.record(names: claim.naming(value, at: place.child(.subject(optional: optional)), in: context.loweredTypes))
+
             return Inspection(
                 // The author's spelling stands, so a document written back
                 // out keeps the declaration it leaned on.
@@ -1464,7 +1470,7 @@ struct TypeChecker {
                     ? .cast(inner.rewritten, as: type, optional: optional)
                     : expression,
                 calls: inner.calls,
-                judgements: inner.judgements,
+                judgements: judgements,
                 // `?` is asked of the fact: a type that already holds null is
                 // not wrapped again.
                 reading: handed,

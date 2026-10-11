@@ -88,23 +88,17 @@ struct ObjectWriter {
         case let .record(record):
             return tagged(
                 Tag.record,
-                Self.maybe(record.layout.name, name),
+                name(record.name),
                 .array(record.layout.fields.map(name)),
                 .array(try record.values.map(self.value))
             )
 
-        // A map keyed by text is a record with no name, written as one.
+        // The keys in the key order the map holds them in, and the values
+        // beside them.
         case let .dictionary(dictionary):
             return tagged(
-                Tag.record,
-                Self.maybe(nil, name),
-                .array(try dictionary.keys.map { (key) throws(ObjectUnwritable) -> Value in
-                    guard case let .string(text) = key, let field = try? Name(text) else {
-                        throw ObjectUnwritable("a value holds a map keyed by what is no name")
-                    }
-
-                    return name(field)
-                }),
+                Tag.dictionary,
+                .array(try dictionary.keys.map(self.value)),
                 .array(try dictionary.values.map(self.value))
             )
 
@@ -512,8 +506,14 @@ struct ObjectWriter {
         }
     }
 
+    // A layout is written `[name, fields]`, the name a list of one, the shape
+    // a record type's layout writes where a literal's reading names none.
     private func layout(_ layout: Layout) -> Value {
-        .array([ObjectWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
+        self.layout(named: layout.name, layout.fields)
+    }
+
+    private func layout(named: Name?, _ fields: [Name]) -> Value {
+        .array([ObjectWriter.maybe(named, name), .array(fields.map(name))])
     }
 
     private func lowered(_ type: LoweredType) -> Value {
@@ -585,7 +585,7 @@ struct ObjectWriter {
     }
 
     private func loweredRecord(_ record: LoweredRecord) -> Value {
-        .array([layout(record.layout), .array(record.fields.map(lowered))])
+        .array([layout(named: record.name, record.names), .array(record.fields.map(lowered))])
     }
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {

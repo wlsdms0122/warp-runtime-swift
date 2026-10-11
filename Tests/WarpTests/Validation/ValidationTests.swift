@@ -797,10 +797,10 @@ struct ValidationTests {
         }
     }
 
-    @Test("a literal holds no map, which a document writes as a record cast to it")
-    func aLiteralMapIsRefused() throws {
+    @Test("a literal may hold a map, which a document writes as the map literal that makes it")
+    func aLiteralMapStands() throws {
         // When / Then
-        #expect {
+        #expect(throws: Never.self) {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -810,8 +810,6 @@ struct ValidationTests {
                     )
                 ]
             )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal holds a map")
         }
     }
 
@@ -839,7 +837,7 @@ struct ValidationTests {
         #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key("a")]))]))
     }
 
-    @Test("a literal names no record, at whatever depth it holds one", arguments: [
+    @Test("a literal holds no record, at whatever depth it holds one", arguments: [
         Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
         .array([.record(Record(name: "Int", ["x": .int(1)]))])
     ])
@@ -850,7 +848,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal writes a record's name")
+            error is ValidationError && "\(error)".contains("a literal holds a record")
         }
     }
 
@@ -956,7 +954,7 @@ struct ValidationTests {
         // Given
         let sut = Procedure(
             body: [Statement(binding: .constant("made"), expression: .literal(.int(1)))],
-            result: .record(["ok": reference("made"), "bad": reference("never")])
+            result: map(["ok": reference("made"), "bad": reference("never")])
         )
 
         // When / Then

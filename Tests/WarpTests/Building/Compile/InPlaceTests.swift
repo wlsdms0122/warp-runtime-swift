@@ -108,7 +108,7 @@ struct InPlaceTests {
         // names it holds them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .cast(.record(["x": .literal(.int(0))]), as: .dictionary(key: .string, value: .int), optional: false)],
+            variables: ["seen": map(["x": .literal(.int(0))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -162,7 +162,7 @@ struct InPlaceTests {
         // start says nothing about what the box will hold, the declaration
         // does, and a write of something else is held to it.
         let sut = try Module(
-            variables: ["seen": ModuleVariable(.record([:]), declared: .dictionary(key: .string, value: .int))],
+            variables: ["seen": ModuleVariable(map([:]), declared: .dictionary(key: .string, value: .int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -320,8 +320,8 @@ struct InPlaceTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .dictionary(key: .string, value: .int), optional: false)
+                            binding: .variable("table", declared: .dictionary(key: .string, value: .int)),
+                            expression: map([:])
                         ),
                         Statement(
                             expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))

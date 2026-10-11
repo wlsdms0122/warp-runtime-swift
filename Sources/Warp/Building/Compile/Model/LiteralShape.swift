@@ -51,10 +51,9 @@ enum LiteralShape: Sendable {
         self = shape ?? .part(reading)
     }
 
-    // A list or a record written out as a value, which is a literal the way
-    // one written part by part is: each element and each field of a record
-    // with no name is a part of its own. Nil for a value of any other kind,
-    // which its reading says whole.
+    // A list or a map written out as a value, which is a literal the way one
+    // written part by part is: each element, key and value is a part of its
+    // own. Nil for a value of any other kind, which its reading says whole.
     init?(literal value: Value, in table: LoweredTypeTable) {
         switch value {
         case let .array(elements):
@@ -62,14 +61,13 @@ enum LiteralShape: Sendable {
                 LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table))
             })
 
-        case let .record(record) where record.name == nil:
-            self = .record(
-                Dictionary(
-                    zip(record.names, record.values).map { name, field in
-                        (name, LiteralShape(literal: field, in: table) ?? .part(LoweredType(literal: field, in: table)))
-                    }
-                ) { first, _ in first }
-            )
+        case let .dictionary(entries):
+            self = .map(entries.entries.map { entry in
+                (
+                    key: LiteralShape(literal: entry.key, in: table) ?? .part(LoweredType(literal: entry.key, in: table)),
+                    value: LiteralShape(literal: entry.value, in: table) ?? .part(LoweredType(literal: entry.value, in: table))
+                )
+            })
 
         default:
             return nil
@@ -151,7 +149,7 @@ enum LiteralShape: Sendable {
         // A record literal is written with exactly the fields the place
         // declares; one of other fields is held whole, and refused there.
         case let .record(record) where !inPlaceAtParameter:
-            guard case let .record(fields) = self, Set(fields.keys) == Set(record.layout.fields) else { break }
+            guard case let .record(fields) = self, Set(fields.keys) == Set(record.names) else { break }
 
             return record.named.allSatisfy { name, field in
                 fields[name].map { given in

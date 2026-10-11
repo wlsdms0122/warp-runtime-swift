@@ -47,7 +47,7 @@ struct DeclaredSpellingTests {
                     body: [],
                     result: .call(Call(
                         selector: "Store.keep",
-                        arguments: [.literal(.record(Record(name: nil, ["id": .string("a")])))]
+                        arguments: [.record(["id": .literal(.string("a"))])]
                     ))
                 )
             ]

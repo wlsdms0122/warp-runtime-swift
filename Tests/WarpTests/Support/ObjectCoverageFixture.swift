@@ -69,7 +69,6 @@ enum ObjectCoverageFixture {
                         .string("s"),
                         .bytes([1, 2]),
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
-                        .record(Record(name: nil, ["c": .null])),
                         .dictionary(Value.Dictionary(ordered: [(key: "k", value: .int(3))])),
                         .procedure(Closure(writer: Closure.Writer(document: .written(Identity([4])), declaration: .procedure("a.ten")), nth: 0, linked: nil, captured: []))
                     ])
@@ -116,7 +115,8 @@ enum ObjectCoverageFixture {
     // Every case of `LoweredType`, the same way.
     static let everyLoweredType: LoweredType = .record(
         LoweredRecord(
-            layout: try! Layout(fields: Self.loweredFields.map(\.0)),
+            name: nil,
+            names: Self.loweredFields.map(\.0).sorted(),
             fields: Self.loweredFields.sorted { one, other in one.0 < other.0 }.map(\.1)
         )
     )
@@ -251,7 +251,7 @@ enum ObjectCoverageFixture {
     ]
 
     static let recordOperation = RecordOperation(
-        layout: try! Layout(fields: ["x", "y"]),
+        layout: Layout(name: "a.four", ordered: ["x", "y"]),
         fields: [.literal(.int(10)), .literal(.int(11))]
     )
 

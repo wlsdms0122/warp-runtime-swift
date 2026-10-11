@@ -138,7 +138,7 @@ struct DeclaredNameTests {
                     body: [
                         Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
                     ],
-                    result: .record(["got": reference("held")])
+                    result: reference("held")
                 )
             ]
         )
@@ -147,7 +147,7 @@ struct DeclaredNameTests {
         let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
 
         // Then
-        #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
+        #expect(answer == .double(1))
     }
 
     @Test("a declaration inside a module variable is held the way one inside a procedure is")

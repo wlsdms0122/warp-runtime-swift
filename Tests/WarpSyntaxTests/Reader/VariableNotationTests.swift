@@ -35,7 +35,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -59,7 +59,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -83,7 +83,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "inner"]]]
+            "result": ["dictionary": [["result", ["ref": "inner"]]]]
         ]
 
         // When / Then
@@ -106,7 +106,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
@@ -122,7 +122,7 @@ struct VariableNotationTests {
         // the two mistakes this is
         let fixture: Value = [
             "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ]
 
         // When / Then
@@ -136,7 +136,7 @@ struct VariableNotationTests {
         // Given
         let fixture: Value = [
             "body": [["set": "verdict", "value": "second"]],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ]
 
         // When / Then
@@ -162,7 +162,7 @@ struct VariableNotationTests {
                     ]
                 ]
             ],
-            "result": ["record": ["result": ["ref": "tally"]]]
+            "result": ["dictionary": [["result", ["ref": "tally"]]]]
         ]
 
         // When / Then
@@ -181,8 +181,7 @@ struct VariableNotationTests {
                     "value": ["call": [
                         "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
-                            ["record": [
-                                "left": [
+                            ["dictionary": [["left", [
                                     "closure": [
                                         "body": [
                                             ["var": "tally", "value": 0],
@@ -190,14 +189,12 @@ struct VariableNotationTests {
                                         ],
                                         "result": ["ref": "tally"]
                                     ]
-                                ],
-                                "right": ["closure": ["result": 2]]
-                            ]]
+                                ]], ["right", ["closure": ["result": 2]]]]]
                         ]
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "both.left"]]]
+            "result": ["dictionary": [["result", ["ref": "both.left"]]]]
         ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When

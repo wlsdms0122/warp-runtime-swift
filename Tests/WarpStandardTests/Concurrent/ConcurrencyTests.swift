@@ -69,7 +69,7 @@ struct ConcurrencyTests {
                 Call(
                     selector: "Standard.Concurrent.allKeyed",
                     arguments: [
-                        .record([
+                        map([
                             "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                             "right": .closure(Procedure(body: [], result: .literal(.int(2))))
                         ])
@@ -352,7 +352,7 @@ struct ConcurrencyTests {
             Procedure(body: [Statement(expression: aborting(literal("doomed")))])
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
-                Call(selector: "Standard.Concurrent.allKeyed", arguments: [.record(["first": doomed, "second": doomed])])
+                Call(selector: "Standard.Concurrent.allKeyed", arguments: [map(["first": doomed, "second": doomed])])
             )
         )
 

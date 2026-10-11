@@ -170,7 +170,7 @@ struct FieldPlaceTests {
         let sut = Procedure(
             signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(key: .string, value: .int))]),
             body: [
-                Statement(binding: .variable("held"), expression: .record(["y": .literal(.int(0))])),
+                Statement(binding: .variable("held"), expression: map(["y": .literal(.int(0))])),
                 Statement(
                     binding: .assignment([PathSegment.key("held")]),
                     expression: .reference([.key("given")])

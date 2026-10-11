@@ -123,14 +123,14 @@ final class LoweredTypeTable: Sendable {
         return record
     }
 
-    // A value from outside with every record it holds under a name, at any
-    // depth, held to the record the name declares: an alias's name is its
-    // record's, the record is fitted to its declaration and judged against
-    // it, and a name that declares no record is the name of no type here.
-    // So every record the run holds under a name is a value of that record,
-    // whatever slot it came in at.
+    // A value from outside with every record it holds, at any depth, held to
+    // the record its name declares: an alias's name is its record's, the
+    // record is fitted to its declaration and judged against it, and a name
+    // that declares no record is the name of no type here. So every record
+    // the run holds is a value of the record its name declares, whatever
+    // slot it came in at.
     func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
-        guard value.holdsName else { return value }
+        guard value.holdsRecord else { return value }
 
         switch value {
         case let .array(items):
@@ -144,15 +144,14 @@ final class LoweredTypeTable: Sendable {
         case let .record(record):
             let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
 
-            guard let name = record.name else { return .record(fields) }
-
-            guard let row = self.record(named: name) else {
-                throw ArgumentError("\(path()): is a \(name), which no document declares as a record")
+            guard let row = self.record(named: record.name) else {
+                throw ArgumentError("\(path()): is a \(record.name), which no document declares as a record")
             }
 
             let declared = LoweredType.named(row)
+            let named = Record(layout: Layout(name: labels[row], ordered: fields.names), values: fields.values)
 
-            return try declared.settling(declared.fitted(.record(fields.named(labels[row])), in: self), at: path(), in: self)
+            return try declared.settling(declared.fitted(.record(named), in: self), at: path(), in: self)
 
         default:
             return value

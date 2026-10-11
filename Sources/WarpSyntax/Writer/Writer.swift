@@ -456,16 +456,15 @@ public struct Writer: Sendable {
         return spelled
     }
 
-    // Data as a document writes it: a record under `record` like every
-    // record, whatever its fields are called.
+    // Data as a document writes it: a map as the map literal that makes it.
     private func literal(_ value: Value) throws -> Value {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
             return value
 
-        // A draft is written as it is, held to no rule, so a named record is
+        // A draft is written as it is, held to no rule, so a record is
         // written with its name and reads back as the literal it was.
-        case let .record(record) where record.name != nil:
+        case .record:
             return value
 
         case let .array(elements):
@@ -476,15 +475,6 @@ public struct Writer: Sendable {
         case let .dictionary(held):
             return .dictionary([
                 ExpressionTag.dictionary.key: .array(try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) })
-            ])
-
-        case .record:
-            let fields = try (value.asDictionary?.named() ?? []).map { entry in
-                (name: entry.name, value: try literal(entry.value))
-            }
-
-            return .dictionary([
-                ExpressionTag.record.key: .dictionary(Value.Dictionary(Swift.Dictionary(uniqueKeysWithValues: fields.map { field in (field.name, field.value) })))
             ])
 
         case .procedure:

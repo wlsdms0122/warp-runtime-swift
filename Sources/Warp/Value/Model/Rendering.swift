@@ -98,7 +98,7 @@ public struct Rendering {
                 "\(quoted(name.spelling)):\(try written(value))"
             }
 
-            return (record.name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
+            return "\(record.name) {" + fields.joined(separator: ",") + "}"
 
         case let .dictionary(dictionary):
             let entries = try dictionary.entries.map { key, value in

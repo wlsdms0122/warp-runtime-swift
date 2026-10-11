@@ -28,7 +28,7 @@ struct KeysQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        guard let held = question[.dictionary].asDictionary else {
+        guard case let .dictionary(held) = question[.dictionary] else {
             throw ExecutionError("Standard.Collection.keys asks a Dictionary")
         }
 

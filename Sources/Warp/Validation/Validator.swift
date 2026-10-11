@@ -495,24 +495,17 @@ struct Validator: Sendable {
         // one as a literal is carrying something no text spells and nothing
         // reads back. A caller assembling a program in Swift is the only one that
         // can build it, and this is the door it comes through. Nor does a
-        // literal name a record: a name is a type's, and a literal written
-        // with one would hold a value of a type nothing declared or imported.
+        // literal hold a record: a record is the value of a declared record,
+        // made by a record literal written where one is read.
         case let .literal(value):
             guard !value.holdsProcedure else {
                 throw ValidationError(Value.procedureIsNotData, at: place)
             }
 
-            guard !value.holdsName else {
+            guard !value.holdsRecord else {
                 throw ValidationError(
-                    "a literal writes a record's name, and a record takes one only from a declared record"
-                        + " it is written into, a door it comes through or a cast",
-                    at: place
-                )
-            }
-
-            guard !value.holdsDictionary else {
-                throw ValidationError(
-                    "a literal holds a map, and a map is written as a dictionary literal, its entries a key and a value each",
+                    "a literal holds a record, and a record is written by a record literal where its declared"
+                        + " record is read",
                     at: place
                 )
             }

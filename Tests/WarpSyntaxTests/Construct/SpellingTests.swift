@@ -53,7 +53,7 @@ struct SpellingTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When

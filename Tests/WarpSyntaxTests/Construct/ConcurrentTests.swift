@@ -54,15 +54,12 @@ struct ConcurrentTests {
                     "value": ["call": [
                         "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
-                            ["record": [
-                                "left": ["closure": ["result": 1]],
-                                "right": ["closure": ["result": 2]]
-                            ]]
+                            ["dictionary": [["left", ["closure": ["result": 1]]], ["right", ["closure": ["result": 2]]]]]
                         ]
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "par"]]]
+            "result": ["dictionary": [["result", ["ref": "par"]]]]
         ], importing: ["Standard.Concurrent.allKeyed"])
         let boundary = IsolationBoundaryProbe()
 
@@ -88,15 +85,12 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
-                                        ["record": [
-                                            "fine": ["closure": ["result": "ok"]],
-                                            "fragile": [
+                                        ["dictionary": [["fine", ["closure": ["result": "ok"]]], ["fragile", [
                                                 "closure": [
                                                     "body": [["let": "boom", "value": ["fail": true]]],
                                                     "result": ["ref": "boom"]
                                                 ]
-                                            ]
-                                        ]]
+                                            ]]]]
                                     ]
                                 ]
                             ]]
@@ -108,7 +102,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "par"]]]
+            "result": ["dictionary": [["result", ["ref": "par"]]]]
         ], importing: ["Standard.Concurrent.allKeyed", "Test.fail"])
 
         // When
@@ -132,20 +126,17 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
-                                        ["record": [
-                                            "fragile": [
+                                        ["dictionary": [["fragile", [
                                                 "closure": [
                                                     "body": [["let": "boom", "value": ["fail": true]]],
                                                     "result": ["ref": "boom"]
                                                 ]
-                                            ],
-                                            "broken": [
+                                            ]], ["broken", [
                                                 "closure": [
                                                     "body": [["let": "boom", "value": ["fail": false]]],
                                                     "result": ["ref": "boom"]
                                                 ]
-                                            ]
-                                        ]]
+                                            ]]]]
                                     ]
                                 ]
                             ]]
@@ -194,7 +185,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "greeted"]]]
+            "result": ["dictionary": [["result", ["ref": "greeted"]]]]
         ], importing: ["Standard.Text.joined", "Standard.Concurrent.map", "Standard.Text.text"])
 
         // When
@@ -230,7 +221,7 @@ struct ConcurrentTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "either"]]]
+            "result": ["dictionary": [["result", ["ref": "either"]]]]
         ], importing: ["Test.fail", "Standard.Concurrent.first"])
 
         // When

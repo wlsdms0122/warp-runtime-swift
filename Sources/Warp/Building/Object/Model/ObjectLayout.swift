@@ -49,6 +49,7 @@ enum ObjectLayout {
         case array
         case record
         case closure
+        case dictionary
     }
 
     // The declaration that wrote a closure.

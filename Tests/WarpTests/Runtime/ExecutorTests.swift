@@ -32,7 +32,7 @@ struct ExecutorTests {
                         Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
                         Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("loud")])
                         ])
                 )
@@ -67,7 +67,7 @@ struct ExecutorTests {
                                     ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("fragile")])
                         ])
                 )
@@ -106,7 +106,7 @@ struct ExecutorTests {
                                     ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("fragile")])
                         ])
                 )
@@ -205,7 +205,7 @@ struct ExecutorTests {
                                     ]))
                         )
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("fragile")])
                         ])
                 )
@@ -281,7 +281,7 @@ struct ExecutorTests {
                                     ]))
                         )
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("fragile")])
                         ])
                 )
@@ -349,7 +349,7 @@ struct ExecutorTests {
                                     ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                             "result": .reference([.key("bail")])
                         ])
                 )

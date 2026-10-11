@@ -25,7 +25,7 @@ struct CallTests {
         let echo = Procedure(
             signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: [],
-            result: .record(["said": reference("text")])
+            result: map(["said": reference("text")])
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
@@ -43,7 +43,7 @@ struct CallTests {
         let outputs = try await run(
             Procedure(
                 body: sut,
-                result: .record([
+                result: map([
                     "counted": reference("counted"),
                     "shouted": reference("shouted"),
                     "echoed": reference("echoed", "said")

@@ -42,7 +42,7 @@ struct SettingQuery: Query {
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard
-            let held = question[.dictionary].asDictionary,
+            case let .dictionary(held) = question[.dictionary],
             case let .string(key) = question[.key]
         else {
             throw ExecutionError("Standard.Collection.setting asks a Dictionary and a String")
@@ -58,8 +58,6 @@ struct SettingQuery: Query {
             )
         }
 
-        // The names are data from here on: what was written was held to no
-        // declaration, so the answer is a dictionary whatever the collection was.
         return .dictionary(held.writing(field, with: question[.value]))
     }
 

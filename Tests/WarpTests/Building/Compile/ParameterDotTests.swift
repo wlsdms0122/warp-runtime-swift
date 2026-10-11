@@ -17,6 +17,17 @@ struct ParameterDotTests {
     // MARK: - Property
     private let builder = Builder()
 
+    // The records the calls hand, each a value of one declared record.
+    private static let types: [Name: TypeDeclaration] = [
+        "App.Count": .record(["count": .string]),
+        "App.Wrap": .record(["inner": .named("App.Count")]),
+        "App.WholeCount": .record(["count": .int]),
+        "App.WholeWrap": .record(["inner": .named("App.WholeCount")]),
+        "App.Deep": .record(["deep": .int]),
+        "App.DeepCount": .record(["count": .named("App.Deep")]),
+        "App.DeepWrap": .record(["inner": .named("App.DeepCount")])
+    ]
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("a dot on some T reads the field the call filled in")
@@ -25,6 +36,7 @@ struct ParameterDotTests {
         // record carrying `count`, and the field wins because nothing here ever
         // judged the dot a procedure
         let sut = try Module(
+            types: Self.types,
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -38,7 +50,7 @@ struct ParameterDotTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .call(Call(selector: "peek", arguments: [.record(["count": .literal(.string("mine"))])]))
+                    result: .call(Call(selector: "peek", arguments: [.cast(.record(["count": .literal(.string("mine"))]), as: .named("App.Count"), optional: false)]))
                 )
             ]
         )
@@ -53,6 +65,7 @@ struct ParameterDotTests {
         // type the call decides, the way the parameter is, so the dot after it
         // stands as written and the call's value answers it
         let sut = try Module(
+            types: Self.types,
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -71,9 +84,9 @@ struct ParameterDotTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            .record([
+                            .cast(.record([
                                 "inner": .record(["count": .literal(.string("mine"))])
-                            ])
+                            ]), as: .named("App.Wrap"), optional: false)
                         ]
                     ))
                 )
@@ -91,6 +104,7 @@ struct ParameterDotTests {
         // in and `of.inner` is a field of that type) so the name holds neither
         // reading and a dot on it is refused.
         let sut = try Module(
+            types: Self.types,
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -122,7 +136,7 @@ struct ParameterDotTests {
                         selector: "peek",
                         arguments: [
                             .literal(.bool(true)),
-                            .record(["inner": .record(["count": .literal(.string("mine"))])])
+                            .cast(.record(["inner": .record(["count": .literal(.string("mine"))])]), as: .named("App.Wrap"), optional: false)
                         ]
                     ))
                 )
@@ -145,6 +159,7 @@ struct ParameterDotTests {
         // type and a dot on it stands.
         func module(marking: Bool) throws -> Module {
             try Module(
+                types: Self.types,
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -180,7 +195,7 @@ struct ParameterDotTests {
                             selector: "peek",
                             arguments: [
                                 .literal(.bool(true)),
-                                .record(["inner": .record(["count": .literal(.int(1))])])
+                                .cast(.record(["inner": .record(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
                             ]
                         ))
                     )
@@ -203,6 +218,7 @@ struct ParameterDotTests {
         // The root is the parameter, so a name in between changes nothing about
         // where the walk landed.
         let sut = try Module(
+            types: Self.types,
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -232,9 +248,9 @@ struct ParameterDotTests {
                         selector: "peek",
                         arguments: [
                             .literal(.bool(true)),
-                            .record([
+                            .cast(.record([
                                 "inner": .record(["count": .record(["deep": .literal(.int(1))])])
-                            ])
+                            ]), as: .named("App.DeepWrap"), optional: false)
                         ]
                     ))
                 )
@@ -251,6 +267,7 @@ struct ParameterDotTests {
         // once, so they hold one type, and the same field of it read through
         // either name is the same field.
         let sut = try Module(
+            types: Self.types,
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -279,9 +296,9 @@ struct ParameterDotTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            .record(["inner": .record(["count": .literal(.int(2))])]),
+                            .cast(.record(["inner": .record(["count": .literal(.int(2))])]), as: .named("App.WholeWrap"), optional: false),
                             .literal(.bool(true)),
-                            .record(["inner": .record(["count": .literal(.int(1))])])
+                            .cast(.record(["inner": .record(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
                         ]
                     ))
                 )

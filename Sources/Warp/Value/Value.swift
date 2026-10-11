@@ -18,7 +18,7 @@ import Foundation
 //
 // Equality is strict, kind and spelling included, and written by hand: two
 // procedures are never equal, since identity is not a question this language
-// lets you ask, and a nameless record equals the map of its fields.
+// lets you ask.
 public indirect enum Value: Sendable, Equatable {
     case null
     case bool(Bool)
@@ -28,16 +28,13 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under names, and the name of the declared record type it is a
-    // value of, where it has one. A record a literal makes has no name; one
-    // takes a name where it is written into a declared record, at the door a
-    // host hands it through or by a cast, and from then on it fits only that
-    // name. Two records of one structure under two names are two values.
+    // Fields under names, and the name of the declared record it is a value
+    // of. Two records of one structure under two names are two values.
     case record(Record)
 
-    // Names and values where the names are data: what a document hands in,
-    // what a host builds out of raw data, and what a procedure that reads names
-    // answers. A declaration is what turns one of these into a record.
+    // Entries under keys that are values: what a document's mappings are,
+    // what a host builds out of raw data, and what a map literal makes. A map
+    // is never a record.
     case dictionary(Dictionary)
 
     case procedure(Closure)
@@ -211,7 +208,7 @@ public indirect enum Value: Sendable, Equatable {
 
             case let (.record(mine), .record(theirs)):
                 guard mine.name == theirs.name else {
-                    return Self.order(.string(mine.name?.spelling ?? ""), .string(theirs.name?.spelling ?? ""))
+                    return mine.name < theirs.name ? .orderedAscending : .orderedDescending
                 }
 
                 return sequenced(
@@ -348,42 +345,22 @@ public indirect enum Value: Sendable, Equatable {
         holdsClosure { _ in true }
     }
 
-    // Whether a record in here, however deep, carries a name. A record takes
-    // one from a declared record it is written into, a door it comes through
-    // or a cast, so a value that already carries one was named by none of
-    // those.
-    var holdsName: Bool {
+    // Whether a record is anywhere in here, however deep. A record is the
+    // value of a declared record, made where a literal is written into one or
+    // handed through a door under the record's name.
+    var holdsRecord: Bool {
         switch self {
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return false
 
         case let .array(elements):
-            return elements.contains { element in element.holdsName }
+            return elements.contains { element in element.holdsRecord }
 
         case let .dictionary(held):
-            return held.entries.contains { key, value in key.holdsName || value.holdsName }
+            return held.entries.contains { key, value in key.holdsRecord || value.holdsRecord }
 
-        case let .record(record):
-            return record.name != nil || record.values.contains { value in value.holdsName }
-        }
-    }
-
-    // Whether a map is anywhere in here, however deep. A document writes a
-    // map as a record cast to the `Dictionary<T>` it is, so no literal holds
-    // one.
-    var holdsDictionary: Bool {
-        switch self {
-        case .null, .bool, .int, .double, .string, .bytes, .procedure:
-            return false
-
-        case let .array(elements):
-            return elements.contains { element in element.holdsDictionary }
-
-        case .dictionary:
+        case .record:
             return true
-
-        case let .record(record):
-            return record.values.contains { value in value.holdsDictionary }
         }
     }
 
@@ -435,8 +412,7 @@ public indirect enum Value: Sendable, Equatable {
     // The type this value is an instance of, under the name a claim writes:
     // a record under the declared name it carries, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
-    // spelling and a record with no name holds its names as data, so they
-    // are `Array` and `Dictionary`.
+    // spelling, so they are `Array`.
     public var nominal: Name {
         switch self {
         case .null:
@@ -461,34 +437,10 @@ public indirect enum Value: Sendable, Equatable {
             return TypeSpelling.dictionary
 
         case let .record(record):
-            return record.name ?? TypeSpelling.dictionary
+            return record.name
 
         case .procedure:
             return TypeSpelling.procedure
-        }
-    }
-
-    // Whether this holds fields under names: a record's layout's, or a
-    // dictionary's own.
-    public var holdsFields: Bool {
-        switch self {
-        case .record, .dictionary: true
-        default: false
-        }
-    }
-
-    // This value's fields as names beside values, and nil for what holds
-    // none. A record's names come from its layout.
-    public var asDictionary: Value.Dictionary? {
-        switch self {
-        case let .dictionary(dictionary):
-            return dictionary
-
-        case let .record(record):
-            return record.asDictionary
-
-        default:
-            return nil
         }
     }
 
@@ -498,11 +450,10 @@ public indirect enum Value: Sendable, Equatable {
         .dictionary(Dictionary(entries))
     }
 
-    // What a reading of fields under names makes. A name is a layout's, so a
-    // reading that carries one makes a record; without one the names stay the
-    // value's own data. Either way one name holds one field, and a name
-    // written twice is refused. The name is a declared type's, so it holds a
-    // type's grammar.
+    // What a reading of fields under names makes: a record of the declared
+    // record a name says, and a map keyed by the names' text where it says
+    // none. Either way one name holds one field, and a name written twice is
+    // refused. The name is a declared type's, so it holds a type's grammar.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
         named name: Name?
@@ -526,22 +477,14 @@ public indirect enum Value: Sendable, Equatable {
         return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
     }
 
-    // This value with one field written. A field a record's layout names is
-    // written where it stands. Any other name is not the declaration's, so a
-    // record under a name is refused rather than quietly made something
-    // else, and one under no name holds the new name as data, the
-    // way the dictionary it equals does.
+    // This value with one field written: a field a record's layout names,
+    // where it stands, or a map's entry under the name's text. Any other
+    // name is not the declaration's, so a record refuses it rather than
+    // being quietly made something else.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
-        case let .record(record) where record.layout.position(of: name) != nil:
-            return .record(try record.writing(name, with: value))
-
         case let .record(record):
-            if let settled = record.name {
-                throw ValueRefused("\(settled) declares no field '\(name)'")
-            }
-
-            return .dictionary(record.asDictionary.writing(name, with: value))
+            return .record(try record.writing(name, with: value))
 
         case let .dictionary(held):
             return .dictionary(held.writing(name, with: value))
@@ -739,10 +682,6 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(left), .dictionary(right)):
             return left == right
 
-        case let (.record(record), .dictionary(dictionary)),
-            let (.dictionary(dictionary), .record(record)):
-            return same(record, dictionary) { mine, theirs in mine == theirs }
-
         default:
             return false
         }
@@ -799,8 +738,8 @@ public indirect enum Value: Sendable, Equatable {
             return left.count == right.count
                 && zip(left, right).allSatisfy { pair in pair.0.matches(pair.1) }
 
-        // Both hold their entries in name order, so two records match
-        // entry by entry.
+        // Both hold their fields in name order, so two records match field by
+        // field.
         case let (.record(left), .record(right)):
             return left.layout == right.layout
                 && zip(left.values, right.values).allSatisfy { mine, theirs in mine.matches(theirs) }
@@ -810,10 +749,6 @@ public indirect enum Value: Sendable, Equatable {
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
                     mine.key.matches(theirs.key) && mine.value.matches(theirs.value)
                 }
-
-        case let (.record(record), .dictionary(dictionary)),
-            let (.dictionary(dictionary), .record(record)):
-            return Value.same(record, dictionary) { mine, theirs in mine.matches(theirs) }
 
         default:
             return self == other
@@ -838,7 +773,7 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (_, .key(name)) where holdsFields:
+        case let (.record, .key(name)), let (.dictionary, .key(name)):
             guard let field = self[name] else {
                 throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
             }
@@ -877,7 +812,7 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].written(at: rest, under: rendered)
 
-        case let (_, .key(name)) where holdsFields:
+        case let (.record, .key(name)), let (.dictionary, .key(name)):
             return try self[name]?.written(at: rest, under: rendered)
 
         case let (.array(elements), .index(index)):
@@ -915,7 +850,7 @@ public indirect enum Value: Sendable, Equatable {
 
         // A name written into what holds its names as data. The build judged
         // the path, so a name that reaches here is one it allowed.
-        case let (_, .key(name)) where holdsFields:
+        case let (.record, .key(name)), let (.dictionary, .key(name)):
             do {
                 return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
             } catch let refused as ValueRefused {
@@ -1000,20 +935,5 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         return taken
-    }
-
-    // Whether a record and a dictionary hold the same fields. A record under
-    // a name is that name's, and no dictionary is.
-    private static func same(
-        _ record: Record,
-        _ dictionary: Value.Dictionary,
-        by held: (Value, Value) -> Bool
-    ) -> Bool {
-        guard record.name == nil, record.count == dictionary.count else { return false }
-
-        return dictionary.entries.indices.allSatisfy { place in
-            dictionary.entries[place].key == .string(record.names[place].spelling)
-                && held(record.values[place], dictionary.entries[place].value)
-        }
     }
 }

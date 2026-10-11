@@ -86,7 +86,7 @@ struct TextPinTests {
             }
 
         case let .record(record):
-            if let name = record.name { visit(.name(name)) }
+            visit(.name(record.name))
             record.names.forEach { name in visit(.name(name)) }
             record.values.forEach { held in walk(held, visit) }
         }

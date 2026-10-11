@@ -1140,6 +1140,7 @@ struct InferenceTests {
         // must stand too. Folding the parameter walk's reading to `Any` made
         // the second refuse on a type the author never wrote
         let sut = try Module(
+            types: ["App.Outer": .record(["a": .named("App.Inner")]), "App.Inner": .record(["b": .string])],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1157,7 +1158,7 @@ struct InferenceTests {
                     body: [],
                     result: .call(Call(
                         selector: "peek",
-                        arguments: [.record(["a": .record(["b": .literal(.string("deep"))])])]
+                        arguments: [.cast(.record(["a": .record(["b": .literal(.string("deep"))])]), as: .named("App.Outer"), optional: false)]
                     ))
                 )
             ]

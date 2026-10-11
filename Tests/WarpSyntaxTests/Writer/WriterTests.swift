@@ -213,7 +213,7 @@ struct WriterTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ],
             "typed": [
                 "parameters": [
@@ -255,7 +255,7 @@ struct WriterTests {
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
-                    "result": ["record": ["result": ["ref": "pair"]]]
+                    "result": ["dictionary": [["result", ["ref": "pair"]]]]
                 ]
             ]
         ],
@@ -308,7 +308,7 @@ struct WriterTests {
                         ]],
                         ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ],
@@ -354,7 +354,7 @@ struct WriterTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "tried"]]]
+                    "result": ["dictionary": [["result", ["ref": "tried"]]]]
                 ]
             ]
         ],
@@ -446,7 +446,7 @@ struct WriterTests {
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
-                    "result": ["record": ["result": ["ref": "line"]]]
+                    "result": ["dictionary": [["result", ["ref": "line"]]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
@@ -673,11 +673,7 @@ struct WriterTests {
                             ]
                         ]
                     ],
-                    "result": ["record": [
-                        "picked": ["ref": "pick"],
-                        "sizes": ["ref": "walked"],
-                        "line": ["ref": "line"]
-                    ]]
+                    "result": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]
                 ]
             ]
         ]

@@ -37,7 +37,7 @@ struct CallTests {
                             "value": ["call": ["procedure": "callee", "arguments": [41, .null]]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "call.pair"]]]
+                    "result": ["dictionary": [["result", ["ref": "call.pair"]]]]
                 ],
                 "callee": [
                     "parameters": [["name": "base", "type": "Int"], ["name": "bump", "type": "Int?"]],
@@ -97,7 +97,7 @@ struct CallTests {
             "procedures": [
                 "caller": [
                     "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]]],
-                    "result": ["record": ["result": ["ref": "call.said"]]]
+                    "result": ["dictionary": [["result", ["ref": "call.said"]]]]
                 ]
             ]
         ])
@@ -135,7 +135,7 @@ struct CallTests {
                             "value": ["call": ["procedure": "shout", "arguments": [["ref": "word"]]]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
