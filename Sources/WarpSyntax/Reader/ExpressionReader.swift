@@ -351,7 +351,7 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("{ format: } template: \(error)")
         }
 
-        return try lowered(segments, over: bindings, spending: interpolation)
+        return try spent(segments, over: bindings, spending: interpolation)
     }
 
     // A template as the procedures that build it. Interpolation is a spelling rather
@@ -360,7 +360,7 @@ public struct ExpressionReader: Decodable {
     //
     // Spent here, a placeholder is an ordinary reference, checked, linked and
     // refused the way every other reference is.
-    private static func lowered(
+    private static func spent(
         _ segments: [TemplateSegment],
         over bindings: [Name: Warp.Expression],
         spending interpolation: Interpolation
