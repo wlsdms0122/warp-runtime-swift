@@ -170,7 +170,7 @@ struct ClosureNotationTests {
         ]
 
         // When / Then
-        #expect(throws: (any Error).self) {
+        #expect(throws: ValidationError.self) {
             try loader.loadDocument(fixture)
         }
     }

@@ -165,7 +165,7 @@ struct TextEncodingTests {
     func aForeignHeaderIsRefused() {
         // When / Then
         for text in ["{}", "", "json 1\n{}", "warpt\n{}"] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().value(from: text)
             }
         }
@@ -180,7 +180,7 @@ struct TextEncodingTests {
             "\(error)".contains("later") || "\(error)".contains("format 2")
         }
 
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try TextEncoding().value(from: "warpt 0\nnull")
         }
     }
@@ -209,7 +209,7 @@ struct TextEncodingTests {
             "warpt 1\n"
         ] {
             // When / Then
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().value(from: text)
             }
         }
@@ -219,7 +219,7 @@ struct TextEncodingTests {
     func aStrayCloseIsRefused() {
         // When / Then
         for text in ["warpt 1\n]", "warpt 1\n}", "warpt 1\n[ } ]", "warpt 1\n{ a ] }"] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().value(from: text)
             }
         }
@@ -229,7 +229,7 @@ struct TextEncodingTests {
     func anUnknownTokenIsRefused() {
         // When / Then
         for text in ["warpt 1\nyes", "warpt 1\nnul", "warpt 1\n--1", "warpt 1\n1.5.5", "warpt 1\n1e"] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().value(from: text)
             }
         }
@@ -263,14 +263,14 @@ struct TextEncodingTests {
             #"warpt 1\#n"\ud800""#,
             #"warpt 1\#n"\ud800A""#
         ] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().value(from: text)
             }
         }
 
         // And a whole pair is refused too: the character it spells is written
         // as itself
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try TextEncoding().value(from: "warpt 1\n\"\\ud83d\\ude00\"\n")
         }
     }
@@ -285,7 +285,7 @@ struct TextEncodingTests {
             "warpt 1\n\"\\u001B\"\n"
         ] {
             // When / Then
-            #expect(throws: (any Error).self, "\(text)") {
+            #expect(throws: EncodingRefused.self, "\(text)") {
                 try TextEncoding().value(from: text)
             }
         }
@@ -304,7 +304,7 @@ struct TextEncodingTests {
         #expect(try TextEncoding().value(from: text) == .string("a\u{01}b"))
 
         // And raw in, refused
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try TextEncoding().value(from: "warpt 1\n\"a\u{01}b\"")
         }
     }
@@ -332,12 +332,12 @@ struct TextEncodingTests {
 
         // When / Then
         for value in [Value.double(.infinity), .double(.nan)] {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try TextEncoding().data(from: value)
             }
         }
 
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try TextEncoding().data(from: procedure)
         }
     }

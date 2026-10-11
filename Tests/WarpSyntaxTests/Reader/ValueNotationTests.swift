@@ -58,7 +58,7 @@ struct ValueNotationTests {
 
         #expect(try decoding(Held.self, from: .dictionary(["blob": .bytes([1, 2])])).blob == Data([1, 2]))
 
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try decoding(Held.self, from: .dictionary(["blob": .array([.int(1), .int(2)])]))
         }
     }

@@ -114,7 +114,7 @@ struct SpellingTests {
         let loader = Loader(registry: ConstructRegistry.standard.removing("conditional"))
 
         // When / Then
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [["name": "kind", "type": "String"]],
                 "body": [

@@ -134,7 +134,7 @@ struct BinaryEncodingTests {
         }
 
         // And a format that never existed is not an earlier one
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try BinaryEncoding().value(from: Data([0x57, 0x41, 0x52, 0x50, 0x00, 0x00]))
         }
     }
@@ -334,7 +334,7 @@ struct BinaryEncodingTests {
 
         // When / Then
         for end in 5..<bytes.count {
-            #expect(throws: (any Error).self) {
+            #expect(throws: EncodingRefused.self) {
                 try BinaryEncoding().value(from: bytes.prefix(end))
             }
         }
