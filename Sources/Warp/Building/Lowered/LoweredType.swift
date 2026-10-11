@@ -2081,20 +2081,26 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // A type parameter the call site filled, or a composition, holding what
-    // arrived to a contract by the type the value is an instance of: what
-    // the link found to answer it is what a value may arrive as. Neither
-    // settles: a value stands as it arrived.
+    // arrived to a contract by what the value reads as, in the sentence the
+    // build refuses such a reading in: what the link found to answer it is
+    // what a value may arrive as, and a table that cannot say yet writes the
+    // claim down. Neither settles: a value stands as it arrived.
     private func standing(
         _ value: Value,
         answering name: Name,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        guard table.stands(value.nominal, answering: name) else {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), and '\(value.nominal)'"
-                    + " does not answer every procedure '\(name)' asks"
-            )
+        let refusal = table.refusal(
+            of: LoweredType(of: value, in: table),
+            answering: name,
+            orNull: false,
+            as: "is",
+            leaning: { claim in table.fulfillment?.require(folded: claim) }
+        )
+
+        if let refusal {
+            throw ArgumentError("\(path()): \(refusal)")
         }
 
         return value

@@ -192,27 +192,6 @@ final class LoweredTypeTable: Sendable {
         return claimed.contains(type)
     }
 
-    // Whether a value of a type stands where a contract is asked, by what
-    // the documents claim about the type. A table that cannot say which
-    // types answer writes the pair down and lets the value pass, so the list
-    // that holds every claim answers for it. Where there is nowhere to write,
-    // there is nothing to wait for and the value is held to what this table
-    // knows.
-    func stands(_ type: Name, answering contract: Name) -> Bool {
-        switch answers(contract: contract, arrived: type) {
-        case true?:
-            return true
-
-        case nil where fulfillment != nil:
-            fulfillment?.require(folded: Claim(type: type, contract: contract))
-
-            return true
-
-        case nil, false?:
-            return false
-        }
-    }
-
     // Whether a name is a declared contract, which is the one thing a bound
     // names.
     func declaresContract(_ name: Name) -> Bool {
