@@ -41,7 +41,7 @@ public struct Module: Sendable {
     let references: Set<Reference>
 
     // How many closure literals each declaration wrote. A closure's number is
-    // the document's fact, so it is settled with the document.
+    // the document's fact, so it is counted with the document.
     let closures: [Closure.Declaration: Int]
 
     // What this supplies to a link under a spelling another document may

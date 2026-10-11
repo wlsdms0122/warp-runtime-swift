@@ -12,7 +12,7 @@ import Foundation
 //
 // What such a procedure declares about itself is read here. A body's constness,
 // isolation and failing are what its code turns out to do and a link works
-// them out; a native says, and the row a compile settles records what it said.
+// them out; a native says, and the row a compile writes records what it said.
 enum Native: Sendable {
     case query(any Query)
     case effect(any Effect)

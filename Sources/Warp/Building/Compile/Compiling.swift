@@ -47,7 +47,7 @@ struct Compiling {
 
     // The rows folding runs against, held apart from the lowering: a row is
     // written in when the phase that lowered it ends, so what a body folds
-    // through is what stood settled before its phase began rather than
+    // through is what stood lowered before its phase began rather than
     // whatever the row order reached first. Lowering is then the only holder
     // of its own table, and writing a row into it copies nothing.
     private var foldingRows: [Linked] = []
@@ -122,11 +122,11 @@ struct Compiling {
     // One document already compiled laid down, as the document itself wrote
     // it.
     //
-    // Its rows and what it settled are cut by where the document says its
+    // Its rows and what it worked out are cut by where the document says its
     // declarations stand, which is the one place that boundary is drawn.
     //
     // What the build read off a body that declared no answer is read off what
-    // it settled rather than off the rows it stands as. A row is a
+    // it worked out rather than off the rows it stands as. A row is a
     // declaration lowered against a link's types, and none of those is a
     // type.
     mutating func lay(

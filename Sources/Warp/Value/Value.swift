@@ -267,7 +267,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The type this value is an instance of, under the name a claim writes:
-    // a record under the declared name it settled to, and every other kind
+    // a record under the declared name it carries, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
     // spelling and a record with no name holds its names as data, so they
     // are `Array` and `Dictionary`.
@@ -357,8 +357,8 @@ public indirect enum Value: Sendable, Equatable {
 
     // This value with one field written. A field a record's layout names is
     // written where it stands. Any other name is not the declaration's, so a
-    // value that settled to one is refused rather than quietly made something
-    // else, and a value that settled to none holds the new name as data, the
+    // record under a name is refused rather than quietly made something
+    // else, and one under no name holds the new name as data, the
     // way the dictionary it equals does.
     public func writing(_ name: Name, with value: Value) throws -> Value {
         switch self {
@@ -831,8 +831,8 @@ public indirect enum Value: Sendable, Equatable {
         return taken
     }
 
-    // Whether a record and a dictionary hold the same fields. A record that
-    // settled to a name is that name's, and no dictionary is.
+    // Whether a record and a dictionary hold the same fields. A record under
+    // a name is that name's, and no dictionary is.
     private static func same(
         _ record: Record,
         _ dictionary: Value.Dictionary,

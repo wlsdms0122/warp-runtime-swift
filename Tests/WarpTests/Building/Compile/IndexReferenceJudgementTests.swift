@@ -139,7 +139,7 @@ struct IndexReferenceJudgementTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("a dictionary by a name the run settles alone")
+            error is BuildError && "\(error)".contains("a dictionary by a name the run reads alone")
         }
     }
 

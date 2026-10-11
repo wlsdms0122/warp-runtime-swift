@@ -16,7 +16,7 @@ import Foundation
 // no rescue, and an observer is told of no failure.
 //
 // Nothing catches it but the construct it names. A document may only write one
-// that something around it will catch, which the validator settles before
+// that something around it will catch, which the load holds before
 // anything runs; an object carries the lowered body rather than the document,
 // so the edge of a frame answers one that reaches it.
 struct Leaving: Error {

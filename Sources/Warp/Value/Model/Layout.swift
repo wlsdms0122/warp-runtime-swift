@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Where a record's fields are: the name it settled to, where it has one, and
+// Where a record's fields are: the name it carries, where it has one, and
 // the field names in the order the values stand. The order is the language's,
 // not a maker's (ascending by the names' bytes) so a layout built by a link, a
 // reader or a host is the same layout for the same fields.

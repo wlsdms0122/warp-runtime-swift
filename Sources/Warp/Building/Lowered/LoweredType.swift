@@ -186,7 +186,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether what this stands for is settled at the call.
+    // Whether what this stands for is decided at the call.
     var decidedAtCall: Bool {
         switch self {
         case .parameter, .projection:
@@ -413,7 +413,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    // What a settled value reads as.
+    // What a value reads as.
     init(of value: Value, in table: LoweredTypeTable) {
         switch value {
         case .null:

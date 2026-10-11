@@ -9,7 +9,7 @@ import Foundation
 
 public struct Question<P: NativeProcedure>: Sendable {
     // MARK: - Property
-    // The arguments a procedure reads, settled by the row a run sent. The row
+    // The arguments a procedure reads, by position in the row a run sent. The row
     // being asked travels with the run: the sends it declared are its
     // document's numbers, and only a run can say which rows they are.
     private let arguments: ArgumentList

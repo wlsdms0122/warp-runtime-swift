@@ -63,7 +63,7 @@ struct Compiler {
 
         // The constants with what each reads as: what seeds the environment a
         // body is judged in, and what a body binds where it reads one at an
-        // index the run settles.
+        // index the run reads.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -169,7 +169,7 @@ struct Compiler {
         }
 
         // The facts nobody declared. All three are fixed points over what a
-        // body reaches, so a document's answer is settled once the documents
+        // body reaches, so a document's answer is decided once the documents
         // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //

@@ -36,8 +36,8 @@ struct Derivation {
     // MARK: - Initializer
     // MARK: - Public
     // Which of these answer without running. A native says so about itself; a
-    // body cannot, so it is read off what it calls. What is settled grows in
-    // place: a document is settled against everything standing in front of
+    // body cannot, so it is read off what it calls. What is derived grows in
+    // place: a document is derived against everything standing in front of
     // it, and this call only ever adds its own.
     //
     // `beyond` answers for a selector this document does not declare: the
@@ -102,7 +102,7 @@ struct Derivation {
     // Grown rather than struck out, the opposite of constness and isolation: a
     // body starts failing nothing and gains what it reaches, and a declaration
     // that says nothing about itself makes everything reaching it say nothing
-    // too. Two procedures calling each other settle where nothing more is
+    // too. Two procedures calling each other stop where nothing more is
     // added, which the finite set of declared names guarantees.
     func failing(
         among symbols: [Symbol],
@@ -205,7 +205,7 @@ struct Derivation {
         case let .cast(_, _, optional):
             return optional ? .these([]) : .these([CastRefused.type])
 
-        // Which value is called is settled at run time, so what may come out
+        // Which value is called is decided at run time, so what may come out
         // of it is not knowable here.
         case .apply:
             return .unstated
@@ -291,7 +291,7 @@ struct Derivation {
     // MARK: - Private
     // Every body starts holding the fact and is struck when something it
     // reaches does not, until nothing more is struck. Only what this call was
-    // handed can be struck: what was settled before it stands in front of it
+    // handed can be struck: what was derived before it stands in front of it
     // and reaches nothing here.
     private func strike(
         among symbols: [Symbol],

@@ -94,7 +94,7 @@ struct Folding {
     // The head of a path bound here, where the path folds here: a name bound
     // here, and the path indexed by nothing still a reference. Asked of a path
     // whose index references have been folded, so one still a reference is
-    // one only a run settles.
+    // one only a run reads.
     func boundHead(of path: Path) -> Name? {
         guard let head = path.head, holds(head) else { return nil }
 

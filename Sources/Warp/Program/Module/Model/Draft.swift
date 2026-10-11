@@ -147,8 +147,8 @@ public struct Draft: Sendable {
     }
 
     // The same document with the imports it turned out to have. A module
-    // settles them from what the text sends, and a writing of that module
-    // takes the settled list.
+    // works them out from what the text sends, and a writing of that module
+    // takes that list.
     public func resolving(_ imports: Set<Name>) -> Draft {
         var held = self
         held.imports = imports

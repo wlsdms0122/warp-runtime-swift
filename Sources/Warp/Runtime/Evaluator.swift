@@ -530,7 +530,7 @@ struct Evaluator: Sendable {
         return try await answer(body, in: &activation, at: trace.appending(linked.hop))
     }
 
-    // A row answered with its arguments settled and nothing handed in place:
+    // A row answered with its arguments and nothing handed in place:
     // what a send reaches and what a run starts from. An effect runs here,
     // and every other row answers the way it does as data.
     private func answer(
@@ -545,8 +545,8 @@ struct Evaluator: Sendable {
         return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
     }
 
-    // The one way a written procedure is called: its frame, the settled
-    // arguments in their slots, whatever the call handed in place held as a
+    // The one way a written procedure is called: its frame, the arguments
+    // in their slots, whatever the call handed in place held as a
     // box, and the body answered in that frame.
     private func answer(
         _ callee: Linked,
@@ -775,7 +775,7 @@ struct Evaluator: Sendable {
         return given
     }
 
-    // What a row answers from its settled arguments, with nothing handed in
+    // What a row answers from its arguments, with nothing handed in
     // place. A query answers through its own door and a body runs on a frame
     // of its own. An effect answers only by running, so it is not read here.
     private func answer(

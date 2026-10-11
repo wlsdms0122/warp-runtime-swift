@@ -50,7 +50,7 @@ struct TypeChecker {
     // answers the type and flow questions alone and refuses nothing (what
     // cannot be read is `Any`) because its askers read a body out of place or
     // more than once: an operand typed where it stands, a round re-read until
-    // its writes settle, where a refusal would be transient or repeated. One
+    // its writes stop moving, where a refusal would be transient or repeated. One
     // walk under two asks, so the rules cannot drift a copy at a time, and so a
     // body is read once, where a walk per question would compound arm by arm
     // into an exponential reading of nothing new.
@@ -68,7 +68,7 @@ struct TypeChecker {
         // written instead of paying for a copy nobody takes. In an expression
         // case the pieces are gathered either way, so a gate there only spares
         // the final assembly, but a loop or a walk also asks this to choose
-        // between the settled probe and a judging re-walk, and that choice
+        // between the final probe and a judging re-walk, and that choice
         // carries refusals and gathered sites, so it is not one to drop.
         var rewrites: Bool {
             if case .judging = self { return true }
@@ -314,7 +314,7 @@ struct TypeChecker {
             )
 
             // A reading naming a type parameter is handed on as it is. What a
-            // parameter means is settled at the call, by the same filling a
+            // parameter means is decided at the call, by the same filling a
             // declared `returns: some T` goes through, so a body answering its
             // own parameter answers what the caller put there, and a body
             // answering a type only it could name (what a walk *through* a
@@ -622,7 +622,7 @@ struct TypeChecker {
             // a needless `?` on a type spelling is.
             var unwrapped = false
 
-            // What the dot lands on, settled: the walk-stopping types are
+            // What the dot lands on, unwrapped: the walk-stopping types are
             // asked again after every unwrap, because what a `T?` holds is a
             // type like any other (`Any`, null, another name, another nullable)
             // and an unwrap that skipped the questions would judge on a type
@@ -749,7 +749,7 @@ struct TypeChecker {
             }
 
             switch (segment, current) {
-            // An index written as a reference is a name the run settles, which
+            // An index written as a reference is a name the run reads, which
             // element is read, not what the elements are. The name is a path of
             // its own, judged like one, and the walk goes on with the element
             // type the way a literal index does.
@@ -763,7 +763,7 @@ struct TypeChecker {
             case let (.index, .array(element)):
                 if let refused = indexed(element) { return refused }
 
-            // A dictionary's names are data, so a key the run settles reads an
+            // A dictionary's names are data, so a key the run reads finds an
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
             case let (.indexRef(inner, optionally), .dictionary(entry)):
@@ -780,8 +780,8 @@ struct TypeChecker {
             case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
-                        + " and an array is indexed by a position or a name the run settles,"
-                        + " a dictionary by a name the run settles alone"
+                        + " and an array is indexed by a position or a name the run reads,"
+                        + " a dictionary by a name the run reads alone"
                 )
 
             // A dictionary holds entries of one type under names that are
@@ -1081,7 +1081,7 @@ struct TypeChecker {
         }
     }
 
-    // The one machine that judges a key the run settles, answering the
+    // The one machine that judges a key the run reads, answering the
     // refusal or nil. A dictionary's names are strings, so what stands between
     // the brackets stands where a `String` is read.
     private func keyReference(
@@ -1111,7 +1111,7 @@ struct TypeChecker {
     ) async throws -> PathSegment {
         guard case let .indexRef(written, optionally) = segment else { return segment }
 
-        // An index path indexed in turn by what only the run settles stays a
+        // An index path indexed in turn by what only the run reads stays a
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
@@ -1311,7 +1311,7 @@ struct TypeChecker {
                 // An inner index path may read a constant too. `items[C]` folds
                 // its index the way a whole constant path folds, so no constant
                 // name survives into the image. One indexed by what only the run
-                // settles (`digits[ch]`) cannot fold: it stays a path, and the
+                // reads (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
                 let folded = try await foldedIndexReferences(path, at: place, folding: folding)
 
@@ -1554,7 +1554,7 @@ struct TypeChecker {
 
             // A box the closure takes is held, inside it, to what it reads as
             // here: a write the closure makes is judged against that type
-            // and settles to it, and leaves the box reading it.
+            // and is held to it, and leaves the box reading it.
             let taken = outside.mapValues { binding in
                 binding.taken(to: binding.type)
             }
@@ -1716,7 +1716,7 @@ struct TypeChecker {
                 flow: flow
             )
 
-        // Which value is called is settled at the run, and what it answers is
+        // Which value is called is decided at the run, and what it answers is
         // the slot's to say under either ask: a procedure type that wrote
         // `returns` answers that, and one that wrote none opens to `Any`. Its
         // operands are data, held as operands below, and write nothing. What
@@ -2170,8 +2170,8 @@ struct TypeChecker {
         // ways they took are absorbed rather than handed on; a `return`, or
         // one naming a loop further out, goes on past it. A round also follows
         // the rounds that finished or continued, so the condition and the body
-        // read the settled environment. The one the rounds' own writes
-        // have already joined into. Readings that cycle instead of settling
+        // read the environment the rounds' own writes have already joined
+        // into. Readings that cycle instead of converging
         // would be widened to `Any` behind the author's back. Judging says so
         // out loud, where a refusal can carry the reason; the probing ask stays
         // total and takes the widened answer.
@@ -2181,7 +2181,7 @@ struct TypeChecker {
             // The fixpoint probes a round as it runs, the condition then the
             // statements. The rounds are what leave things for one another,
             // and the result never runs between rounds. The probe reads, so a
-            // probing asker takes the settled probe of the statements as its
+            // probing asker takes the final probe of the statements as its
             // own walk; judging walks once more for the rewrite.
             let entry = rounded(environment, as: round)
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
@@ -2215,8 +2215,8 @@ struct TypeChecker {
 
             if !converged {
                 try refuse(
-                    "the names this loop writes never settle"
-                        + " into one reading, so the build cannot say what"
+                    "the names this loop writes never converge"
+                        + " on one reading, so the build cannot say what"
                         + " they hold",
                     at: place,
                     when: ask
@@ -2622,7 +2622,7 @@ struct TypeChecker {
                         }
                     } else {
                         // A write through a path leaves the box reading as it
-                        // was, so what it writes settles to what the path
+                        // was, so what it writes is held to what the path
                         // reaches.
                         if let reached = try refuseUnfit(
                             written,
@@ -2716,13 +2716,13 @@ struct TypeChecker {
     // joins into the entry environment, and the body is re-read until the
     // reading stops moving. The reader reads with the probing ask, because a
     // refusal mid-climb would be a refusal of an environment no run ever stands
-    // in. A body that writes nothing outward settles on the first look; a chain
-    // of writes settles one link per look, so the bound is the chain's own
-    // size: the names the body writes, times the few steps the join ladder has.
-    // Past it the readings are not climbing (they are cycling) and everything
-    // the body writes falls to `Any`, or to the type it is held to where
-    // something took it, over-wide and never wrong; the judging ask answers
-    // that state out loud, where it can refuse.
+    // in. A body that writes nothing outward converges on the first look; a
+    // chain of writes converges one link per look, so the bound is the chain's
+    // own size: the names the body writes, times the few steps the join ladder
+    // has. Past it the readings are not climbing (they are cycling) and
+    // everything the body writes falls to `Any`, or to the type it is held to
+    // where something took it, over-wide and never wrong; the judging ask
+    // answers that state out loud, where it can refuse.
     private func fixedPoint<Round>(
         from entry: [Name: Binding],
         start starting: (Flow) throws -> Way,
@@ -3098,7 +3098,7 @@ struct TypeChecker {
     // judgement a call to a declaration and a call of a value share, once
     // each has refused another count. What each position takes, then every
     // composition it mentions held to its bounds, with what leans on a claim
-    // this table cannot settle written down for the link. What an argument
+    // this table cannot decide written down for the link. What an argument
     // holds is read from the body it was written in, so a name bound to a call
     // carries that call's declared answer. A declaration's slots name each
     // position; a value's type writes the positions alone.
@@ -3127,7 +3127,7 @@ struct TypeChecker {
                 )
             }
 
-            // A pair the link settles is written down at the call, which an
+            // A pair the link decides is written down at the call, which an
             // object records; a refusal here stands at the argument.
             if let refusal = refusal(
                 writing: given,

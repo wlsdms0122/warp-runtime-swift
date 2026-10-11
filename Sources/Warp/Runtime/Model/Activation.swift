@@ -71,7 +71,7 @@ struct Activation: Sendable {
                 case let .int(index):
                     return .index(index)
 
-                // A dictionary's names are data, so a key the run settled
+                // A dictionary's names are data, so a key the run read
                 // writes an entry the way a written key does.
                 case let .string(key):
                     guard let name = try? Name(key) else {
@@ -153,7 +153,7 @@ struct Activation: Sendable {
                 case let .found(.int(index)):
                     read = indexed(current, at: index, walked: walked)
 
-                // A dictionary's names are data, so a key the run settled
+                // A dictionary's names are data, so a key the run read
                 // reads an entry the way a written key does.
                 case let .found(.string(key)):
                     read = keyed(
@@ -234,7 +234,7 @@ struct Activation: Sendable {
         return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
     }
 
-    // One reading for a key the run settled. What is keyed is whatever holds
+    // One reading for a key the run read. What is keyed is whatever holds
     // fields, and an absent entry follows the mark the way a written key does.
     private func keyed(
         _ current: Value,
