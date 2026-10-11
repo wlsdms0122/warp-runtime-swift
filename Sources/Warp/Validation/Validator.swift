@@ -441,7 +441,7 @@ public struct Validator: Sendable {
                         throw ValidationError(refusal, at: named)
                     }
 
-                    try refuseBelowZero(in: path, at: named)
+                    try held(steps: path, at: named)
                     try validate(paths: Array(path.expandingIndexReferences.dropFirst()), visible: visible, at: named)
 
                     guard let head = path.head else {
@@ -866,7 +866,7 @@ public struct Validator: Sendable {
                 throw ValidationError(refusal, at: place)
             }
 
-            try refuseBelowZero(in: path, at: place)
+            try held(steps: path, at: place)
 
             guard let head = path.head else {
                 throw ValidationError(
@@ -887,14 +887,25 @@ public struct Validator: Sendable {
         }
     }
 
-    // A whole number written between the brackets is a position, and one
-    // below zero is no position.
-    private func refuseBelowZero(in path: Path, at place: Place) throws {
-        for case let .index(index, _) in path.segments where index < 0 {
-            throw ValidationError(
-                "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
-                at: place
-            )
+    // What a path's steps are held to wherever it is written: a name it
+    // reads is a value's, the one name a path reads back as one key, and a
+    // whole number written between the brackets is a position, which one
+    // below zero is not.
+    private func held(steps path: Path, at place: Place) throws {
+        for segment in path.segments {
+            switch segment {
+            case let .key(name, _):
+                try held(name, as: .value, at: place)
+
+            case let .index(index, _) where index < 0:
+                throw ValidationError(
+                    "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
+                    at: place
+                )
+
+            case .index, .indexRef:
+                continue
+            }
         }
     }
 

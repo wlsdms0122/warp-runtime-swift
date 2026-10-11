@@ -833,6 +833,19 @@ struct ValidationTests {
         #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
     }
 
+    @Test("every name a path reads is a value's name, however the path was made", arguments: [
+        Name("a.b"), Name(" a"), Name("a?"), Name("a[0]")
+    ])
+    func aPathReadsValueNames(step: Name) throws {
+        // Given
+        let record = Statement(binding: .variable("d"), expression: .record(["a": .literal(.int(1))]))
+
+        // When / Then. A read and a write
+        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key(step)]))]))
+        #expect(!validates(body: [record, Statement(binding: .assignment([.key("d"), .key(step)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key("a")]))]))
+    }
+
     @Test("a literal names no record, at whatever depth it holds one", arguments: [
         Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
         .array([.record(Record(name: "Int", ["x": .int(1)]))])
