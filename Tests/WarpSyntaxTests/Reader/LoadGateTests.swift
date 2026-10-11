@@ -171,7 +171,7 @@ struct LoadGateTests {
     }
 
     @Test("runtime data becomes IR through the loader's reading of a Value")
-    func valueLowersThroughFrontendDoor() throws {
+    func valueIsReadByTheLoader() throws {
         // Given. A step array that arrived as data (through a signature)
         // becomes IR through the loader's reading of a Value; the string stays
         // a literal even there

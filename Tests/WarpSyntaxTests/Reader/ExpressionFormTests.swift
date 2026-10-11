@@ -153,7 +153,7 @@ struct ExpressionFormTests {
     }
 
     @Test("a template is spent into the procedures that build it")
-    func templateLowersToProcedures() throws {
+    func templateIsSpentIntoProcedures() throws {
         // Given / When
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
