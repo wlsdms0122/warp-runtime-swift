@@ -608,6 +608,14 @@ public struct Validator: Sendable {
                 )
             }
 
+            // The row a closure is lifted into is its document's alone.
+            guard procedure.access == .internal else {
+                throw ValidationError(
+                    "a closure writes no access. Access says who may name a declaration, and nothing names a closure",
+                    at: inside
+                )
+            }
+
             try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
 
             // The same rule the top-level signature gets. A closure's parameter
