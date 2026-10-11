@@ -97,7 +97,7 @@ struct Evaluator: Sendable {
         handing arguments: [Value],
         at trace: Trace
     ) async throws -> Value {
-        let linked = try closure.answered()
+        let linked = try row(of: closure)
 
         return try await answer(closure, as: linked, given: try linked.settle(outside: arguments), holding: [], at: trace)
     }
@@ -113,7 +113,8 @@ struct Evaluator: Sendable {
 
     // Sending a procedure a procedure declared it sends. The row the send reaches is
     // numbered by the sender's document, the same as one written in a body, and
-    // the arguments stand at the callee's positions.
+    // the arguments, values a procedure the host answers made, come in through
+    // the door at the callee's slots.
     func send(
         _ sending: Sent,
         from origin: Int,
@@ -124,7 +125,7 @@ struct Evaluator: Sendable {
 
         return try await answer(
             callee,
-            settled: try settled(callee, sending: sending, handing: values),
+            settled: Settled(values: try callee.settle(outside: values)),
             at: trace.appending(callee.hop)
         )
     }
@@ -454,7 +455,10 @@ struct Evaluator: Sendable {
             )
         }
 
-        let linked = try closure.answered()
+        let linked = try row(of: closure)
+
+        try linked.refuseCount(arguments.count)
+
         let handed = arguments.enumerated().compactMap { position, argument -> CallOperation.Handed? in
             guard
                 case let .reference(address) = argument,
@@ -486,10 +490,9 @@ struct Evaluator: Sendable {
     }
 
     // The one way a closure is called: the captured cells in their slots, the
-    // arguments in theirs as the caller has them, whatever the call handed in
-    // place held as a box, and the body answered in the frame that was just
-    // made. The row is asked whether this run may read it before anything
-    // reads its rows.
+    // arguments in theirs as the caller has them, one for each, whatever the
+    // call handed in place held as a box, and the body answered in the frame
+    // that was just made. The row is the one `row(of:)` answered.
     //
     // Making the frame and answering from it are one act here, so no caller
     // holds a frame it has not answered from.
@@ -503,13 +506,6 @@ struct Evaluator: Sendable {
         guard case let .body(body, frame) = linked.implementation else {
             throw ExecutionError("a closure is a body, and this one is native")
         }
-
-        // Its rows are numbered by the table of the link that made it.
-        guard linked.readable(in: loweredTypes) else {
-            throw ExecutionError("this call \(Linked.unreadable)")
-        }
-
-        try linked.refuseCount(arguments.count)
 
         var activation = try self.activation(of: linked, in: frame)
 
@@ -871,22 +867,15 @@ struct Evaluator: Sendable {
         return row
     }
 
-    // A send's arguments, values a procedure the host answers made, through
-    // the door at the callee's boundary, standing at its positions.
-    private func settled(
-        _ callee: Linked,
-        sending: Sent,
-        handing values: [Value]
-    ) throws -> Settled {
-        // How many a Swift body builds is the body's, so this is the one thing
-        // about a send the build cannot read.
-        guard values.count == sending.handing else {
-            throw ExecutionError(
-                "'\(callee.rendered)' is handed \(values.count) here, and the procedure sending"
-                    + " it declares it hands \(sending.handing)"
-            )
+    // The row a closure value is a body of, asked before anything reads its
+    // rows: it is numbered by the table of the link that made it.
+    private func row(of closure: Closure) throws -> Linked {
+        let linked = try closure.answered()
+
+        guard linked.readable(in: loweredTypes) else {
+            throw ExecutionError("this call \(Linked.unreadable)")
         }
 
-        return Settled(values: try callee.settle(outside: values))
+        return linked
     }
 }
