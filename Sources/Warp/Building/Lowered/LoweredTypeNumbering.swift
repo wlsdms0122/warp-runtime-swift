@@ -54,10 +54,7 @@ struct LoweredTypeNumbering: Sendable {
             in place: Place
         ) throws -> Int {
             guard resolutions.indices.contains(number) else {
-                throw BuildError.unjudged(
-                    "a type standing at \(number), which its document never numbered",
-                    at: place
-                )
+                throw BuildError("a type stands at \(number), which its document never numbered", at: place)
             }
 
             switch resolutions[number] {
