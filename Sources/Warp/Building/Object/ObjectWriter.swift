@@ -506,14 +506,10 @@ struct ObjectWriter {
         }
     }
 
-    // A layout is written `[name, fields]`, the name a list of one, the shape
-    // a record type's layout writes where a literal's reading names none.
+    // A layout is written `[name, fields]`: the declared record's name, and
+    // the field names in their order.
     private func layout(_ layout: Layout) -> Value {
-        self.layout(named: layout.name, layout.fields)
-    }
-
-    private func layout(named: Name?, _ fields: [Name]) -> Value {
-        .array([ObjectWriter.maybe(named, name), .array(fields.map(name))])
+        .array([name(layout.name), .array(layout.fields.map(name))])
     }
 
     private func lowered(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
@@ -587,7 +583,7 @@ struct ObjectWriter {
     }
 
     private func loweredRecord(_ record: LoweredRecord) throws(ObjectUnwritable) -> Value {
-        .array([layout(named: record.name, record.names), .array(try record.fields.map(lowered))])
+        .array([layout(record.layout), .array(try record.fields.map(lowered))])
     }
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
