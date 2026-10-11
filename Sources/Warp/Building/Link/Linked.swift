@@ -279,11 +279,10 @@ public final class Linked: Sendable {
 
     // What a procedure the host answers hands back, a value from outside at
     // the door it comes through: fitted to what the row declares and judged
-    // against it.
+    // against it, `Any` where it declares nothing, which is what the build
+    // reads such a call's answer as.
     func settling(answered value: Value) throws -> Value {
-        guard let returns else { return value }
-
-        return try returns.settling(outside: value, at: "returns", in: table)
+        try (returns ?? .any).settling(outside: value, at: "returns", in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made
