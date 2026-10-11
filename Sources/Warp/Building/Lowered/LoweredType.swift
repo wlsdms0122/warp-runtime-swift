@@ -1379,25 +1379,34 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // A value from outside fitted to this type before it is held to it: a
-    // record's fields this does not declare left out, and a nameless record
-    // or a map of fields where a declared record is read named by it, at
-    // whatever depth a record, a list, a map or what may be null holds one.
-    // Only the doors a host hands a value through fit it to a type.
+    // record's fields this does not declare left out, a map of fields where
+    // a record type is read made the record it spells, and named by it where
+    // the record is declared, at whatever depth a record, a list, a map or
+    // what may be null holds one. Only the doors fit a value to a type.
     func fitted(_ value: Value, in table: LoweredTypeTable) -> Value {
         shaped(value, leavingOut: true, in: table)
     }
 
-    // A value from outside at the door it comes through: every record it
-    // holds under a name held to the record the name declares, then fitted
-    // to this type and judged against it. The one rule every door keeps.
+    // The door's first two steps, in its one order: every record a value
+    // from outside holds under a name held to the record the name declares,
+    // then the value fitted to this type. What the value reads as after
+    // these is what a door that is a call fills type parameters from.
+    func fitted(
+        outside value: Value,
+        at path: @autoclosure () -> String,
+        in table: LoweredTypeTable
+    ) throws -> Value {
+        fitted(try table.resolvingNames(in: value, at: path()), in: table)
+    }
+
+    // A value from outside at a door that fills no type parameter: fitted,
+    // then judged against this type.
     func settling(
         outside value: Value,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        let resolved = try table.resolvingNames(in: value, at: path())
-
-        return try settling(fitted(resolved, in: table), at: path(), in: table)
+        try settling(fitted(outside: value, at: path(), in: table), at: path(), in: table)
     }
 
     // A value a cast reads, named the way this type names it: a nameless
@@ -2297,21 +2306,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.named(row), _):
             let shaped = table.loweredTypes[row].shaped(value, leavingOut: leavingOut, in: table)
 
-            switch shaped {
-            case let .record(record) where record.name == nil:
-                return .record(record.named(table.labels[row]))
+            guard case let .record(record) = shaped, record.name == nil else { return shaped }
 
-            case let .dictionary(entries):
-                return .record(
-                    Record(
-                        name: table.labels[row],
-                        Dictionary(uniqueKeysWithValues: entries.names.compactMap { name in entries[name].map { held in (name, held) } })
-                    )
-                )
-
-            default:
-                return shaped
-            }
+            return .record(record.named(table.labels[row]))
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.shaped(value, leavingOut: leavingOut, in: table)
@@ -2331,8 +2328,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.record(declared), .record(record)):
             return .record(Record(name: record.name, fields(record.names, of: { name in record[name] }, along: declared, leavingOut: leavingOut, in: table)))
 
+        // A map read as a record type holds its entries as the record's
+        // fields.
         case let (.record(declared), .dictionary(entries)):
-            return .dictionary(Value.Dictionary(fields(entries.names, of: { name in entries[name] }, along: declared, leavingOut: leavingOut, in: table)))
+            return .record(Record(name: nil, fields(entries.names, of: { name in entries[name] }, along: declared, leavingOut: leavingOut, in: table)))
 
         default:
             return value
