@@ -405,7 +405,10 @@ struct ClaimChecker {
                     + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
 
-        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds) else {
+        guard
+            let answer = asked.returns,
+            let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds)
+        else {
             return nil
         }
 

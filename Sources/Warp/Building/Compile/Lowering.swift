@@ -100,7 +100,13 @@ struct Lowering {
         var size: Int { names.count }
 
         var frame: Frame {
-            Frame(size: size, parameters: parameters, variables: reads, captures: captures.map { _, inner in inner }, names: names)
+            Frame(
+                size: size,
+                parameters: parameters,
+                variables: reads,
+                captures: captures.map { _, inner in inner },
+                names: names
+            )
         }
 
         // MARK: - Initializer

@@ -912,7 +912,8 @@ indirect enum LoweredType: Sendable, Equatable {
         // A value read as a composition is of a type that answers its
         // contracts and nothing more the build knows of, so it stands where
         // every contract asked is one it answers.
-        case let (.composition(bounds), .composition(theirs)), let (.nullable(.composition(bounds)), .composition(theirs)):
+        case let (.composition(bounds), .composition(theirs)),
+            let (.nullable(.composition(bounds)), .composition(theirs)):
             return Set(bounds).isSubset(of: theirs)
 
         // A composition takes what answers each of its contracts, asked of

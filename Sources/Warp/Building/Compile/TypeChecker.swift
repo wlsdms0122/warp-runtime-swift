@@ -510,7 +510,12 @@ struct TypeChecker {
         }
 
         for (parameter, names) in bounds {
-            if let refusal = substitution.severalTypes(of: parameter, bounds: names, over: slots.map(\.type), in: loweredTypes) {
+            if let refusal = substitution.severalTypes(
+                of: parameter,
+                bounds: names,
+                over: slots.map(\.type),
+                in: loweredTypes
+            ) {
                 return .refusal(refusal)
             }
         }
@@ -1565,8 +1570,11 @@ struct TypeChecker {
                 let answered = inner.flow.answer(resulting: inner.reading)
 
                 procedure = procedure.with(
-                    signature: Signature(parameters: procedure.signature.parameters, returns: answered.spelled(in: context.loweredTypes))
-                        .bounded(by: context.bounds)
+                    signature: Signature(
+                        parameters: procedure.signature.parameters,
+                        returns: answered.spelled(in: context.loweredTypes)
+                    )
+                    .bounded(by: context.bounds)
                 )
             }
 
@@ -2259,7 +2267,14 @@ struct TypeChecker {
                     exit[name] = written.map { type in LoweredType.null.joined(type) }
                 }
 
-                tail = try await inspected(result, naming: nil, at: place.child(.held).child(.result), in: exit, with: context, ask: ask)
+                tail = try await inspected(
+                    result,
+                    naming: nil,
+                    at: place.child(.held).child(.result),
+                    in: exit,
+                    with: context,
+                    ask: ask
+                )
             }
 
             return Inspection(
@@ -2364,7 +2379,14 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         ask: Ask
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable, reading: LoweredType, literalShape: LiteralShape?, flow: Flow) {
+    ) async throws -> (
+        block: Block,
+        calls: [CallSite],
+        judgements: JudgementTable,
+        reading: LoweredType,
+        literalShape: LiteralShape?,
+        flow: Flow
+    ) {
         let body = try await inspected(
             block.body,
             at: place.child(.body),

@@ -119,7 +119,9 @@ struct Derivation {
 
             for (name, block) in bodies {
                 let before = failing
-                let read = self.failing(block, given: { selector in own.contains(selector) ? before[selector] : beyond(selector) })
+                let read = self.failing(block) { selector in
+                    own.contains(selector) ? before[selector] : beyond(selector)
+                }
 
                 guard read != failing[name] else { continue }
 
