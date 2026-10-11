@@ -691,9 +691,9 @@ struct WriterTests {
 
         // Then
         #expect(before == after)
-        #expect(before["picked"] == .string("matched"))
-        #expect(before["sizes"] == .int(3))
-        #expect(before["line"] == .string("hey/matched"))
+        #expect(before.map?["picked"] == .string("matched"))
+        #expect(before.map?["sizes"] == .int(3))
+        #expect(before.map?["line"] == .string("hey/matched"))
     }
 
     @Test("a spelling is written back as the call it stood for")
@@ -718,8 +718,8 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let call = body.first?["value"]?["conditional"]?["when"]?["call"]
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
+            let call = body.first?.map?["value"]?.map?["conditional"]?.map?["when"]?.map?["call"]
         else {
             Issue.record("a conditional is written with a condition under `when`")
 
@@ -727,9 +727,9 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the call it always was.
-        #expect(call["procedure"] == .string("Standard.Logic.equal"))
-        #expect(call["of"] == nil)
-        #expect(call["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
+        #expect(call.map?["procedure"] == .string("Standard.Logic.equal"))
+        #expect(call.map?["of"] == nil)
+        #expect(call.map?["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
     @Test("a record whose field is named like a tag is written under `record` and read back as a record")
@@ -756,7 +756,7 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
             block.body.statements.count == 2,
             case let .record(payload) = block.body.statements[0].expression,
@@ -767,8 +767,8 @@ struct WriterTests {
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
-        #expect(body.last?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
+        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
+        #expect(body.last?.map?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
         #expect(payload["ref"]?.constantValue == .string("not-a-path"))
         #expect(held["ref"]?.referencePath == [.name("payload")])
     }

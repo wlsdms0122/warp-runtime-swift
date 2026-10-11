@@ -127,8 +127,8 @@ struct VocabularyTests {
         )
 
         // Then
-        #expect(outputs["result"] == .string("long"))
-        #expect(outputs["head"] == .string("spectacle"))
+        #expect(outputs.map?["result"] == .string("long"))
+        #expect(outputs.map?["head"] == .string("spectacle"))
     }
 
     @Test("a procedure left out of the link is a procedure that does not exist")

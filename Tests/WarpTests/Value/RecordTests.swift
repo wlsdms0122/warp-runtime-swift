@@ -74,9 +74,11 @@ struct RecordTests {
         #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "App.Point", ["a": .int(9)])))
 
         // A name the declaration never had would make this something other
-        // than the type it names
+        // than the type it names, and what is no record, a map included,
+        // holds no fields
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
         #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
+        #expect(throws: ValueRefused.self) { try Value.dictionary(["a": .int(1)]).writing("a", with: .int(2)) }
     }
 
     @Test("a record's name is part of its layout")
@@ -116,6 +118,7 @@ struct RecordTests {
         #expect(record != dictionary)
         #expect(!record.matches(dictionary))
         #expect(record["a"] == .int(1))
+        #expect(dictionary["a"] == nil)
     }
 
     @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")

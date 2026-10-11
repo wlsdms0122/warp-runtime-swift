@@ -112,7 +112,7 @@ struct ImportsListTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Numeric.plus")]))
+        #expect(written.map?[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Numeric.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")

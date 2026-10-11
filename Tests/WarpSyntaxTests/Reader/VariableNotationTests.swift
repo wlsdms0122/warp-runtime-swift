@@ -42,7 +42,7 @@ struct VariableNotationTests {
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
 
         // Then
-        #expect(outputs["result"] == .string("touched"))
+        #expect(outputs.map?["result"] == .string("touched"))
     }
 
     @Test("a conditional that did not run changes nothing")
@@ -66,7 +66,7 @@ struct VariableNotationTests {
         let outputs = try await run(sut, arguments: ["kind": .string("b")])
 
         // Then
-        #expect(outputs["result"] == .string("untouched"))
+        #expect(outputs.map?["result"] == .string("untouched"))
     }
 
     @Test("a variable declared inside a block does not escape it")
@@ -113,7 +113,7 @@ struct VariableNotationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .string("outer"))
+        #expect(outputs.map?["result"] == .string("outer"))
     }
 
     @Test("writing a fixed name is rejected at load")
@@ -201,7 +201,7 @@ struct VariableNotationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .int(1))
+        #expect(outputs.map?["result"] == .int(1))
     }
 
     @Test("a step naming itself twice is rejected at load")

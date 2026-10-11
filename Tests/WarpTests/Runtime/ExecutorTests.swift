@@ -43,7 +43,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["who": .string("spec")])
 
         // Then
-        #expect(outputs["result"] == .string("hello, spec!"))
+        #expect(outputs.map?["result"] == .string("hello, spec!"))
     }
 
     @Test("a recoverable failure runs the rescue path")
@@ -78,7 +78,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
         // Then. The rescue's result is what the attempt answers
-        #expect(outputs["result"] == .string("recovered"))
+        #expect(outputs.map?["result"] == .string("recovered"))
     }
 
     @Test("the failure is a value inside the rescue, and only there")
@@ -119,7 +119,7 @@ struct ExecutorTests {
         // Then. Inside the rescue, `fragile` was the failure payload; after it,
         // `fragile` is the rescue's output (a string here), so the payload
         // never leaks past the rescue
-        #expect(outputs["result"] == .string("saw: the world did not cooperate"))
+        #expect(outputs.map?["result"] == .string("saw: the world did not cooperate"))
     }
 
     @Test("an unrescued failure propagates")
@@ -216,7 +216,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["data": .dictionary([:])])
 
         // Then
-        #expect(outputs["result"] == .null)
+        #expect(outputs.map?["result"] == .null)
     }
 
     @Test("an entry the data does not carry refuses where nothing said it may be absent")
@@ -292,7 +292,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["kind": .string("b")])
 
         // Then
-        #expect(outputs["result"] == .string("name=null"))
+        #expect(outputs.map?["result"] == .string("name=null"))
     }
 
     @Test("abort throws carrying its rendered message")
@@ -360,7 +360,7 @@ struct ExecutorTests {
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .string("recovered"))
+        #expect(outputs.map?["result"] == .string("recovered"))
     }
 
     // MARK: - Public

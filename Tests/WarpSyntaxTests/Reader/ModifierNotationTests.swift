@@ -242,12 +242,12 @@ struct ModifierNotationTests {
         let read = try loader.load(written)
 
         // Then. Written under `record`, and read back as the record it was
-        guard case let .array(body)? = written["procedures"]?["entry"]?["body"] else {
+        guard case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"] else {
             Issue.record("the body was not written as an array")
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
+        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
         guard case let .record(fields)? = read.procedures["entry"]?.body.statements.first?.expression else {
             Issue.record("the record literal was not read back as one")
             return

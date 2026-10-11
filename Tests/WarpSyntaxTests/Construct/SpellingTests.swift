@@ -60,7 +60,7 @@ struct SpellingTests {
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
 
         // Then
-        #expect(outputs["result"] == .string("took-then"))
+        #expect(outputs.map?["result"] == .string("took-then"))
     }
 
     @Test("registering a form twice is an alias, so both keys work")

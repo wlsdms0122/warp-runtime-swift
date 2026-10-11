@@ -59,7 +59,7 @@ struct CallTests {
 
         // Then. `bump` declares null, so the null handed reads null at the
         // callee boundary
-        #expect(outputs["result"] == .record(Record(name: "App.Pair", ["base": .int(41), "bump": .null])))
+        #expect(outputs.map?["result"] == .record(Record(name: "App.Pair", ["base": .int(41), "bump": .null])))
     }
 
     @Test("a constant argument violating the callee signature is rejected at the build")
@@ -116,7 +116,7 @@ struct CallTests {
         let outputs = try await run([caller, elsewhere], entry: "caller")
 
         // Then
-        #expect(outputs["result"] == .string("hello"))
+        #expect(outputs.map?["result"] == .string("hello"))
     }
 
     @Test("a call writes what a procedure is about as its first argument")
@@ -150,7 +150,7 @@ struct CallTests {
         let outputs = try await run(sut, arguments: ["word": .string("hey")])
 
         // Then
-        #expect(outputs["result"] == .string("hey!"))
+        #expect(outputs.map?["result"] == .string("hey!"))
     }
 
     @Test("a key the call does not name is refused at the load")

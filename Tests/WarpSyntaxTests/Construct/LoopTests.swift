@@ -41,7 +41,7 @@ struct LoopTests {
         let outputs = try await run(spec)
 
         // Then. Rounds 0/1/2 ran; at index 3 the where turned false
-        #expect(outputs["result"] == .int(2))
+        #expect(outputs.map?["result"] == .int(2))
     }
 
     @Test("a loop runs unbounded, like while")
@@ -67,7 +67,7 @@ struct LoopTests {
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .int(6))
+        #expect(outputs.map?["result"] == .int(6))
     }
 
     @Test("a key the loop does not name is refused at the load")

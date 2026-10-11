@@ -54,9 +54,9 @@ struct CallTests {
         )
 
         // Then
-        #expect(outputs["counted"] == .int(2))
-        #expect(outputs["shouted"] == .string("HI"))
-        #expect(outputs["echoed"] == .string("back"))
+        #expect(outputs.map?["counted"] == .int(2))
+        #expect(outputs.map?["shouted"] == .string("HI"))
+        #expect(outputs.map?["echoed"] == .string("back"))
     }
 
     @Test("an argument outside what a procedure declares is refused at the build")
