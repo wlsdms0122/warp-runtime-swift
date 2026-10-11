@@ -1983,24 +1983,18 @@ struct TypeChecker {
             try handedInPlace(arguments, to: parameters, in: environment, with: context, at: place, when: ask)
 
             // A type parameter the slot names is the body's own, which no
-            // call fills and no run can hold a value to, so what stands
-            // there is a value of it already, the way a write into a box
-            // of it is.
-            for (position, slot) in parameters.enumerated() where !handed.contains(position) && slot.namesParameter {
+            // call fills.
+            for (position, slot) in parameters.enumerated() {
                 let written = LiteralShape(shapes[position], reading: sent[position])
-                let holds = written.everyPart(along: slot, inPlace: false, in: context.loweredTypes) { slot, part, _ in
-                    !slot.namesParameter || slot.accepts(part.folded, in: context.loweredTypes, rigid: true)
-                }
 
-                if !holds {
-                    try refuse(
-                        "\(subject) with \(written.rendered(in: context.loweredTypes)) at position \(position),"
-                            + " where its slot reads \(slot.rendered(in: context.loweredTypes)): a type parameter"
-                            + " the body does not fill takes only a value of it",
-                        at: place.child(.argument(position)),
-                        when: ask
-                    )
-                }
+                try refuseUnfilled(
+                    written,
+                    at: slot,
+                    as: "\(subject) with \(written.rendered(in: context.loweredTypes)) at position \(position)",
+                    in: context.loweredTypes,
+                    at: place.child(.argument(position)),
+                    when: ask
+                )
             }
 
             try check(
@@ -2160,12 +2154,14 @@ struct TypeChecker {
             )
 
             // A slot the body's own type parameter fills stands for whatever
-            // filled the body's, so it takes only a value of that parameter.
-            for position in loose(taking: taking, readings: sent, shaped: shapes, filling: filled, in: context.loweredTypes) {
-                try refuse(
-                    "sending '\(call.selector)' with \(sent[position].rendered(in: context.loweredTypes)) at position"
-                        + " \(position), where its slot reads \(taking[position].rendered(in: context.loweredTypes)):"
-                        + " a type parameter the body does not fill takes only a value of it",
+            // filled the body's.
+            for (position, slot) in taking.enumerated() {
+                try refuseUnfilled(
+                    LiteralShape(shapes[position], reading: sent[position]),
+                    at: slot,
+                    as: "sending '\(call.selector)' with \(sent[position].rendered(in: context.loweredTypes))"
+                        + " at position \(position)",
+                    in: context.loweredTypes,
                     at: argumentPlaces[position],
                     when: ask
                 )
@@ -2929,26 +2925,6 @@ struct TypeChecker {
         return flow
     }
 
-    // The positions of a call whose argument is not a value of what fills
-    // its slot, where that names a type parameter of the body around.
-    private func loose(
-        taking: [LoweredType],
-        readings sent: [LoweredType],
-        shaped shapes: [Int: LiteralShape],
-        filling filled: [Name: LoweredType],
-        in loweredTypes: LoweredTypeTable
-    ) -> [Int] {
-        guard filled.values.contains(where: \.namesParameter) else { return [] }
-
-        return taking.indices.filter { position in
-            guard position < sent.count, taking[position].namesParameter else { return false }
-
-            let written = LiteralShape(shapes[position], reading: sent[position])
-
-            return !written.isHeld(by: taking[position], inPlace: true, in: loweredTypes)
-        }
-    }
-
     // The rules a call handing variables in place is held to, at each
     // position whose slot takes one: the argument is a path, the path's head
     // is a variable here, the path is one a write may take, and a variable a
@@ -3133,18 +3109,46 @@ struct TypeChecker {
             throw BuildError(refusal, at: place)
         }
 
-        // A type parameter the body does not fill is one type it knows
-        // nothing about, so a write there takes only a value of it.
-        if slot.namesParameter, !written.isHeld(by: slot, inPlace: true, in: context.loweredTypes) {
-            throw BuildError(
-                "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), where it reads"
-                    + " \(slot.rendered(in: context.loweredTypes)): a type parameter the body does not fill"
-                    + " takes only a value of it",
-                at: place
-            )
-        }
+        try refuseUnfilled(
+            written,
+            at: slot,
+            as: "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes))",
+            in: context.loweredTypes,
+            at: place,
+            when: ask
+        )
 
         return slot
+    }
+
+    // A type parameter the body does not fill is one type it knows nothing
+    // about, so a write into a place reading it, and an argument at a slot
+    // reading it, takes only a value of it there. A literal is held part by
+    // part, and only a part standing where the slot reads the parameter is
+    // held to it. A slot handed in place takes exactly its own type, which
+    // the call's check holds.
+    private func refuseUnfilled(
+        _ written: LiteralShape,
+        at slot: LoweredType,
+        as subject: String,
+        in loweredTypes: LoweredTypeTable,
+        at place: Place,
+        when ask: Ask
+    ) throws {
+        guard slot.namesParameter, !slot.isInout else { return }
+
+        let holds = written.everyPart(along: slot, inPlace: false, in: loweredTypes) { slot, part, _ in
+            !slot.namesParameter || slot.accepts(part.folded, in: loweredTypes, rigid: true)
+        }
+
+        guard !holds else { return }
+
+        try refuse(
+            "\(subject), where its slot reads \(slot.rendered(in: loweredTypes)):"
+                + " a type parameter the body does not fill takes only a value of it",
+            at: place,
+            when: ask
+        )
     }
 
     private func check(
