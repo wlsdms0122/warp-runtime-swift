@@ -31,8 +31,7 @@ struct CastAgreementTests {
             "Someone": .alias(.named("Person")),
             "Maybe": .alias(.nullable(.int)),
             "Whole": .alias(.int),
-            // A type that names itself, so the walk's own guard is exercised
-            // by every pair it takes part in.
+            // A record that names itself in a field.
             "Tree": .record(["children": .array(.named("Tree"))]),
             // The layout of `Person` under another name, and two chains of
             // one layout under two names, so a name is all that tells them
@@ -125,27 +124,14 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("the question reads the same from either side, but for a declared record beside a nameless one")
+    @Test("the question reads the same from either side")
     func theQuestionIsSymmetric() {
         // Given. "could some value be both" names no side, so an answer that
         // depended on which type was written first would be an answer to a
-        // different question. The walk peels one name at a time from whichever
-        // side has one, which is exactly where an asymmetry would hide. A
-        // declared record beside a nameless record or a map is the one pair
-        // it tells apart, pinned below.
-        let table = types.loweredTypes
-
-        func nominalBesideNameless(_ one: TypeExpression, _ other: TypeExpression) -> Bool {
-            let one = one.lowered(in: table, bounds: bounds)
-            let other = other.lowered(in: table, bounds: bounds)
-
-            return (one.row != nil && other.isNamelessStructure)
-                || (other.row != nil && one.isNamelessStructure)
-        }
-
+        // different question
         // When / Then
-        for mine in typeExpressions {
-            for theirs in typeExpressions where !nominalBesideNameless(mine, theirs) {
+        for mine in typeExpressions + namedTypeExpressions {
+            for theirs in typeExpressions + namedTypeExpressions {
                 #expect(
                     couldBothHold(mine, theirs)
                         == couldBothHold(theirs, mine),
@@ -155,26 +141,23 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("a cast writes a declared record's name onto a map and takes none off")
-    func aCastNamesAndNeverUnnames() {
+    @Test("a declared record and a map of its fields share no value")
+    func aRecordAndAMapShareNoValue() {
         // Given. A declared record and a map of its fields
         let named = TypeExpression.named("Person")
-        let structures: [TypeExpression] = [.dictionary(key: .string, value: .string)]
+        let map = TypeExpression.dictionary(key: .string, value: .string)
 
-        // When / Then
-        for structure in structures {
-            #expect(couldBothHold(named, structure), "reading \(structure.rendered) as Person")
-            #expect(!couldBothHold(structure, named), "reading Person as \(structure.rendered)")
-        }
+        // When / Then. A cast neither writes a name nor takes one off
+        #expect(!couldBothHold(named, map), "reading \(map.rendered) as Person")
+        #expect(!couldBothHold(map, named), "reading Person as \(map.rendered)")
     }
 
     @Test("a name or a chain that rules every value out is called impossible")
     func recordsThatCannotMeetAreRefused() {
         // Given. The other direction again, for names: a cast and the reading
         // it is written on, where every value the reading may be is refused
-        // by the cast. A chain is read through its own name as far as the
-        // cast goes, so the walk's guard has to tell a question come back
-        // from a new one deeper down.
+        // by the cast. Two records of one layout under two names are two
+        // types, a chain of them included.
         let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
             (.named("Human"), .named("Person")),
             (.named("Link"), .named("Chain")),

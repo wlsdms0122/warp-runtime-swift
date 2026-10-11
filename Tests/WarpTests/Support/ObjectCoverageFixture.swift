@@ -115,7 +115,7 @@ enum ObjectCoverageFixture {
     // Every case of `LoweredType`, the same way.
     static let everyLoweredType: LoweredType = .record(
         LoweredRecord(
-            name: nil,
+            name: "a.every",
             names: Self.loweredFields.map(\.0).sorted(),
             fields: Self.loweredFields.sorted { one, other in one.0 < other.0 }.map(\.1)
         )

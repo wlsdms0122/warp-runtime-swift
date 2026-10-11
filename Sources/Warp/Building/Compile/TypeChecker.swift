@@ -911,9 +911,8 @@ struct TypeChecker {
     }
 
     // What a path write reaches from the box its head names, or why it may
-    // not. Each field on the way is one a declared type wrote `var`, or a
-    // field of a type no declaration named; an element is written through
-    // its index. A type that may be null is not written into, and neither is
+    // not. Each field on the way is one its declared record wrote `var`; an
+    // entry is written through its key and an element through its index. A type that may be null is not written into, and neither is
     // `Any`.
     private func writable(
         _ path: Path,
@@ -932,11 +931,6 @@ struct TypeChecker {
         for segment in path.segments.dropFirst() {
             walked.append(segment)
 
-            // Whether the container being entered is a declared type's, which
-            // is asked of this segment alone: a record written inline under a
-            // `var` field is nobody's declaration.
-            let declared = if case .named = current { true } else { false }
-
             current = context.resolve(current)
 
             switch (segment, current) {
@@ -948,7 +942,7 @@ struct TypeChecker {
                     )
                 }
 
-                if declared, !field.isVariable {
+                if !field.isVariable {
                     return .refused(
                         "\(walked.rendered) writes through '\(key)', which the type"
                             + " declares without `var`. A field a path may write"
