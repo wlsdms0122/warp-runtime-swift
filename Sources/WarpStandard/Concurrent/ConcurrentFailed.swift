@@ -22,8 +22,8 @@ public struct ConcurrentFailed: RecoverableFailure {
     // where it says what it may fail with.
     public static let type = "concurrent_failed"
 
-    public var details: [Name: Value] {
-        ["failures": .dictionary(failures)]
+    public var details: Value.Dictionary {
+        Value.Dictionary(["failures": .dictionary(failures)])
     }
 
     public var message: String {
