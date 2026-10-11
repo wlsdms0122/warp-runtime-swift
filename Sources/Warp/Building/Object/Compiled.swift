@@ -191,7 +191,10 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Initializer
-    private init(
+    // Each part stated, as a compile stands them up: what the lowering made
+    // by its role, so nothing here is asked of how the parts stand to each
+    // other.
+    init(
         document: Place.Document,
         types: [Name: TypeExpression],
         contracts: [Name: [Name: ContractProcedure]],
@@ -230,13 +233,13 @@ public struct Compiled: Sendable, Declaring {
         self.fingerprint = fingerprint
     }
 
-    // The same, where the parts were read apart and what has to be true is how
-    // they stand to each other. Each one alone says nothing wrong; a table
-    // shorter than the spellings it stands for, or a variable numbered past
-    // the ones this holds, is a fact about two of them.
+    // The same, where an object's parts were read apart and what has to be
+    // true is how they stand to each other. Each one alone says nothing
+    // wrong; a table shorter than the spellings it stands for, or a variable
+    // numbered past the ones this holds, is a fact about two of them.
     //
     // This is the only door that sees all of them, so it is the only place
-    // those facts can be asked.
+    // those facts can be asked of bytes read back.
     init(
         document: Place.Document,
         types: [Name: TypeExpression],

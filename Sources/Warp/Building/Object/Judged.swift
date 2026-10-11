@@ -108,11 +108,10 @@ struct Judged: Sendable {
             implementation = .native(sending: procedure.sending)
         }
 
-        do {
-            try Self.judge(implementation, against: row.signature)
-        } catch {
-            assertionFailure("the link stands a body up beside a frame that fits it: \(error)")
-        }
+        assert(
+            (try? Self.judge(implementation, against: row.signature)) != nil,
+            "the link stands a body up beside a frame that fits it"
+        )
 
         self.label = row.label
         self.signature = row.signature
