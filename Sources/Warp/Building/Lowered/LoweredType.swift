@@ -268,7 +268,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
-    private static let witnesses: [Value] = [
+    private static let samples: [Value] = [
         .null, .bool(false), .int(0), .double(0), .string(""),
         .array([]), .dictionary([:]), .bytes([])
     ]
@@ -1974,9 +1974,9 @@ indirect enum LoweredType: Sendable, Equatable {
             guard mine.isDecidedKind, theirs.isDecidedKind else { return true }
 
             // Asked of the judge that will settle it, not of a second opinion
-            // about what it would say. One witness per kind is enough here.
-            return LoweredType.witnesses.contains { witness in
-                mine.settles(witness, in: table) && theirs.settles(witness, in: table)
+            // about what it would say. One sample per kind is enough here.
+            return LoweredType.samples.contains { sample in
+                mine.settles(sample, in: table) && theirs.settles(sample, in: table)
             }
         }
     }
