@@ -535,11 +535,11 @@ struct ObjectWriter {
         case let .record(record):
             return tagged(Tag.record, loweredRecord(record))
 
-        case let .procedure(parameters, returns, constness, isolation):
+        case let .procedure(signature, constness, isolation):
             return tagged(
                 Tag.procedure,
-                ObjectWriter.maybe(parameters) { written in .array(written.map(lowered)) },
-                ObjectWriter.maybe(returns, lowered),
+                ObjectWriter.maybe(signature?.parameters) { written in .array(written.map(lowered)) },
+                ObjectWriter.maybe(signature?.returns, lowered),
                 self.constness(constness),
                 self.isolation(isolation)
             )

@@ -58,8 +58,12 @@ extension TypeExpression {
 
         case let .procedure(type, constness, isolation):
             return .procedure(
-                parameters: type?.parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) },
-                returns: type?.returns?.lowered(in: table, bounds: bounds),
+                type.map { type in
+                    LoweredProcedureType(
+                        parameters: type.parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) },
+                        returns: type.returns?.lowered(in: table, bounds: bounds)
+                    )
+                },
                 constness: constness,
                 isolation: isolation
             )

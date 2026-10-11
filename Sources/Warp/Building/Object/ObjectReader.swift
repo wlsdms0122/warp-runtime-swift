@@ -666,12 +666,20 @@ struct ObjectReader {
         case .array: read = .array(try lowered(cursor.next()))
         case .dictionary: read = .dictionary(try lowered(cursor.next()))
         case .record: read = .record(try loweredRecord(cursor.next()))
+        // A type that writes no parameters writes no signature, so it says
+        // nothing of an answer either.
         case .procedure:
+            let parameters = try cursor.field().maybe { written in
+                try Field(written, of: "parameters").list(lowered)
+            }
+            let returns = try cursor.field().maybe(lowered)
+
+            guard parameters != nil || returns == nil else {
+                throw ObjectRefused("a procedure type writes what it answers and nothing of what it takes")
+            }
+
             read = .procedure(
-                parameters: try cursor.field().maybe { written in
-                    try Field(written, of: "parameters").list(lowered)
-                },
-                returns: try cursor.field().maybe(lowered),
+                parameters.map { parameters in LoweredProcedureType(parameters: parameters, returns: returns) },
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())
             )
