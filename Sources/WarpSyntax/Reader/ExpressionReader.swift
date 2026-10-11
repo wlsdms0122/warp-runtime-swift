@@ -118,7 +118,7 @@ public struct ExpressionReader: Decodable {
         case let .among(tags):
             throw ExpressionFormError(
                 "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
-                    + " A record with that field is written { record: { … } }"
+                    + " A record with that field is written under `record`"
                     + " (found keys: \(record.names))"
             )
 
@@ -134,7 +134,7 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError(
                 "a mapping where a value is wanted is one of"
                     + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
-                    + " under its one key. A record is written { record: { … } }"
+                    + " under its one key. A record is written under `record`"
                     + " (found keys: \(record.names))"
             )
         }
@@ -174,7 +174,7 @@ public struct ExpressionReader: Decodable {
         }
 
         guard let record = written.asDictionary else {
-            throw ExpressionFormError("{ record: } takes a mapping of its fields")
+            throw ExpressionFormError("`record` takes a mapping of its fields")
         }
 
         return try fields(in: record, at: steps, in: decoder)
@@ -226,7 +226,7 @@ public struct ExpressionReader: Decodable {
             let subject = cast[Self.subjectKey],
             let spelled = cast[Self.typeKey]
         else {
-            throw ExpressionFormError("{ \(key): } takes { of: <value>, type: <type> }")
+            throw ExpressionFormError("`\(key)` takes `of`, the value, and `type`, the type, and nothing else")
         }
 
         // A type has two spellings and a cast takes either: the string a
@@ -268,7 +268,7 @@ public struct ExpressionReader: Decodable {
             // to say it again.
             throw refusal
         } catch {
-            throw ExpressionFormError("{ closure: }: \(error)")
+            throw ExpressionFormError("`closure`: \(error)")
         }
     }
 
@@ -283,7 +283,7 @@ public struct ExpressionReader: Decodable {
         } catch let refusal as ReadingError {
             throw refusal
         } catch {
-            throw ExpressionFormError("{ call: }: \(error)")
+            throw ExpressionFormError("`call`: \(error)")
         }
     }
 
@@ -312,13 +312,13 @@ public struct ExpressionReader: Decodable {
 
         guard Set(record.names).subtracting(Interpolation.keys).isEmpty else {
             throw ExpressionFormError(
-                "a record with `format` must be exactly { format: <template>,"
-                    + " with: <bindings> } (found keys: \(record.names))"
+                "a record with `format` holds `format`, the template, and `with`, its bindings,"
+                    + " and nothing else (found keys: \(record.names))"
             )
         }
 
         guard case let .string(template)? = record[Interpolation.formatKey] else {
-            throw ExpressionFormError("{ format: } takes a template string")
+            throw ExpressionFormError("`format` takes a template string")
         }
 
         let bindings: [Name: Warp.Expression]
@@ -338,7 +338,7 @@ public struct ExpressionReader: Decodable {
 
         case let other?:
             throw ExpressionFormError(
-                "{ format: } `with` takes a record of bindings,"
+                "`format`'s `with` takes a record of bindings,"
                     + " got \(other.nominal)"
             )
         }
@@ -348,7 +348,7 @@ public struct ExpressionReader: Decodable {
         do {
             segments = try TemplateParser().parse(template)
         } catch {
-            throw ExpressionFormError("{ format: } template: \(error)")
+            throw ExpressionFormError("`format`'s template: \(error)")
         }
 
         return try spent(segments, over: bindings, spending: interpolation)
@@ -404,7 +404,7 @@ public struct ExpressionReader: Decodable {
     ) throws -> Warp.Expression {
         guard let head = path.head, let bound = bindings[head] else {
             throw ExpressionFormError(
-                "{ format: } placeholder ${\(path.rendered)} names"
+                "`format`'s placeholder ${\(path.rendered)} names"
                     + " no binding this template was given"
             )
         }
@@ -420,7 +420,7 @@ public struct ExpressionReader: Decodable {
         // refused instead.
         guard case let .reference(prefix) = bound else {
             throw ExpressionFormError(
-                "{ format: } placeholder ${\(path.rendered)} drills into"
+                "`format`'s placeholder ${\(path.rendered)} drills into"
                     + " '\(head)', which is bound to something other than a name"
             )
         }
@@ -438,7 +438,7 @@ public struct ExpressionReader: Decodable {
 
         guard case let .reference(closed) = try substituted(inner, over: bindings) else {
             throw ExpressionFormError(
-                "{ format: } index ${\(inner.rendered)} is bound to something"
+                "`format`'s index ${\(inner.rendered)} is bound to something"
                     + " other than a name, and an index reads a name"
             )
         }

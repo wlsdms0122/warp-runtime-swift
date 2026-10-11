@@ -110,7 +110,7 @@ struct TypeReader: Decodable {
     // What a type that is neither a spelling nor a form is refused with.
     private static let unread = "a type is a name like `String`, `Array<String>` or"
         + " `Task`, or a mapping under one of `record`, `procedure`, `array`"
-        + " and `dictionary`. A record type is written { record: { id: String } }"
+        + " and `dictionary`. A record type is written under `record`"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -372,7 +372,7 @@ struct TypeReader: Decodable {
         case let .among(tags):
             throw ReadingError(
                 "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
-                    + " A record type with that field is written { \(recordKey): { … } }"
+                    + " A record type with that field is written under `\(recordKey)`"
                     + " (found keys: \(keyed.allKeys.map(\.stringValue).sorted()))",
                 at: decoder.steps
             )
