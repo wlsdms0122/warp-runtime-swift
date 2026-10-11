@@ -422,7 +422,7 @@ struct ObjectReader {
         let read: PathSegment
 
         switch ObjectLayout.SegmentTag(rawValue: try cursor.field().integer()) {
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
+        case .name: read = .name(try name(cursor.next()), optional: try cursor.field().flag())
         case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
         case .indexRef:
             read = .indexRef(
@@ -910,7 +910,7 @@ struct ObjectReader {
         case .field:
             read = .field(try cursor.field().count(), try name(cursor.next()), optional: try cursor.field().flag())
 
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
+        case .name: read = .name(try name(cursor.next()), optional: try cursor.field().flag())
         case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
         case .at: read = .at(try address(cursor.next()), optional: try cursor.field().flag())
         case nil: throw ObjectRefused("'walk' steps in a way this reads none of")

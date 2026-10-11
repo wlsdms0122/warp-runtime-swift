@@ -169,7 +169,7 @@ struct InferenceTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.reference([.name("kept")])]
                         )))
                     ]
                 ),
@@ -224,7 +224,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("done")])
+                    result: .reference([.name("done")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -232,7 +232,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -279,7 +279,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("task"), .key("done")])]
+                            arguments: [.reference([.name("task"), .name("done")])]
                         )))
                     ]
                 ),
@@ -320,7 +320,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("walk"), expression: walking(
-                                [.key("counts")],
+                                [.name("counts")],
                                 element: "element",
                                 body: [
                                     Statement(binding: .constant("said"), expression: .call(Call(
@@ -372,15 +372,15 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.int(1))),
                         Statement(
                             expression: .conditional(equals(
-                                        .reference([.key("flag")]),
+                                        .reference([.name("flag")]),
                                         .literal(.bool(true))
                                         ), then: [
-                                        Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text")))
+                                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("text")))
                                     ], else: nil)
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -417,7 +417,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("done")])
+                    result: .reference([.name("done")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -430,7 +430,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -527,16 +527,16 @@ struct InferenceTests {
                         Statement(binding: .variable("many"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                .reference([.key("ready")]),
+                                .reference([.name("ready")]),
                                 then: [
-                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.string("no")))
+                                    Statement(binding: .assignment([.name("many")]), expression: .literal(.string("no")))
                                 ],
                                 else: nil
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -575,7 +575,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("count"), .key("nope")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("count"), .name("nope")]))
                     ]
                 )
             ]
@@ -602,7 +602,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("name"), .index(0)]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("name"), .index(0)]))
                     ]
                 )
             ]
@@ -656,7 +656,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("payload"), .key("whatever")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("payload"), .name("whatever")]))
                     ]
                 )
             ]
@@ -687,7 +687,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .named("Preson"),
                         optional: true
                     )
@@ -718,7 +718,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .any,
                                 optional: false
                             )
@@ -755,13 +755,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("reason"), expression: .cast(
-                                .reference([.key("failed")]),
+                                .reference([.name("failed")]),
                                 as: .named("App.Reasons"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("reason"), .key("failures")])
+                    result: .reference([.name("reason"), .name("failures")])
                 )
             ]
         )
@@ -791,13 +791,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("tree"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Tree"),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("tree"), .key("value")])
+                    result: .reference([.name("tree"), .name("value")])
                 )
             ]
         )
@@ -826,7 +826,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("rows")]), as: .string, optional: true)
+                    result: .cast(.reference([.name("rows")]), as: .string, optional: true)
                 )
             ]
         )
@@ -855,19 +855,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("once"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .int,
                                 optional: true
                             )
                         ),
                         Statement(binding: .constant("twice"), expression: .cast(
-                                .reference([.key("once")]),
+                                .reference([.name("once")]),
                                 as: .int,
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("twice")])
+                    result: .reference([.name("twice")])
                 )
             ]
         )
@@ -896,7 +896,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .never,
                         optional: true
                     )
@@ -928,19 +928,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("once"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Maybe"),
                                 optional: true
                             )
                         ),
                         Statement(binding: .constant("twice"), expression: .cast(
-                                .reference([.key("once")]),
+                                .reference([.name("once")]),
                                 as: .named("Maybe"),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("twice")])
+                    result: .reference([.name("twice")])
                 )
             ]
         )
@@ -969,7 +969,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .named("Preson"),
                         optional: true
                     )
@@ -999,7 +999,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("count")]), as: .double, optional: false)
+                    result: .cast(.reference([.name("count")]), as: .double, optional: false)
                 )
             ]
         )
@@ -1026,7 +1026,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("count")]), as: .null, optional: true)
+                    result: .cast(.reference([.name("count")]), as: .null, optional: true)
                 )
             ]
         )
@@ -1049,7 +1049,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("count")]),
+                        .reference([.name("count")]),
                         as: .nullable(.string),
                         optional: true
                     )
@@ -1081,19 +1081,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         ),
                         Statement(binding: .constant("again"), expression: .cast(
-                                .reference([.key("read")]),
+                                .reference([.name("read")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("again"), .key("name")])
+                    result: .reference([.name("again"), .name("name")])
                 )
             ]
         )
@@ -1121,7 +1121,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("text")]), as: .int, optional: true)
+                    result: .cast(.reference([.name("text")]), as: .int, optional: true)
                 )
             ]
         )
@@ -1148,9 +1148,9 @@ struct InferenceTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("a")]))
+                        Statement(binding: .constant("held"), expression: .reference([.name("of"), .name("a")]))
                     ],
-                    result: .reference([.key("held"), .key("b")])
+                    result: .reference([.name("held"), .name("b")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -1187,7 +1187,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -1213,13 +1213,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("rows"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .array(.any),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("rows"), .index(0)])
+                    result: .reference([.name("rows"), .index(0)])
                 )
             ]
         )
@@ -1246,13 +1246,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload"), .key("data")]),
+                                .reference([.name("payload"), .name("data")]),
                                 as: .named("App.Named"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("read"), .key("name")])
+                    result: .reference([.name("read"), .name("name")])
                 )
             ]
         )
@@ -1278,13 +1278,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("read"), .key("name")])
+                    result: .reference([.name("read"), .name("name")])
                 )
             ]
         )
@@ -1323,12 +1323,12 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("App.Whatever"),
                                 optional: false
                             )
                         ),
-                        Statement(binding: .constant("said"), expression: .reference([.key("read"), .key("whatever")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("read"), .name("whatever")]))
                     ]
                 )
             ]
@@ -1354,7 +1354,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("task"), .name("done")]))
                     ]
                 )
             ]
@@ -1379,7 +1379,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done", optional: true)]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("task"), .name("done", optional: true)]))
                     ]
                 )
             ]
@@ -1410,13 +1410,13 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: [
                                     Statement(
                                         expression: .conditional(
-                                            .reference([.key("ready")]),
+                                            .reference([.name("ready")]),
                                             then: [
-                                                Statement(binding: .assignment([.key("held")]), expression: .literal(.null)),
+                                                Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                                 Statement(
                                                     expression: .leave(
                                                         Leave(reach: .construct, target: nil, value: nil)
@@ -1431,7 +1431,7 @@ struct InferenceTests {
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1471,13 +1471,13 @@ struct InferenceTests {
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null)),
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                     mayFail("risky")
                                 ]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("saidInside"), expression: .call(Call(
                                         selector: "wants",
-                                        arguments: [.reference([.key("held")])]
+                                        arguments: [.reference([.name("held")])]
                                     )))
                                 ], result: .literal(.string("rescued")))
                             )
@@ -1522,13 +1522,13 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: [
                                     Statement(binding: .constant("said"), expression: .call(Call(
                                         selector: "wants",
-                                        arguments: [.reference([.key("held")])]
+                                        arguments: [.reference([.name("held")])]
                                     ))),
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
                                 ])
                             )
                         )
@@ -1562,8 +1562,8 @@ struct InferenceTests {
         // only reads nullable after as many looks as the chain is long.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain = Body(zip(names, names.dropFirst()).map { name, next in
-            Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
-        } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))])
+            Statement(binding: .assignment([.name(name)]), expression: .reference([.name(next)]))
+        } + [Statement(binding: .assignment([.name("f")]), expression: .literal(.null))])
 
         let sut = try Module(
             procedures: [
@@ -1578,13 +1578,13 @@ struct InferenceTests {
                         Statement(binding: .variable(name), expression: .literal(.string("s")))
                     } + [
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: chain)
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("a")])]
+                            arguments: [.reference([.name("a")])]
                         )))
                     ])
                 ),
@@ -1632,13 +1632,13 @@ struct InferenceTests {
                                     )
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
                                 ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.literal(.string("hey")), .reference([.key("held")])]
+                            arguments: [.literal(.string("hey")), .reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1682,16 +1682,16 @@ struct InferenceTests {
                             expression: .attempt(
                                 Block(body: [
                                     mayFail(),
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text")))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.string("text")))
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1)))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.int(1)))
                                 ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1734,16 +1734,16 @@ struct InferenceTests {
                         Statement(binding: .variable("many"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                .reference([.key("ready")]),
+                                .reference([.name("ready")]),
                                 then: [
-                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.int(1)))
+                                    Statement(binding: .assignment([.name("many")]), expression: .literal(.int(1)))
                                 ],
                                 else: [Statement(expression: aborting(literal("no")))]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -1784,7 +1784,7 @@ struct InferenceTests {
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -1831,7 +1831,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "gives_up"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -1869,7 +1869,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))]))
                     ],
-                    result: .reference([.key("task"), .key("absolute")])
+                    result: .reference([.name("task"), .name("absolute")])
                 )
             ]
         )
@@ -1896,7 +1896,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("task"), expression: .literal(.string("a")))
                     ],
-                    result: .reference([.key("task"), .key("count")])
+                    result: .reference([.name("task"), .name("count")])
                 )
             ]
         )

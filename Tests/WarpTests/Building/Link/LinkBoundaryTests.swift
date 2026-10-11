@@ -74,7 +74,7 @@ struct LinkBoundaryTests {
                                 returns: .any
                             ),
                             body: [],
-                            result: .reference([.key("it")])
+                            result: .reference([.name("it")])
                         ))
                     ),
                     "entry": Procedure(

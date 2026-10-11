@@ -872,7 +872,7 @@ struct Validator: Sendable {
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
-            case let .key(name, _):
+            case let .name(name, _):
                 try held(name, as: .value, at: place)
 
             case let .index(index, _) where index < 0:
@@ -985,7 +985,7 @@ struct Validator: Sendable {
             throw ValidationError(
                 "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
+                    + " and `\(Path([.name(of)] + path.segments).rendered)` is a path"
                     + " only that body can read",
                 at: place
             )

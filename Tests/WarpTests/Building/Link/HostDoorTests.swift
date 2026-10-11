@@ -212,7 +212,7 @@ struct HostDoorTests {
                             .closure(Procedure(
                                 signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string),
                                 body: [],
-                                result: .reference([.key("x"), .key("id")])
+                                result: .reference([.name("x"), .name("id")])
                             ))
                         ]
                     ))
@@ -243,9 +243,9 @@ struct HostDoorTests {
                     access: .public,
                     body: [
                         Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
-                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.key("n")])])))
+                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])])))
                     ],
-                    result: .reference([.key("n")])
+                    result: .reference([.name("n")])
                 )
             ]
         )
@@ -306,7 +306,7 @@ struct HostDoorTests {
                     result: .closure(Procedure(
                         signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], returns: .parameter(name: "T")),
                         body: [],
-                        result: .reference([.key("y")])
+                        result: .reference([.name("y")])
                     ))
                 ),
                 "entry": Procedure(
@@ -447,11 +447,11 @@ struct HostDoorTests {
                             binding: .constant("failed"),
                             expression: .attempt(
                                 Block(body: [Statement(expression: .call(Call(selector: "App.carry")))]),
-                                rescue: Block(body: [], result: .reference([.key("failed"), .key("details"), .key("held")]))
+                                rescue: Block(body: [], result: .reference([.name("failed"), .name("details"), .name("held")]))
                             )
                         )
                     ],
-                    result: .reference([.key("failed")])
+                    result: .reference([.name("failed")])
                 )
             ]
         )

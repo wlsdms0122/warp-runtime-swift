@@ -19,7 +19,7 @@ import Foundation
 // `?[` on an index), the one mark that says absence is expected here. A plain
 // segment refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
-    case key(Name, optional: Bool)
+    case name(Name, optional: Bool)
     case index(Int, optional: Bool)
     case indexRef(Path, optional: Bool)
 
@@ -41,7 +41,7 @@ public enum PathSegment: Sendable, Equatable {
     // shares, however it is spelled.
     public var optional: Bool {
         switch self {
-        case let .key(_, optional), let .index(_, optional), let .indexRef(_, optional):
+        case let .name(_, optional), let .index(_, optional), let .indexRef(_, optional):
             return optional
         }
     }
@@ -52,8 +52,8 @@ public enum PathSegment: Sendable, Equatable {
     // walk arrived has to see one segment for both.
     public var unmarked: PathSegment {
         switch self {
-        case let .key(name, _):
-            return .key(name)
+        case let .name(name, _):
+            return .name(name)
 
         case let .index(index, _):
             return .index(index)
@@ -67,7 +67,7 @@ public enum PathSegment: Sendable, Equatable {
     // position, not a name.
     public var named: Name? {
         switch self {
-        case let .key(name, _):
+        case let .name(name, _):
             return name
 
         case .index, .indexRef:
@@ -79,7 +79,7 @@ public enum PathSegment: Sendable, Equatable {
     // every sentence that names the spelling asks instead of guessing.
     public var mark: String {
         switch self {
-        case .key:
+        case .name:
             return "?."
 
         case .index, .indexRef:
@@ -91,7 +91,7 @@ public enum PathSegment: Sendable, Equatable {
     // MARK: - Public
     // The plain spellings. Most segments are written without the mark, and a
     // construction site that says nothing about absence means it.
-    public static func key(_ name: Name) -> PathSegment { .key(name, optional: false) }
+    public static func name(_ name: Name) -> PathSegment { .name(name, optional: false) }
     public static func index(_ index: Int) -> PathSegment { .index(index, optional: false) }
     public static func indexRef(_ path: Path) -> PathSegment { .indexRef(path, optional: false) }
 

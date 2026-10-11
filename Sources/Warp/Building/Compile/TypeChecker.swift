@@ -588,7 +588,7 @@ struct TypeChecker {
 
         var current = bound.type
 
-        var walked: Path = [.key(head)]
+        var walked: Path = [.name(head)]
 
         // Whether an optional segment read past a possible absence. The one
         // thing that makes the whole path's answer nullable.
@@ -632,7 +632,7 @@ struct TypeChecker {
                 // into) so it refuses here too, and says so in its own terms.
                 if current == .any {
                     let reach = switch segment {
-                    case .key: "reads a dot on"
+                    case .name: "reads a dot on"
                     case .index, .indexRef: "indexes into"
                     }
 
@@ -778,7 +778,7 @@ struct TypeChecker {
             // rule is asked here like everywhere else and always answers yes:
             // the mark has an absence to expect on an entry, unwrapped or not,
             // and that fact lives in the rule rather than in this landing.
-            case let (.key, .dictionary(_, entry)):
+            case let (.name, .dictionary(_, entry)):
                 if let refusal = needless(.entry) { return refusal }
 
                 if segment.optional { optional = true }
@@ -790,7 +790,7 @@ struct TypeChecker {
             // found at run, and so is a `?.` on one it does declare: the type
             // proves the field is there, so the spelling that expects absence
             // says nothing, unless it just read past the record's own null.
-            case let (.key(key, _), .record(fields)):
+            case let (.name(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
@@ -808,7 +808,7 @@ struct TypeChecker {
             // A type with no fields has no name here to read. The procedure by
             // this spelling is sent with a written call, which names the
             // declaration it means.
-            case let (.key(key, _), _):
+            case let (.name(key, _), _):
                 return .refused(
                     "\(walked.rendered) names '\(key)',"
                         + " and \(current.rendered(in: context.loweredTypes)) has no name there to read."
@@ -868,7 +868,7 @@ struct TypeChecker {
             current = context.resolve(current)
 
             switch (segment, current) {
-            case let (.key(key, _), .record(fields)):
+            case let (.name(key, _), .record(fields)):
                 guard let field = fields[key] else {
                     return .refused(
                         "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.loweredTypes))"
@@ -886,7 +886,7 @@ struct TypeChecker {
 
                 current = field.fieldUnwrapped
 
-            case let (.key, .dictionary(_, entry)):
+            case let (.name, .dictionary(_, entry)):
                 current = entry
 
             // A name between the brackets is a path of its own, judged as
@@ -909,19 +909,19 @@ struct TypeChecker {
             case let (.index, .array(element)):
                 current = element
 
-            case (.key, .any), (.index, .any), (.indexRef, .any):
+            case (.name, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
                     "\(walked.rendered) writes into \(current.rendered(in: context.loweredTypes)), which"
                         + " declares nothing. A type is written by naming it"
                 )
 
-            case (.key, .nullable), (.index, .nullable), (.indexRef, .nullable):
+            case (.name, .nullable), (.index, .nullable), (.indexRef, .nullable):
                 return .refused(
                     "\(walked.rendered) writes into \(current.rendered(in: context.loweredTypes)), which may"
                         + " be null. Write the whole first"
                 )
 
-            case (.key, _):
+            case (.name, _):
                 return .refused(
                     "\(walked.rendered) writes a field into \(current.rendered(in: context.loweredTypes)),"
                         + " which has none"
@@ -1140,7 +1140,7 @@ struct TypeChecker {
                 throw BuildError("key reference \(inner.rendered) is '\(key)', which is not a name", at: place)
             }
 
-            return .key(name, optional: optionally)
+            return .name(name, optional: optionally)
 
         default:
             throw BuildError(

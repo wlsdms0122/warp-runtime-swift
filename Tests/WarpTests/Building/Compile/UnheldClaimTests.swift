@@ -31,7 +31,7 @@ struct UnheldClaimTests {
                         bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])]))
+                    result: .call(Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])]))
                 )
             ]
         )
@@ -54,7 +54,7 @@ struct UnheldClaimTests {
                         bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("it")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("it")])]))
                 ),
                 main: Procedure(
                     access: .public,
@@ -69,7 +69,7 @@ struct UnheldClaimTests {
                             )
                         )
                     ],
-                    result: .reference([.key("account"), .key("balance")])
+                    result: .reference([.name("account"), .name("balance")])
                 )
             ]
         )
@@ -98,7 +98,7 @@ struct UnheldClaimTests {
                     ),
                     body: [],
                     result: .call(
-                        Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])])
+                        Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
                     )
                 )
             ]
@@ -141,7 +141,7 @@ struct UnheldClaimTests {
                             )
                         )
                     ],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("account")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("account")])]))
                 )
             ]
         )
@@ -169,7 +169,7 @@ struct UnheldClaimTests {
                     ),
                     body: [],
                     result: .call(
-                        Call(selector: "App.Describable.describe", arguments: [.reference([.key("it")])])
+                        Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
                     )
                 )
             ]
@@ -197,7 +197,7 @@ struct UnheldClaimTests {
                             )
                         )
                     ],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.key("plain")])]))
+                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("plain")])]))
                 )
             ]
         )
@@ -271,7 +271,7 @@ struct UnheldClaimTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )

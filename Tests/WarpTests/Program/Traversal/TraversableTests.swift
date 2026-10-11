@@ -78,7 +78,7 @@ struct TraversableTests {
         // Given. A call of a value handing a variable in place, written in
         // every position a statement can stand in, and in closures held by
         // every operand that can hold one
-        func name(_ spelling: String) -> Warp.Expression { .reference([.key(Name(stringLiteral: spelling))]) }
+        func name(_ spelling: String) -> Warp.Expression { .reference([.name(Name(stringLiteral: spelling))]) }
 
         let call = Statement(expression: .apply(name("bump"), arguments: [name("count")]))
 

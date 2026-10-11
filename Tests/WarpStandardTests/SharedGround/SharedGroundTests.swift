@@ -174,13 +174,13 @@ struct SharedGroundTests {
                                 )),
                                 then: [
                                     Statement(
-                                        binding: .assignment([.key("verdict")]),
+                                        binding: .assignment([.name("verdict")]),
                                         expression: .literal(.string("small"))
                                     )
                                 ],
                                 else: [
                                     Statement(
-                                        binding: .assignment([.key("verdict")]),
+                                        binding: .assignment([.name("verdict")]),
                                         expression: .literal(.string("large"))
                                     )
                                 ]

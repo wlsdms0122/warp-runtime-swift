@@ -243,7 +243,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(
-                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))]
+                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.name("inner")]))]
                         ),
                         body: [],
                         result: .literal(.null)

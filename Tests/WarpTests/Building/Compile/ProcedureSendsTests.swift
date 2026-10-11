@@ -515,7 +515,7 @@ struct ProcedureSendsTests {
                     returns: .int
                 ),
                 body: [],
-                result: .reference([.key("z")])
+                result: .reference([.name("z")])
             )
         ]
     )
@@ -525,7 +525,7 @@ struct ProcedureSendsTests {
             "App.pick": Procedure(
                 signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
                 body: [],
-                result: .reference([.key("a")])
+                result: .reference([.name("a")])
             )
         ]
     )
@@ -574,7 +574,7 @@ struct ProcedureSendsTests {
                     returns: .string
                 ),
                 body: [],
-                result: .reference([.key("said")])
+                result: .reference([.name("said")])
             )
         ]
     )

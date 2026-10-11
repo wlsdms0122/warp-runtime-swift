@@ -39,19 +39,19 @@ struct WriterTests {
                     signature: Signature(parameters: [Parameter(name: "payload", type: .any)]),
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("App.Counted"),
                                 optional: false
                             )
                         ),
                         Statement(binding: .constant("asked"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .array(.string),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("named"), .key("count")])
+                    result: .reference([.name("named"), .name("count")])
                 )
             ]
         ),
@@ -71,7 +71,7 @@ struct WriterTests {
                                             .call(
                                                 Call(
                                                     selector: "Standard.Text.text",
-                                                    arguments: [.reference([.key("procedure")])]
+                                                    arguments: [.reference([.name("procedure")])]
                                                 )
                                             ),
                                             .literal(.string("!"))
@@ -82,14 +82,14 @@ struct WriterTests {
                             )
                         ),
                         Statement(binding: .constant("held"), expression: .record([
-                                "line": .reference([.key("joined")]),
+                                "line": .reference([.name("joined")]),
                                 "size": .call(
-                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("procedure")])])
+                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.name("procedure")])])
                                 )
                             ])
                         )
                     ],
-                    result: .reference([.key("held")])
+                    result: .reference([.name("held")])
                 )
             ]
         ),
@@ -105,9 +105,9 @@ struct WriterTests {
                             ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
-                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("payload")])
+                    result: .reference([.name("payload")])
                 )
             ]
         )
@@ -743,7 +743,7 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
                         ),
-                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.key("payload")])])
+                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.name("payload")])])
                         )
                     ]
                 )
@@ -770,7 +770,7 @@ struct WriterTests {
         #expect(body.first?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
         #expect(body.last?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
         #expect(payload["ref"]?.constantValue == .string("not-a-path"))
-        #expect(held["ref"]?.referencePath == [.key("payload")])
+        #expect(held["ref"]?.referencePath == [.name("payload")])
     }
 
     @Test("a notation that gave up a construct key cannot write what it said")

@@ -24,7 +24,7 @@ public struct Path: Sendable, Equatable {
 
         for segment in segments {
             switch segment {
-            case let .key(key, optional):
+            case let .name(key, optional):
                 rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
 
             case let .index(index, optional):
@@ -66,7 +66,7 @@ public struct Path: Sendable, Equatable {
     // The root name this path reads from. Nil when the path doesn't start with
     // a name, which no scope can serve.
     public var head: Name? {
-        guard case let .key(head, _)? = segments.first else { return nil }
+        guard case let .name(head, _)? = segments.first else { return nil }
 
         return head
     }

@@ -139,10 +139,10 @@ struct LoweredTypeTests {
         // Given. Nothing is known of what a projection holds, so it takes
         // anything, and a slot of a type takes it only through a cast
         let table = types.loweredTypes
-        let projection = try TypeExpression.projection(of: "T", path: [.key("inner")]).lowered(in: table)
+        let projection = try TypeExpression.projection(of: "T", path: [.name("inner")]).lowered(in: table)
 
         // When / Then
-        #expect(projection == .projection(of: "T", path: [.key("inner")]))
+        #expect(projection == .projection(of: "T", path: [.name("inner")]))
         #expect(try TypeExpression.array(.projection(of: "T", path: [])).lowered(in: table)
             == .array(.projection(of: "T", path: [])))
         #expect(!LoweredType.int.accepts(projection, in: table))
@@ -265,7 +265,7 @@ struct LoweredTypeTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
                     body: [],
-                    result: .apply(.reference([.key("held")]), arguments: [])
+                    result: .apply(.reference([.name("held")]), arguments: [])
                 )
             ]
         )
@@ -299,7 +299,7 @@ struct LoweredTypeTests {
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
                     body: [],
-                    result: .apply(.reference([.key("held")]), arguments: [])
+                    result: .apply(.reference([.name("held")]), arguments: [])
                 )
             ]
         )

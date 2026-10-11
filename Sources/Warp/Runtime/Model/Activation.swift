@@ -58,8 +58,8 @@ struct Activation: Sendable {
             case let .field(position, name, _):
                 return .field(position, name)
 
-            case let .key(name, _):
-                return .key(name)
+            case let .name(name, _):
+                return .name(name)
 
             case let .index(index, _):
                 return .index(index)
@@ -80,7 +80,7 @@ struct Activation: Sendable {
                         )
                     }
 
-                    return .key(name)
+                    return .name(name)
 
                 default:
                     throw ExecutionError(
@@ -94,7 +94,7 @@ struct Activation: Sendable {
 
     // The path as the author wrote it, for a sentence that reads it back.
     func spelled(_ address: Address) -> Path {
-        Path([.key(frame.names[address.slot])] + address.steps.map(spelled))
+        Path([.name(frame.names[address.slot])] + address.steps.map(spelled))
     }
 
     // MARK: - Private
@@ -186,7 +186,7 @@ struct Activation: Sendable {
 
                 read = .found(record.values[position])
 
-            case let .key(key, optional):
+            case let .name(key, optional):
                 switch current {
                 case .record, .dictionary: break
                 default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
@@ -270,8 +270,8 @@ struct Activation: Sendable {
 
     private func spelled(_ step: Step) -> PathSegment {
         switch step {
-        case let .field(_, name, optional), let .key(name, optional):
-            return .key(name, optional: optional)
+        case let .field(_, name, optional), let .name(name, optional):
+            return .name(name, optional: optional)
 
         case let .index(index, optional):
             return .index(index, optional: optional)

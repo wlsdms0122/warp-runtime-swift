@@ -641,7 +641,7 @@ struct Lowering {
                 case .index, .at:
                     return reached?.element(in: loweredTypes)
 
-                case .key:
+                case .name:
                     return nil
                 }
             }
@@ -1091,11 +1091,11 @@ struct Lowering {
 
         let steps = try path.segments.dropFirst().map { segment -> Step in
             switch segment {
-            case let .key(name, optional):
+            case let .name(name, optional):
                 guard let place = reached?.place(of: name, in: loweredTypes) else {
                     reached = nil
 
-                    return .key(name, optional: optional)
+                    return .name(name, optional: optional)
                 }
 
                 reached = place.type

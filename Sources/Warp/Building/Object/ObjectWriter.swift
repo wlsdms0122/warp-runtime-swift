@@ -320,8 +320,8 @@ struct ObjectWriter {
         typealias Tag = ObjectLayout.SegmentTag
 
         switch segment {
-        case let .key(spelling, optional):
-            return tagged(Tag.key, name(spelling), .bool(optional))
+        case let .name(spelling, optional):
+            return tagged(Tag.name, name(spelling), .bool(optional))
 
         case let .index(index, optional):
             return tagged(Tag.index, .int(index), .bool(optional))
@@ -666,8 +666,8 @@ struct ObjectWriter {
         case let .field(position, spelling, optional):
             return tagged(Tag.field, .int(position), name(spelling), .bool(optional))
 
-        case let .key(spelling, optional):
-            return tagged(Tag.key, name(spelling), .bool(optional))
+        case let .name(spelling, optional):
+            return tagged(Tag.name, name(spelling), .bool(optional))
 
         case let .index(index, optional):
             return tagged(Tag.index, .int(index), .bool(optional))

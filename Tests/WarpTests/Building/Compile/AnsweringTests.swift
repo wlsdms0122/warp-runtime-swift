@@ -38,7 +38,7 @@ struct AnsweringTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "counts")))
                     ],
-                    result: .reference([.key("said"), .key("total")])
+                    result: .reference([.name("said"), .name("total")])
                 )
             ]
         )
@@ -64,7 +64,7 @@ struct AnsweringTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "middle")))
                     ],
-                    result: .reference([.key("said"), .key("total")])
+                    result: .reference([.name("said"), .name("total")])
                 )
             ]
         )
@@ -90,7 +90,7 @@ struct AnsweringTests {
                                 Statement(
                                     expression: .conditional(
                                         equals(
-                                            .reference([.key("flag")]),
+                                            .reference([.name("flag")]),
                                             .literal(.bool(true))
                                         ),
                                         then: [
@@ -116,7 +116,7 @@ struct AnsweringTests {
                                 arguments: [.literal(.bool(true))]
                             )))
                         ],
-                        result: .reference([.key("said"), .key("total")])
+                        result: .reference([.name("said"), .name("total")])
                     )
                 ]
             )
@@ -176,7 +176,7 @@ struct AnsweringTests {
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                         ],
-                        result: .reference([.key("said"), .key("total")])
+                        result: .reference([.name("said"), .name("total")])
                     )
                 ]
             )
@@ -228,13 +228,13 @@ struct AnsweringTests {
         // When / Then. The parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
         _ = try await builder.build(
-            [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
+            [module(reading: [.name("said"), .name("inner")], answering: [.name("of")])]
                 + Module.standard
         )
 
         await #expect {
             try await builder.build(
-                [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
+                [module(reading: [.name("said"), .name("missing")], answering: [.name("of")])]
                     + Module.standard
             )
         } throws: { error in
@@ -246,8 +246,8 @@ struct AnsweringTests {
         await #expect {
             try await builder.build(
                 [module(
-                    reading: [.key("said"), .key("inner")],
-                    answering: [.key("of"), .key("inner")]
+                    reading: [.name("said"), .name("inner")],
+                    answering: [.name("of"), .name("inner")]
                 )] + Module.standard
             )
         } throws: { error in
@@ -290,7 +290,7 @@ struct AnsweringTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -299,7 +299,7 @@ struct AnsweringTests {
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -328,7 +328,7 @@ struct AnsweringTests {
             procedures: [
                 "callee": Procedure(
                     signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
-                    body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
+                    body: [Statement(binding: .constant("echo"), expression: .reference([.name("base")]))]
                 ),
                 "caller": Procedure(
                     access: .public,
@@ -336,7 +336,7 @@ struct AnsweringTests {
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),

@@ -505,7 +505,7 @@ struct Derivation {
             case .index, .indexRef:
                 return reached?.element(in: table)
 
-            case let .key(name, _):
+            case let .name(name, _):
                 return reached?.dotted(name, in: table)
             }
         }

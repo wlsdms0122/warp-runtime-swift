@@ -37,8 +37,8 @@ struct IndexReferenceJudgementTests {
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("names"), .indexRef([.key("C")])])
+                        .name("items"),
+                        .indexRef([.name("names"), .indexRef([.name("C")])])
                     ])
                 )
             ]
@@ -73,9 +73,9 @@ struct IndexReferenceJudgementTests {
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("i")]),
-                        .key("nope")
+                        .name("items"),
+                        .indexRef([.name("i")]),
+                        .name("nope")
                     ])
                 )
             ]
@@ -104,7 +104,7 @@ struct IndexReferenceJudgementTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .indexRef([.key("name")])])
+                    result: .reference([.name("items"), .indexRef([.name("name")])])
                 )
             ]
         )
@@ -131,7 +131,7 @@ struct IndexReferenceJudgementTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("text"), .indexRef([.key("i")])])
+                    result: .reference([.name("text"), .indexRef([.name("i")])])
                 )
             ]
         )

@@ -24,7 +24,7 @@ struct PathParserTests {
         let parsed = try sut.parse("items[0].name[${i}]")
 
         // Then
-        #expect(parsed == [.key("items"), .index(0), .key("name"), .indexRef([.key("i")])])
+        #expect(parsed == [.name("items"), .index(0), .name("name"), .indexRef([.name("i")])])
     }
 
     @Test("a whole number between brackets is a position, whatever its size")
@@ -33,7 +33,7 @@ struct PathParserTests {
         let sut = PathParser()
 
         // When / Then. One no `Int` holds is refused, never read as a name
-        #expect(try sut.parse("d[5]") == [.key("d"), .index(5)])
+        #expect(try sut.parse("d[5]") == [.name("d"), .index(5)])
         #expect(throws: PathSyntaxError.self) { try sut.parse("d[99999999999999999999]") }
     }
 
@@ -44,19 +44,19 @@ struct PathParserTests {
 
         // When / Then. `?.` marks the segment after it
         #expect(
-            try sut.parse("task?.name") == [.key("task"), .key("name", optional: true)]
+            try sut.parse("task?.name") == [.name("task"), .name("name", optional: true)]
         )
         #expect(
             try sut.parse("a.b?.c[0]?.d")
-                == [.key("a"), .key("b"), .key("c", optional: true), .index(0), .key("d", optional: true)]
+                == [.name("a"), .name("b"), .name("c", optional: true), .index(0), .name("d", optional: true)]
         )
 
-        #expect(Path([.key("task"), .key("name", optional: true)]).rendered == "task?.name")
+        #expect(Path([.name("task"), .name("name", optional: true)]).rendered == "task?.name")
 
         // A space before the `?` belongs to nobody. The name comes out trimmed,
         // the way every other segment does.
         #expect(
-            try sut.parse("a.b ?.c") == [.key("a"), .key("b"), .key("c", optional: true)]
+            try sut.parse("a.b ?.c") == [.name("a"), .name("b"), .name("c", optional: true)]
         )
     }
 
@@ -68,24 +68,24 @@ struct PathParserTests {
         // When / Then. `?[` is the same mark `?.` puts on a name, on an index
         // instead: a literal, an index reference, one after an index
         #expect(
-            try sut.parse("items?[0]") == [.key("items"), .index(0, optional: true)]
+            try sut.parse("items?[0]") == [.name("items"), .index(0, optional: true)]
         )
         #expect(
             try sut.parse("a.items?[i]")
-                == [.key("a"), .key("items"), .indexRef([.key("i")], optional: true)]
+                == [.name("a"), .name("items"), .indexRef([.name("i")], optional: true)]
         )
         #expect(
             try sut.parse("rows[0]?[1]")
-                == [.key("rows"), .index(0), .index(1, optional: true)]
+                == [.name("rows"), .index(0), .index(1, optional: true)]
         )
 
         // A mark on the head reads as written, for the load to refuse.
         #expect(try sut.parse("?[0]") == [.index(0, optional: true)])
-        #expect(try sut.parse("?.a") == [.key("a", optional: true)])
+        #expect(try sut.parse("?.a") == [.name("a", optional: true)])
 
-        #expect(Path([.key("items"), .index(0, optional: true)]).rendered == "items?[0]")
+        #expect(Path([.name("items"), .index(0, optional: true)]).rendered == "items?[0]")
         #expect(
-            Path([.key("a"), .indexRef([.key("i")], optional: true)]).rendered == "a?[i]"
+            Path([.name("a"), .indexRef([.name("i")], optional: true)]).rendered == "a?[i]"
         )
     }
 
@@ -121,7 +121,7 @@ struct PathParserTests {
         // And. The dot after an index is a segment boundary, not an empty
         // segment.
         #expect(
-            try sut.parse("items[0].name") == [.key("items"), .index(0), .key("name")]
+            try sut.parse("items[0].name") == [.name("items"), .index(0), .name("name")]
         )
     }
 
@@ -136,7 +136,7 @@ struct PathParserTests {
         #expect(throws: PathSyntaxError.self) { try sut.parse("a]") }
         #expect(throws: PathSyntaxError.self) { try sut.parse("a[0]]") }
 
-        #expect(try sut.parse("a[i[0]]") == [.key("a"), .indexRef([.key("i"), .index(0)])])
+        #expect(try sut.parse("a[i[0]]") == [.name("a"), .indexRef([.name("i"), .index(0)])])
     }
 
     // MARK: - Public

@@ -17,7 +17,7 @@ enum Step: Sendable {
 
     // A name read from what only the run knows the keys of: a dictionary, or
     // a value read through a type parameter, whose type the call decides.
-    case key(Name, optional: Bool)
+    case name(Name, optional: Bool)
 
     case index(Int, optional: Bool)
     case at(Address, optional: Bool)
@@ -25,7 +25,7 @@ enum Step: Sendable {
     // MARK: - Property
     var optional: Bool {
         switch self {
-        case let .field(_, _, optional), let .key(_, optional), let .index(_, optional),
+        case let .field(_, _, optional), let .name(_, optional), let .index(_, optional),
             let .at(_, optional):
             return optional
         }

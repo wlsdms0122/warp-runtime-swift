@@ -116,7 +116,7 @@ struct BakedTests {
                         Statement(
                             binding: .constant("once"),
                             expression: .call(
-                                Call(selector: "App.add1", arguments: [.reference([.key("value")])])
+                                Call(selector: "App.add1", arguments: [.reference([.name("value")])])
                             )
                         )
                     ],
@@ -510,7 +510,7 @@ struct BakedTests {
                     result: .call(
                         Call(
                             selector: "Standard.Numeric.plus",
-                            arguments: [.reference([.key("value")]), .literal(.int(number))]
+                            arguments: [.reference([.name("value")]), .literal(.int(number))]
                         )
                     )
                 )

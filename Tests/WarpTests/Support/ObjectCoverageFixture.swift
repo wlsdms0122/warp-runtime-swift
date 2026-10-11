@@ -105,9 +105,9 @@ enum ObjectCoverageFixture {
         "projection": .projection(
             of: "a.fifteen",
             path: [
-                .key("k", optional: true),
+                .name("k", optional: true),
                 .index(3, optional: false),
-                .indexRef([.key("inner", optional: false)], optional: true)
+                .indexRef([.name("inner", optional: false)], optional: true)
             ]
         )
     ])
@@ -245,7 +245,7 @@ enum ObjectCoverageFixture {
 
     static let everyStep: [Step] = [
         .field(0, "f", optional: false),
-        .key("k", optional: true),
+        .name("k", optional: true),
         .index(2, optional: false),
         .at(Address(slot: 4, steps: []), optional: true)
     ]

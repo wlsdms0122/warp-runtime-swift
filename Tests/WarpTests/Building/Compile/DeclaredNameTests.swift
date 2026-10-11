@@ -111,7 +111,7 @@ struct DeclaredNameTests {
                     access: .public,
                     body: [
                         Statement(binding: .variable("held", declared: .int), expression: .literal(.int(1))),
-                        Statement(binding: .assignment([.key("held")]), expression: .literal(.string("no")))
+                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("no")))
                     ],
                     result: reference("held")
                 )
@@ -195,7 +195,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: [.reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
                         )
                     ],
@@ -205,7 +205,7 @@ struct DeclaredNameTests {
                     signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
                     body: [
                         Statement(
-                            binding: .assignment([.key("step")]),
+                            binding: .assignment([.name("step")]),
                             expression: .closure(Procedure(signature: takes, body: [], result: .literal(.int(9))))
                         )
                     ]
@@ -237,7 +237,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: [.reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
                         )
                     ],

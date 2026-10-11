@@ -13,14 +13,14 @@ import Foundation
 // beside a field is what a sentence calls it.
 enum Projection: Sendable {
     case field(Int, Name)
-    case key(Name)
+    case name(Name)
     case index(Int)
 
     // MARK: - Property
     // How the step reads back, as the author wrote it.
     var spelled: PathSegment {
         switch self {
-        case let .field(_, name), let .key(name): .key(name)
+        case let .field(_, name), let .name(name): .name(name)
         case let .index(index): .index(index)
         }
     }

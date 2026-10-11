@@ -73,7 +73,7 @@ struct PathParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.key(try name(key), optional: optional))
+                segments.append(.name(try name(key), optional: optional))
                 optional = false
                 expectsKey = false
                 appended = true

@@ -87,7 +87,7 @@ struct ConstnessTests {
         let writing = Procedure(
             body: [
                 Statement(binding: .variable("held"), expression: .literal(.string("first"))),
-                Statement(binding: .assignment([.key("held")]), expression: .literal(.string("second")))
+                Statement(binding: .assignment([.name("held")]), expression: .literal(.string("second")))
             ],
             result: reference("held")
         )
@@ -130,7 +130,7 @@ struct ConstnessTests {
         // Given. A closure that writes a variable the body around it declared.
         // The box is outside the closure, so the write reaches the run's state.
         let writing = Procedure(
-            body: [Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1)))],
+            body: [Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))],
             result: .literal(.string("written"))
         )
         let handed = try Module(
@@ -163,7 +163,7 @@ struct ConstnessTests {
         // box, so the declaration runs, and the closure sends what runs.
         let bumping = Procedure(
             signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))]),
-            body: [Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))]
+            body: [Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))]
         )
         let sending = Procedure(
             body: [

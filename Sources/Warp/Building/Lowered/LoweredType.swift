@@ -1563,7 +1563,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Spelled as `TypeExpression` spells it, for the message alone.
         case let .projection(of, path):
-            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
         case .never:
             return TypeSpelling.never.spelling

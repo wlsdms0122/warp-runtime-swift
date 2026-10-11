@@ -38,7 +38,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -59,7 +59,7 @@ struct FieldPlaceTests {
                     expression: .record(["b": .literal(.int(2)), "a": .literal(.int(1))])
                 )
             ],
-            result: .reference([.key("held"), .key("b")])
+            result: .reference([.name("held"), .name("b")])
         )
 
         // When
@@ -77,14 +77,14 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))]
             ),
             body: [],
-            result: .reference([.key("entries"), .key("a")])
+            result: .reference([.name("entries"), .name("a")])
         )
 
         // When
         let steps = try await resultSteps(of: sut)
 
         // Then
-        #expect(steps == [.key("a", optional: false)])
+        #expect(steps == [.name("a", optional: false)])
     }
 
     @Test("a place is read at every depth the build laid out")
@@ -95,7 +95,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "outer", type: .named("App.Outer"))]
             ),
             body: [],
-            result: .reference([.key("outer"), .key("inner"), .key("deep")])
+            result: .reference([.name("outer"), .name("inner"), .name("deep")])
         )
 
         // When
@@ -115,7 +115,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -142,11 +142,11 @@ struct FieldPlaceTests {
                     expression: .record(["x": .literal(.int(1)), "y": .literal(.int(2))])
                 ),
                 Statement(
-                    binding: .assignment([PathSegment.key("point")]),
-                    expression: .cast(.reference([.key("given")]), as: .named("App.Point"), optional: false)
+                    binding: .assignment([PathSegment.name("point")]),
+                    expression: .cast(.reference([.name("given")]), as: .named("App.Point"), optional: false)
                 )
             ],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
 
         // When
@@ -172,11 +172,11 @@ struct FieldPlaceTests {
             body: [
                 Statement(binding: .variable("held"), expression: map(["y": .literal(.int(0))])),
                 Statement(
-                    binding: .assignment([PathSegment.key("held")]),
-                    expression: .reference([.key("given")])
+                    binding: .assignment([PathSegment.name("held")]),
+                    expression: .reference([.name("given")])
                 )
             ],
-            result: .reference([.key("held"), .key("y")])
+            result: .reference([.name("held"), .name("y")])
         )
 
         // When
@@ -187,7 +187,7 @@ struct FieldPlaceTests {
         )
 
         // Then
-        #expect(steps == [.key("y", optional: false)])
+        #expect(steps == [.name("y", optional: false)])
         #expect(answer == .int(2))
     }
 
@@ -200,12 +200,12 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
         let named = Procedure(
             signature: Signature(parameters: [Parameter(name: "point", type: .dictionary(key: .string, value: .int))]),
             body: [],
-            result: .reference([.key("point"), .key("y")])
+            result: .reference([.name("point"), .name("y")])
         )
         // When
         let byPlace = try await run(laid, arguments: ["point": .record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))])

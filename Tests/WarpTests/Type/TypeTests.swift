@@ -325,7 +325,7 @@ struct TypeTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("node"), .key("value")])
+                    result: .reference([.name("node"), .name("value")])
                 ),
                 entryName: Procedure(
                     access: .public,

@@ -44,7 +44,7 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [],
-                    result: .reference([.key("of"), .key("count")])
+                    result: .reference([.name("of"), .name("count")])
                 ),
                 "entry": Procedure(
                     access: .public,
@@ -73,9 +73,9 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")]))
+                        Statement(binding: .constant("held"), expression: .reference([.name("of"), .name("inner")]))
                     ],
-                    result: .reference([.key("held"), .key("count")])
+                    result: .reference([.name("held"), .name("count")])
                 ),
                 "entry": Procedure(
                     access: .public,
@@ -115,18 +115,18 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .variable("held"), expression: .reference([.key("of")])),
+                        Statement(binding: .variable("held"), expression: .reference([.name("of")])),
                         Statement(
                             expression: .conditional(
-                                equals(.reference([.key("flag")]), .literal(.bool(true))),
+                                equals(.reference([.name("flag")]), .literal(.bool(true))),
                                 then: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .reference([.key("of"), .key("inner")]))
+                                    Statement(binding: .assignment([.name("held")]), expression: .reference([.name("of"), .name("inner")]))
                                 ],
                                 else: nil
                             )
                         )
                     ],
-                    result: .reference([.key("held"), .key("count")])
+                    result: .reference([.name("held"), .name("count")])
                 ),
                 "entry": Procedure(
                     access: .public,
@@ -170,14 +170,14 @@ struct ParameterDotTests {
                             returns: .any
                         ),
                         body: [
-                            Statement(binding: .variable("held"), expression: .reference([.key("of"), .key("inner")])),
+                            Statement(binding: .variable("held"), expression: .reference([.name("of"), .name("inner")])),
                             Statement(
                                 expression: .conditional(
-                                    equals(.reference([.key("flag")]), .literal(.bool(true))),
+                                    equals(.reference([.name("flag")]), .literal(.bool(true))),
                                     then: [
-                                        Statement(binding: .assignment([.key("held")]), expression: .reference([
-                                                .key("of"),
-                                                .key("inner", optional: marking)
+                                        Statement(binding: .assignment([.name("held")]), expression: .reference([
+                                                .name("of"),
+                                                .name("inner", optional: marking)
                                             ])
                                         )
                                     ],
@@ -185,7 +185,7 @@ struct ParameterDotTests {
                                 )
                             )
                         ],
-                        result: .reference([.key("held"), .key("count")])
+                        result: .reference([.name("held"), .name("count")])
                     ),
                     entryName: Procedure(
                         access: .public,
@@ -229,16 +229,16 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("inner")])),
-                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner"), .key("count")])),
+                        Statement(binding: .constant("held"), expression: .reference([.name("of"), .name("inner")])),
+                        Statement(binding: .variable("seen"), expression: .reference([.name("of"), .name("inner"), .name("count")])),
                         Statement(expression: .conditional(
-                            equals(.reference([.key("flag")]), .literal(.bool(true))),
-                            then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("held"), .key("count")])
+                            equals(.reference([.name("flag")]), .literal(.bool(true))),
+                            then: [Statement(binding: .assignment([.name("seen")]), expression: .reference([.name("held"), .name("count")])
                             )],
                             else: nil
                         ))
                     ],
-                    result: .reference([.key("seen"), .key("deep")])
+                    result: .reference([.name("seen"), .name("deep")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -279,15 +279,15 @@ struct ParameterDotTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .variable("seen"), expression: .reference([.key("of"), .key("inner")])),
+                        Statement(binding: .variable("seen"), expression: .reference([.name("of"), .name("inner")])),
                         Statement(expression: .conditional(
-                            equals(.reference([.key("flag")]), .literal(.bool(true))),
-                            then: [Statement(binding: .assignment([.key("seen")]), expression: .reference([.key("also"), .key("inner")])
+                            equals(.reference([.name("flag")]), .literal(.bool(true))),
+                            then: [Statement(binding: .assignment([.name("seen")]), expression: .reference([.name("also"), .name("inner")])
                             )],
                             else: nil
                         ))
                     ],
-                    result: .reference([.key("seen"), .key("count")])
+                    result: .reference([.name("seen"), .name("count")])
                 ),
                 entryName: Procedure(
                     access: .public,

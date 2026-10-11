@@ -185,7 +185,7 @@ struct TextTests {
                     body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
                     result: .call(Call(
                         selector: "Standard.Text.encoded",
-                        arguments: [.literal(.string("hi")), .reference([.key("named")])]
+                        arguments: [.literal(.string("hi")), .reference([.name("named")])]
                     ))
                 )
             ]

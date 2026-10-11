@@ -71,10 +71,10 @@ struct ControlFlowTests {
             Warp.Expression.conditional(
                 .literal(.bool(take)),
                 then: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
+                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("then")))
                 ],
                 else: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else")))
+                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("else")))
                 ]
             )
         }
@@ -107,7 +107,7 @@ struct ControlFlowTests {
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),
             then: [
-                Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
+                Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("then")))
             ],
             else: nil
         )
@@ -230,10 +230,10 @@ struct ControlFlowTests {
         // read against the material's count, with the element read at that
         // index, and a round's contribution is what it writes outward
         let sut = walking(
-            [.key("counts")],
+            [.name("counts")],
             element: "element",
             body: [
-                Statement(binding: .assignment([.key("sum")]), expression: .call(
+                Statement(binding: .assignment([.name("sum")]), expression: .call(
                     Call(selector: "Standard.Numeric.plus", arguments: [reference("sum"), reference("element")])
                 ))
             ]

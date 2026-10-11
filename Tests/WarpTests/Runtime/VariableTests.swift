@@ -20,8 +20,8 @@ struct VariableTests {
         // Given
         let sut: Body = [
             Statement(binding: .variable("tally"), expression: .literal(.int(1))),
-            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(2))),
-            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(3)))
+            Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(2))),
+            Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(3)))
         ]
 
         // When
@@ -37,7 +37,7 @@ struct VariableTests {
         // what makes an accumulator work at all
         let sut: Body = [
             Statement(binding: .variable("text"), expression: .literal(.string("a"))),
-            Statement(binding: .assignment([.key("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">")))
+            Statement(binding: .assignment([.name("text")]), expression: interpolated(literal("<"), spelling(reference("text")), literal(">")))
         ]
 
         // When
@@ -60,7 +60,7 @@ struct VariableTests {
                                     Procedure(
                                         body: [
                                             Statement(binding: .variable("tally"), expression: .literal(.int(0))),
-                                            Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1)))
+                                            Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))
                                         ],
                                         result: reference("tally")
                                     )
@@ -90,7 +90,7 @@ struct VariableTests {
                     while: differs(reference("gate", "index"), .literal(.int(3))),
                     body: Block(body: [
                         Statement(binding: .constant("transient"), expression: reference("gate", "index")),
-                        Statement(binding: .assignment([.key("latest")]), expression: reference("transient"))
+                        Statement(binding: .assignment([.name("latest")]), expression: reference("transient"))
                     ])
                 )
             )

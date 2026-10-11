@@ -38,30 +38,30 @@ struct ReferenceLookupTests {
     @Test("an existing path returns its value")
     func existingPathReturnsValue() async {
         // When / Then
-        await #expect(lookup([.key("name")], in: sut) == .found(.string("spec")))
-        await #expect(lookup([.key("run"), .key("id")], in: sut) == .found(.string("r-1")))
-        await #expect(lookup([.key("step"), .key("out")], in: sut) == .found(.string("done")))
-        await #expect(lookup([.key("items"), .index(1)], in: sut) == .found(.int(2)))
+        await #expect(lookup([.name("name")], in: sut) == .found(.string("spec")))
+        await #expect(lookup([.name("run"), .name("id")], in: sut) == .found(.string("r-1")))
+        await #expect(lookup([.name("step"), .name("out")], in: sut) == .found(.string("done")))
+        await #expect(lookup([.name("items"), .index(1)], in: sut) == .found(.int(2)))
     }
 
     @Test("a missing entry refuses, and ?. reads it as null")
     func missingEntryRefusesUnlessOptional() async {
         // When / Then. Absence past the head is a defect unless the author spelled
         // that they expect it
-        guard case .unfit = await lookup([.key("step"), .key("gone")], in: sut) else {
+        guard case .unfit = await lookup([.name("step"), .name("gone")], in: sut) else {
             Issue.record("expected unfit for an absent entry")
 
             return
         }
 
-        await #expect(lookup([.key("step"), .key("gone", optional: true)], in: sut) == .found(.null))
+        await #expect(lookup([.name("step"), .name("gone", optional: true)], in: sut) == .found(.null))
     }
 
     @Test("an index past the end is unfit, not absent")
     func indexPastTheEndIsUnfit() async {
         // When / Then. The array is there and says how long it is, so a reading that
         // misses it read the length wrong
-        guard case .unfit = await lookup([.key("items"), .index(9)], in: sut) else {
+        guard case .unfit = await lookup([.name("items"), .index(9)], in: sut) else {
             Issue.record("expected unfit for an index past the end")
 
             return
@@ -72,13 +72,13 @@ struct ReferenceLookupTests {
     func typeMisuseReturnsUnfit() async {
         // When / Then. Drilling a field into a string is an author error, not missing
         // data
-        guard case .unfit = await lookup([.key("name"), .key("foo")], in: sut) else {
+        guard case .unfit = await lookup([.name("name"), .name("foo")], in: sut) else {
             Issue.record("expected unfit")
 
             return
         }
 
-        guard case .unfit = await lookup([.key("name"), .index(0)], in: sut) else {
+        guard case .unfit = await lookup([.name("name"), .index(0)], in: sut) else {
             Issue.record("expected unfit for indexing into a String")
 
             return
@@ -89,13 +89,13 @@ struct ReferenceLookupTests {
     func keySegmentDoesNotDerive() async {
         // When / Then. The value has no say: a `key` the build left as a read is a
         // read, even where a procedure by that name would have answered
-        guard case .unfit = await lookup([.key("items"), .key("count")], in: sut) else {
+        guard case .unfit = await lookup([.name("items"), .name("count")], in: sut) else {
             Issue.record("expected unfit for a key on an array")
 
             return
         }
 
-        guard case .unfit = await lookup([.key("name"), .key("count")], in: sut) else {
+        guard case .unfit = await lookup([.name("name"), .name("count")], in: sut) else {
             Issue.record("expected unfit for a key on a String")
 
             return
@@ -105,7 +105,7 @@ struct ReferenceLookupTests {
     @Test("an index-reference segment resolves from a binding")
     func indexReferenceResolvesFromBinding() async {
         // When / Then
-        await #expect(lookup([.key("items"), .indexRef([.key("index")])], in: sut) == .found(.int(2)))
+        await #expect(lookup([.name("items"), .indexRef([.name("index")])], in: sut) == .found(.int(2)))
     }
 
     @Test("a fraction index reference is unfit")
@@ -119,7 +119,7 @@ struct ReferenceLookupTests {
         // When / Then. An index is an Int or a key, so a fraction is neither,
         // whole or not
         guard case let .unfit(reason) = await lookup(
-            [.key("items"), .indexRef([.key("half")])],
+            [.name("items"), .indexRef([.name("half")])],
             in: folding
         ) else {
             Issue.record("expected unfit for a fraction index reference")
@@ -134,7 +134,7 @@ struct ReferenceLookupTests {
     func indexReferenceNamingNothingIsUnfit() async {
         // When / Then. The heads the text shows were checked at load, so a name that
         // answers nothing here is a defect said out loud
-        guard case .unfit = await lookup([.key("items"), .indexRef([.key("typo")])], in: sut) else {
+        guard case .unfit = await lookup([.name("items"), .indexRef([.name("typo")])], in: sut) else {
             Issue.record("expected unfit for an index reference naming nothing")
 
             return

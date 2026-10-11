@@ -773,7 +773,7 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (.record, .key(name)), let (.dictionary, .key(name)):
+        case let (.record, .name(name)), let (.dictionary, .name(name)):
             guard let field = self[name] else {
                 throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
             }
@@ -812,7 +812,7 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].written(at: rest, under: rendered)
 
-        case let (.record, .key(name)), let (.dictionary, .key(name)):
+        case let (.record, .name(name)), let (.dictionary, .name(name)):
             return try self[name]?.written(at: rest, under: rendered)
 
         case let (.array(elements), .index(index)):
@@ -850,7 +850,7 @@ public indirect enum Value: Sendable, Equatable {
 
         // A name written into what holds its names as data. The build judged
         // the path, so a name that reaches here is one it allowed.
-        case let (.record, .key(name)), let (.dictionary, .key(name)):
+        case let (.record, .name(name)), let (.dictionary, .name(name)):
             do {
                 return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
             } catch let refused as ValueRefused {

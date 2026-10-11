@@ -108,8 +108,8 @@ struct UnwritableTests {
     func aPathWithAnUnspellableNameIsRefused() throws {
         // Given. A name holding a dot or a bracket is one segment to the
         // program and something else to a document
-        let dotted = Path([.key("a.b")])
-        let bracketed = Path([.key("a"), .key("[0")])
+        let dotted = Path([.name("a.b")])
+        let bracketed = Path([.name("a"), .name("[0")])
 
         // When / Then. Neither as a reference nor as the path a `set` writes
         #expect(throws: WritingError.self) { try sut.value(of: Warp.Expression.reference(dotted)) }
@@ -119,7 +119,7 @@ struct UnwritableTests {
         }
 
         #expect(
-            try sut.value(of: Warp.Expression.reference([.key("a"), .index(0, optional: true), .indexRef([.key("i")])]))
+            try sut.value(of: Warp.Expression.reference([.name("a"), .index(0, optional: true), .indexRef([.name("i")])]))
                 == .dictionary(["ref": .string("a?[0][i]")])
         )
     }
