@@ -711,7 +711,7 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("satisfies.Any: 'Any' is no type's name")
+                && "\(error)".contains("satisfies.Any: 'Any' is no name a module gives a type or a contract")
         }
     }
 
@@ -766,7 +766,7 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError && "\(error)".hasPrefix("\(place): ")
-                && ("\(error)".contains("is no type's name") || "\(error)".contains("is no type parameter's name"))
+                && ("\(error)".contains("is no name a module gives a type or a contract") || "\(error)".contains("is no type parameter's name"))
         }
     }
 
