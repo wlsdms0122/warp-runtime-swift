@@ -200,13 +200,13 @@ struct Compiling {
 
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
-    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
-        try lowering.settle(row, body: block, judgements: judgements, at: place)
+    mutating func lower(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
+        try lowering.lower(row, body: block, judgements: judgements, at: place)
 
         loweredRows.append(row)
     }
 
-    // The stand-ins, while the procedures themselves settle: a procedure folding through
+    // The stand-ins, while the procedures themselves are lowered: a procedure folding through
     // a procedure would be a cycle, and which procedures are already lowered is a fact
     // of name order rather than of the text.
     func folding() -> ResolvedTable {

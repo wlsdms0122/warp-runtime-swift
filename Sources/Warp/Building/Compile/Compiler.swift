@@ -162,7 +162,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
+                try compiling.lower(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure

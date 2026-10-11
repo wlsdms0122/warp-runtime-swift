@@ -387,7 +387,7 @@ struct Lowering {
 
     // Lowers a declaration's body into its row. `judgements` is what the type
     // check judged at each place in it.
-    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
+    mutating func lower(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
