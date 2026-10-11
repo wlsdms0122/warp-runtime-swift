@@ -92,10 +92,6 @@ public indirect enum Value: Sendable, Equatable {
             self.entries = entries
         }
 
-        private init(keeping entries: [(name: Name, value: Value)]) {
-            self.entries = entries
-        }
-
         // MARK: - Public
         public subscript(name: Name) -> Value? {
             let (position, found) = place(of: name)
@@ -115,7 +111,7 @@ public indirect enum Value: Sendable, Equatable {
                 written.insert((name: name, value: value), at: position)
             }
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
         // This dictionary without the entry of this name, or as it is where none
@@ -128,14 +124,14 @@ public indirect enum Value: Sendable, Equatable {
             var written = entries
             written.remove(at: position)
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
         // This dictionary with every value put through `transform`, under the
         // same names in the same order.
         public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Dictionary {
             Dictionary(
-                keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+                ordered: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
             )
         }
 

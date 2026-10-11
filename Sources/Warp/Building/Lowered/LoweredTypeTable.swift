@@ -118,18 +118,9 @@ final class LoweredTypeTable: Sendable {
     // declares, or the one an alias of a record stands for. Nil where the
     // name declares no record.
     func record(named name: Name) -> Int? {
-        guard let row = row(named: name) else { return nil }
+        guard let row = row(named: name), case let .named(record) = mention(of: row) else { return nil }
 
-        switch loweredTypes[row] {
-        case .record:
-            return row
-
-        case let .named(record):
-            return record
-
-        default:
-            return nil
-        }
+        return record
     }
 
     // A value from outside with every record it holds under a name, at any

@@ -153,11 +153,12 @@ struct Substitution: Sendable {
             return nil
         }
 
-        let spelled = parameter == TypeSpelling.selfType ? "`Self`" : "`some \(parameter)`"
+        let spelled = parameter == TypeSpelling.selfType ? TypeExpression.selfType : .parameter(name: parameter)
 
         return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: table)), a value of more than one"
-            + " type, and \(spelled) is one type wherever it stands. A value of a contract or of what may"
-            + " be null fills a bounded parameter only where the parameter stands alone at one position"
+            + " type, and `\(spelled.rendered)` is one type wherever it stands. A value of a contract"
+            + " or of what may be null fills a bounded parameter only where the parameter stands alone"
+            + " at one position"
     }
 
     // A parameter read once more, joined with what it is already read as by

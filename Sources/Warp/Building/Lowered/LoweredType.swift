@@ -1485,12 +1485,12 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner.holdsEveryByte(in: table)
 
         // A parameter stands for what arrived and does not settle it. A
-        // bounded one asks each value whether its type answers every
-        // contract, and every byte is an `Int`, so one answer is the answer
-        // for all of them. A table that cannot say yet passes each byte as
-        // it is, and so passes them all.
+        // bounded one asks each value whether its type stands where every
+        // contract is asked, and every byte is an `Int`, so one answer is the
+        // answer for all of them, a pair the table cannot decide written down
+        // as each byte would write it.
         case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.allSatisfy { contract in table.answers(contract: contract, arrived: TypeSpelling.int) != false }
+            return bounds.allSatisfy { contract in table.stands(TypeSpelling.int, answering: contract) }
 
         // `Double` takes no whole number and so no byte, and neither do the
         // rest. Named rather than left to a default, so that a kind added to
