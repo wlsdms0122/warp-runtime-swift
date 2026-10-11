@@ -469,6 +469,7 @@ struct ObjectWriter {
         case .rescue: return tagged(Tag.rescue)
         case .fields: return tagged(Tag.fields)
         case .bounds: return tagged(Tag.bounds)
+        case .entries: return tagged(Tag.entries)
         }
     }
 
@@ -489,6 +490,7 @@ struct ObjectWriter {
         case .reference: return tagged(Tag.reference)
         case .array: return tagged(Tag.array)
         case .record: return tagged(Tag.record)
+        case .dictionary: return tagged(Tag.dictionary)
         case .closure: return tagged(Tag.closure)
         case .cast: return tagged(Tag.cast)
         case .block: return tagged(Tag.block)
@@ -690,6 +692,14 @@ struct ObjectWriter {
 
         case let .record(record):
             return tagged(Tag.record, try recordOperation(record))
+
+        case let .dictionary(entries):
+            return tagged(
+                Tag.dictionary,
+                .array(try entries.map { (entry) throws(ObjectUnwritable) -> Value in
+                    .array([try self.operation(entry.key), try self.operation(entry.value)])
+                })
+            )
 
         case let .closure(number, captures):
             return tagged(

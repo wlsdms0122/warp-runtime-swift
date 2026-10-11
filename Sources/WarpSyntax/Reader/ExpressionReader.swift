@@ -107,6 +107,7 @@ public struct ExpressionReader: Decodable {
             switch tag {
             case .reference: return try reference(written, at: inside)
             case .record: return try fields(under: written, at: inside, in: decoder)
+            case .dictionary: return try entries(written, at: inside, in: decoder)
             case .call: return try call(written, at: steps, in: decoder)
             case .closure: return try closure(written, at: steps, in: decoder)
             case .cast: return try cast(written, optional: false, at: inside, in: decoder)
@@ -193,6 +194,27 @@ public struct ExpressionReader: Decodable {
                     entry.value,
                     at: steps + [.key(entry.name.spelling)],
                     in: decoder
+                )
+            }
+        )
+    }
+
+    // `{ dictionary: [[<key>, <value>], …] }`: the entries in the order
+    // written, each a list of two expressions.
+    private static func entries(_ written: Value, at steps: [Place.Step], in decoder: Decoder) throws -> Warp.Expression {
+        let refusal = "`dictionary` takes its entries as a list, each a list of two: its key and its value"
+
+        guard case let .array(entries) = written else { throw ReadingError(refusal, at: steps) }
+
+        return .dictionary(
+            try entries.enumerated().map { position, entry in
+                guard case let .array(pair) = entry, pair.count == 2 else {
+                    throw ReadingError(refusal, at: steps + [.index(position)])
+                }
+
+                return (
+                    key: try read(pair[0], at: steps + [.index(position), .index(0)], in: decoder),
+                    value: try read(pair[1], at: steps + [.index(position), .index(1)], in: decoder)
                 )
             }
         )

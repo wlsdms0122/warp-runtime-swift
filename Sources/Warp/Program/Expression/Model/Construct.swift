@@ -19,6 +19,7 @@ public enum Construct: Sendable, Hashable {
     case reference
     case array
     case record
+    case dictionary
     case closure
     case cast
 
@@ -43,6 +44,7 @@ public enum Construct: Sendable, Hashable {
         case .reference: "reference"
         case .array: "array"
         case .record: "record"
+        case .dictionary: "dictionary"
         case .closure: "closure"
         case .cast: "cast"
         case .block: "block"

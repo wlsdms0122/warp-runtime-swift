@@ -66,6 +66,7 @@ public extension Place {
             ]
 
         case .fields: [.key(ExpressionTag.record.rawValue)]
+        case .entries: [.key(ExpressionTag.dictionary.rawValue)]
 
         case .callee: [.key(CallForm.CodingKeys.procedure.stringValue)]
         case .arguments: [.key(CallForm.CodingKeys.arguments.stringValue)]
@@ -101,7 +102,7 @@ public extension Place {
         switch construct {
         // A call is a tag, and every table reads it under that one key.
         case .call: return ExpressionTag.call.rawValue
-        case .literal, .reference, .array, .record, .closure, .cast: return StatementReader.valueKey.spelling
+        case .literal, .reference, .array, .record, .dictionary, .closure, .cast: return StatementReader.valueKey.spelling
         case .block: form = BlockForm.self
         case .conditional: form = ConditionalForm.self
         case .loop: form = LoopForm.self

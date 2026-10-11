@@ -140,6 +140,7 @@ enum ObjectLayout {
         case rescue
         case fields
         case bounds
+        case entries
     }
 
     enum ConditionHolderTag: Int {
@@ -160,6 +161,7 @@ enum ObjectLayout {
         case attempt
         case call
         case leave
+        case dictionary
     }
 
     enum ReachTag: Int {
@@ -224,6 +226,7 @@ enum ObjectLayout {
         case call
         case dispatch
         case leave
+        case dictionary
     }
 
     enum ArgumentTag: Int {

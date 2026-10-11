@@ -685,6 +685,14 @@ struct Lowering {
         case let .record(record):
             return try lower(record: record, in: scope, on: context, at: place)
 
+        case let .dictionary(entries):
+            return .dictionary(try entries.enumerated().map { position, entry in
+                (
+                    key: try lower(entry.key, naming: nil, in: scope, on: context, at: place.child(.entryKey(position))),
+                    value: try lower(entry.value, naming: nil, in: scope, on: context, at: place.child(.entryValue(position)))
+                )
+            })
+
         case let .closure(procedure):
             return try lower(closure: procedure, in: scope, on: context, at: place)
 

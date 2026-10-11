@@ -512,7 +512,7 @@ struct Validator: Sendable {
 
             guard !value.holdsDictionary else {
                 throw ValidationError(
-                    "a literal holds a map, and a map is written as a record cast to the `Dictionary<T>` it is",
+                    "a literal holds a map, and a map is written as a dictionary literal, its entries a key and a value each",
                     at: place
                 )
             }
@@ -534,6 +534,14 @@ struct Validator: Sendable {
 
                 try held(field, asValueAt: here)
                 try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
+            }
+
+        case let .dictionary(entries):
+            for (position, entry) in entries.enumerated() {
+                for (part, here) in [(entry.key, place.child(.entryKey(position))), (entry.value, place.child(.entryValue(position)))] {
+                    try held(part, asValueAt: here)
+                    try validate(part, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
+                }
             }
 
         // A cast names a type and reads a value as it. The type is the build's

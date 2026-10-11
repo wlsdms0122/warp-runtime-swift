@@ -227,6 +227,11 @@ public struct Writer: Sendable {
         case let .record(fields):
             return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
 
+        case let .dictionary(entries):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(try entries.map { entry in .array([try value(of: entry.key), try value(of: entry.value)]) })
+            ])
+
         case let .closure(procedure):
             return .dictionary([ExpressionTag.closure.key: try value(of: procedure)])
 
@@ -466,15 +471,12 @@ public struct Writer: Sendable {
         case let .array(elements):
             return .array(try elements.map(literal))
 
-        // A dictionary and a record read back apart only by the type they
-        // stand in, and `record` reads back as a record. A dictionary is
-        // written as a record cast to the dictionary it is, which names what
-        // it holds, and only its author can say that.
-        case .dictionary:
-            throw WritingError(
-                "a dictionary has no document of its own. Write a record and cast it"
-                    + " to the `Dictionary<T>` it is"
-            )
+        // A map is written as the map literal that makes it, its entries in
+        // key order.
+        case let .dictionary(held):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) })
+            ])
 
         case .record:
             let fields = try (value.asDictionary?.named() ?? []).map { entry in
@@ -499,6 +501,7 @@ public struct Writer: Sendable {
         case .reference: "a reference"
         case .array: "an array"
         case .record: "a record"
+        case .dictionary: "a map"
         case .closure: "a closure"
         case .apply: "a call of a value"
         case .block: "a block"

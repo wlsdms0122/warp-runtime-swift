@@ -102,6 +102,10 @@ public struct Place: Sendable, Hashable {
         // What a record is written with: its fields, each under its name.
         case fields
 
+        // What a map literal is written with: its entries in order, each a
+        // key and a value.
+        case entries
+
         // A condition, and which construct holds it. The construct is carried
         // because a document does not write the two under one key (a
         // conditional asks `when` and a loop asks `while`) and a part that had
@@ -134,6 +138,7 @@ public struct Place: Sendable, Hashable {
             case .result: "result"
             case .subject: "subject"
             case .fields: "fields"
+            case .entries: "entries"
             case .callee: "callee"
             case .arguments: "arguments"
             case .closure: "closure"

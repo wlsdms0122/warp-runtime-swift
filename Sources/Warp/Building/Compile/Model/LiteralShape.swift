@@ -7,11 +7,12 @@
 
 import Foundation
 
-// What a list or record literal holds where it is written into a slot, part
-// by part. A part that is no literal holds what it reads as. An attempt
+// What a list, map or record literal holds where it is written into a slot,
+// part by part. A part that is no literal holds what it reads as. An attempt
 // writes what one of its two ways answers, each written on its own.
 enum LiteralShape: Sendable {
     case list([LiteralShape])
+    case map([(key: LiteralShape, value: LiteralShape)])
     case record([Name: LiteralShape])
     case part(LoweredType)
     indirect case either(LiteralShape, LiteralShape)
@@ -25,6 +26,12 @@ enum LiteralShape: Sendable {
         switch self {
         case let .list(items):
             return .array(items.reduce(.never) { held, item in held.joined(item.folded) })
+
+        case let .map(entries):
+            return .dictionary(
+                key: entries.reduce(.never) { held, entry in held.joined(entry.key.folded) },
+                value: entries.reduce(.never) { held, entry in held.joined(entry.value.folded) }
+            )
 
         case let .record(fields):
             return .record(fields.mapValues(\.folded))
@@ -109,7 +116,7 @@ enum LiteralShape: Sendable {
             return attempted.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
                 && rescued.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
 
-        case .list, .record:
+        case .list, .map, .record:
             break
         }
 
@@ -128,6 +135,13 @@ enum LiteralShape: Sendable {
             }
 
         case let .dictionary(key, element):
+            if case let .map(entries) = self {
+                return entries.allSatisfy { entry in
+                    entry.key.everyPart(along: key, inPlace: inPlace, in: table, holds: holds)
+                        && entry.value.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
+                }
+            }
+
             guard case let .record(fields) = self, key.accepts(.string, in: table) else { break }
 
             return fields.values.allSatisfy { field in
@@ -169,6 +183,13 @@ enum LiteralShape: Sendable {
 
             return .list(items.map { item in item.written(into: element, in: table) })
 
+        case let .map(entries):
+            guard case let .dictionary(key, value) = place else { return self }
+
+            return .map(entries.map { entry in
+                (key: entry.key.written(into: key, in: table), value: entry.value.written(into: value, in: table))
+            })
+
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
@@ -187,6 +208,10 @@ enum LiteralShape: Sendable {
         switch self {
         case let .list(items):
             return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
+
+        case let .map(entries):
+            return "[" + entries.map { entry in "\(entry.key.rendered(in: table)): \(entry.value.rendered(in: table))" }
+                .joined(separator: ", ") + "]"
 
         case let .record(fields):
             return LoweredType.rendered(

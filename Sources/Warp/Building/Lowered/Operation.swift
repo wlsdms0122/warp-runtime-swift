@@ -22,6 +22,10 @@ indirect enum Operation: Sendable {
 
     case record(RecordOperation)
 
+    // A map literal: each entry's key and value, in the order written, so a
+    // key written twice keeps the later value.
+    case dictionary([(key: Operation, value: Operation)])
+
     // A closure literal: the number its document gave the row its body was
     // lowered into, and which cells of the frame it takes with it, as
     // (outer slot, inner slot).
@@ -73,6 +77,9 @@ indirect enum Operation: Sendable {
 
         case let .record(held):
             return held.fields.allSatisfy { field in field.walk(visit) }
+
+        case let .dictionary(entries):
+            return entries.allSatisfy { entry in entry.key.walk(visit) && entry.value.walk(visit) }
 
         // An argument handed in place is a place and not an operation, and a
         // place is the node's own to read.
@@ -145,6 +152,16 @@ indirect enum Operation: Sendable {
                     layout: held.layout,
                     fields: try held.fields.map { field in try field.rewritten(operation: operation, type: type) }
                 )
+            )
+
+        case let .dictionary(entries):
+            inside = .dictionary(
+                try entries.map { entry in
+                    (
+                        key: try entry.key.rewritten(operation: operation, type: type),
+                        value: try entry.value.rewritten(operation: operation, type: type)
+                    )
+                }
             )
 
         case let .apply(callee, arguments):

@@ -1743,7 +1743,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // is never spelled.
     func naming(_ expression: Expression, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
         switch expression {
-        case .record, .array, .block, .attempt, .loop:
+        case .record, .array, .dictionary, .block, .attempt, .loop:
             break
 
         default:
@@ -2450,6 +2450,16 @@ indirect enum LoweredType: Sendable, Equatable {
                     } ?? field)
                 })
             )
+
+        case let .dictionary(entries):
+            guard case let .dictionary(key, value) = slotUnwrapped else { return expression }
+
+            return .dictionary(entries.enumerated().map { position, entry in
+                (
+                    key: key.reaching(entry.key, at: place?.child(.entryKey(position)), in: table, replacing: replacing),
+                    value: value.reaching(entry.value, at: place?.child(.entryValue(position)), in: table, replacing: replacing)
+                )
+            })
 
         default:
             return expression

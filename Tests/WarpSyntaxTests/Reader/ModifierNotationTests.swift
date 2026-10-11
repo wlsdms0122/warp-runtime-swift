@@ -248,7 +248,12 @@ struct ModifierNotationTests {
         }
 
         #expect(body.first?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
-        #expect(read.procedures["entry"]?.body.statements.first?.expression.constantValue == .dictionary(["loop": .int(1)]))
+        guard case let .record(fields)? = read.procedures["entry"]?.body.statements.first?.expression else {
+            Issue.record("the record literal was not read back as one")
+            return
+        }
+
+        #expect(fields["loop"]?.constantValue == .int(1))
     }
 
     @Test("a module's var and a set path survive the round trip")

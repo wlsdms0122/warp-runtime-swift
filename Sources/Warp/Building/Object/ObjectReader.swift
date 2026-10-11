@@ -597,6 +597,7 @@ struct ObjectReader {
         case .rescue: read = .rescue
         case .fields: read = .fields
         case .bounds: read = .bounds
+        case .entries: read = .entries
         case nil: throw ObjectRefused("'part' names a part this reads none of")
         }
 
@@ -629,6 +630,7 @@ struct ObjectReader {
         case .reference: read = .reference
         case .array: read = .array
         case .record: read = .record
+        case .dictionary: read = .dictionary
         case .closure: read = .closure
         case .cast: read = .cast
         case .block: read = .block
@@ -901,6 +903,15 @@ struct ObjectReader {
         case .local: read = .local(try address(cursor.next()))
         case .array: read = .array(try Field(cursor.next(), of: "array").list(operation))
         case .record: read = .record(try recordOperation(cursor.next()))
+        case .dictionary:
+            read = .dictionary(try Field(cursor.next(), of: "dictionary").list { written in
+                var entry = try FieldCursor(written, of: "entry")
+                let read = (key: try operation(entry.next()), value: try operation(entry.next()))
+
+                try entry.end()
+
+                return read
+            })
         case .closure:
             read = .closure(
                 try cursor.field().count(),

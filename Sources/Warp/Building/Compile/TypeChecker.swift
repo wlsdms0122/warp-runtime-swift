@@ -962,6 +962,11 @@ struct TypeChecker {
         case let .record(record):
             return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
 
+        case let .dictionary(entries):
+            return entries.lazy.compactMap { entry in
+                runs(in: entry.key, given: context) ?? runs(in: entry.value, given: context)
+            }.first
+
         // A contract's procedure is answered by whatever type the value turns
         // out to be, so what a call through one reads as is what the contract
         // asked of every declaration answering it.
@@ -1464,6 +1469,63 @@ struct TypeChecker {
                 // not wrapped again.
                 reading: handed,
                 flow: flow
+            )
+
+        // In the order written, each key before its value: the order the run
+        // makes the entries in. The keys join to one type and the values to
+        // another, the way a list's elements do, and an empty map holds
+        // `Never` at both, so it is a value of a map of any types.
+        case let .dictionary(entries):
+            var environment = environment
+            var rewritten: [(key: Expression, value: Expression)] = []
+            var calls: [CallSite] = []
+            var judgements = JudgementTable()
+            var flowed = Flow()
+            var keys: LoweredType = .never
+            var values: LoweredType = .never
+            var shapes: [(key: LiteralShape, value: LiteralShape)] = []
+
+            for (position, entry) in entries.enumerated() {
+                var parts: [Inspection] = []
+
+                for (part, child) in [(entry.key, Expression.Child.entryKey(position)), (entry.value, .entryValue(position))] {
+                    let inner = try await inspected(
+                        part,
+                        naming: nil,
+                        at: place.child(child),
+                        in: environment,
+                        with: context,
+                        ask: ask
+                    )
+
+                    inner.flow.apply(to: &environment)
+                    flowed = flowed.followed(by: inner.flow)
+                    calls += inner.calls
+                    judgements.absorb(inner.judgements)
+                    parts.append(inner)
+                }
+
+                keys = keys.joined(parts[0].reading)
+                values = values.joined(parts[1].reading)
+                shapes.append((key: parts[0].written, value: parts[1].written))
+                rewritten.append((key: parts[0].rewritten, value: parts[1].rewritten))
+            }
+
+            // A literal whole number read beside fractions is the fraction it
+            // names, since the keys hold one type and the values another.
+            if ask.rewrites {
+                rewritten = rewritten.map { entry in
+                    (key: keys.written(entry.key, in: context.loweredTypes), value: values.written(entry.value, in: context.loweredTypes))
+                }
+            }
+
+            return Inspection(
+                rewritten: ask.rewrites ? .dictionary(rewritten) : expression,
+                calls: calls,
+                judgements: judgements,
+                reading: .dictionary(key: keys, value: values),
+                flow: flowed,
+                literalShape: .map(shapes)
             )
 
         // In name order. The order the run evaluates fields in, so what one
