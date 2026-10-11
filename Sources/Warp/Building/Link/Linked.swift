@@ -381,7 +381,7 @@ public final class Linked: Sendable {
             func refusal(_ first: LoweredType, _ second: LoweredType) -> ArgumentError {
                 ArgumentError(
                     "\(standing): '\(parameter)' is read as \(first.rendered(in: table))"
-                        + " and as \(second.rendered(in: table)), and a type parameter is one type"
+                        + " and as \(second.rendered(in: table))"
                 )
             }
 
@@ -406,7 +406,9 @@ public final class Linked: Sendable {
         }
 
         return parameters.reduce(into: [:]) { filled, parameter in
-            filled[parameter.key] = substitution.readings[parameter.key] ?? .parameter(label: parameter.key, bounds: parameter.value)
+            let (name, bounds) = parameter
+
+            filled[name] = substitution.readings[name] ?? .parameter(label: name, bounds: bounds)
         }
     }
 
