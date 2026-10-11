@@ -1183,7 +1183,7 @@ struct ValidationTests {
     }
 
     @Test("a name that is no record and comes back to itself refuses at the load")
-    func aNameComingBackRefusesAtTheLoad() async throws {
+    func aNameComingBackRefusesAtTheLoad() throws {
         // Given. A record may name itself, and a name that is no record
         // spells no type where it reaches itself, through names or a structure
         let cycles: [[Name: TypeExpression]] = [
@@ -1211,21 +1211,19 @@ struct ValidationTests {
             }
         }
 
-        // A recursive type passes: the name reaches a type on the way back.
-        let tree = try Module(
-            types: ["Tree": .record(["children": .array(.named("Tree"))])],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
-                )
-            ]
-        )
-
-        await #expect(throws: Never.self) {
-            try await Builder().build([tree] + Module.standard)
+        // A recursive type loads: the name reaches a type on the way back.
+        #expect(throws: Never.self) {
+            try Module(
+                types: ["Tree": .record(["children": .array(.named("Tree"))])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(),
+                        body: [],
+                        result: .literal(.int(1))
+                    )
+                ]
+            )
         }
     }
 

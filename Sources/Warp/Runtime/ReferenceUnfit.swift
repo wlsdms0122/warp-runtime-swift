@@ -7,13 +7,15 @@
 
 import Foundation
 
+// A path a run reads that does not reach a value. The reason names the
+// path as far as the step that failed.
 public struct ReferenceUnfit: WarpError {
     // MARK: - Property
     public let path: Path
     public let reason: String
 
     public var message: String {
-        "reference unfit: { ref: \(path.rendered) }: \(reason)"
+        reason
     }
 
     public let trace: Trace?

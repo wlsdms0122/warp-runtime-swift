@@ -19,9 +19,9 @@ struct StandardTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("every bundle written in Swift checks at the door a module from outside takes")
+    @Test("every bundle written in Swift loads as a module from outside does")
     func everyBundleChecks() throws {
-        // Given. The bundles stand without the check
+        // Given. The bundles stand without the load's judgement
         let bundles = Module.standard.filter(\.builtin)
 
         // When / Then

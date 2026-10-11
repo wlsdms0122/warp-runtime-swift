@@ -354,9 +354,7 @@ struct Compiler {
             answering: read
         )
 
-        // Through the one door an object read back goes through, so what a
-        // compile stands up is what a reading would take.
-        return try Compiled(
+        return Compiled(
             document: .of(module),
             types: module.types,
             contracts: module.contracts,
@@ -368,7 +366,7 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
+            variables: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
             dependencies: dependencies,
             token: token
         )

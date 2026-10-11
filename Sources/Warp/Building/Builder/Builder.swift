@@ -119,7 +119,12 @@ public struct Builder: Sendable {
         let assembled = try Assembled(compiled)
         let linkage = Linkage()
         let namespace = try TypeNamespace(compiled)
+
+        try ModuleGraph.stand(compiled)
+
         let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: linkage)
+
+        try DeclarationChecker().judge(compiled, in: declaring)
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
@@ -367,7 +372,17 @@ public struct Builder: Sendable {
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
         let namespace = try TypeNamespace(compiled)
+
+        // Each object stands after what it names, the order the documents it
+        // was compiled from stood in, and every type it names is declared
+        // here, since it may have been compiled beside other documents than
+        // these.
+        try ModuleGraph.stand(compiled)
+
         let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: Linkage())
+
+        try DeclarationChecker().judge(compiled, in: declaring)
+
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(

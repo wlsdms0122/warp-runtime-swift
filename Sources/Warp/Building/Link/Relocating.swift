@@ -249,10 +249,7 @@ final class Relocating {
             )
 
         case .unnumbered:
-            throw BuildError.unjudged(
-                "a call standing at \(number), which its document never numbered",
-                at: context.place
-            )
+            throw BuildError("a call stands at \(number), which its document never numbered", at: context.place)
         }
     }
 
@@ -312,7 +309,10 @@ final class Relocating {
         )
 
         guard let asked = contractProcedures[spelling] else {
-            throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: context.place)
+            throw BuildError(
+                "'\(spelling)' is called through a contract here, and no contract in this link declares it",
+                at: context.place
+            )
         }
 
         return DispatchOperation(
@@ -328,14 +328,7 @@ final class Relocating {
                     )
                 }
 
-                calls[entry.key] = try CallOperation(
-                    handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
-                    to: table[row],
-                    row: row,
-                    picked: true,
-                    in: loweredTypes,
-                    at: context.place
-                )
+                calls[entry.key] = try dispatch.call(of: table[row], at: row, in: loweredTypes, at: context.place)
             }
         )
     }

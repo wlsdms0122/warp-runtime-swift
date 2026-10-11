@@ -96,12 +96,12 @@ struct TypeWriter {
         case let .dictionary(element):
             return try value(of: element, in: .dictionary)
 
-        // Spelt with the trailing `?` the reader takes, which is why the
+        // Spelled with the trailing `?` the reader takes, which is why the
         // declared half has to have a name of its own. A record has no spelling
         // for a `?` to trail.
         case let .nullable(inner):
             return .string(
-                "\(try spelt(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
+                "\(try named(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
 
         // A record and a procedure are both written as a mapping, and the one
@@ -181,9 +181,9 @@ struct TypeWriter {
         }
     }
 
-    // One fact (only a type with a spelling of its own composes) said with the
+    // Only a type with a name of its own takes a `?` after it, said with the
     // place the author wrote, so the refusal points at their text.
-    private func spelt(_ type: TypeExpression, at context: String) throws -> String {
+    private func named(_ type: TypeExpression, at context: String) throws -> String {
         guard case let .string(name) = try form(of: type) else {
             throw WritingError("only a type with a name is written \(context)")
         }

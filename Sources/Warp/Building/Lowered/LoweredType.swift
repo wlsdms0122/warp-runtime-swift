@@ -33,14 +33,9 @@ indirect enum LoweredType: Sendable, Equatable {
     case record(LoweredRecord)
 
     // What a slot asks of a procedure value: the types it is applied with, in
-    // position order, and what it must answer. Nil where nothing was
+    // position order, and what it must answer. Nil where no signature was
     // declared. Constness and isolation are the slot's requirements.
-    case procedure(
-        parameters: [LoweredType]?,
-        returns: LoweredType?,
-        constness: Constness,
-        isolation: Isolation
-    )
+    case procedure(LoweredProcedureType?, constness: Constness, isolation: Isolation)
 
     case variable(LoweredType)
     case `inout`(LoweredType)
@@ -113,9 +108,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .record(record):
             return record.fields.contains { field in field.namesParameter }
 
-        case let .procedure(parameters, returns, _, _):
-            return (parameters ?? []).contains { parameter in parameter.namesParameter }
-                || (returns?.namesParameter ?? false)
+        case let .procedure(signature, _, _):
+            return (signature?.parameters ?? []).contains { parameter in parameter.namesParameter }
+                || (signature?.returns?.namesParameter ?? false)
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
             return false
@@ -135,8 +130,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .record(record):
             return record.fields.reduce(into: [:]) { found, field in found.merge(field.typeParameters) { first, _ in first } }
 
-        case let .procedure(parameters, returns, _, _):
-            return ((parameters ?? []) + [returns].compactMap { $0 }).reduce(into: [:]) { found, part in
+        case let .procedure(signature, _, _):
+            return ((signature?.parameters ?? []) + [signature?.returns].compactMap { $0 }).reduce(into: [:]) { found, part in
                 found.merge(part.typeParameters) { first, _ in first }
             }
 
@@ -349,14 +344,18 @@ indirect enum LoweredType: Sendable, Equatable {
         // A procedure's answer stands where it is held, and is held there. Its
         // parameters are what it is handed and take `Never`, which every
         // parameter takes, so they ask nothing.
-        case let .procedure(parameters, returns, _, _):
-            let answer = (returns ?? .any).boundedAlone
+        case let .procedure(signature, _, _):
+            guard let signature else { return .any }
+
+            let answer = (signature.returns ?? .any).boundedAlone
 
             guard answer != .any else { return .any }
 
             return .procedure(
-                parameters: parameters?.map { parameter in parameter.isInout ? .inout(.never) : .never },
-                returns: answer,
+                LoweredProcedureType(
+                    parameters: signature.parameters.map { parameter in parameter.isInout ? .inout(.never) : .never },
+                    returns: answer
+                ),
                 constness: .unstated,
                 isolation: .unstated
             )
@@ -406,7 +405,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // A procedure that already exists as a value says nothing about itself
         // that a walk can read.
         case .procedure:
-            self = .procedure(parameters: nil, returns: nil, constness: .unstated, isolation: .unstated)
+            self = .procedure(nil, constness: .unstated, isolation: .unstated)
 
         case let .array(elements):
             self = .array(LoweredType(joining: elements.map { element in LoweredType(of: element, in: table) }))
@@ -487,13 +486,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // slot declared this way is judged on the slot's word, since the slot is
     // what says which values may arrive there.
     var isConstProcedure: Bool {
-        guard case .procedure(_, _, .const, _)? = procedureHeld else { return false }
+        guard case .procedure(_, .const, _)? = procedureHeld else { return false }
 
         return true
     }
 
     var isIsolatedProcedure: Bool {
-        guard case .procedure(_, _, _, .isolated)? = procedureHeld else { return false }
+        guard case .procedure(_, _, .isolated)? = procedureHeld else { return false }
 
         return true
     }
@@ -501,9 +500,9 @@ indirect enum LoweredType: Sendable, Equatable {
     // The positions a procedure a slot holding this holds takes in place.
     // Empty where the slot says nothing of the procedure's parameters.
     var inPlacePositions: Set<Int> {
-        guard case let .procedure(parameters?, _, _, _)? = procedureHeld else { return [] }
+        guard case let .procedure(signature?, _, _)? = procedureHeld else { return [] }
 
-        return Set(parameters.indices.filter { position in parameters[position].isInout })
+        return Set(signature.parameters.indices.filter { position in signature.parameters[position].isInout })
     }
 
     // Whether a value this holds may carry a procedure that takes a parameter
@@ -512,8 +511,8 @@ indirect enum LoweredType: Sendable, Equatable {
     // parameters and answer are that procedure's business and are not walked.
     func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
         switch self {
-        case let .procedure(parameters, _, _, _):
-            return parameters?.contains { parameter in parameter.isInout } ?? false
+        case let .procedure(signature, _, _):
+            return signature?.parameters.contains { parameter in parameter.isInout } ?? false
 
         case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
             return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
@@ -639,12 +638,10 @@ indirect enum LoweredType: Sendable, Equatable {
         }
 
         switch (self, written) {
-        case let (.procedure(nil, nil, .unstated, .unstated), .procedure(parameters, returns, constness, isolation)):
-            guard fixed else {
-                return .procedure(parameters: parameters, returns: returns, constness: .unstated, isolation: .unstated)
-            }
+        case let (.procedure(nil, .unstated, .unstated), .procedure(signature, constness, isolation)):
+            guard fixed else { return .procedure(signature, constness: .unstated, isolation: .unstated) }
 
-            return .procedure(parameters: parameters, returns: returns, constness: constness, isolation: isolation)
+            return .procedure(signature, constness: constness, isolation: isolation)
 
         case let (.array(element), .array(judgedElement)):
             return .array(element.refined(by: judgedElement, fixed: fixed))
@@ -713,14 +710,11 @@ indirect enum LoweredType: Sendable, Equatable {
         // constness both of them have: one body that runs, in a list of them,
         // does not pass a slot that asked for none.
         if
-            case let .procedure(mine, myAnswer, wanted, wantedIsolation) = self,
-            case let .procedure(_, _, offered, offeredIsolation) = other
+            case let .procedure(mine, wanted, wantedIsolation) = self,
+            case let .procedure(theirs, offered, offeredIsolation) = other
         {
-            let agreed = sameProcedure(as: other)
-
             return .procedure(
-                parameters: agreed ? mine : nil,
-                returns: agreed ? myAnswer : nil,
+                mine == theirs ? mine : nil,
                 constness: wanted == .const && offered == .const ? .const : .unstated,
                 isolation: wantedIsolation == .isolated && offeredIsolation == .isolated ? .isolated : .unstated
             )
@@ -791,31 +785,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case .any, .never, .nullable, .parameter, .composition, .projection:
             return nil
-        }
-    }
-
-    // Whether two procedure types declare the same slots and the same answer.
-    // What each requires of the value is beside that, so a join may keep the
-    // slots while reading the two requirements together.
-    func sameProcedure(as other: LoweredType) -> Bool {
-        guard
-            case let .procedure(mine, myAnswer, _, _) = self,
-            case let .procedure(theirs, theirAnswer, _, _) = other
-        else {
-            return false
-        }
-
-        guard myAnswer == theirAnswer else { return false }
-
-        switch (mine, theirs) {
-        case (nil, nil):
-            return true
-
-        case let (mine?, theirs?):
-            return mine == theirs
-
-        default:
-            return false
         }
     }
 
@@ -956,8 +925,8 @@ indirect enum LoweredType: Sendable, Equatable {
                     theirs[name].map { given in field.accepts(given, in: table, rigid: rigid) } ?? false
                 }
 
-        case let (.procedure(required, wanted, wantedConstness, wantedIsolation),
-                  .procedure(given, offered, offeredConstness, offeredIsolation)):
+        case let (.procedure(required, wantedConstness, wantedIsolation),
+                  .procedure(given, offeredConstness, offeredIsolation)):
             // A slot asking for constness takes only what says it is const, and one
             // asking for isolation only what says it is isolated. The two are
             // separate claims: a const body answers without running and can
@@ -973,16 +942,16 @@ indirect enum LoweredType: Sendable, Equatable {
             // What stands here takes exactly the positions the slot hands: an
             // application gives every position, so a value of another count
             // is refused by every one of them.
-            guard given.count == required.count else { return false }
+            guard given.parameters.count == required.parameters.count else { return false }
 
             // The directions are opposite on purpose: what is given must
             // accept everything that will be passed to it, and what is
             // required must accept everything it will get back.
-            for (parameter, taken) in zip(required, given) {
+            for (parameter, taken) in zip(required.parameters, given.parameters) {
                 guard taken.takes(parameter, in: table, rigid: rigid) else { return false }
             }
 
-            return (wanted ?? .any).accepts(offered ?? .any, in: table, rigid: rigid)
+            return (required.returns ?? .any).accepts(given.returns ?? .any, in: table, rigid: rigid)
 
         // A whole number written as a literal is an Int, or the fraction it
         // names where the place declares a Double.
@@ -1037,10 +1006,10 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A procedure's positions and answer are written as themselves, and a
         // value saying it is const or isolated fits a slot that does not ask.
-        case let (.procedure(parameters, returns, constness, isolation), .procedure(_, _, given, held)):
+        case let (.procedure(signature, constness, isolation), .procedure(_, given, held)):
             guard constness != .const || given == .const, isolation != .isolated || held == .isolated else { return false }
 
-            return LoweredType.procedure(parameters: parameters, returns: returns, constness: given, isolation: held) == written
+            return LoweredType.procedure(signature, constness: given, isolation: held) == written
 
         default:
             return self == written
@@ -1190,18 +1159,18 @@ indirect enum LoweredType: Sendable, Equatable {
         // only where nothing handed does, and the procedure is then judged
         // against what filled it. What it takes is no value standing where a
         // composition is asked, so nothing there is held to one.
-        case let (.procedure(.some(mine), myAnswer, _, _), .procedure(.some(theirs), theirAnswer, _, _)):
+        case let (.procedure(mine?, _, _), .procedure(theirs?, _, _)):
             var takenInside = Substitution()
             var accepted: [Substitution.Held] = []
 
-            for (parameter, against) in zip(mine, theirs) {
+            for (parameter, against) in zip(mine.parameters, theirs.parameters) {
                 parameter.binding(against: against, into: &taking, taking: &takenInside, holding: &accepted, in: table)
             }
 
             taking.read(takenBy: takenInside)
 
-            (myAnswer ?? .any).binding(
-                against: theirAnswer ?? .any,
+            (mine.returns ?? .any).binding(
+                against: theirs.returns ?? .any,
                 into: &substitution,
                 taking: &taking,
                 holding: &holding,
@@ -1250,10 +1219,9 @@ indirect enum LoweredType: Sendable, Equatable {
                 )
             )
 
-        case let .procedure(parameters, returns, constness, isolation):
+        case let .procedure(signature, constness, isolation):
             return .procedure(
-                parameters: parameters?.map { parameter in parameter.filling(filled) },
-                returns: returns?.filling(filled),
+                signature?.map { part in part.filling(filled) },
                 constness: constness,
                 isolation: isolation
             )
@@ -1322,12 +1290,9 @@ indirect enum LoweredType: Sendable, Equatable {
                 )
             )
 
-        case let .procedure(parameters, returns, constness, isolation):
+        case let .procedure(signature, constness, isolation):
             return .procedure(
-                parameters: try parameters?.map { parameter in
-                    try parameter.replacingRows(by: type)
-                },
-                returns: try returns?.replacingRows(by: type),
+                try signature?.map { part in try part.replacingRows(by: type) },
                 constness: constness,
                 isolation: isolation
             )
@@ -1445,11 +1410,10 @@ indirect enum LoweredType: Sendable, Equatable {
         // and its isolation, and a slot that asks for either reads the
         // carried fact. A closure that reached here through a cast or from
         // outside is judged here for the first time.
-        case let .procedure(required, returns, constness, isolation):
+        case let .procedure(required, constness, isolation):
             return try settlingProcedure(
                 value,
-                parameters: required,
-                returns: returns,
+                signature: required,
                 constness: constness,
                 isolation: isolation,
                 at: path(),
@@ -1618,7 +1582,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .inout(inner):
             return "\(TypeSpelling.inout) \(inner.rendered(in: table))"
 
-        case let .procedure(parameters, returns, constness, isolation):
+        case let .procedure(signature, constness, isolation):
             let spelling = [
                 constness == .const ? TypeSpelling.const.spelling : nil,
                 isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
@@ -1627,12 +1591,12 @@ indirect enum LoweredType: Sendable, Equatable {
             .compactMap { part in part }
             .joined(separator: " ")
 
-            guard let parameters else { return spelling }
+            guard let signature else { return spelling }
 
-            let written = parameters.map { parameter in parameter.rendered(in: table) }
+            let written = signature.parameters.map { parameter in parameter.rendered(in: table) }
 
             return "\(spelling)<(\(written.joined(separator: ", ")))"
-                + " -> \((returns ?? .any).rendered(in: table))>"
+                + " -> \((signature.returns ?? .any).rendered(in: table))>"
 
         case let .array(element):
             return "Array<\(element.rendered(in: table))>"
@@ -1793,7 +1757,9 @@ indirect enum LoweredType: Sendable, Equatable {
         reaching(expression, at: nil, in: table) { place, standing, _ in
             guard case let .closure(written) = standing else { return nil }
 
-            guard written.signature.returns == nil, case let .procedure(_, returns?, _, _) = place else { return standing }
+            guard written.signature.returns == nil, case let .procedure(signature, _, _) = place, let returns = signature?.returns else {
+                return standing
+            }
 
             let answer = returns.spelled(in: table)
 
@@ -1845,13 +1811,13 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .record(record):
             return .record(Dictionary(uniqueKeysWithValues: record.named.map { name, field in (name, field.spelled(in: table)) }))
 
-        case let .procedure(parameters, returns, constness, isolation):
-            guard let parameters else { return .procedure(nil, constness, isolation) }
+        case let .procedure(signature, constness, isolation):
+            guard let signature else { return .procedure(nil, constness, isolation) }
 
             return .procedure(
                 ProcedureType(
-                    parameters: parameters.map { parameter in parameter.spelled(in: table) },
-                    returns: returns?.spelled(in: table)
+                    parameters: signature.parameters.map { parameter in parameter.spelled(in: table) },
+                    returns: signature.returns?.spelled(in: table)
                 ),
                 constness,
                 isolation
@@ -1900,11 +1866,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.record(mine), .record(theirs)):
             return mine == theirs
 
-        case let (.procedure(_, _, myConstness, myIsolation),
-                  .procedure(_, _, theirConstness, theirIsolation)):
+        case let (.procedure(mine, myConstness, myIsolation),
+                  .procedure(theirs, theirConstness, theirIsolation)):
             return myConstness == theirConstness
                 && myIsolation == theirIsolation
-                && lhs.sameProcedure(as: rhs)
+                && mine == theirs
 
         case let (.named(mine), .named(theirs)):
             return mine == theirs
@@ -2189,8 +2155,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     private func settlingProcedure(
         _ value: Value,
-        parameters required: [LoweredType]?,
-        returns: LoweredType?,
+        signature required: LoweredProcedureType?,
         constness: Constness,
         isolation: Isolation,
         at path: @autoclosure () -> String,
@@ -2223,8 +2188,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // It is read as answering what its own signature says it answers.
         let given = LoweredType.procedure(
-            parameters: linked.slots.map(\.type),
-            returns: linked.returns,
+            LoweredProcedureType(parameters: linked.slots.map(\.type), returns: linked.returns),
             constness: linked.constness,
             isolation: linked.isolation
         )
@@ -2234,7 +2198,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // body's call, which no value says. A value arriving here gets its
         // type whole, so it is no value of a procedure type that writes a
         // signature. `Procedure` writes none, and every procedure is one.
-        guard !given.namesParameter || (required == nil && returns == nil) else {
+        guard !given.namesParameter || required == nil else {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table)),"
                     + " whose type parameter only the call that made it fills"
@@ -2243,7 +2207,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A type parameter the slot names is filled by what arrived, the way
         // a call fills it at the build.
-        let slot = LoweredType.procedure(parameters: required, returns: returns, constness: .unstated, isolation: .unstated)
+        let slot = LoweredType.procedure(required, constness: .unstated, isolation: .unstated)
         let asked = slot.filling(Substitution(filling: [slot], against: [given], in: table).readings)
 
         guard asked.accepts(given, in: table) else {

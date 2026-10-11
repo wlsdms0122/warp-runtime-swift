@@ -44,7 +44,7 @@ public struct ConstructRegistry: Sendable {
         self.forms = [:]
 
         // A key a construct is registered under is a key a document writes,
-        // so it comes through the door every name a document writes does.
+        // so it is read as every name a document writes is.
         for (written, form) in forms {
             do {
                 try insert(form, as: try Name(written))

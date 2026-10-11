@@ -306,8 +306,10 @@ final class LoweredTypeTable: Sendable {
         })
 
         // An alias is what it stands for, worked out once each. None comes
-        // back to itself, which the load and an object's reading refuse, so
-        // the expansion ends.
+        // back to itself: the load and an object's reading refuse that within
+        // one document, and the documents of a build stand in an order where
+        // each names only what it or one before it declares, so the expansion
+        // ends.
         var expanded: [Int: LoweredType] = [:]
 
         func mention(of row: Int) -> LoweredType {

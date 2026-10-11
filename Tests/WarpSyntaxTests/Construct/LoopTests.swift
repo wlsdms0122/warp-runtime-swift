@@ -112,7 +112,7 @@ struct LoopTests {
         task.cancel()
 
         // Then
-        await #expect(throws: (any Error).self) {
+        await #expect(throws: CancellationError.self) {
             try await task.value
         }
     }

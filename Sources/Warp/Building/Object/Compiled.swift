@@ -147,16 +147,19 @@ public struct Compiled: Sendable, Declaring {
         )
     }
 
-    // Every name this document reaches outside itself, read off what its
-    // object holds: its module's `references`. What its bodies send, the
-    // types they and its signatures stand on, and the names its claims and
-    // the pairs it leaned on write. An object keeps no list of what its
-    // document named, so this is that list worked out again from the facts
-    // the object does keep.
-    var references: Set<Reference> {
+    // What this document needs of the documents a link lays before it, read
+    // off what its object holds: what its bodies send, and the types they,
+    // its signatures and its declared types stand on. A claim is not among
+    // them: a document claims a type answers a contract declared anywhere in
+    // its link, and the link holds the claim to it.
+    var needs: Set<Reference> {
         var reached = Set(numbering.sending.map(Reference.procedure))
 
         reached.formUnion(typeNumbering.types.map(Reference.type))
+
+        for type in types.values {
+            reached.formUnion(type.mentions.map(Reference.type))
+        }
 
         for row in table {
             reached.formUnion(row.signature.mentions.map(Reference.type))
@@ -168,6 +171,16 @@ public struct Compiled: Sendable, Declaring {
             }
         }
 
+        return outside(reached)
+    }
+
+    // Every name this document reaches outside itself: its module's
+    // `references`. What it needs, and the names its claims and the pairs it
+    // leaned on write. An object keeps no list of what its document named, so
+    // this is that list worked out again from the facts the object does keep.
+    var references: Set<Reference> {
+        var reached = needs
+
         for (type, claimed) in claims {
             reached.insert(.type(type))
             reached.formUnion(claimed.map(Reference.type))
@@ -177,7 +190,7 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion([.type(claim.type), .type(claim.contract)])
         }
 
-        return reached.subtracting(supplies)
+        return outside(reached)
     }
 
     // Which document this stands against, which is what a host keeps it
@@ -187,7 +200,10 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Initializer
-    private init(
+    // Each part stated, as a compile stands them up: what the lowering made
+    // by its role, so nothing here is asked of how the parts stand to each
+    // other.
+    init(
         document: Place.Document,
         types: [Name: TypeExpression],
         contracts: [Name: [Name: ContractProcedure]],
@@ -226,13 +242,13 @@ public struct Compiled: Sendable, Declaring {
         self.fingerprint = fingerprint
     }
 
-    // The same, where the parts were read apart and what has to be true is how
-    // they stand to each other. Each one alone says nothing wrong; a table
-    // shorter than the spellings it stands for, or a variable numbered past
-    // the ones this holds, is a fact about two of them.
+    // The same, where an object's parts were read apart and what has to be
+    // true is how they stand to each other. Each one alone says nothing
+    // wrong; a table shorter than the spellings it stands for, or a variable
+    // numbered past the ones this holds, is a fact about two of them.
     //
     // This is the only door that sees all of them, so it is the only place
-    // those facts can be asked.
+    // those facts can be asked of bytes read back.
     init(
         document: Place.Document,
         types: [Name: TypeExpression],
@@ -358,6 +374,11 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
+    // The names among these this document does not declare itself.
+    private func outside(_ reached: Set<Reference>) -> Set<Reference> {
+        reached.subtracting(supplies).subtracting(hidden.map(Reference.procedure))
+    }
+
     // The frame of the row a body's closure number stands, or nothing where
     // this document numbers no closure there.
     private func frame(ofClosure number: Int) -> Frame? {

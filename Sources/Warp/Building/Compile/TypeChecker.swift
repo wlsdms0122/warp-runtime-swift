@@ -1747,7 +1747,7 @@ struct TypeChecker {
             let callee = called.reading.slotUnwrapped
             let answers: LoweredType
 
-            if case let .procedure(_, returns?, _, _) = callee {
+            if case let .procedure(signature?, _, _) = callee, let returns = signature.returns {
                 answers = returns
             } else {
                 answers = .any
@@ -1756,11 +1756,11 @@ struct TypeChecker {
             // A closure literal written here, at any depth, is completed by
             // the type it is written into.
             let arguments = arguments.enumerated().map { position, argument in
-                guard case let .procedure(parameters?, _, _, _) = callee, parameters.indices.contains(position) else {
+                guard case let .procedure(signature?, _, _) = callee, signature.parameters.indices.contains(position) else {
                     return argument
                 }
 
-                return parameters[position].completing(argument, in: context.loweredTypes)
+                return signature.parameters[position].completing(argument, in: context.loweredTypes)
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -1768,8 +1768,8 @@ struct TypeChecker {
             // and none where it does not.
             var handed: [Int] = []
 
-            if case let .procedure(parameters?, _, _, _) = callee {
-                handed = parameters.indices.filter { position in parameters[position].isInout }
+            if case let .procedure(signature?, _, _) = callee {
+                handed = signature.parameters.indices.filter { position in signature.parameters[position].isInout }
             }
 
             // What the operands took is taken by the call, and so is what it
@@ -1816,7 +1816,7 @@ struct TypeChecker {
             // A value whose type writes no parameters says nothing the build
             // can hold an argument against, so it is called once a cast says
             // what procedure it is.
-            guard case let .procedure(parameters?, _, _, _) = callee else {
+            guard case let .procedure(signature?, _, _) = callee else {
                 throw BuildError(
                     "calls a value of \(called.reading.rendered(in: context.loweredTypes)),"
                         + " which writes no parameters it takes. A cast says what procedure it is",
@@ -1824,6 +1824,7 @@ struct TypeChecker {
                 )
             }
 
+            let parameters = signature.parameters
             let subject = "calls a value of \(called.reading.rendered(in: context.loweredTypes))"
 
             try refuseCount(handing: arguments.count, taking: parameters.count, as: subject, at: place)

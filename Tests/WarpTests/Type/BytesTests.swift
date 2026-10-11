@@ -53,7 +53,7 @@ struct BytesTests {
         )
 
         // A byte is a whole number, so a list of fractions takes none.
-        #expect(throws: (any Error).self) {
+        #expect(throws: ArgumentError.self) {
             try TypeExpression.array(.double).settling(.bytes([1]), at: "value")
         }
     }
@@ -169,7 +169,7 @@ struct BytesTests {
             try await run(sut, arguments: ["data": .bytes([104, 105])])
         } throws: { error in
             "\(error)".contains("input 'data'[0]: expected String, got Int")
-                && !"\(error)".contains("expected an Array")
+                && !"\(error)".contains("expected Array,")
         }
     }
 

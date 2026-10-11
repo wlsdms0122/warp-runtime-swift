@@ -162,7 +162,8 @@ struct Validator: Sendable {
     // the names it mentions, at any depth: a spelling that reaches itself
     // spells no type, and a type that holds itself is a declared record. A
     // record on the way stands as its own name, so the walk stops there. Asked
-    // of every module's types here and of every object's where it is read, so
+    // of every module's types here and of every object's where it is read;
+    // across documents the module graph stands each after what it names, so
     // no later stage meets one.
     func comesBack(_ name: Name, in types: [Name: TypeExpression]) -> Bool {
         func standsAsAName(_ mentioned: Name) -> Bool {

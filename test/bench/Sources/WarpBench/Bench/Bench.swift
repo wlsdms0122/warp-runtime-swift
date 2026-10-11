@@ -55,7 +55,8 @@ struct Bench {
         // MARK: - Private
     }
 
-    // What one build of fanned-out procedures costs, by the door that was asked.
+    // What one build of fanned-out procedures costs, by the entry point that was
+    // asked.
     private struct Cost {
         // MARK: - Property
         let build: Double

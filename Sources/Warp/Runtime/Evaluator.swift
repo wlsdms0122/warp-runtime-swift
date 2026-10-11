@@ -721,11 +721,9 @@ struct Evaluator: Sendable {
         if dispatch.calls.isEmpty, let row = witnesses[spelling]?[first.nominal] {
             loweredTypes.fulfillment?.require(folded: Claim(type: first.nominal, contract: dispatch.contract))
 
-            let call = try CallOperation(
-                handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
-                to: linked[row],
-                row: row,
-                picked: true,
+            let call = try dispatch.call(
+                of: linked[row],
+                at: row,
                 in: loweredTypes,
                 at: .procedure(linked[row].rendered, in: .assembled)
             )

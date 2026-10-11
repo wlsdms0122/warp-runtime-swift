@@ -33,12 +33,12 @@ struct Fanout {
     private let modules: [Module]
 
     // The same documents already compiled, which is what `link()` is handed.
-    // What that door times is the laying down, so settling the documents again
-    // for every sample would only be time spent outside the clock.
+    // What that entry point times is the laying down, so the documents are
+    // compiled once, outside the clock.
     private let compiled: [Compiled]
 
-    // The vocabulary these were compiled against, held so that every door
-    // times the same build rather than settling it again.
+    // The vocabulary these were compiled against, held so that every entry
+    // point times the same build rather than making it again.
     private let vocabulary: Vocabulary
 
     // MARK: - Initializer

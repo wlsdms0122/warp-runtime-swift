@@ -244,7 +244,7 @@ struct ImportsListTests {
     func aVersionBelowTheEarliestIsRefused() {
         // When / Then. The range is closed at both ends. Below it, a document
         // claims a language that never was.
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.load(["warp": 0, "procedures": ["entry": ["result": "hello"]]])
         }
     }

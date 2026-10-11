@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What the compile refuses about declarations once their names resolve: a
+// What the build refuses about declarations once their names resolve: a
 // mention no module in the link declares, a bound or a composition naming what
 // is no contract, a `?` behind a name where it says nothing, a cast naming
 // nothing to read, and a parameter a procedure the host answers could never
@@ -30,8 +30,7 @@ struct DeclarationChecker {
         let declared = namespace.types
 
         // A document's types take a run of type rows the way its declarations
-        // take a run of table rows, in the order the documents stand, so a
-        // document's types are behind the types it names.
+        // take a run of table rows, in the order the documents stand.
         let table = TypeTable(
             types: declared.mapValues(\.held),
             contracts: namespace.contracts.mapValues(\.held),
@@ -70,16 +69,7 @@ struct DeclarationChecker {
                 }
             }
 
-            // A contract's procedures are declarations the way the module's
-            // own are, and what a call is judged against is what was judged.
-            // `Self` is read as one type parameter the contract bounds.
-            for (contract, procedures) in module.contracts.sorted(by: { $0.key < $1.key }) {
-                for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
-                    let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
-
-                    try judge(asked.signature.read(of: contract), at: place, in: table)
-                }
-            }
+            try judge(contracts: module.contracts, of: .of(module), in: table)
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
@@ -99,7 +89,39 @@ struct DeclarationChecker {
         }
     }
 
+    // Every type an object's signatures name, held to being one the link
+    // declares, the way a document's are where it is compiled: an object
+    // compiled against other documents may name what none of these declares.
+    // What its declared types name is held by `types`, and what its bodies
+    // stand on where their numbers are answered with rows.
+    func judge(_ objects: [Compiled], in table: TypeTable) throws {
+        for object in objects {
+            for row in object.table {
+                try judge(row.signature, at: .procedure(row.label.spelling, in: object.document), in: table)
+            }
+
+            try judge(contracts: object.contracts, of: object.document, in: table)
+        }
+    }
+
     // MARK: - Private
+    // A contract's procedures are declarations the way a document's own are,
+    // and what a call is judged against is what was judged. `Self` is read
+    // as one type parameter the contract bounds.
+    private func judge(
+        contracts: [Name: [Name: ContractProcedure]],
+        of document: Place.Document,
+        in table: TypeTable
+    ) throws {
+        for (contract, procedures) in contracts.sorted(by: { $0.key < $1.key }) {
+            for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
+                let place = Place.contract(contract.spelling, in: document).key(name.spelling)
+
+                try judge(asked.signature.read(of: contract), at: place, in: table)
+            }
+        }
+    }
+
     // Every type a body mentions, held where it is written: the signatures its
     // closures carry, the types its casts name, and what its names say they
     // hold. A procedure's, a constant's and a variable's body each ask this,

@@ -19,7 +19,7 @@ extension Decoder {
     var notation: Notation { userInfo[.notation] as? Notation ?? .canonical }
 
     // Read what is written here, standing on it, so a reader judging a value
-    // after reading it refuses at the place it read. The same door
+    // after reading it refuses at the place it read. The same reading
     // `ValueDecoder.decode` is, reached from a decoder handed over as the
     // protocol; a decoder that is somebody else's reads as itself.
     func read<T: Decodable>(_ type: T.Type) throws -> T {

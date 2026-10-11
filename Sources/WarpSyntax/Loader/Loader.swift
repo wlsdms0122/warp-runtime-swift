@@ -35,14 +35,14 @@ public struct Loader: Sendable {
     // in its link, so a host assembling a graph can ask what it owes before
     // assembling it.
     //
-    // What a notation says with a procedure rather than a construct is a choice it
-    // made, so the debt is its own to state. Leaving it unstated would have the
-    // bundles read as optional while the spellings quietly required them.
+    // What a notation says with a procedure rather than a construct is its own
+    // to state.
     public func vocabulary(of notation: Notation) -> Set<Name> {
         registry.vocabulary(with: notation).union(notation.vocabulary)
     }
 
-    // A document read into a module, the one door a document comes through.
+    // A document read into a module: the load, which every document comes
+    // through.
     // It reads a document and nothing else: a spelling a notation offers has
     // been spent by the time a document exists. What runs is decided when the
     // module is linked with the others.
@@ -153,9 +153,7 @@ public struct Loader: Sendable {
     //
     //     let image = try await loader.reading { try await Builder().build(modules) }
     //
-    // The reading path takes it on its own; a link is the stage that does not,
-    // because what to link is the host's statement and the modules in it may
-    // have come from anywhere.
+    // `load` places its own refusals this way; a build's are placed here.
     public func reading<T>(_ refused: () throws -> T) throws -> T {
         try reading(by: registry, refused)
     }
@@ -184,8 +182,8 @@ public struct Loader: Sendable {
         }
     }
 
-    // What a document spells, unjudged. Not a door: nothing here has been held
-    // to the language's rules, and `load` is the one that has.
+    // What a document spells, unjudged: nothing here is held to the language's
+    // rules, which `load` holds.
     private func spelled(
         _ value: Value,
         in document: Place.Document,
@@ -223,10 +221,8 @@ public struct Loader: Sendable {
     }
 
     // Every reading goes through here, and so does every refusal one raises.
-    // Decoding says what is wrong and where in the data it stopped, and knows
-    // nothing about which document either is about. The door does, and it says
-    // so by handing one in. A door that could read without saying would be a
-    // refusal nobody can place, which is the state this asks about up front.
+    // Decoding says what is wrong and where in the data it stopped; which
+    // document it is about is the caller's, handed in as `document`.
     private func read<T: Decodable>(
         _ type: T.Type,
         from value: Value,
@@ -235,8 +231,8 @@ public struct Loader: Sendable {
         by table: ConstructRegistry? = nil
     ) throws -> T {
         // Held here rather than in each reader below: a value a caller built
-        // reaches every reader through this one door, and past the bound the
-        // readers recurse in the ordinary way.
+        // reaches every reader through here, and past the bound the readers
+        // recurse in the ordinary way.
         guard value.nesting <= Value.nestingBound else {
             throw ReadingError("nesting deeper than \(Value.nestingBound) containers", at: value.deepest).read(in: document)
         }

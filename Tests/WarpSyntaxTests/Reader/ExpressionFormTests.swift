@@ -153,7 +153,7 @@ struct ExpressionFormTests {
     }
 
     @Test("a template is spent into the procedures that build it")
-    func templateLowersToProcedures() throws {
+    func templateIsSpentIntoProcedures() throws {
         // Given / When
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
@@ -217,7 +217,7 @@ struct ExpressionFormTests {
     func drillingIntoAComputedBindingIsRefused() {
         // Given / When / Then. Continuing a path needs a path to continue, and
         // reading the placeholder as written would reach the ambient scope
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.expression(from: [
                 "format": "hello, ${who.name}",
                 "with": ["who": ["record": ["name": "warp"]]]
