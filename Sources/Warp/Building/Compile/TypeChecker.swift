@@ -1046,7 +1046,8 @@ struct TypeChecker {
 
     // The segments a stopped walk leaves stand as written, and an index
     // reference among them is a path of its own, judged wherever the outer
-    // walk stops. What they reach is not read.
+    // walk stops. What they reach is not read, so what the reference reads
+    // is judged by the run against what arrived, a position or a key.
     private func asWritten(
         _ path: Path,
         in environment: [Name: Binding],
@@ -1056,17 +1057,17 @@ struct TypeChecker {
         for segment in path.segments {
             guard case let .indexRef(inner, _) = segment else { continue }
 
-            if let refusal = indexReference(inner, in: environment, with: context, at: place) {
-                return .refused(refusal)
+            if case let .refused(reason) = reading(of: inner, in: environment, with: context, at: place) {
+                return .refused(reason)
             }
         }
 
         return .reads(.any)
     }
 
-    // The one machine that judges an index reference, wherever a walk meets
-    // one, answering the refusal or nil. The inner path is a path of its own,
-    // and what it reads stands where an `Int` is read.
+    // The one machine that judges an index reference on a list, answering
+    // the refusal or nil. The inner path is a path of its own, and what it
+    // reads stands where an `Int` is read.
     private func indexReference(
         _ inner: Path,
         in environment: [Name: Binding],
