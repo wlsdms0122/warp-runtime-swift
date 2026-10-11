@@ -109,7 +109,7 @@ struct Activation: Sendable {
         do {
             current = try cells[slot].value()
         } catch {
-            return .unfit("\(error)")
+            return .unfit("\(spelled(Address(slot: slot, steps: [])).rendered): \(error)")
         }
 
         for (index, step) in steps.enumerated() {
@@ -166,7 +166,8 @@ struct Activation: Sendable {
 
                 case let .found(value):
                     return .unfit(
-                        "index reference \(name()) is \(value.nominal), expected Int or String"
+                        "\(walked().rendered): index reference \(name()) is \(value.nominal),"
+                            + " expected Int or String"
                     )
 
                 case let .unfit(reason):
