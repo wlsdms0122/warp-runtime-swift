@@ -33,20 +33,19 @@ struct DictionaryProcedureTests {
         #expect(answer == .dictionary(["a": .int(1), "b": .int(2)]))
     }
 
-    @Test("setting refuses a key that is not one byte spelling")
-    func settingRefusesAKeyOutsideNormalForm() async {
-        // When / Then
-        await #expect {
-            try await run(
-                Self.asking(.call(Call(
-                    selector: "Standard.Collection.setting",
-                    arguments: [reference("held"), reference("key"), .literal(.int(2))]
-                ))),
-                arguments: ["held": .dictionary(["a": .int(1)]), "key": .string("cafe\u{301}")]
-            )
-        } throws: { error in
-            "\(error)".contains("normal form C")
-        }
+    @Test("setting under another spelling of a key the map holds writes that entry")
+    func settingFindsAKeyBySameness() async throws {
+        // When
+        let answer = try await run(
+            Self.asking(.call(Call(
+                selector: "Standard.Collection.setting",
+                arguments: [reference("held"), reference("key"), .literal(.int(2))]
+            ))),
+            arguments: ["held": .dictionary(["caf\u{E9}": .int(1)]), "key": .string("cafe\u{301}")]
+        )
+
+        // Then
+        #expect(answer == .dictionary(["caf\u{E9}": .int(2)]))
     }
 
     @Test("a procedure that counts a map counts its entries")

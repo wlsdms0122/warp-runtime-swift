@@ -89,7 +89,7 @@ struct HostDoorTests {
 
         static let type = "carried"
 
-        var details: [Name: Value] { ["held": held] }
+        var details: Value.Dictionary { Value.Dictionary(["held": held]) }
 
         // MARK: - Initializer
         // MARK: - Public
