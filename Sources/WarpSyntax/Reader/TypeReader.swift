@@ -104,8 +104,9 @@ struct TypeReader: Decodable {
     // MARK: - Property
     let type: TypeExpression
 
-    // The one key a record type is written under.
+    // The keys a record type and a procedure type are written under.
     static let recordKey: Name = "record"
+    static let procedureKey: Name = "procedure"
 
     // What a type that is neither a spelling nor a form is refused with.
     private static let unread = "a type is a name like `String`, `Array<String>` or"
@@ -157,7 +158,7 @@ struct TypeReader: Decodable {
 
         guard
             let (constness, isolation, head) = modifiers(of: rest),
-            head == "procedure"
+            head == procedureKey.spelling
         else {
             return nil
         }
@@ -171,7 +172,7 @@ struct TypeReader: Decodable {
         [
             constness == .const ? TypeSpelling.const.spelling : nil,
             isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
-            head == .name ? TypeSpelling.procedure.spelling : "procedure"
+            head == .name ? TypeSpelling.procedure.spelling : procedureKey.spelling
         ]
         .compactMap { part in part }
         .joined(separator: " ")
@@ -343,6 +344,7 @@ struct TypeReader: Decodable {
 
     private static func read(from decoder: Decoder) throws -> TypeExpression {
         let notation = decoder.notation
+
         if let written = try? decoder.singleValueContainer().decode(String.self) {
             return try parse(written, in: notation)
         }
