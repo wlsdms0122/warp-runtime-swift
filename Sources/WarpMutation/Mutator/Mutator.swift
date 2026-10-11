@@ -18,11 +18,12 @@ import Warp
 // One place at a time, because a mutant that differs in two places cannot say
 // which of them the answer was about.
 public struct Mutator: Sendable {
-    // One step down into a value: a position in a list, or a key in a record
-    // or a dictionary.
+    // One step down into a value: a position in a list, a key in a map, or a
+    // field of a record.
     private enum Step {
         case position(Int)
-        case key(Name)
+        case key(Value)
+        case field(Name)
     }
 
     // MARK: - Property
@@ -69,7 +70,8 @@ public struct Mutator: Sendable {
         steps.map { step in
             switch step {
             case let .position(position): String(position)
-            case let .key(key): key.spelling
+            case let .key(key): Rendering(key).text()
+            case let .field(name): name.spelling
             }
         }.joined(separator: "/")
     }
@@ -129,13 +131,13 @@ public struct Mutator: Sendable {
             }
 
         case let .dictionary(dictionary):
-            for entry in (try? dictionary.named()) ?? [] {
-                walk(entry.value, at: steps + [.key(entry.name)], visit)
+            for entry in dictionary.entries {
+                walk(entry.value, at: steps + [.key(entry.key)], visit)
             }
 
         case let .record(record):
             for (name, field) in zip(record.names, record.values) {
-                walk(field, at: steps + [.key(name)], visit)
+                walk(field, at: steps + [.field(name)], visit)
             }
 
         default:
@@ -155,13 +157,13 @@ public struct Mutator: Sendable {
             return .array(replaced)
 
         case let (.key(key), .dictionary(dictionary)):
-            guard let held = dictionary[key] else { return value }
+            guard let held = dictionary[key: key] else { return value }
 
-            return .dictionary(dictionary.writing(key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
+            return .dictionary(dictionary.writing(key: key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
 
-        case let (.key(key), .record(record)):
-            return .record(record.mapValues { name, field in
-                name == key ? replacing(steps.dropFirst(), in: field, with: mutated) : field
+        case let (.field(field), .record(record)):
+            return .record(record.mapValues { name, held in
+                name == field ? replacing(steps.dropFirst(), in: held, with: mutated) : held
             })
 
         default:
