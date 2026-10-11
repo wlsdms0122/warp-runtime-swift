@@ -116,7 +116,7 @@ struct Substitution: Sendable {
     // or nil where none does. A bounded parameter is one type wherever it
     // stands, and a value of a contract is of whichever type answers it, and
     // one of what may be null of the type or `Null`, so two of them, or one
-    // inside a list or a record, are not known to be one type. Standing
+    // inside a list or a map, are not known to be one type. Standing
     // alone at one position of `slots`, the value is the one thing the
     // parameter stands for, and the call reads the parameter the way it read
     // the value.
