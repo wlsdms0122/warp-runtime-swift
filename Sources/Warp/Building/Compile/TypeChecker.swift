@@ -28,12 +28,12 @@ import Foundation
 // the type the walk reached, and a dot on a type that declares no such field
 // is refused rather than left for the run.
 struct TypeChecker {
-    // What a call put in a generic declaration's type parameters, read once:
-    // a parameter read two ways is refused rather than folded, a bounded one
-    // is judged against its bounds, and the declaration comes back with
-    // the readings filled.
+    // What a call put in a generic declaration's type parameters, read once
+    // by the walk: a parameter read two ways is refused rather than folded,
+    // a bounded one is judged against its bounds, and the slots come back
+    // with the readings filled.
     private enum Instantiation {
-        case fits(slots: [Slot], returns: LoweredType?)
+        case fits(slots: [Slot])
         case refusal(String)
     }
 
@@ -550,19 +550,14 @@ struct TypeChecker {
     private func instantiated(
         _ declared: Signature,
         over slots: [Slot],
-        answering: LoweredType?,
-        readings sent: [LoweredType],
+        substitution: Substitution,
         shaped shapes: [Int: LiteralShape],
         in loweredTypes: LoweredTypeTable,
         fulfillment: Fulfillment,
         at place: Place
     ) -> Instantiation {
         // A declaration with nothing to fill is read as the build lowered it.
-        // Lowering it again per call site is the same answer paid for again,
-        // and this is the site every call goes through.
-        guard declared.isGeneric else { return .fits(slots: slots, returns: answering) }
-
-        let substitution = substitution(over: slots, readings: sent, in: loweredTypes)
+        guard declared.isGeneric else { return .fits(slots: slots) }
 
         guard substitution.disagreeing.isEmpty else {
             let named = substitution.disagreeing.keys.sorted().map { parameter in
@@ -621,10 +616,7 @@ struct TypeChecker {
             }
         }
 
-        return .fits(
-            slots: declared.lowered(in: loweredTypes, filling: substitution.readings),
-            returns: answering?.filling(substitution.readings)
-        )
+        return .fits(slots: slots.map { slot in Slot(name: slot.name, type: slot.type.filling(substitution.readings)) })
     }
 
     // Why a value of more than one type fills a bounded parameter it cannot,
@@ -2153,7 +2145,8 @@ struct TypeChecker {
                 flow = flow.followed(by: inner.flow)
             }
 
-            let filled = substitution(over: slots, readings: sent, in: context.loweredTypes).readings
+            let substitution = substitution(over: slots, readings: sent, in: context.loweredTypes)
+            let filled = substitution.readings
 
             let taking = slots.map { slot in slot.type.filling(filled) }
 
@@ -2207,7 +2200,8 @@ struct TypeChecker {
                         call: rewritten,
                         place: place,
                         readings: sent,
-                        shapes: shapes
+                        shapes: shapes,
+                        substitution: substitution
                     )
                 ] + calls,
                 judgements: judgements,
@@ -3174,8 +3168,7 @@ struct TypeChecker {
         switch instantiated(
             declared,
             over: context.slots(of: call.selector),
-            answering: context.answer(of: call.selector),
-            readings: site.readings,
+            substitution: site.substitution,
             shaped: site.shapes,
             in: loweredTypes,
             fulfillment: fulfillment,
@@ -3187,7 +3180,7 @@ struct TypeChecker {
                 at: site.place
             )
 
-        case let .fits(filled, _):
+        case let .fits(filled):
             slots = filled
         }
 
