@@ -1470,7 +1470,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // for all of them. A table that cannot say yet passes each byte as
         // it is, and so passes them all.
         case let .parameter(_, bounds), let .composition(bounds):
-            return bounds.allSatisfy { contract in table.settles(contract: contract, arrived: TypeSpelling.int) != false }
+            return bounds.allSatisfy { contract in table.answers(contract: contract, arrived: TypeSpelling.int) != false }
 
         // `Double` takes no whole number and so no byte, and neither do the
         // rest. Named rather than left to a default, so that a kind added to

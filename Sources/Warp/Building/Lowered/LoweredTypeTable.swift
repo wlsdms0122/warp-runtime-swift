@@ -16,12 +16,12 @@ import Foundation
 // reference down rather than a copy of every array the table holds.
 final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
-    // type alone settles is settled here; a named type settles nothing,
+    // type alone decides is decided here; a named type decides nothing,
     // since which types answer a contract is read off the claims of the whole
     // list, so the names come back and the asker writes them down. Asked
-    // rigidly, the documents settle it.
+    // rigidly, the documents decide it.
     enum Answering {
-        case settled(Bool)
+        case decided(Bool)
         case leansOn([Name])
 
         // MARK: - Property
@@ -30,13 +30,13 @@ final class LoweredTypeTable: Sendable {
         // What a reading comes to where it answers only if both parts do.
         func and(_ other: Answering) -> Answering {
             switch (self, other) {
-            case (.settled(false), _), (_, .settled(false)):
-                return .settled(false)
+            case (.decided(false), _), (_, .decided(false)):
+                return .decided(false)
 
-            case (.settled(true), _):
+            case (.decided(true), _):
                 return other
 
-            case (_, .settled(true)):
+            case (_, .decided(true)):
                 return self
 
             case let (.leansOn(mine), .leansOn(theirs)):
@@ -185,7 +185,7 @@ final class LoweredTypeTable: Sendable {
     // documents claim about it. Nil where nothing declares the contract, what
     // an undeclared name means being for whoever asked to say, and where the
     // table does not hold every claim there is.
-    func settles(contract name: Name, arrived type: Name) -> Bool? {
+    func answers(contract name: Name, arrived type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
         guard settled else { return nil }
 
@@ -199,7 +199,7 @@ final class LoweredTypeTable: Sendable {
     // there is nothing to wait for and the value is held to what this table
     // knows.
     func stands(_ type: Name, answering contract: Name) -> Bool {
-        switch settles(contract: contract, arrived: type) {
+        switch answers(contract: contract, arrived: type) {
         case true?:
             return true
 
@@ -228,10 +228,10 @@ final class LoweredTypeTable: Sendable {
     }
 
     // Whether a reading stands where a contract bounds a slot. A claim this
-    // table cannot settle passes, for the link to settle, unless `rigid`:
+    // table cannot decide passes, for the link to decide, unless `rigid`:
     // then a named type is held to what the documents standing so far say.
     func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
-        if case .settled(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
+        if case .decided(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
     }
 
     // The declarations as the run reads them. A link says which order its rows
@@ -322,14 +322,14 @@ final class LoweredTypeTable: Sendable {
         rigid: Bool,
         orNull: Bool
     ) -> Answering {
-        guard let reading = read(given, orNull: orNull) else { return .settled(true) }
+        guard let reading = read(given, orNull: orNull) else { return .decided(true) }
 
         switch reading {
         case .never:
-            return .settled(true)
+            return .decided(true)
 
         case .any, .projection:
-            return .settled(false)
+            return .decided(false)
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of, so one bounded by the contract
@@ -337,7 +337,7 @@ final class LoweredTypeTable: Sendable {
         // says what a call may fill it with. A composition is read as the
         // contracts it names, so it answers those alone.
         case let .parameter(_, bounds), let .composition(bounds):
-            return .settled(bounds.contains(name))
+            return .decided(bounds.contains(name))
 
         // What may be null is a value of the type or null, so it answers
         // where both do.
@@ -350,8 +350,8 @@ final class LoweredTypeTable: Sendable {
         // and the asker writes it down. Asked rigidly, or where the table
         // holds every claim there is, it is held to what the documents say.
         default:
-            guard let type = reading.nominal(in: self) else { return .settled(true) }
-            guard !rigid, !settled else { return .settled(settles(contract: name, arrived: type) != false) }
+            guard let type = reading.nominal(in: self) else { return .decided(true) }
+            guard !rigid, !settled else { return .decided(answers(contract: name, arrived: type) != false) }
 
             return .leansOn([type])
         }

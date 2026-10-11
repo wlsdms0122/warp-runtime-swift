@@ -481,7 +481,7 @@ struct TypeChecker {
         at place: Place
     ) -> String? {
         switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
-        // What leans on a claim is written down for the link to settle.
+        // What leans on a claim is written down for the link to decide.
         case let .leansOn(types):
             for type in types {
                 fulfillment.require(Claim(type: type, contract: name), at: place)
@@ -489,10 +489,10 @@ struct TypeChecker {
 
             return nil
 
-        case .settled(true):
+        case .decided(true):
             return nil
 
-        case .settled(false):
+        case .decided(false):
             return "\(label) \(reading.rendered(in: loweredTypes)),"
                 + " which does not answer every procedure '\(name)' asks"
         }
