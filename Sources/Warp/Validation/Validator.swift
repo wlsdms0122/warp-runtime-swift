@@ -889,7 +889,10 @@ struct Validator: Sendable {
     // parameter, since two under one name would be one name a body reads two
     // ways, each parameter's type, in front of which `inout` may stand, and
     // the answer's, and a bound only on a name some slot writes as `some T`,
-    // since one on a name nobody wrote binds nothing.
+    // since one on a name nobody wrote binds nothing. A call fills a type
+    // parameter from what it hands, so one a signature declares is named by
+    // a parameter, at whatever depth; a closure's are the procedure's around
+    // it.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
         for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
             let here = place.part(.bounds).key(parameter.spelling)
@@ -910,6 +913,21 @@ struct Validator: Sendable {
                     + " `some \(first.spelling)`. A bound rides on a parameter some slot mentions",
                 at: place.part(.bounds)
             )
+        }
+
+        if context.declaresTypeParameters {
+            let taken = signature.parameters.reduce(into: Set<Name>()) { taken, parameter in
+                taken.formUnion(parameter.type.parameterNames)
+            }
+
+            if let unfilled = named.subtracting(taken).sorted().first {
+                throw ValidationError(
+                    "answers `\(TypeExpression.parameter(name: unfilled).rendered)`, and no parameter writes it."
+                        + " A call fills a type parameter from what it hands, so one only the answer names"
+                        + " is filled by nothing",
+                    at: place.part(.returns)
+                )
+            }
         }
 
         for (position, parameter) in signature.parameters.enumerated() {

@@ -38,6 +38,16 @@ enum TypeContext: Sendable {
         }
     }
 
+    // Whether a signature written here declares the type parameters it
+    // names, which a closure's does not: its `some T` is the procedure's
+    // around it.
+    var declaresTypeParameters: Bool {
+        switch self {
+        case .signature, .contract: true
+        case .declaration, .closure, .value: false
+        }
+    }
+
     // Whether a record's field may be written `var`: a path writes through a
     // declared type's field.
     var takesWritableFields: Bool {

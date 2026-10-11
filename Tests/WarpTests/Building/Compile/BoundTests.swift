@@ -299,7 +299,10 @@ struct BoundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])),
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
+                        returns: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])
+                    ),
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("x"))])
                 )
