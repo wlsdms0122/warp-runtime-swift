@@ -20,11 +20,7 @@ import Foundation
 public struct Draft: Sendable {
     // What reading a document once answers: what it declares, what it leans on
     // another document for, and how many closures each of its declarations
-    // wrote.
-    //
-    // One value rather than one question at a time, because every one of these
-    // is answered by walking the same text and the same tables. Asking for them
-    // apart walks the document once for each.
+    // wrote, read in one walk of the text.
     struct Reading: Sendable {
         // MARK: - Property
         let sends: Set<Name>
@@ -82,12 +78,7 @@ public struct Draft: Sendable {
     // the type. A type answers a contract because a document says it does: the
     // link holds the claim to the declarations that back it, and a declaration
     // named for a type and a procedure nobody claimed is that document's procedure and
-    // nothing more.
-    //
-    // Said here rather than beside the type, because the type may be another
-    // document's. A document that arrives later gives a type it did not
-    // declare the procedures a contract asks, and saying it beside the type would
-    // leave that document nowhere to say it.
+    // nothing more. The type may be another document's.
     public let claims: [Name: Set<Name>]
 
     public let constants: [Name: Expression]

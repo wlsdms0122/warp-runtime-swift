@@ -15,10 +15,9 @@ import Foundation
 // procedure is reached by a written call, which spells the declaration it
 // means, so a path never decides which declaration a bare name stands for.
 //
-// Optionality is one axis across every access, not a family of spellings: each
-// segment carries whether the author wrote it optional (`?.` on a name, `?[` on
-// an index) the one mark that says absence is expected here. A plain segment
-// refuses what an optional one reads as null.
+// Each segment carries whether the author wrote it optional (`?.` on a name,
+// `?[` on an index), the one mark that says absence is expected here. A plain
+// segment refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
     case key(Name, optional: Bool)
     case index(Int, optional: Bool)
@@ -98,8 +97,7 @@ public enum PathSegment: Sendable, Equatable {
 
     // The refusal a mark earns where the types prove there is nothing to read
     // past. Nil where the mark stands, none was written, or the landing is one
-    // that may genuinely be absent. One rule for every access, because a rule
-    // that lived at each landing would drift.
+    // that may genuinely be absent. One rule for every access.
     func needlessMark(
         at walked: Path,
         on held: String,

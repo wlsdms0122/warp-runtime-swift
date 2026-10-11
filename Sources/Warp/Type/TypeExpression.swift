@@ -329,7 +329,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether anything in here is a type parameter. A declaration without one
-    // is read as written, so nothing pays for a feature it does not use.
+    // is read as written.
     var isGeneric: Bool {
         switch self {
         // Both are types a call decides, and the deep question is only

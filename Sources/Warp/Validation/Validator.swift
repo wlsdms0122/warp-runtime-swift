@@ -37,8 +37,7 @@ struct Validator: Sendable {
         let bound = constants.union(variables)
 
         // A constant sees no scope, so it may name another constant and nothing
-        // else. Which is also why it is checked here rather than per procedure:
-        // what it can see is a fact about the module.
+        // else.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
             try held(expression, asOperand: .constant(name.spelling, in: .of(module)))
@@ -154,9 +153,8 @@ struct Validator: Sendable {
             )
         }
 
-        // Last, because it is the least specific thing that can be wrong: a
-        // module whose bodies do not even check is refused for that, and going
-        // first would make the list the only thing an author ever heard about.
+        // Last, so a module whose declarations refuse is refused for them
+        // before its list.
         try declared(module)
     }
 
@@ -193,8 +191,7 @@ struct Validator: Sendable {
     // What a module says it imports against what it uses: the procedures it
     // sends and the types and contracts it names. A host reads the list to
     // decide what to grant and what to lay in the link before it links
-    // anything, so a list allowed to drift would be worse than none: it would
-    // be trusted and wrong.
+    // anything.
     private func declared(_ module: Module) throws {
         let used = Set(module.references.map(\.name))
 
@@ -206,12 +203,8 @@ struct Validator: Sendable {
 
         guard !undisclosed.isEmpty || !unspent.isEmpty else { return }
 
-        // The two differences and not the two lists. They are different
-        // mistakes with different fixes (a name used and not listed is the
-        // dependency the list existed to disclose, and a name listed and not
-        // used asks for one the program has no use for) and a module using
-        // thirty names would otherwise leave an author diffing two of them by
-        // eye to find the one that moved.
+        // The two differences, each its own mistake: a name used and not
+        // listed, and a name listed and not used.
         let said = [
             undisclosed.isEmpty ? nil : "uses \(undisclosed), which it does not import",
             unspent.isEmpty ? nil : "imports \(unspent), which it does not use"
@@ -245,10 +238,8 @@ struct Validator: Sendable {
                     "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
                         + " cycle. A constant may name another declared beside it, but"
                         + " not one that names it back",
-                    // Any of them is where the fix can be made, so the one
-                    // walked to is the first in sorted order: a cycle has no
-                    // first member, and reading one off the walk would name a
-                    // different constant depending on where the walk started.
+                    // The first in name order, so the refusal names one
+                    // constant wherever the walk started.
                     at: .constant(cycle[0].spelling, in: .of(module))
                 )
             }
@@ -718,9 +709,8 @@ struct Validator: Sendable {
             )
 
             guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-                // An empty rescue would swallow a failure into null without a
-                // trace. If the alternate path produces nothing, the author's
-                // honest form is no rescue at all.
+                // A rescue answers for the failure it caught, and an empty
+                // one answers nothing.
                 throw ValidationError("must not be empty", at: place.child(.rescue))
             }
 
@@ -861,17 +851,12 @@ struct Validator: Sendable {
             try held(steps: path, at: place)
 
             guard let head = path.head else {
-                throw ValidationError(
-                    "reference { ref: \(path.rendered) } does not"
-                        + " start with a name",
-                    at: place
-                )
+                throw ValidationError("'\(path.rendered)' starts with no name, and a path reads from one", at: place)
             }
 
             guard visible.contains(head) else {
                 throw ValidationError(
-                    "reference { ref: \(path.rendered) } names"
-                        + " '\(head)', which is not visible here. Declare it earlier"
+                    "'\(path.rendered)' reads '\(head)', which is not visible here. Declare it earlier"
                         + " or check the spelling",
                     at: place
                 )
@@ -1050,7 +1035,7 @@ struct Validator: Sendable {
                 try written(parameter.slotUnwrapped, in: context.nested, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context.nested, at: place)
+            try written(procedure.returns ?? .any, in: context.nested, at: place.part(.returns))
 
         case .inout:
             throw ValidationError(

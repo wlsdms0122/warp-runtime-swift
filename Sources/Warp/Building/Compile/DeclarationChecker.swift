@@ -209,7 +209,7 @@ struct DeclarationChecker {
                 try mentioned(in: parameter.slotUnwrapped, at: place.index(position), resolve: table)
             }
 
-            try mentioned(in: type.returns ?? .any, at: place, resolve: table)
+            try mentioned(in: type.returns ?? .any, at: place.part(.returns), resolve: table)
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some

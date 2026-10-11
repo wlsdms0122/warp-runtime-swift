@@ -212,13 +212,13 @@ public struct ExpressionReader: Decodable {
 
     private static func reference(_ written: Value, at steps: [Place.Step]) throws -> Warp.Expression {
         guard case let .string(rendered) = written else {
-            throw ReadingError("{ ref: } takes a path string like a.b[0]", at: steps)
+            throw ReadingError("`ref` takes a path string like `a.b[0]`", at: steps)
         }
 
         do {
             return .reference(try PathParser().parse(rendered))
         } catch {
-            throw ReadingError("{ ref: \(rendered) }: \(error)", at: steps)
+            throw ReadingError("`ref` '\(rendered)': \(error)", at: steps)
         }
     }
 
