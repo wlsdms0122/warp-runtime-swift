@@ -31,7 +31,7 @@ struct AnsweringTests {
             procedures: [
                 "counts": Procedure(
                     body: [],
-                    result: .record(["total": .literal(.int(7))])
+                    result: map(["total": .literal(.int(7))])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -54,7 +54,7 @@ struct AnsweringTests {
         // comes from.
         let sut = try Module(
             procedures: [
-                "innermost": Procedure(body: [], result: .record(["total": .literal(.int(3))])),
+                "innermost": Procedure(body: [], result: map(["total": .literal(.int(3))])),
                 "middle": Procedure(
                     body: [],
                     result: .call(Call(selector: "innermost"))
@@ -106,7 +106,7 @@ struct AnsweringTests {
                                 )
                             ]
                             : [],
-                        result: .record(["total": .literal(.int(7))])
+                        result: map(["total": .literal(.int(7))])
                     ),
                     entryName: Procedure(
                         access: .public,
@@ -169,7 +169,7 @@ struct AnsweringTests {
                         body: [],
                         result: cycling
                             ? .call(Call(selector: "ping"))
-                            : .record(["total": .literal(.int(1))])
+                            : map(["total": .literal(.int(1))])
                     ),
                     entryName: Procedure(
                         access: .public,
@@ -202,6 +202,7 @@ struct AnsweringTests {
         // a path only that body can read, which nothing fills.
         func module(reading path: Path, answering answer: Path) throws -> Module {
             try Module(
+                types: ["App.Inner": .record(["inner": .int])],
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -215,7 +216,7 @@ struct AnsweringTests {
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "peek",
-                                arguments: [.record(["inner": .literal(.int(1))])]
+                                arguments: [.cast(.record(["inner": .literal(.int(1))]), as: .named("App.Inner"), optional: false)]
                             )))
                         ],
                         result: .reference(path)

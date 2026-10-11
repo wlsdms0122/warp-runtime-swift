@@ -123,40 +123,46 @@ final class LoweredTypeTable: Sendable {
         return record
     }
 
-    // A value from outside with every record it holds under a name, at any
-    // depth, held to the record the name declares: an alias's name is its
-    // record's, the record is fitted to its declaration and judged against
-    // it, and a name that declares no record is the name of no type here.
-    // So every record the run holds under a name is a value of that record,
-    // whatever slot it came in at.
+    // A value from outside with every record it holds, at any depth, held to
+    // the record its name declares: an alias's name is its record's, the
+    // record is fitted to its declaration and judged against it, and a name
+    // that declares no record is the name of no type here. So every record
+    // the run holds is a value of the record its name declares, whatever
+    // slot it came in at.
     func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
-        guard value.holdsName else { return value }
+        guard value.holdsRecord else { return value }
 
         switch value {
         case let .array(items):
             return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
 
         case let .dictionary(entries):
-            return .dictionary(try entries.mapValues { name, item in
-                try resolvingNames(in: item, at: "\(path()).\(name)")
+            return .dictionary(try entries.mapValues { key, item in
+                try resolvingNames(in: item, at: "\(path()).\(Rendering(key).text())")
             })
 
         case let .record(record):
             let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
 
-            guard let name = record.name else { return .record(fields) }
-
-            guard let row = self.record(named: name) else {
-                throw ArgumentError("\(path()): is a \(name), which no document declares as a record")
+            guard let row = self.record(named: record.name) else {
+                throw ArgumentError("\(path()): is a \(record.name), which no document declares as a record")
             }
 
             let declared = LoweredType.named(row)
+            let named = Record(layout: Layout(name: labels[row], ordered: fields.names), values: fields.values)
 
-            return try declared.settling(declared.fitted(.record(fields.named(labels[row])), in: self), at: path(), in: self)
+            return try declared.settling(declared.fitted(.record(named), in: self), at: path(), in: self)
 
         default:
             return value
         }
+    }
+
+    // A record the language declares itself, by its row. Every table a
+    // compile or a link holds stands on the `Prelude`, and one a caller
+    // assembled with nothing declared reads it as no value's type.
+    func prelude(_ name: Name) -> LoweredType {
+        row(named: name).map(LoweredType.named) ?? .never
     }
 
     // Whether a row is a declared record's.
@@ -207,7 +213,8 @@ final class LoweredTypeTable: Sendable {
         case .never:
             return .decided(true)
 
-        case .any, .projection:
+        // A procedure answers no contract: no claim is about one.
+        case .any, .projection, .procedure:
             return .decided(false)
 
         // A parameter stands for whatever fills it, and a call fills it with
@@ -273,7 +280,7 @@ final class LoweredTypeTable: Sendable {
     // numbers it was lowered with. Either way a row is a row of one table and
     // nothing a link concludes reads one to decide what to say.
     static func lowering(
-        _ types: [Name: TypeExpression],
+        _ types: [Name: TypeDeclaration],
         satisfying: [Name: Set<Name>] = [:],
         holdsEveryClaim: Bool,
         fulfillment: Fulfillment? = nil,
@@ -288,7 +295,7 @@ final class LoweredTypeTable: Sendable {
         // is a slot the contract fills.
         let index = LoweredTypeTable(loweredTypes: [], labels: labels, satisfying: satisfying, of: linkage)
 
-        var loweredTypes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
+        var loweredTypes = labels.map { label in types[label]?.lowered(as: label, in: index) ?? .any }
 
         let records = Set(loweredTypes.indices.filter { row in
             if case .record = loweredTypes[row] { true } else { false }

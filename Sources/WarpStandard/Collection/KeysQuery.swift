@@ -17,7 +17,7 @@ struct KeysQuery: Query {
         case dictionary
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(.any)) }
+        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(key: .string, value: .any)) }
 
         // MARK: - Initializer
         // MARK: - Public
@@ -28,14 +28,14 @@ struct KeysQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        guard let held = question[.dictionary].asDictionary else {
+        guard case let .dictionary(held) = question[.dictionary] else {
             throw ExecutionError("Standard.Collection.keys asks a Dictionary")
         }
 
         // In name order, the order both spellings hold: a walk that answered a
         // different order each run would make a program that reads it depend on
         // nothing an author wrote.
-        return .array(held.names.map { name in .string(name.spelling) })
+        return .array(held.keys)
     }
 
     // MARK: - Private

@@ -154,6 +154,10 @@ public struct Writer: Sendable {
         try TypeWriter(readBy: readBy).value(of: type)
     }
 
+    public func value(of declared: TypeDeclaration) throws -> Value {
+        try TypeWriter(readBy: readBy).value(of: declared)
+    }
+
     public func value(of parameter: Parameter) throws -> Value {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
@@ -222,6 +226,11 @@ public struct Writer: Sendable {
 
         case let .record(fields):
             return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
+
+        case let .dictionary(entries):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(try entries.map { entry in .array([try value(of: entry.key), try value(of: entry.value)]) })
+            ])
 
         case let .closure(procedure):
             return .dictionary([ExpressionTag.closure.key: try value(of: procedure)])
@@ -447,37 +456,26 @@ public struct Writer: Sendable {
         return spelled
     }
 
-    // Data as a document writes it: a record under `record` like every
-    // record, whatever its fields are called.
+    // Data as a document writes it: a map as the map literal that makes it.
     private func literal(_ value: Value) throws -> Value {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
             return value
 
-        // A draft is written as it is, held to no rule, so a named record is
+        // A draft is written as it is, held to no rule, so a record is
         // written with its name and reads back as the literal it was.
-        case let .record(record) where record.name != nil:
+        case .record:
             return value
 
         case let .array(elements):
             return .array(try elements.map(literal))
 
-        // A dictionary and a record read back apart only by the type they
-        // stand in, and `record` reads back as a record. A dictionary is
-        // written as a record cast to the dictionary it is, which names what
-        // it holds, and only its author can say that.
-        case .dictionary:
-            throw WritingError(
-                "a dictionary has no document of its own. Write a record and cast it"
-                    + " to the `Dictionary<T>` it is"
-            )
-
-        case .record:
-            let fields = try (value.asDictionary?.entries ?? []).map { entry in
-                (name: entry.name, value: try literal(entry.value))
-            }
-
-            return .dictionary([ExpressionTag.record.key: .dictionary(try Value.Dictionary(fields))])
+        // A map is written as the map literal that makes it, its entries in
+        // key order.
+        case let .dictionary(held):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) })
+            ])
 
         case .procedure:
             throw WritingError(
@@ -493,6 +491,7 @@ public struct Writer: Sendable {
         case .reference: "a reference"
         case .array: "an array"
         case .record: "a record"
+        case .dictionary: "a map"
         case .closure: "a closure"
         case .apply: "a call of a value"
         case .block: "a block"

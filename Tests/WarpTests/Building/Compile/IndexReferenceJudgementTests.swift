@@ -61,13 +61,14 @@ struct IndexReferenceJudgementTests {
         // Given. The element type is known whatever the index is, so the absent
         // field is the build's to refuse
         let sut = try Module(
+            types: ["App.Item": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
                             Parameter(name: "i", type: .int),
-                            Parameter(name: "items", type: .array(.record(["id": .string])))
+                            Parameter(name: "items", type: .array(.named("App.Item")))
                         ]
                     ),
                     body: [],

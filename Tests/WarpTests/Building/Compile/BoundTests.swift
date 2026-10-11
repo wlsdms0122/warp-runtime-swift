@@ -301,10 +301,10 @@ struct BoundTests {
                     access: .public,
                     signature: Signature(
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
-                        returns: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])
+                        returns: .array(.parameter(name: "T"))
                     ),
                     body: [],
-                    result: .record(["a": .literal(.int(1)), "b": .literal(.string("x"))])
+                    result: .array([.literal(.int(1)), .literal(.string("x"))])
                 )
             ]
         )
@@ -313,7 +313,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("answers { a: Int, b: String }, and its declaration promises")
+            error is BuildError && "\(error)".contains("and its declaration promises")
         }
     }
 
@@ -455,7 +455,7 @@ struct BoundTests {
         // through a cast, and a name standing for a procedure type is such a
         // slot
         let sut = try Module(
-            types: ["App.Pick": .procedure(ProcedureType(parameters: [.int], returns: .int))],
+            types: ["App.Pick": .alias(.procedure(ProcedureType(parameters: [.int], returns: .int)))],
             contracts: Self.markers("App.Marked"),
             claims: ["Int": ["App.Marked"]],
             procedures: [

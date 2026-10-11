@@ -569,7 +569,7 @@ struct PlaceTests {
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ type: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(types: ["Pricing.Money": type], identity: identity)
+            try Module(types: ["Pricing.Money": .alias(type)], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -591,7 +591,7 @@ struct PlaceTests {
         // Given. The two tables held against each other, which is the one
         // judgement that reads both tables. The contract is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let type = try Module(types: ["Pricing.Money": .int], identity: Identity([0x01]))
+        let type = try Module(types: ["Pricing.Money": .alias(.int)], identity: Identity([0x01]))
 
         let contract = try Module(contracts: ["Pricing.Money": [Name: Signature]()], identity: Identity([0x02]))
 

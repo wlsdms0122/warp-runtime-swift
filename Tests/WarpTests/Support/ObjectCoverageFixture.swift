@@ -15,7 +15,7 @@ enum ObjectCoverageFixture {
         // up an object the reading would refuse.
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
-            types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
+            types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": recordOfEveryTypeExpression],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
@@ -69,8 +69,7 @@ enum ObjectCoverageFixture {
                         .string("s"),
                         .bytes([1, 2]),
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
-                        .record(Record(name: nil, ["c": .null])),
-                        .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
+                        .dictionary(Value.Dictionary(ordered: [(key: "k", value: .int(3))])),
                         .procedure(Closure(writer: Closure.Writer(document: .written(Identity([4])), declaration: .procedure("a.ten")), nth: 0, linked: nil, captured: []))
                     ])
                 )
@@ -84,8 +83,9 @@ enum ObjectCoverageFixture {
         description: "what it takes"
     )
 
-    // Every case of `TypeExpression`, each holding something no other holds.
-    static let everyTypeExpression: TypeExpression = .record([
+    // Every case of `TypeExpression`, each holding something no other holds,
+    // as the fields of a declared record.
+    static let recordOfEveryTypeExpression: TypeDeclaration = .record([
         "any": .any,
         "never": .never,
         "null": .null,
@@ -94,7 +94,7 @@ enum ObjectCoverageFixture {
         "Double": .double,
         "String": .string,
         "array": .array(.int),
-        "dictionary": .dictionary(.string),
+        "dictionary": .dictionary(key: .string, value: .string),
         "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
@@ -115,7 +115,8 @@ enum ObjectCoverageFixture {
     // Every case of `LoweredType`, the same way.
     static let everyLoweredType: LoweredType = .record(
         LoweredRecord(
-            layout: try! Layout(fields: Self.loweredFields.map(\.0)),
+            name: nil,
+            names: Self.loweredFields.map(\.0).sorted(),
             fields: Self.loweredFields.sorted { one, other in one.0 < other.0 }.map(\.1)
         )
     )
@@ -129,7 +130,7 @@ enum ObjectCoverageFixture {
         ("Double", .double),
         ("String", .string),
         ("array", .array(.string)),
-        ("dictionary", .dictionary(.bool)),
+        ("dictionary", .dictionary(key: .string, value: .bool)),
         ("procedure", .procedure(
             LoweredProcedureType(parameters: [.int], returns: .double),
             constness: .const,
@@ -250,7 +251,7 @@ enum ObjectCoverageFixture {
     ]
 
     static let recordOperation = RecordOperation(
-        layout: try! Layout(fields: ["x", "y"]),
+        layout: Layout(name: "a.four", ordered: ["x", "y"]),
         fields: [.literal(.int(10)), .literal(.int(11))]
     )
 

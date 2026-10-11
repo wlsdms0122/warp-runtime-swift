@@ -51,8 +51,8 @@ public struct ModuleReader: Decodable {
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
-            types: try Self.record(TypeReader.self, in: container, forKey: .types)
-                .mapValues(\.type),
+            types: try Self.record(TypeDeclarationReader.self, in: container, forKey: .types)
+                .mapValues(\.declared),
             contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
             // In key order, so that the same refusal comes first every run.

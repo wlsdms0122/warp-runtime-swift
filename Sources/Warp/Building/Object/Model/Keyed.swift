@@ -21,8 +21,8 @@ struct Keyed {
             throw ObjectRefused("'object' is not written as a record")
         }
 
-        if let stray = written.names.first(where: { name in !ObjectLayout.keys.contains(name) }) {
-            throw ObjectRefused("'object' writes '\(stray)', which this reads none of")
+        if let stray = written.keys.first(where: { key in !ObjectLayout.keys.contains { name in key == .string(name.spelling) } }) {
+            throw ObjectRefused("'object' writes '\(Rendering(stray).text())', which this reads none of")
         }
 
         self.parts = try ObjectLayout.Key.allCases.map { key in

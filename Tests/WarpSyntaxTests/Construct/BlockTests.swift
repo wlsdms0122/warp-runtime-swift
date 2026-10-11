@@ -44,7 +44,7 @@ struct BlockTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "greet"]]]
+            "result": ["dictionary": [["result", ["ref": "greet"]]]]
         ], importing: ["Standard.Text.joined", "Standard.Text.text"])
 
         // When
@@ -68,7 +68,7 @@ struct BlockTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "block"]]]
+            "result": ["dictionary": [["result", ["ref": "block"]]]]
         ])
 
         // When

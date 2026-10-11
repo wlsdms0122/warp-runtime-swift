@@ -44,9 +44,6 @@ struct CountQuery: Query {
         case let .string(text):
             return .int(text.count)
 
-        case let .record(record):
-            return .int(record.count)
-
         case let .dictionary(held):
             return .int(held.count)
 

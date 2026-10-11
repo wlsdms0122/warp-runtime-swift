@@ -34,7 +34,7 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "gate"]]]
+            "result": ["dictionary": [["result", ["ref": "gate"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
@@ -60,7 +60,7 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "gate"]]]
+            "result": ["dictionary": [["result", ["ref": "gate"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When

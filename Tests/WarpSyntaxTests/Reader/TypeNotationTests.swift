@@ -25,7 +25,7 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Array<Any>") == .array(.any))
         #expect(try TypeReader.parse("Array") == .named("Array"))
         #expect(try TypeReader.parse("Array<String>") == .array(.string))
-        #expect(try TypeReader.parse("Dictionary<Array<Int>>") == .dictionary(.array(.int)))
+        #expect(try TypeReader.parse("Dictionary<String, Array<Int>>") == .dictionary(key: .string, value: .array(.int)))
         #expect(try TypeReader.parse("Procedure") == .procedure(nil))
         #expect(try TypeReader.parse("Never") == .never)
     }
@@ -235,14 +235,14 @@ struct TypeNotationTests {
         )
     }
 
-    @Test("the record form holds only an element with no spelling of its own")
-    func recordFormIsForNamelessElements() throws {
-        // Given / When. An array of records has no string spelling, so the
-        // record form is the one way to write it.
+    @Test("the array form holds only an element with no spelling of its own")
+    func arrayFormIsForUnspelledElements() throws {
+        // Given / When. An array of procedures that write their signature has
+        // no string spelling, so the form is the one way to write it.
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
+                    "parameters": [["name": "rows", "type": ["array": ["procedure": ["returns": "Int"]]]]],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
@@ -251,8 +251,21 @@ struct TypeNotationTests {
         // Then
         #expect(
             sut.procedures["entry"]?.signature.parameter(named: "rows")?.type
-                == .array(.record(["id": .string]))
+                == .array(.procedure(ProcedureType(returns: .int)))
         )
+
+        // And. A record is declared under `types` and named, so a slot
+        // written as a record is no type
+        #expect(throws: ReadingError.self) {
+            try loader.loadDocument([
+                "procedures": [
+                    "entry": [
+                        "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
+                        "body": [["let": "seen", "value": ["ref": "rows"]]]
+                    ]
+                ]
+            ])
+        }
 
         // And. An element with a spelling is written `Array<String>`. A document
         // says it that one way, and the form around it is a second spelling
@@ -275,6 +288,36 @@ struct TypeNotationTests {
         }
     }
 
+    @Test("a map type writes its key's type and its value's, in the spelling or the form")
+    func mapTypeWritesKeyAndValue() throws {
+        // Given / When. A map of procedures has no string spelling, so the
+        // form writes its key's type and its value's under their own keys.
+        let sut = try loader.loadDocument([
+            "procedures": [
+                "entry": [
+                    "parameters": [
+                        [
+                            "name": "steps",
+                            "type": ["dictionary": ["key": "String", "value": ["procedure": ["returns": "Int"]]]]
+                        ]
+                    ],
+                    "body": [["let": "seen", "value": ["ref": "steps"]]]
+                ]
+            ]
+        ])
+
+        // Then
+        #expect(
+            sut.procedures["entry"]?.signature.parameter(named: "steps")?.type
+                == .dictionary(key: .string, value: .procedure(ProcedureType(returns: .int)))
+        )
+
+        // And. The spelling writes two types, and one is no map
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Dictionary<Int>") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("Array<Int, Int>") }
+        #expect(try TypeReader.parse("Dictionary<Int?, Array<String>>") == .dictionary(key: .nullable(.int), value: .array(.string)))
+    }
+
     @Test("a declared type is enforced at the call boundary")
     func declaredTypeIsEnforced() async throws {
         // Given
@@ -284,18 +327,18 @@ struct TypeNotationTests {
                 "entry": [
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
-                    "result": ["record": ["result": ["ref": "seen"]]]
+                    "result": ["dictionary": [["result", ["ref": "seen"]]]]
                 ]
             ]
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .string("a")])])])
+        let good = try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .string("a")]))])])
 
         #expect(good["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.dictionary(["id": .int(1)])])])
+            try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .int(1)]))])])
         }
     }
 

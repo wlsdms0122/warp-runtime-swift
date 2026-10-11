@@ -48,7 +48,7 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
             ],
-            result: .record(["greeting": .reference([.key("greet")])])
+            result: map(["greeting": .reference([.key("greet")])])
         )
 
         // When
@@ -94,7 +94,7 @@ struct SwiftAuthoringTests {
                     )
                 )
             ],
-            result: .record(["verdict": .reference([.key("verdict")])])
+            result: map(["verdict": .reference([.key("verdict")])])
         )
 
         // When. Comparing is a procedure, so this builds with the bundle that
@@ -123,7 +123,7 @@ struct SwiftAuthoringTests {
                     Call(selector: "App.shout", arguments: [.literal(.string("hey"))])
                 ))
             ],
-            result: .record(["shout": .reference([.key("shout")])])
+            result: map(["shout": .reference([.key("shout")])])
         )
 
         // When
@@ -154,7 +154,7 @@ struct SwiftAuthoringTests {
                     Call(selector: "echo", arguments: [.literal(.string("yo"))])
                 ))
             ],
-            result: .record([
+            result: map([
                 "counted": .reference([.key("counted")]),
                 "shouted": .reference([.key("shouted")]),
                 "called": .reference([.key("called"), .key("said")])
@@ -165,7 +165,7 @@ struct SwiftAuthoringTests {
         let echo = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "text", type: .string)],
-                returns: .record(["said": .string])
+                returns: .named("App.Said")
             ),
             body: [],
             result: .record(["said": .reference([.key("text")])])
@@ -173,7 +173,13 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["speak": procedure.with(access: .public), "echo": echo]), .shouting] + Module.standard
+            [
+                try Module(
+                    types: ["App.Said": .record(["said": .string])],
+                    procedures: ["speak": procedure.with(access: .public), "echo": echo]
+                ),
+                .shouting
+            ] + Module.standard
         )
         let outputs = try await Executor().run(image, entry: "speak")
 
@@ -191,7 +197,7 @@ struct SwiftAuthoringTests {
                 "entry": Procedure(
                     access: .public,
                     body: [],
-                    result: .record([
+                    result: map([
                         "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))
                     ])
                 ),

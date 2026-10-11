@@ -78,7 +78,7 @@ struct NullableTests {
 
         // When / Then. The value that arrived reads its field, and the null the
         // host handed answers null
-        #expect(try await run(sut, arguments: ["task": .dictionary(["size": .int(7)])]) == .int(7))
+        #expect(try await run(sut, arguments: ["task": .record(Record(name: "App.Task", ["size": .int(7)]))]) == .int(7))
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
 
@@ -203,7 +203,8 @@ struct NullableTests {
         // Given. The constant is a record, so a field it does not carry is the
         // build's refusal, not a run's surprise
         let sut = try Module(
-            constants: ["config": .record(["host": .literal(.string("a"))])],
+            types: ["App.Config": .record(["host": .string])],
+            constants: ["config": .cast(.record(["host": .literal(.string("a"))]), as: .named("App.Config"), optional: false)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -227,7 +228,7 @@ struct NullableTests {
         // Given. The reader refuses `Any?` by spelling; a name may hide the
         // same type, and the rule is the model's, held where names resolve
         let hidingAny = try Module(
-            types: ["Loose": .any],
+            types: ["Loose": .alias(.any)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -252,7 +253,7 @@ struct NullableTests {
         // And a nullable behind the name (`B = Int?`, then `B?`) is the doubled
         // `?` by another spelling.
         let hidingNullable = try Module(
-            types: ["Maybe": .nullable(.int)],
+            types: ["Maybe": .alias(.nullable(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -298,7 +299,7 @@ struct NullableTests {
 
         // When / Then
         #expect(
-            try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
+            try await run(sut, arguments: ["task": .record(Record(name: "Task", ["name": .string("a")]))])
                 == .string("a")
         )
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
@@ -309,12 +310,13 @@ struct NullableTests {
         // Given. The field is proven present, so the spelling that expects
         // absence says nothing, the way `Int??` says nothing on a type
         let onAField = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [],

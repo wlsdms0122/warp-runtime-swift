@@ -626,7 +626,8 @@ struct Lowering {
         case let .record(held):
             return .record(
                 LoweredRecord(
-                    layout: held.layout,
+                    name: held.layout.name,
+                    names: held.layout.fields,
                     fields: held.fields.map { field in standing(field, on: slots) ?? .any }
                 )
             )
@@ -685,6 +686,14 @@ struct Lowering {
         case let .record(record):
             return try lower(record: record, in: scope, on: context, at: place)
 
+        case let .dictionary(entries):
+            return .dictionary(try entries.enumerated().map { position, entry in
+                (
+                    key: try lower(entry.key, naming: nil, in: scope, on: context, at: place.child(.entryKey(position))),
+                    value: try lower(entry.value, naming: nil, in: scope, on: context, at: place.child(.entryValue(position)))
+                )
+            })
+
         case let .closure(procedure):
             return try lower(closure: procedure, in: scope, on: context, at: place)
 
@@ -739,9 +748,18 @@ struct Lowering {
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
 
+        // A record is a value of a declared record, and a literal takes the
+        // name of the one its place reads.
+        guard let name = context.judgements.name(ofRecordAt: place) else {
+            throw BuildError(
+                "a record literal is written where a declared record is read, and nothing here declares one",
+                at: place
+            )
+        }
+
         return .record(
             RecordOperation(
-                layout: Layout(name: context.judgements.name(ofRecordAt: place), ordered: ordered.map(\.key)),
+                layout: Layout(name: name, ordered: ordered.map(\.key)),
                 fields: try ordered.map { name, field in
                     try lower(field, naming: nil, in: scope, on: context, at: place.child(.field(name)))
                 }
@@ -913,7 +931,7 @@ struct Lowering {
 
         if let round, let slot {
             inner.slots[round] = slot
-            context.slots.hold(slot, .record(.round))
+            context.slots.hold(slot, loweredTypes.prelude(TypeSpelling.round))
         }
 
         let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))

@@ -55,7 +55,7 @@ struct VariableTests {
                     Call(
                         selector: "Standard.Concurrent.allKeyed",
                         arguments: [
-                            .record([
+                            map([
                                 "left": .closure(
                                     Procedure(
                                         body: [
@@ -73,19 +73,8 @@ struct VariableTests {
             )
         ]
 
-        // When. `all` answers `Any` by its declaration, so the type the author
-        // expects is named before a dot reads it
-        let answer = try await answer(
-            of: Body(sut.statements + [
-                Statement(binding: .constant("read"), expression: .cast(
-                        reference("both"),
-                        as: .record(["left": .int, "right": .int]),
-                        optional: false
-                    )
-                )
-            ]),
-            result: reference("read", "left")
-        )
+        // When. The pieces' answers are read as the map they are
+        let answer = try await answer(of: sut, result: reference("both", "left"))
 
         // Then
         #expect(answer == .int(1))

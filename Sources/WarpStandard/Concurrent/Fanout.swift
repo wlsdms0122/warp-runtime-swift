@@ -109,7 +109,7 @@ struct Fanout: Sendable {
     // MARK: - Private
     // One piece per name, in the order the names stand.
     private func pieces(of held: Value.Dictionary) throws -> [Piece] {
-        try held.entries.enumerated().map { position, entry in
+        try held.named().enumerated().map { position, entry in
             Piece(
                 key: entry.name,
                 position: position,
@@ -125,9 +125,6 @@ struct Fanout: Sendable {
         of invocation: Invocation<P>
     ) throws -> ([Piece], keyed: Bool) where P.Parameters == FanoutOperand {
         switch invocation[.pieces] {
-        case let .record(record):
-            return (try pieces(of: record.asDictionary), keyed: true)
-
         case let .dictionary(held):
             return (try pieces(of: held), keyed: true)
 
@@ -269,10 +266,10 @@ struct Fanout: Sendable {
             try Value.Dictionary(
                 outcomes
                     .sorted { left, right in left.position < right.position }
-                    .compactMap { outcome in
+                    .compactMap { outcome -> (key: Value, value: Value)? in
                         guard let key = outcome.key, let value = outcome.value else { return nil }
 
-                        return (name: key, value: value)
+                        return (key: .string(key.spelling), value: value)
                     }
             )
         )

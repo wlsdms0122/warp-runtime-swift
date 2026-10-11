@@ -209,11 +209,11 @@ public struct Loader: Sendable {
     private static func document(_ value: Value) throws -> Value.Dictionary {
         // A value under a type's name is a value of that type. A document is
         // the reader's own data and stands under no name.
-        if case let .record(record) = value, let name = record.name {
-            throw ReadingError("a document stands under no name, and this one stands under '\(name)'")
+        if case let .record(record) = value {
+            throw ReadingError("a document stands under no name, and this one stands under '\(record.name)'")
         }
 
-        guard let held = value.asDictionary else {
+        guard case let .dictionary(held) = value else {
             throw ReadingError("a document is names and values, and this one is \(value.nominal)")
         }
 

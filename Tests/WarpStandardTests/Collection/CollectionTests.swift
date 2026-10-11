@@ -70,7 +70,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "doubled": reference("doubled"),
                         "kept": reference("kept"),
                         "total": reference("total")
@@ -228,7 +228,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "grown": reference("grown"),
                         "moved": reference("moved")
                     ])
@@ -262,7 +262,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(key: .string, value: .int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
                             selector: "Standard.Collection.keys",
@@ -280,7 +280,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "changed": reference("changed"),
                         "held": reference("held"),
                         "named": reference("named")

@@ -308,6 +308,19 @@ struct Evaluator: Sendable {
 
             return .record(Record(layout: held.layout, values: values))
 
+        // Each entry is made in the order written, the key before its value,
+        // so a key written twice holds the later value.
+        case let .dictionary(entries):
+            var held = Value.Dictionary([:])
+
+            for entry in entries {
+                let key = try await evaluate(entry.key, in: &activation, at: trace)
+
+                held = held.writing(key: key, with: try await evaluate(entry.value, in: &activation, at: trace))
+            }
+
+            return .dictionary(held)
+
         // The run's whole share of a cast: the build already decided what every
         // dot after this means, and the one thing it could not know is what
         // actually arrived. A plain cast lets a mismatch out as `cast_refused`,
@@ -586,7 +599,7 @@ struct Evaluator: Sendable {
             // and the result reads it as it stands when the loop ends.
             if let round {
                 activation.cells[round] = .value(
-                    .record(Record(layout: LoweredRecord.round.layout, values: [.int(index)]))
+                    .record(Record(layout: Prelude.round, values: [.int(index)]))
                 )
             }
 
@@ -641,7 +654,7 @@ struct Evaluator: Sendable {
             // in through the door at the envelope's type.
             if let failure {
                 activation.cells[failure] = .value(
-                    try FailurePayload.declared.lowered(in: loweredTypes).settling(
+                    try loweredTypes.prelude(TypeSpelling.failure).settling(
                         outside: recoverable.payload,
                         at: "'\(activation.frame.names[failure])'",
                         in: loweredTypes

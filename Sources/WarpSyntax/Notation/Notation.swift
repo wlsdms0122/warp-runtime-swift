@@ -56,8 +56,8 @@ public struct Notation: Sendable {
     public private(set) var interpolation: Interpolation?
 
     // Whether a mapping with no tag of its own is a record: where a value is
-    // wanted, a record of expressions, and where a type is, a record type. A
-    // document writes a record under `record`.
+    // wanted, a record of expressions, and where a type is declared, the
+    // record it declares. A document writes a record under `record`.
     public let readsBareRecords: Bool
 
     // Whether a parameter may be written as one pair, `count: Int` for

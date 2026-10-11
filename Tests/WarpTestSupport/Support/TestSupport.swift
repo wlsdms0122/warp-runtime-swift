@@ -124,6 +124,16 @@ public func reference(_ names: Name...) -> Warp.Expression {
     .reference(Path(names.map { name in .key(name) }))
 }
 
+// A map literal keyed by text: what a test answers several values at once
+// with, each under its own key.
+public func map(_ entries: [Name: Warp.Expression]) -> Warp.Expression {
+    .dictionary(
+        entries.sorted { one, other in one.key < other.key }.map { name, value in
+            (key: .literal(.string(name.spelling)), value: value)
+        }
+    )
+}
+
 // MARK: - Conditions
 
 // Equality and the connectives are procedures, so a test writing one writes

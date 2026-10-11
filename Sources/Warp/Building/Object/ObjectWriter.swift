@@ -88,17 +88,17 @@ struct ObjectWriter {
         case let .record(record):
             return tagged(
                 Tag.record,
-                Self.maybe(record.layout.name, name),
+                name(record.name),
                 .array(record.layout.fields.map(name)),
                 .array(try record.values.map(self.value))
             )
 
-        // Names as data are a record with no name, written as one.
+        // The keys in the key order the map holds them in, and the values
+        // beside them.
         case let .dictionary(dictionary):
             return tagged(
-                Tag.record,
-                Self.maybe(nil, name),
-                .array(dictionary.names.map(name)),
+                Tag.dictionary,
+                .array(try dictionary.keys.map(self.value)),
                 .array(try dictionary.values.map(self.value))
             )
 
@@ -147,7 +147,7 @@ struct ObjectWriter {
             return .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) })
 
         case .types:
-            return keyed(compiled.types, type)
+            return keyed(compiled.types, declaration)
 
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
@@ -235,6 +235,18 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
+    // A declared type: a record under the record's tag, its fields by name,
+    // and an alias as the type it stands for.
+    private func declaration(_ declared: TypeDeclaration) -> Value {
+        switch declared {
+        case let .record(fields):
+            return tagged(ObjectLayout.TypeTag.record, keyed(fields, type))
+
+        case let .alias(stands):
+            return type(stands)
+        }
+    }
+
     private func type(_ expression: TypeExpression) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
@@ -263,11 +275,8 @@ struct ObjectWriter {
         case let .array(element):
             return tagged(Tag.array, type(element))
 
-        case let .dictionary(element):
-            return tagged(Tag.dictionary, type(element))
-
-        case let .record(fields):
-            return tagged(Tag.record, keyed(fields, type))
+        case let .dictionary(key, value):
+            return tagged(Tag.dictionary, type(key), type(value))
 
         case let .procedure(written, constness, isolation):
             return tagged(
@@ -454,6 +463,7 @@ struct ObjectWriter {
         case .rescue: return tagged(Tag.rescue)
         case .fields: return tagged(Tag.fields)
         case .bounds: return tagged(Tag.bounds)
+        case .entries: return tagged(Tag.entries)
         }
     }
 
@@ -474,6 +484,7 @@ struct ObjectWriter {
         case .reference: return tagged(Tag.reference)
         case .array: return tagged(Tag.array)
         case .record: return tagged(Tag.record)
+        case .dictionary: return tagged(Tag.dictionary)
         case .closure: return tagged(Tag.closure)
         case .cast: return tagged(Tag.cast)
         case .block: return tagged(Tag.block)
@@ -495,8 +506,14 @@ struct ObjectWriter {
         }
     }
 
+    // A layout is written `[name, fields]`, the name a list of one, the shape
+    // a record type's layout writes where a literal's reading names none.
     private func layout(_ layout: Layout) -> Value {
-        .array([ObjectWriter.maybe(layout.name, name), .array(layout.fields.map(name))])
+        self.layout(named: layout.name, layout.fields)
+    }
+
+    private func layout(named: Name?, _ fields: [Name]) -> Value {
+        .array([ObjectWriter.maybe(named, name), .array(fields.map(name))])
     }
 
     private func lowered(_ type: LoweredType) -> Value {
@@ -529,8 +546,8 @@ struct ObjectWriter {
         case let .array(element):
             return tagged(Tag.array, lowered(element))
 
-        case let .dictionary(element):
-            return tagged(Tag.dictionary, lowered(element))
+        case let .dictionary(key, value):
+            return tagged(Tag.dictionary, lowered(key), lowered(value))
 
         case let .record(record):
             return tagged(Tag.record, loweredRecord(record))
@@ -568,7 +585,7 @@ struct ObjectWriter {
     }
 
     private func loweredRecord(_ record: LoweredRecord) -> Value {
-        .array([layout(record.layout), .array(record.fields.map(lowered))])
+        .array([layout(named: record.name, record.names), .array(record.fields.map(lowered))])
     }
 
     private func judged(_ row: Judged, spelled: Bool) throws(ObjectUnwritable) -> Value {
@@ -675,6 +692,14 @@ struct ObjectWriter {
 
         case let .record(record):
             return tagged(Tag.record, try recordOperation(record))
+
+        case let .dictionary(entries):
+            return tagged(
+                Tag.dictionary,
+                .array(try entries.map { (entry) throws(ObjectUnwritable) -> Value in
+                    .array([try self.operation(entry.key), try self.operation(entry.value)])
+                })
+            )
 
         case let .closure(number, captures):
             return tagged(

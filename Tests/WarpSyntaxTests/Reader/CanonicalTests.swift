@@ -47,7 +47,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -86,7 +86,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "seen"]]]
+            "result": ["dictionary": [["result", ["ref": "seen"]]]]
         ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When
@@ -114,7 +114,7 @@ struct CanonicalTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ], importing: ["Standard.Logic.equal"])
         }
 
@@ -160,7 +160,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ])
 
         // When

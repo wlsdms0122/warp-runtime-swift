@@ -44,7 +44,7 @@ struct ClosureNotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "ran"]]]
+                    "result": ["dictionary": [["result", ["ref": "ran"]]]]
                 ],
                 "twice": [
                     "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
@@ -52,7 +52,7 @@ struct ClosureNotationTests {
                         ["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]],
                         ["let": "second", "value": ["call": ["procedure": ["ref": "body"]]]]
                     ],
-                    "result": ["record": ["said": [["ref": "first"], ["ref": "second"]]]]
+                    "result": ["dictionary": [["said", [["ref": "first"], ["ref": "second"]]]]]
                 ]
             ]
         ])
@@ -88,7 +88,7 @@ struct ClosureNotationTests {
                             "value": ["call": ["procedure": "runner", "arguments": [["ref": "made"]]]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
                 "runner": [
                     "parameters": [["name": "body", "type": ["procedure": ["returns": "String"]]]],
@@ -96,7 +96,7 @@ struct ClosureNotationTests {
                         ["let": "outer", "value": "called"],
                         ["let": "ran", "value": ["call": ["procedure": ["ref": "body"]]]]
                     ],
-                    "result": ["record": ["said": ["ref": "ran"]]]
+                    "result": ["dictionary": [["said", ["ref": "ran"]]]]
                 ]
             ]
         ])
@@ -139,7 +139,7 @@ struct ClosureNotationTests {
                             "value": ["call": ["procedure": ["ref": "doubler"], "arguments": [3]]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ]
             ]
         ])

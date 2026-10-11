@@ -94,11 +94,11 @@ public extension Module {
             ordering(of: name, as: type)
         }
         + [
-            (TypeSpelling.array, TypeExpression.array(.any)),
-            (TypeSpelling.dictionary, .dictionary(.any)),
-            (TypeSpelling.string, .string)
-        ].map { name, type in
-            counting(of: name, as: type)
+            (TypeSpelling.array, TypeExpression.array(.any), [:]),
+            (TypeSpelling.dictionary, .dictionary(key: .parameter(name: "Key"), value: .any), ["Key": [TypeSpelling.hashable]]),
+            (TypeSpelling.string, .string, [:])
+        ].map { name, type, bounds in
+            counting(of: name, as: type, bounds: bounds)
         }
 
     // What `Standard.Numeric` asks, answered for one type of number: two of
@@ -149,9 +149,9 @@ public extension Module {
     // count: the elements of a list, bytes included, the entries of a map,
     // a record's fields included, and the characters of text as a person
     // reads them.
-    private static func counting(of name: Name, as type: TypeExpression) -> Witness {
+    private static func counting(of name: Name, as type: TypeExpression, bounds: [Name: Set<Name>]) -> Witness {
         Witness(name, answering: ContractSpelling.collection, "count") { spelling in
-            .witness(CountQuery(answering: spelling), taking: type, returns: .int, description: "How many.")
+            .witness(CountQuery(answering: spelling), taking: type, returns: .int, bounds: bounds, description: "How many.")
         }
     }
 }

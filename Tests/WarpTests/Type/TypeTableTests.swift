@@ -28,10 +28,10 @@ struct TypeTableTests {
     func aCycleOfNamesRefuses() {
         // When / Then. Through `?` and a structure as well, and a chain that
         // ends stands
-        for types: [Name: TypeExpression] in [
-            ["App.A": .named("App.B"), "App.B": .named("App.A"), "App.C": .int],
-            ["App.M": .nullable(.named("App.M"))],
-            ["App.L": .dictionary(.named("App.L"))]
+        for types: [Name: TypeDeclaration] in [
+            ["App.A": .alias(.named("App.B")), "App.B": .alias(.named("App.A")), "App.C": .alias(.int)],
+            ["App.M": .alias(.nullable(.named("App.M")))],
+            ["App.L": .alias(.dictionary(key: .string, value: .named("App.L")))]
         ] {
             #expect {
                 try TypeTable(types: types)
@@ -40,14 +40,14 @@ struct TypeTableTests {
             }
         }
         #expect(throws: Never.self) {
-            try TypeTable(types: ["App.T": .nullable(.named("App.Leaf")), "App.Leaf": .int])
+            try TypeTable(types: ["App.T": .alias(.nullable(.named("App.Leaf"))), "App.Leaf": .alias(.int)])
         }
     }
 
     @Test("a name a table does not declare stands for no type, so no value is one")
     func aNameTheTableDoesNotDeclareIsNoType() throws {
         // Given
-        let types = try TypeTable(types: ["App.Whole": .int])
+        let types = try TypeTable(types: ["App.Whole": .alias(.int)])
 
         // When / Then
         #expect(!TypeExpression.named("Bank.Vault").accepts(.int, in: types))

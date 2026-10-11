@@ -29,9 +29,10 @@ struct WriterTests {
     // document happens to have, which is exactly where a writer goes wrong.
     private static let assembled: [Module] = [
         // Both cast spellings, over both ways a type is written. A name, and
-        // the mapping a record is. A type written back as a string it cannot be
+        // one applied to another. A type written back as a string it cannot be
         // read from would survive neither direction.
         try! Module(
+            types: ["App.Counted": .record(["count": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -39,7 +40,7 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
                                 .reference([.key("payload")]),
-                                as: .record(["count": .int]),
+                                as: .named("App.Counted"),
                                 optional: false
                             )
                         ),
@@ -135,7 +136,7 @@ struct WriterTests {
                     ["name": "names", "type": "Array<String>"],
                     ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "Dictionary<Any>",
+                "returns": "Dictionary<String, Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -212,7 +213,7 @@ struct WriterTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ],
             "typed": [
                 "parameters": [
@@ -221,7 +222,7 @@ struct WriterTests {
                     ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
+                    ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
                 "bounds": ["T": "Scalar"],
@@ -246,7 +247,7 @@ struct WriterTests {
                         ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "Dictionary<Any>",
+                    "returns": "Dictionary<String, Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -254,7 +255,7 @@ struct WriterTests {
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
-                    "result": ["record": ["result": ["ref": "pair"]]]
+                    "result": ["dictionary": [["result", ["ref": "pair"]]]]
                 ]
             ]
         ],
@@ -307,7 +308,7 @@ struct WriterTests {
                         ]],
                         ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ],
@@ -353,7 +354,7 @@ struct WriterTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "tried"]]]
+                    "result": ["dictionary": [["result", ["ref": "tried"]]]]
                 ]
             ]
         ],
@@ -445,7 +446,7 @@ struct WriterTests {
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
-                    "result": ["record": ["result": ["ref": "line"]]]
+                    "result": ["dictionary": [["result", ["ref": "line"]]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
@@ -672,11 +673,7 @@ struct WriterTests {
                             ]
                         ]
                     ],
-                    "result": ["record": [
-                        "picked": ["ref": "pick"],
-                        "sizes": ["ref": "walked"],
-                        "line": ["ref": "line"]
-                    ]]
+                    "result": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]
                 ]
             ]
         ]
@@ -884,7 +881,7 @@ struct WriterTests {
             }
 
         case let .dictionary(record):
-            return record.entries.reduce(into: Set(record.names)) { found, entry in
+            return ((try? record.named()) ?? []).reduce(into: Set(((try? record.named()) ?? []).map(\.name))) { found, entry in
                 found.formUnion(keys(in: entry.value))
             }
 

@@ -1241,7 +1241,7 @@ enum Library {
                   parameters [
                     {
                       name "dictionary"
-                      type "Dictionary<some Entry>"
+                      type "Dictionary<String, some Entry>"
                     }
                   ]
                   result {

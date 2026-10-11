@@ -166,6 +166,9 @@ struct Derivation {
         case let .record(record):
             return record.values.reduce(here) { carried, field in carried.joined(read(field)) }
 
+        case let .dictionary(entries):
+            return entries.reduce(here) { carried, entry in carried.joined(read(entry.key)).joined(read(entry.value)) }
+
         case let .call(call):
             return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
 
@@ -210,7 +213,7 @@ struct Derivation {
         case let .call(call):
             return failing(call.selector) ?? .unstated
 
-        case .literal, .reference, .closure, .array, .record, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .array, .record, .dictionary, .block, .conditional, .loop, .attempt, .leave:
             return .these([])
         }
     }
@@ -436,6 +439,9 @@ struct Derivation {
 
         case let .record(record):
             return record.values.allSatisfy(holds)
+
+        case let .dictionary(entries):
+            return entries.allSatisfy { entry in holds(entry.key) && holds(entry.value) }
 
         case let .call(call):
             guard fact.callee(call.selector) else { return false }

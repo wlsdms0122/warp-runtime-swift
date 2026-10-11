@@ -48,7 +48,7 @@ struct ObjectCoverageTests {
         }
 
         // Then
-        #expect(Set(written.names) == ObjectLayout.keys)
+        #expect(Set(try written.named().map(\.name)) == ObjectLayout.keys)
     }
 
     // MARK: - Public

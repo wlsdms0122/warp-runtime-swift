@@ -7,11 +7,12 @@
 
 import Foundation
 
-// What a list or record literal holds where it is written into a slot, part
-// by part. A part that is no literal holds what it reads as. An attempt
+// What a list, map or record literal holds where it is written into a slot,
+// part by part. A part that is no literal holds what it reads as. An attempt
 // writes what one of its two ways answers, each written on its own.
 enum LiteralShape: Sendable {
     case list([LiteralShape])
+    case map([(key: LiteralShape, value: LiteralShape)])
     case record([Name: LiteralShape])
     case part(LoweredType)
     indirect case either(LiteralShape, LiteralShape)
@@ -25,6 +26,12 @@ enum LiteralShape: Sendable {
         switch self {
         case let .list(items):
             return .array(items.reduce(.never) { held, item in held.joined(item.folded) })
+
+        case let .map(entries):
+            return .dictionary(
+                key: entries.reduce(.never) { held, entry in held.joined(entry.key.folded) },
+                value: entries.reduce(.never) { held, entry in held.joined(entry.value.folded) }
+            )
 
         case let .record(fields):
             return .record(fields.mapValues(\.folded))
@@ -44,10 +51,9 @@ enum LiteralShape: Sendable {
         self = shape ?? .part(reading)
     }
 
-    // A list or a record written out as a value, which is a literal the way
-    // one written part by part is: each element and each field of a record
-    // with no name is a part of its own. Nil for a value of any other kind,
-    // which its reading says whole.
+    // A list or a map written out as a value, which is a literal the way one
+    // written part by part is: each element, key and value is a part of its
+    // own. Nil for a value of any other kind, which its reading says whole.
     init?(literal value: Value, in table: LoweredTypeTable) {
         switch value {
         case let .array(elements):
@@ -55,14 +61,13 @@ enum LiteralShape: Sendable {
                 LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table))
             })
 
-        case let .record(record) where record.name == nil:
-            self = .record(
-                Dictionary(
-                    zip(record.names, record.values).map { name, field in
-                        (name, LiteralShape(literal: field, in: table) ?? .part(LoweredType(literal: field, in: table)))
-                    }
-                ) { first, _ in first }
-            )
+        case let .dictionary(entries):
+            self = .map(entries.entries.map { entry in
+                (
+                    key: LiteralShape(literal: entry.key, in: table) ?? .part(LoweredType(literal: entry.key, in: table)),
+                    value: LiteralShape(literal: entry.value, in: table) ?? .part(LoweredType(literal: entry.value, in: table))
+                )
+            })
 
         default:
             return nil
@@ -109,7 +114,7 @@ enum LiteralShape: Sendable {
             return attempted.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
                 && rescued.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
 
-        case .list, .record:
+        case .list, .map, .record:
             break
         }
 
@@ -127,8 +132,15 @@ enum LiteralShape: Sendable {
                 item.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
             }
 
-        case let .dictionary(element):
-            guard case let .record(fields) = self else { break }
+        case let .dictionary(key, element):
+            if case let .map(entries) = self {
+                return entries.allSatisfy { entry in
+                    entry.key.everyPart(along: key, inPlace: inPlace, in: table, holds: holds)
+                        && entry.value.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
+                }
+            }
+
+            guard case let .record(fields) = self, key.accepts(.string, in: table) else { break }
 
             return fields.values.allSatisfy { field in
                 field.everyPart(along: element, inPlace: inPlace, in: table, holds: holds)
@@ -137,7 +149,7 @@ enum LiteralShape: Sendable {
         // A record literal is written with exactly the fields the place
         // declares; one of other fields is held whole, and refused there.
         case let .record(record) where !inPlaceAtParameter:
-            guard case let .record(fields) = self, Set(fields.keys) == Set(record.layout.fields) else { break }
+            guard case let .record(fields) = self, Set(fields.keys) == Set(record.names) else { break }
 
             return record.named.allSatisfy { name, field in
                 fields[name].map { given in
@@ -169,6 +181,13 @@ enum LiteralShape: Sendable {
 
             return .list(items.map { item in item.written(into: element, in: table) })
 
+        case let .map(entries):
+            guard case let .dictionary(key, value) = place else { return self }
+
+            return .map(entries.map { entry in
+                (key: entry.key.written(into: key, in: table), value: entry.value.written(into: value, in: table))
+            })
+
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
@@ -187,6 +206,10 @@ enum LiteralShape: Sendable {
         switch self {
         case let .list(items):
             return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
+
+        case let .map(entries):
+            return "[" + entries.map { entry in "\(entry.key.rendered(in: table)): \(entry.value.rendered(in: table))" }
+                .joined(separator: ", ") + "]"
 
         case let .record(fields):
             return LoweredType.rendered(

@@ -43,7 +43,7 @@ public extension Module {
                     description: "The map with one name bound to another value.",
                     signature: Signature(
                         of: SettingQuery.self,
-                        returns: .dictionary(.parameter(name: "Value"))
+                        returns: .dictionary(key: .string, value: .parameter(name: "Value"))
                     ),
                     implementation: .query(SettingQuery())
                 )

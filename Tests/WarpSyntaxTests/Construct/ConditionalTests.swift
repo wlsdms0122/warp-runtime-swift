@@ -34,7 +34,7 @@ struct ConditionalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -75,7 +75,7 @@ struct ConditionalTests {
             "body": [
                 ["var": "kept"]
             ],
-            "result": ["record": ["result": ["ref": "kept"]]]
+            "result": ["dictionary": [["result", ["ref": "kept"]]]]
         ])
 
         // When

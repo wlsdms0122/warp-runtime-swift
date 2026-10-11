@@ -44,7 +44,7 @@ public struct Compiled: Sendable, Declaring {
     // link lays these down in the order it was handed the documents to
     // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.
-    let types: [Name: TypeExpression]
+    let types: [Name: TypeDeclaration]
     let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts it said each type answers, as it wrote them. The link
@@ -205,7 +205,7 @@ public struct Compiled: Sendable, Declaring {
     // other.
     init(
         document: Place.Document,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
@@ -251,7 +251,7 @@ public struct Compiled: Sendable, Declaring {
     // those facts can be asked of bytes read back.
     init(
         document: Place.Document,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],

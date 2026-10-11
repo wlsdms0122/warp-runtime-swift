@@ -78,7 +78,7 @@ struct NotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ], from: .canonical)

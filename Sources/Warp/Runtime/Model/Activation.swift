@@ -187,8 +187,9 @@ struct Activation: Sendable {
                 read = .found(record.values[position])
 
             case let .key(key, optional):
-                guard current.holdsFields else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
+                switch current {
+                case .record, .dictionary: break
+                default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
                 guard let next = current[key] else {
@@ -244,8 +245,9 @@ struct Activation: Sendable {
         walked: () -> Path,
         segment: () -> PathSegment
     ) -> Walk {
-        guard current.holdsFields else {
-            return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
+        switch current {
+        case .record, .dictionary: break
+        default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
         }
 
         guard let name = try? Name(key) else {

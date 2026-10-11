@@ -64,7 +64,7 @@ extension Value {
             return zip(record.layout.fields, record.values).map { name, value in (.key(name.spelling), value) }
 
         case let .dictionary(fields):
-            return fields.entries.map { entry in (.key(entry.name.spelling), entry.value) }
+            return fields.entries.map { entry in (.key(Rendering(entry.key).text()), entry.value) }
 
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return nil

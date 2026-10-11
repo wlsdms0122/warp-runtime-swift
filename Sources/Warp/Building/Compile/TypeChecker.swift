@@ -163,7 +163,6 @@ struct TypeChecker {
     }
 
     // MARK: - Property
-    private static let roundType = LoweredType.record(.round)
 
     // MARK: - Initializer
     // MARK: - Public
@@ -755,7 +754,7 @@ struct TypeChecker {
             // A dictionary's names are data, so a key the run reads finds an
             // entry the way a written key does. Absence follows the mark, the
             // rule every entry reading shares.
-            case let (.indexRef(inner, optionally), .dictionary(entry)):
+            case let (.indexRef(inner, optionally), .dictionary(_, entry)):
                 if let refusal = keyReference(inner, in: environment, with: context, at: place) {
                     return .refused(refusal)
                 }
@@ -779,7 +778,7 @@ struct TypeChecker {
             // rule is asked here like everywhere else and always answers yes:
             // the mark has an absence to expect on an entry, unwrapped or not,
             // and that fact lives in the rule rather than in this landing.
-            case let (.key, .dictionary(entry)):
+            case let (.key, .dictionary(_, entry)):
                 if let refusal = needless(.entry) { return refusal }
 
                 if segment.optional { optional = true }
@@ -798,7 +797,7 @@ struct TypeChecker {
                             + " which \(current.rendered(in: context.loweredTypes)) does not declare."
                             + " A procedure is sent with a written call, and data"
                             + " past the declaration is read by declaring it,"
-                            + " or through `Dictionary<Any>`"
+                            + " or through `Dictionary<String, Any>`"
                     )
                 }
 
@@ -887,13 +886,13 @@ struct TypeChecker {
 
                 current = field.fieldUnwrapped
 
-            case let (.key, .dictionary(entry)):
+            case let (.key, .dictionary(_, entry)):
                 current = entry
 
             // A name between the brackets is a path of its own, judged as
             // what the container reads it as: a position in a list and a key
             // in a map.
-            case let (.indexRef(inner, _), .dictionary(entry)):
+            case let (.indexRef(inner, _), .dictionary(_, entry)):
                 if let refusal = keyReference(inner, in: environment, with: context, at: place) {
                     return .refused(refusal)
                 }
@@ -962,6 +961,11 @@ struct TypeChecker {
 
         case let .record(record):
             return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
+
+        case let .dictionary(entries):
+            return entries.lazy.compactMap { entry in
+                runs(in: entry.key, given: context) ?? runs(in: entry.value, given: context)
+            }.first
 
         // A contract's procedure is answered by whatever type the value turns
         // out to be, so what a call through one reads as is what the contract
@@ -1453,6 +1457,12 @@ struct TypeChecker {
                 flow.fail()
             }
 
+            // A record literal the cast reads is written into the record the
+            // cast names, and takes its name there.
+            var judgements = inner.judgements
+
+            judgements.record(names: claim.naming(value, at: place.child(.subject(optional: optional)), in: context.loweredTypes))
+
             return Inspection(
                 // The author's spelling stands, so a document written back
                 // out keeps the declaration it leaned on.
@@ -1460,11 +1470,68 @@ struct TypeChecker {
                     ? .cast(inner.rewritten, as: type, optional: optional)
                     : expression,
                 calls: inner.calls,
-                judgements: inner.judgements,
+                judgements: judgements,
                 // `?` is asked of the fact: a type that already holds null is
                 // not wrapped again.
                 reading: handed,
                 flow: flow
+            )
+
+        // In the order written, each key before its value: the order the run
+        // makes the entries in. The keys join to one type and the values to
+        // another, the way a list's elements do, and an empty map holds
+        // `Never` at both, so it is a value of a map of any types.
+        case let .dictionary(entries):
+            var environment = environment
+            var rewritten: [(key: Expression, value: Expression)] = []
+            var calls: [CallSite] = []
+            var judgements = JudgementTable()
+            var flowed = Flow()
+            var keys: LoweredType = .never
+            var values: LoweredType = .never
+            var shapes: [(key: LiteralShape, value: LiteralShape)] = []
+
+            for (position, entry) in entries.enumerated() {
+                var parts: [Inspection] = []
+
+                for (part, child) in [(entry.key, Expression.Child.entryKey(position)), (entry.value, .entryValue(position))] {
+                    let inner = try await inspected(
+                        part,
+                        naming: nil,
+                        at: place.child(child),
+                        in: environment,
+                        with: context,
+                        ask: ask
+                    )
+
+                    inner.flow.apply(to: &environment)
+                    flowed = flowed.followed(by: inner.flow)
+                    calls += inner.calls
+                    judgements.absorb(inner.judgements)
+                    parts.append(inner)
+                }
+
+                keys = keys.joined(parts[0].reading)
+                values = values.joined(parts[1].reading)
+                shapes.append((key: parts[0].written, value: parts[1].written))
+                rewritten.append((key: parts[0].rewritten, value: parts[1].rewritten))
+            }
+
+            // A literal whole number read beside fractions is the fraction it
+            // names, since the keys hold one type and the values another.
+            if ask.rewrites {
+                rewritten = rewritten.map { entry in
+                    (key: keys.written(entry.key, in: context.loweredTypes), value: values.written(entry.value, in: context.loweredTypes))
+                }
+            }
+
+            return Inspection(
+                rewritten: ask.rewrites ? .dictionary(rewritten) : expression,
+                calls: calls,
+                judgements: judgements,
+                reading: .dictionary(key: keys, value: values),
+                flow: flowed,
+                literalShape: .map(shapes)
             )
 
         // In name order. The order the run evaluates fields in, so what one
@@ -2171,7 +2238,7 @@ struct TypeChecker {
             // and the result never runs between rounds. The probe reads, so a
             // probing asker takes the final probe of the statements as its
             // own walk; judging walks once more for the rewrite.
-            let entry = rounded(environment, as: round)
+            let entry = rounded(environment, as: round, in: context.loweredTypes)
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let climbing = meeting(at: place, in: context.loweredTypes, when: .probing)
             let (seeded, probed, converged) = try await fixedPoint(
@@ -2680,11 +2747,12 @@ struct TypeChecker {
     // its asker both read it.
     private func rounded(
         _ environment: [Name: Binding],
-        as round: Name?
+        as round: Name?,
+        in table: LoweredTypeTable
     ) -> [Name: Binding] {
         guard let round else { return environment }
 
-        return environment.merging([round: Binding(.fixed(declared: nil), Self.roundType)]) { _, new in new }
+        return environment.merging([round: Binding(.fixed(declared: nil), table.prelude(TypeSpelling.round))]) { _, new in new }
     }
 
     // The environment a rescue stands in: the entry, soaked with what the
@@ -2701,7 +2769,7 @@ struct TypeChecker {
         failed?.indefinite().apply(to: &caught)
 
         if let failure {
-            caught[failure] = Binding(.fixed(declared: nil), FailurePayload.declared.lowered(in: context.loweredTypes))
+            caught[failure] = Binding(.fixed(declared: nil), context.loweredTypes.prelude(TypeSpelling.failure))
         }
 
         return caught

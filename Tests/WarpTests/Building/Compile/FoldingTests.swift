@@ -87,7 +87,7 @@ struct FoldingTests {
     @Test("nested structure resolves element by element")
     func nestedStructureResolves() async throws {
         // Given
-        let reference = Expression.record([
+        let reference = map([
             "n": .reference([.key("count")]),
             "list": .array([.literal(.string("x"))])
         ])
@@ -113,20 +113,20 @@ struct FoldingTests {
 
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() async throws {
-        // Given. The payload is data: a ref-shaped record inside stays a record
-        let reference = Expression.literal(.record(Record(name: nil, [
+        // Given. The payload is data: a ref-shaped map inside stays a map
+        let reference = Expression.literal(.dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
-        ])))
+        ]))
 
         // When
         let value = try await read(reference)
 
         // Then. Nothing evaluated, nothing rendered
-        #expect(value == .record(Record(name: nil, [
+        #expect(value == .dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
-        ])))
+        ]))
     }
 
     // MARK: - Public

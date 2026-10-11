@@ -115,10 +115,14 @@ struct ValueWalk {
             return .array(count: elements.count)
 
         case let .record(record):
-            return try opening(record.asDictionary, named: record.name)
+            return try opening(Array(zip(record.names, record.values)).map { name, value in (name: name, value: value) }, named: record.name)
 
         case let .dictionary(held):
-            return try opening(held, named: nil)
+            do {
+                return try opening(try held.named(), named: nil)
+            } catch let refused as ValueRefused {
+                throw EncodingRefused(refused.message)
+            }
 
         case .procedure:
             throw EncodingRefused("a procedure is code, and data is what a document spells")
@@ -127,14 +131,14 @@ struct ValueWalk {
 
     // Fields under names, with the name of the layout they stood on where
     // there was one. Held in byte order, the order written.
-    private mutating func opening(_ held: Value.Dictionary, named name: Name?) throws -> Step {
+    private mutating func opening(_ fields: [(name: Name, value: Value)], named name: Name?) throws -> Step {
         try opening()
 
-        if !held.isEmpty {
-            opened.append(.fields(held.entries[...]))
+        if !fields.isEmpty {
+            opened.append(.fields(fields[...]))
         }
 
-        return .record(name: name, count: held.count)
+        return .record(name: name, count: fields.count)
     }
 
     // The same count a reader keeps: containers open around this one, and

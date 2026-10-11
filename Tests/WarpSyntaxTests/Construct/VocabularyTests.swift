@@ -116,7 +116,7 @@ struct VocabularyTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"], "head": ["ref": "head"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]], ["head", ["ref": "head"]]]]
         ], importing: ["Extra.longerThan", "Standard.Collection.first"])
 
         // When

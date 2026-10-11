@@ -235,7 +235,18 @@ public struct Builder: Sendable {
 
         let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
 
-        try DeclarationChecker().judge(laying, in: declaring)
+        // The compile's ledger, woven into the table its rows are built from.
+        // A body folded here runs against a table that cannot decide a
+        // contract, and what it hands over is written here rather than passed
+        // over. A map's key the declarations lean on is the first thing
+        // written.
+        let fulfillment = Fulfillment()
+
+        try DeclarationChecker().judge(
+            laying,
+            from: compiled.count,
+            in: declaring.satisfying([:], fulfillment: fulfillment)
+        )
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
@@ -281,11 +292,6 @@ public struct Builder: Sendable {
             symbols.filter { symbol in !symbol.supplies }.map(\.declared)
         })
 
-        // The compile's ledger, woven into the table its rows are built from.
-        // A body folded here runs against a table that cannot decide a
-        // contract, and what it hands over is written here rather than passed
-        // over.
-        let fulfillment = Fulfillment()
         let lowered = try ClaimChecker().lowered(
             declaring,
             in: namespace,

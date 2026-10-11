@@ -210,12 +210,12 @@ struct SeparateCompilationTests {
         // Given. A document naming a type another declares, handed over first,
         // so the rows follow the documents and not what they name.
         let naming = try Module(
-            types: ["Z.Wraps": .named("A.Held"), "Z.Also": .named("A.Held")],
+            types: ["Z.Wraps": .alias(.named("A.Held")), "Z.Also": .alias(.named("A.Held"))],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [], result: .literal(.int(1)))
             ]
         )
-        let held = try Module(types: ["A.Held": .int])
+        let held = try Module(types: ["A.Held": .alias(.int)])
 
         // When
         let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
@@ -750,10 +750,10 @@ struct SeparateCompilationTests {
         // Given. Each document compiled beside a counterpart declaring the
         // name it mentions as `Int`, so each compile stands, and the two
         // objects laid together name each other's types.
-        let naming = try Module(types: ["App.A": .array(.named("Lib.B"))])
-        let named = try Module(types: ["Lib.B": .named("App.A")])
-        let first = try await builder.compile([naming, try Module(types: ["Lib.B": .int])])
-        let second = try await builder.compile([named, try Module(types: ["App.A": .int])])
+        let naming = try Module(types: ["App.A": .alias(.array(.named("Lib.B")))])
+        let named = try Module(types: ["Lib.B": .alias(.named("App.A"))])
+        let first = try await builder.compile([naming, try Module(types: ["Lib.B": .alias(.int)])])
+        let second = try await builder.compile([named, try Module(types: ["App.A": .alias(.int)])])
         let objects = [first[0], second[0]]
 
         // When / Then. Refused as two documents that need each other, before
@@ -775,9 +775,9 @@ struct SeparateCompilationTests {
     func objectsWrittenToNameEachOtherAreRefused() async throws {
         // Given. Two documents declaring a type each, written down and read
         // back with each type naming the other's.
-        let library = try Module(types: ["Lib.B": .int])
+        let library = try Module(types: ["Lib.B": .alias(.int)])
         let program = try Module(
-            types: ["App.A": .int],
+            types: ["App.A": .alias(.int)],
             procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
         )
         let compiled = try await builder.compile([library, program] + Module.standard)
@@ -861,7 +861,7 @@ struct SeparateCompilationTests {
                 )
             ]
         )
-        let compiled = try await builder.compile([program, try Module(types: ["Lib.B": .int])])
+        let compiled = try await builder.compile([program, try Module(types: ["Lib.B": .alias(.int)])])
 
         // When / Then
         #expect {

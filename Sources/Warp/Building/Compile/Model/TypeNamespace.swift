@@ -9,7 +9,7 @@ import Foundation
 
 // The type namespace of a list of documents: every type and contract they
 // declare, each at the place it was written, and what they claim about the
-// names in it.
+// names in it, beside what the language declares itself, the `Prelude`.
 //
 // Types and contracts share the namespace, so no name in it is both and none
 // is declared twice. Each space is gathered whole before the spaces are held
@@ -17,7 +17,7 @@ import Foundation
 // documents were listed in.
 struct TypeNamespace {
     // MARK: - Property
-    let types: [Name: Placed<TypeExpression>]
+    let types: [Name: Placed<TypeDeclaration>]
     let contracts: [Name: Placed<[Name: ContractProcedure]>]
 
     // What each document said one of its types, or another document's,
@@ -28,8 +28,13 @@ struct TypeNamespace {
 
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
-        var types: [Name: Placed<TypeExpression>] = [:]
-        var contracts: [Name: Placed<[Name: ContractProcedure]>] = [:]
+        // The language's own stand as no document's, ahead of every one.
+        var types = Prelude.types.reduce(into: [Name: Placed<TypeDeclaration>]()) { types, declared in
+            types[declared.key] = Placed(declared.value, at: .type(declared.key.spelling, in: Prelude.document), of: -1)
+        }
+        var contracts = Prelude.contracts.reduce(into: [Name: Placed<[Name: ContractProcedure]>]()) { contracts, declared in
+            contracts[declared.key] = Placed(declared.value, at: .contract(declared.key.spelling, in: Prelude.document), of: -1)
+        }
 
         for (handed, held) in documents.enumerated() {
             for (name, type) in held.types.sorted(by: { $0.key < $1.key }) {
@@ -71,8 +76,12 @@ struct TypeNamespace {
             }
         }
 
-        var claimed: Set<Claim> = []
-        var claims: [Placed<Claim>] = []
+        var claims: [Placed<Claim>] = Prelude.claims.sorted { $0.key < $1.key }.flatMap { type, contracts in
+            contracts.sorted().map { contract in
+                Placed(Claim(type: type, contract: contract), at: .satisfies(type.spelling, in: Prelude.document), of: -1)
+            }
+        }
+        var claimed = Set(claims.map(\.held))
 
         for (handed, held) in documents.enumerated() {
             for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
