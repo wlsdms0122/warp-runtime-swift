@@ -737,16 +737,16 @@ struct ValidationTests {
 
     @Test("a name in the types namespace is held to one grammar where a module built in Swift spells it", arguments: [
         ("procedures.App.keep.parameters[0]", [:], TypeExpression.named("a b"), [:]),
-        ("types.Int", ["Int": .string], .int, [:]),
+        ("types.Int", ["Int": .alias(.string)], .int, [:]),
         ("procedures.App.keep.bounds.T", [:], .parameter(name: "T"), ["T": ["Array<Int>"]]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Self"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "A.B"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Int"), [:]),
         ("procedures.App.keep.bounds.some", [:], .parameter(name: "some"), ["some": ["App.Shown"]])
-    ] as [(String, [Name: TypeExpression], TypeExpression, [Name: Set<Name>])])
+    ] as [(String, [Name: TypeDeclaration], TypeExpression, [Name: Set<Name>])])
     func aTypeNamespaceNameHoldsOneGrammar(
         place: String,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         parameter: TypeExpression,
         bounds: [Name: Set<Name>]
     ) throws {
@@ -775,17 +775,11 @@ struct ValidationTests {
         // reaches the field
         #expect {
             try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "value", type: .record(["a.b": .int]))]),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
+                types: ["App.Held": .record(["a.b": .int])],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0].fields")
+            error is ValidationError && "\(error)".hasPrefix("types.App.Held.fields")
                 && "\(error)".contains("is no name a path reads")
         }
 
@@ -1185,10 +1179,10 @@ struct ValidationTests {
     func aNameComingBackRefusesAtTheLoad() throws {
         // Given. A record may name itself, and a name that is no record
         // spells no type where it reaches itself, through names or a structure
-        let cycles: [[Name: TypeExpression]] = [
-            ["Loop": .named("Loop")],
-            ["A": .named("B"), "B": .named("A")],
-            ["List": .array(.named("List"))]
+        let cycles: [[Name: TypeDeclaration]] = [
+            ["Loop": .alias(.named("Loop"))],
+            ["A": .alias(.named("B")), "B": .alias(.named("A"))],
+            ["List": .alias(.array(.named("List")))]
         ]
 
         for types in cycles {

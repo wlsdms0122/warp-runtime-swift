@@ -153,7 +153,7 @@ struct ObjectWriter {
             return .array(dependencies.map { fingerprint in .bytes(fingerprint.bytes) })
 
         case .types:
-            return keyed(compiled.types, type)
+            return keyed(compiled.types, declaration)
 
         case .contracts:
             return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
@@ -241,6 +241,18 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
+    // A declared type: a record under the record's tag, its fields by name,
+    // and an alias as the type it stands for.
+    private func declaration(_ declared: TypeDeclaration) -> Value {
+        switch declared {
+        case let .record(fields):
+            return tagged(ObjectLayout.TypeTag.record, keyed(fields, type))
+
+        case let .alias(stands):
+            return type(stands)
+        }
+    }
+
     private func type(_ expression: TypeExpression) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
@@ -271,9 +283,6 @@ struct ObjectWriter {
 
         case let .dictionary(key, value):
             return tagged(Tag.dictionary, type(key), type(value))
-
-        case let .record(fields):
-            return tagged(Tag.record, keyed(fields, type))
 
         case let .procedure(written, constness, isolation):
             return tagged(

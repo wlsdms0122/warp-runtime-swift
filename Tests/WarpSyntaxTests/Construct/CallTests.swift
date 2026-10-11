@@ -25,6 +25,10 @@ struct CallTests {
     func calleeSignatureHoldsInputs() async throws {
         // Given
         let sut = try loader.loadDocument([
+            "types": [
+                "App.Pair": ["record": ["base": "Int", "bump": "Int?"]],
+                "App.Echo": ["record": ["pair": "App.Pair"]]
+            ],
             "procedures": [
                 "caller": [
                     "body": [
@@ -40,11 +44,12 @@ struct CallTests {
                     "body": [
                         [
                             "let": "echo",
+                            "type": "App.Pair",
                             "value": ["record": ["base": ["ref": "base"], "bump": ["ref": "bump"]]]
                         ]
                     ],
                     "result": ["record": ["pair": ["ref": "echo"]]],
-                    "returns": ["record": ["pair": ["record": ["base": "Int", "bump": "Int?"]]]]
+                    "returns": "App.Echo"
                 ]
             ]
         ])
@@ -54,7 +59,7 @@ struct CallTests {
 
         // Then. `bump` declares null, so the null handed reads null at the
         // callee boundary
-        #expect(outputs["result"] == .dictionary(["base": .int(41), "bump": .null]))
+        #expect(outputs["result"] == .record(Record(name: "App.Pair", ["base": .int(41), "bump": .null])))
     }
 
     @Test("a constant argument violating the callee signature is rejected at the build")
@@ -97,11 +102,12 @@ struct CallTests {
             ]
         ])
         let elsewhere = try loader.loadDocument([
+            "types": ["App.Said": ["record": ["said": "String"]]],
             "procedures": [
                 "some-other-file.greet": [
                     "body": [["let": "word", "value": "hello"]],
                     "result": ["record": ["said": ["ref": "word"]]],
-                    "returns": ["record": ["said": "String"]]
+                    "returns": "App.Said"
                 ]
             ]
         ])

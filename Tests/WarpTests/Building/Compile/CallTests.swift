@@ -23,10 +23,7 @@ struct CallTests {
     func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
         let echo = Procedure(
-            signature: Signature(
-                parameters: [Parameter(name: "text", type: .string)],
-                returns: .record(["said": .string])
-            ),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: [],
             result: .record(["said": reference("text")])
         )
@@ -233,10 +230,7 @@ struct CallTests {
     func recursiveProcedureBuildsOnce() async throws {
         // Given
         let countdown = Procedure(
-            signature: Signature(
-                parameters: [Parameter(name: "n", type: .int)],
-                returns: .record(["done": .bool])
-            ),
+            signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .bool),
             body: [
                 Statement(
                     expression: .conditional(
@@ -250,7 +244,7 @@ struct CallTests {
                     )
                 )
             ],
-            result: .record(["done": .literal(.bool(true))])
+            result: .literal(.bool(true))
         )
         let sut = Procedure(
             body: [
@@ -258,14 +252,14 @@ struct CallTests {
                     Call(selector: "countdown", arguments: [.literal(.int(1))])
                 ))
             ],
-            result: .record(["done": reference("run", "done")])
+            result: reference("run")
         )
 
         // When
         let outputs = try await run(sut, beside: ["countdown": countdown])
 
         // Then
-        #expect(outputs["done"] == .bool(true))
+        #expect(outputs == .bool(true))
     }
 
     @Test("an argument past the callee's parameters is refused")

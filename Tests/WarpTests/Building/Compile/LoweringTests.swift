@@ -330,7 +330,7 @@ struct LoweringTests {
         // it names: there is no representation to disagree about, so a variable
         // holding an int is what an `inout Count` slot declares.
         let sut = try Module(
-            types: ["Count": .int],
+            types: ["Count": .alias(.int)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -360,7 +360,7 @@ struct LoweringTests {
         // the top of the slot. A name is what it names wherever it is written,
         // so the walk reaches it there too.
         let sut = try Module(
-            types: ["Count": .int],
+            types: ["Count": .alias(.int)],
             procedures: [
                 entryName: Procedure(
                     access: .public,

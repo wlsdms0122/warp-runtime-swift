@@ -21,7 +21,7 @@ struct TypeNamespaceTests {
     // however they are handed over.
     private let modules: [Module] = [
         try! Module(
-            types: ["A.T": .record(["x": .int]), "A.S": .string],
+            types: ["A.T": .record(["x": .int]), "A.S": .alias(.string)],
             procedures: [
                 "A.make": Procedure(
                     access: .public,
@@ -33,7 +33,7 @@ struct TypeNamespaceTests {
             identity: Identity([0x0a])
         ),
         try! Module(
-            types: ["B.U": .array(.named("A.T"))],
+            types: ["B.U": .alias(.array(.named("A.T")))],
             procedures: [
                 "B.use": Procedure(
                     access: .public,
@@ -79,7 +79,7 @@ struct TypeNamespaceTests {
     @Test("a name declared as a type and as a contract is refused the same way in either order")
     func aTypeAndAContractAreRefusedInEitherOrder() async throws {
         // Given
-        let typing = try Module(types: ["T.T": .int], identity: Identity([0x01]))
+        let typing = try Module(types: ["T.T": .alias(.int)], identity: Identity([0x01]))
         let contracting = try Module(contracts: ["T.T": [Name: Signature]()], identity: Identity([0x02]))
 
         for given in [[typing, contracting], [contracting, typing]] {

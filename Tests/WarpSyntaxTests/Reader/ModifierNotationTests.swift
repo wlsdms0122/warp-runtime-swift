@@ -118,32 +118,6 @@ struct ModifierNotationTests {
         }
     }
 
-    @Test(
-        "a key carrying two marks is a field's name, whichever two they are",
-        arguments: SlotMark.allCases, SlotMark.allCases
-    )
-    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) throws {
-        // Given. A slot writes one mark, so a key carrying two is not a
-        // procedure form's, and a key that is not one is a field's name like
-        // any other. The writing never makes one: a marked type holding a
-        // marked type is refused before it gets here
-        let key = try Name("\(mark.word) \(inside.word) procedure")
-        let type = TypeExpression.record([key: .record(["returns": .int])])
-
-        // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": [
-                "entry": ["parameters": [["name": "f", "type": written]]]
-            ]
-        ])
-
-        // Then
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
-    }
-
     @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
     func aMarkIsNotWrittenUnderADoubt(mark: SlotMark) throws {
         // Given. `var Task?` reads as a `var` of a nullable, so a nullable of a
@@ -160,45 +134,23 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse("\(mark.word) Task?") == mark.marking(.nullable(.named("Task"))))
     }
 
-    @Test("a record's field is named whatever the document named it")
-    func aFieldNamedLikeTwoMarksIsStillAField() throws {
-        // Given. The rule about two marks is a procedure form's, and a key is
-        // only that form's once what is under the marks says `procedure`.
-        // Anything else is a field name, and the writer writes one back
-        let type = TypeExpression.record(["var inout x": .int])
-
-        // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
-        ])
-
-        // Then
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
-    }
-
     @Test(
-        "a record's only field may be named for a key the reading takes another way",
-        arguments: ["procedure", "var procedure", "const isolated Procedure", "array", "record"]
+        "a declared record's field is named whatever the document named it",
+        arguments: ["procedure", "var procedure", "var inout procedure", "const isolated Procedure", "array", "record", "var inout x"]
     )
-    func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) throws {
-        // Given. A record type is written under `record`, so its field names
-        // are never keys the reading takes as a form
-        let type = TypeExpression.record([try Name(spelling): .int])
+    func aRecordsFieldMayBeNamedLikeAForm(spelling: String) throws {
+        // Given. A record is declared under `record`, so its field names are
+        // never keys the reading takes as a form or a mark
+        let declared = TypeDeclaration.record([try Name(spelling): .int])
+        let module = try Module(types: ["App.T": declared], procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))])
 
         // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
-        ])
+        let written = try Writer().value(of: module)
+        let read = try Loader().load(written)
 
         // Then
-        #expect(written == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
+        #expect(try Writer().value(of: declared) == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
+        #expect(read.types["App.T"] == declared)
     }
 
     @Test(

@@ -28,9 +28,9 @@ struct CastAgreementTests {
             "Person": .record(["name": .string]),
             // A name standing for another declared record, so an alias meets
             // the record it names in every pair.
-            "Someone": .named("Person"),
-            "Maybe": .nullable(.int),
-            "Whole": .int,
+            "Someone": .alias(.named("Person")),
+            "Maybe": .alias(.nullable(.int)),
+            "Whole": .alias(.int),
             // A type that names itself, so the walk's own guard is exercised
             // by every pair it takes part in.
             "Tree": .record(["children": .array(.named("Tree"))]),
@@ -39,7 +39,11 @@ struct CastAgreementTests {
             // apart.
             "Human": .record(["name": .string]),
             "Chain": .record(["next": .nullable(.named("Chain"))]),
-            "Link": .record(["next": .nullable(.named("Link"))])
+            "Link": .record(["next": .nullable(.named("Link"))]),
+            // Records holding a declared record, so a name decides the answer
+            // a field deep.
+            "Of": .record(["of": .named("Human")]),
+            "Next": .record(["next": .named("Link")])
         ],
         contracts: ["Comparable": [:]],
         satisfying: ["Comparable": ["Int", "Double", "String"]],
@@ -57,9 +61,6 @@ struct CastAgreementTests {
         // element type there is and the pair is not impossible for it.
         .array(.string),
         .dictionary(key: .string, value: .string), .dictionary(key: .string, value: .any), .dictionary(key: .string, value: .int),
-        .record(["name": .string]),
-        .record(["age": .int]),
-        .record([:]),
         .nullable(.int), .nullable(.string), .nullable(.array(.int)),
         .named("Person"), .named("Maybe"), .named("Whole"),
         .named("Tree"),
@@ -76,9 +77,8 @@ struct CastAgreementTests {
     private let namedTypeExpressions: [TypeExpression] = [
         .named("Human"), .named("Chain"), .named("Link"),
         .nullable(.named("Human")),
-        .record(["of": .named("Human")]),
-        .record(["next": .named("Link")]),
-        .record(["next": .record(["next": .named("Link")])])
+        .named("Of"),
+        .named("Next")
     ]
 
     private let values: [Value] = [
@@ -155,11 +155,11 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("a cast writes a declared record's name onto a nameless value and takes none off")
+    @Test("a cast writes a declared record's name onto a map and takes none off")
     func aCastNamesAndNeverUnnames() {
-        // Given. A declared record, a nameless record of its fields and a map
+        // Given. A declared record and a map of its fields
         let named = TypeExpression.named("Person")
-        let structures: [TypeExpression] = [.record(["name": .string]), .dictionary(key: .string, value: .string)]
+        let structures: [TypeExpression] = [.dictionary(key: .string, value: .string)]
 
         // When / Then
         for structure in structures {
@@ -175,11 +175,10 @@ struct CastAgreementTests {
         // by the cast. A chain is read through its own name as far as the
         // cast goes, so the walk's guard has to tell a question come back
         // from a new one deeper down.
-        let fourDeep: TypeExpression = .record(["next": .record(["next": .record(["next": .record(["next": .int])])])])
         let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
             (.named("Human"), .named("Person")),
             (.named("Link"), .named("Chain")),
-            (fourDeep, .named("Chain"))
+            (.named("Next"), .named("Chain"))
         ]
 
         // When / Then

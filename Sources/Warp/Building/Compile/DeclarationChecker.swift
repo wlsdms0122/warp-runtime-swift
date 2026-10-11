@@ -58,8 +58,8 @@ struct DeclarationChecker {
         for (offset, module) in modules.enumerated() {
             table.loweredTypes.fulfillment?.laying(origin + offset, at: Place(in: .of(module)))
 
-            for (name, type) in module.types.sorted(by: { $0.key < $1.key }) {
-                try mentioned(in: type, at: .type(name.spelling, in: .of(module)), resolve: table)
+            for (name, declared) in module.types.sorted(by: { $0.key < $1.key }) {
+                try mentioned(in: declared, at: .type(name.spelling, in: .of(module)), resolve: table)
             }
 
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
@@ -313,10 +313,24 @@ struct DeclarationChecker {
                 )
             }
 
+        }
+    }
+
+    // The types a declared type names: each field's, or what an alias
+    // stands for.
+    private func mentioned(
+        in declared: TypeDeclaration,
+        at place: Place,
+        resolve table: TypeTable
+    ) throws {
+        switch declared {
         case let .record(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
-                try mentioned(in: field, at: place.part(.fields).key(name.spelling), bounds: bounds, resolve: table)
+                try mentioned(in: field, at: place.part(.fields).key(name.spelling), resolve: table)
             }
+
+        case let .alias(type):
+            try mentioned(in: type, at: place, resolve: table)
         }
     }
 

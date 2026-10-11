@@ -15,7 +15,7 @@ import Foundation
 // that declaration wherever it is written.
 enum Prelude {
     // The records, each a name beside its fields.
-    static let types: [Name: TypeExpression] = [
+    static let types: [Name: TypeDeclaration] = [
         TypeSpelling.failure: .record([
             FailurePayload.type: .string,
             FailurePayload.message: .string,

@@ -91,7 +91,8 @@ struct UnwritableTests {
     @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
     func aNullableSpellsOrRefuses() throws {
         // When / Then. The trailing `?` needs a name in front of it, and a
-        // record spells as a mapping rather than a name
+        // procedure type that writes its signature spells as a mapping rather
+        // than a name
         #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("Int?"))
         #expect(
             try sut.value(of: TypeExpression.nullable(.array(.string)))
@@ -99,7 +100,7 @@ struct UnwritableTests {
         )
 
         #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.nullable(.record(["id": .string])))
+            try sut.value(of: TypeExpression.nullable(.procedure(ProcedureType(returns: .int))))
         }
     }
 

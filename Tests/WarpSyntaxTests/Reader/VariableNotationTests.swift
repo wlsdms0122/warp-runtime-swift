@@ -195,13 +195,9 @@ struct VariableNotationTests {
                             ]]
                         ]
                     ]
-                ]],
-                [
-                    "let": "read",
-                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int", "right": "Int"]]]]
-                ]
+                ]]
             ],
-            "result": ["record": ["result": ["ref": "read.left"]]]
+            "result": ["record": ["result": ["ref": "both.left"]]]
         ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When

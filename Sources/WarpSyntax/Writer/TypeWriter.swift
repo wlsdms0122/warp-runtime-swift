@@ -42,6 +42,18 @@ struct TypeWriter {
         return written
     }
 
+    // A declared type: a record under `record`, its fields beside their
+    // types, and an alias as the type it stands for.
+    func value(of declared: TypeDeclaration) throws -> Value {
+        switch declared {
+        case let .record(fields):
+            return .dictionary([TypeDeclarationReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
+
+        case let .alias(type):
+            return try value(of: type)
+        }
+    }
+
     // The bounds, written once, at the signature that declares the names.
     func bounds(of signature: Signature) -> Value? {
         guard !signature.bounds.isEmpty else { return nil }
@@ -110,17 +122,11 @@ struct TypeWriter {
             return .string("\(TypeReader.Holding.dictionary.spelling)<\(keySpelling), \(valueSpelling)>")
 
         // Spelled with the trailing `?` the reader takes, which is why the
-        // declared half has to have a name of its own. A record has no spelling
-        // for a `?` to trail.
+        // declared half has to have a name of its own.
         case let .nullable(inner):
             return .string(
                 "\(try named(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
-
-        // A record and a procedure are both written as a mapping, and the one
-        // key is what tells them apart.
-        case let .record(fields):
-            return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
 
         // Both marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries
@@ -154,8 +160,7 @@ struct TypeWriter {
 
     // A marked slot is written with the mark in front of the inner type,
     // whichever form that type takes: a bare name, or a procedure form under
-    // its one key. An inline record has no front to write a mark on, and a
-    // declaration's field is the one place a procedure type goes anyway.
+    // its one key.
     private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
         switch try form(of: inner) {
         case let .string(written):

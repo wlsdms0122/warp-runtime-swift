@@ -17,7 +17,7 @@ import Foundation
 // documents were listed in.
 struct TypeNamespace {
     // MARK: - Property
-    let types: [Name: Placed<TypeExpression>]
+    let types: [Name: Placed<TypeDeclaration>]
     let contracts: [Name: Placed<[Name: ContractProcedure]>]
 
     // What each document said one of its types, or another document's,
@@ -29,7 +29,7 @@ struct TypeNamespace {
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
         // The language's own stand as no document's, ahead of every one.
-        var types = Prelude.types.reduce(into: [Name: Placed<TypeExpression>]()) { types, declared in
+        var types = Prelude.types.reduce(into: [Name: Placed<TypeDeclaration>]()) { types, declared in
             types[declared.key] = Placed(declared.value, at: .type(declared.key.spelling, in: Prelude.document), of: -1)
         }
         var contracts = Prelude.contracts.reduce(into: [Name: Placed<[Name: ContractProcedure]>]()) { contracts, declared in

@@ -16,14 +16,13 @@ import Warp
 //   Dictionary<String, Task>  . The same, for a map: its key's type and its
 //                                value's
 //   Task                      . A name some module declares
-//   { record: { id: String } }. A record, its fields under `record`
 //   { procedure: { parameters: [], returns: } }
 //                             . A procedure, written as the types it is called
 //                                with and what it answers. Bare `Procedure` says
 //                                only that it is one
 //
-// A mapping is one of these by its one key, so a record's field names are
-// never keys the grammar reads.
+// A mapping is one of these by its one key. A record is a structure a
+// module declares under `types`, and a type names it.
 struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
     // position order, and what it answers. No names, since a value carries
@@ -147,14 +146,13 @@ struct TypeReader: Decodable {
     // MARK: - Property
     let type: TypeExpression
 
-    // The keys a record type and a procedure type are written under.
-    static let recordKey: Name = "record"
+    // The key a procedure type is written under.
     static let procedureKey: Name = "procedure"
 
     // What a type that is neither a spelling nor a form is refused with.
-    private static let unread = "a type is a name like `String`, `Array<String>` or"
-        + " `Task`, or a mapping under one of `record`, `procedure`, `array`"
-        + " and `dictionary`. A record type is written under `record`"
+    static let unread = "a type is a name like `String`, `Array<String>` or"
+        + " `Task`, or a mapping under one of `procedure`, `array`"
+        + " and `dictionary`. A record is declared under `types` and named"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -440,33 +438,16 @@ struct TypeReader: Decodable {
         case let .one(.holding(.dictionary), key):
             return try keyed.decode(DictionaryTypeReader.self, forKey: key).type
 
-        case let .one(.record, key):
-            return try record(from: try keyed.superDecoder(forKey: key))
-
         case let .among(tags):
             throw ReadingError(
-                "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
-                    + " A record type with that field is written under `\(recordKey)`"
+                "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping"
                     + " (found keys: \(keyed.allKeys.map(\.stringValue).sorted()))",
                 at: decoder.steps
             )
 
         case .none:
-            guard notation.readsBareRecords else { throw ReadingError(Self.unread, at: decoder.steps) }
-
-            return try record(from: decoder)
+            throw ReadingError(Self.unread, at: decoder.steps)
         }
-    }
-
-    // A record type's fields, each a type.
-    private static func record(from decoder: Decoder) throws -> TypeExpression {
-        guard (try? decoder.container(keyedBy: AnyCodingKey.self)) != nil else {
-            throw ReadingError("a record type is a mapping of its fields to their types", at: decoder.steps)
-        }
-
-        // Each field read where it stands, so a refusal inside one keeps its
-        // own place and its own sentence.
-        return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
     }
 
     // The rest of the text where it begins with this, and nothing where it does

@@ -13,7 +13,7 @@ import Foundation
 // names itself is a row and not a regress.
 public struct TypeTable: Sendable {
     // MARK: - Property
-    public let types: [Name: TypeExpression]
+    public let types: [Name: TypeDeclaration]
 
     // Contracts declared in this link: a name bound to the procedures a value's
     // type must answer. A contract is an open set of types, and a claim puts a
@@ -45,7 +45,7 @@ public struct TypeTable: Sendable {
     // declares and a name that is no record and comes back to itself are
     // refused here, in the words a document is refused in.
     init(
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
     ) throws {
         let declaring = try Module(types: types, contracts: contracts)
@@ -63,7 +63,7 @@ public struct TypeTable: Sendable {
     // The same declarations as one link's, which owns the identity its rows
     // are numbered against.
     init(
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: Set<Name>] = [:],
         holdsEveryClaim: Bool = false,

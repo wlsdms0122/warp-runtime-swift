@@ -738,21 +738,25 @@ struct InferenceTests {
 
     @Test("a cast to a record of other fields is refused, since a record is exactly its fields")
     func aCastOntoADisjointRecordIsRefused() async throws {
-        // Given. A record type says all there is, so no value is a record of
-        // these fields and of those at once
+        // Given. A declared record is its name, so no value is one record
+        // and another at once
         let sut = try Module(
+            types: [
+                "App.Failed": .record(["type": .string, "message": .string]),
+                "App.Reasons": .record(["failures": .dictionary(key: .string, value: .string)])
+            ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "failed", type: .record(["type": .string, "message": .string]))
+                            Parameter(name: "failed", type: .named("App.Failed"))
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("reason"), expression: .cast(
                                 .reference([.key("failed")]),
-                                as: .record(["failures": .dictionary(key: .string, value: .string)]),
+                                as: .named("App.Reasons"),
                                 optional: false
                             )
                         )
@@ -913,7 +917,7 @@ struct InferenceTests {
         // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`, the
         // same type whether the author wrote the name or what it stands for
         let sut = try Module(
-            types: ["Maybe": .nullable(.int)],
+            types: ["Maybe": .alias(.nullable(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1049,36 +1053,6 @@ struct InferenceTests {
                         as: .nullable(.string),
                         optional: true
                     )
-                )
-            ]
-        )
-
-        // When / Then
-        _ = try await builder.build([sut] + Module.standard)
-    }
-
-    @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
-    func aCastBetweenADictionaryAndARecordStands() async throws {
-        // Given. A map holding exactly the record's fields is a value of
-        // both, so refusing this would refuse a cast that succeeds
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "payload", type: .dictionary(key: .string, value: .string))
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["a": .string]),
-                                optional: false
-                            )
-                        )
-                    ],
-                    result: .reference([.key("read"), .key("a")])
                 )
             ]
         )
@@ -1260,23 +1234,24 @@ struct InferenceTests {
         // the cast as saying nothing, and the dot it would have allowed as
         // unjudgeable
         let sut = try Module(
+            types: ["App.Payload": .record(["data": .any]), "App.Named": .record(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "payload", type: .record(["data": .any]))
+                            Parameter(name: "payload", type: .named("App.Payload"))
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["data": .record(["name": .string])]),
+                                .reference([.key("payload"), .key("data")]),
+                                as: .named("App.Named"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("read"), .key("data"), .key("name")])
+                    result: .reference([.key("read"), .key("name")])
                 )
             ]
         )
@@ -1336,6 +1311,7 @@ struct InferenceTests {
         // dot is judged against that type, and the run is left only the
         // question of what arrived
         let sut = try Module(
+            types: ["App.Whatever": .record(["whatever": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1347,7 +1323,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
                                 .reference([.key("payload")]),
-                                as: .record(["whatever": .string]),
+                                as: .named("App.Whatever"),
                                 optional: false
                             )
                         ),
@@ -1367,12 +1343,13 @@ struct InferenceTests {
         // `?.` speaks about what may be absent at run, not about what the
         // declaration already decided
         let sut = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [
@@ -1391,12 +1368,13 @@ struct InferenceTests {
 
         // The optional spelling changes nothing a declaration decided.
         let optional = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [

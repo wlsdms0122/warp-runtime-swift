@@ -29,9 +29,10 @@ struct WriterTests {
     // document happens to have, which is exactly where a writer goes wrong.
     private static let assembled: [Module] = [
         // Both cast spellings, over both ways a type is written. A name, and
-        // the mapping a record is. A type written back as a string it cannot be
+        // one applied to another. A type written back as a string it cannot be
         // read from would survive neither direction.
         try! Module(
+            types: ["App.Counted": .record(["count": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -39,7 +40,7 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
                                 .reference([.key("payload")]),
-                                as: .record(["count": .int]),
+                                as: .named("App.Counted"),
                                 optional: false
                             )
                         ),
@@ -221,7 +222,7 @@ struct WriterTests {
                     ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
+                    ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
                 "bounds": ["T": "Scalar"],

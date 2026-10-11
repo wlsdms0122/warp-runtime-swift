@@ -227,7 +227,7 @@ struct NullableTests {
         // Given. The reader refuses `Any?` by spelling; a name may hide the
         // same type, and the rule is the model's, held where names resolve
         let hidingAny = try Module(
-            types: ["Loose": .any],
+            types: ["Loose": .alias(.any)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -252,7 +252,7 @@ struct NullableTests {
         // And a nullable behind the name (`B = Int?`, then `B?`) is the doubled
         // `?` by another spelling.
         let hidingNullable = try Module(
-            types: ["Maybe": .nullable(.int)],
+            types: ["Maybe": .alias(.nullable(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -309,12 +309,13 @@ struct NullableTests {
         // Given. The field is proven present, so the spelling that expects
         // absence says nothing, the way `Int??` says nothing on a type
         let onAField = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [],

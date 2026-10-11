@@ -46,16 +46,6 @@ extension TypeExpression {
         case let .dictionary(key, value):
             return .dictionary(key: key.lowered(in: table, bounds: bounds), value: value.lowered(in: table, bounds: bounds))
 
-        case let .record(fields):
-            let ordered = fields.sorted { left, right in left.key < right.key }
-
-            return .record(
-                LoweredRecord(
-                    layout: Layout(name: nil, ordered: ordered.map(\.key)),
-                    fields: ordered.map { _, field in field.lowered(in: table, bounds: bounds) }
-                )
-            )
-
         case let .procedure(type, constness, isolation):
             return .procedure(
                 type.map { type in

@@ -165,7 +165,7 @@ struct SwiftAuthoringTests {
         let echo = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "text", type: .string)],
-                returns: .record(["said": .string])
+                returns: .named("App.Said")
             ),
             body: [],
             result: .record(["said": .reference([.key("text")])])
@@ -173,7 +173,13 @@ struct SwiftAuthoringTests {
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["speak": procedure.with(access: .public), "echo": echo]), .shouting] + Module.standard
+            [
+                try Module(
+                    types: ["App.Said": .record(["said": .string])],
+                    procedures: ["speak": procedure.with(access: .public), "echo": echo]
+                ),
+                .shouting
+            ] + Module.standard
         )
         let outputs = try await Executor().run(image, entry: "speak")
 

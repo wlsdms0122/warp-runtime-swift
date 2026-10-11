@@ -153,7 +153,7 @@ struct OneSpellingTests {
             try Loader().load(document, identity: nil)
         } throws: { error in
             (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
-                && "\(error)".contains("A record type is written")
+                && "\(error)".contains("A record is declared under `types` and named")
         }
     }
 

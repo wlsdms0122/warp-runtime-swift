@@ -50,13 +50,18 @@ struct TypeTests {
 
     @Test("a record from outside is fitted to the fields declared, one short refusing")
     func recordDeclaresFields() throws {
-        // Given. A record type is its fields, and the door a value from
+        // Given. A declared record is its fields, and the door a value from
         // outside comes through leaves out a field it does not declare
-        let sut = TypeExpression.record(["id": .string, "done": .bool])
+        let types = try TypeTable(types: ["App.Task": .record(["id": .string, "done": .bool])])
+        let sut = TypeExpression.named("App.Task")
 
         // When
-        let settled = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true)]), at: "task")
-        let fitted = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
+        let settled = try sut.settling(.record(Record(name: "App.Task", ["id": .string("a"), "done": .bool(true)])), at: "task", in: types)
+        let fitted = try sut.settling(
+            .record(Record(name: "App.Task", ["id": .string("a"), "done": .bool(true), "extra": .int(1)])),
+            at: "task",
+            in: types
+        )
 
         // Then
         #expect(settled["id"] == .string("a"))
@@ -64,14 +69,14 @@ struct TypeTests {
         #expect(fitted["extra"] == nil)
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.dictionary(["id": .string("a")]), at: "task")
+            try sut.settling(.record(Record(name: "App.Task", ["id": .string("a")])), at: "task", in: types)
         }
     }
 
     @Test("an alias of a declared record names the record on either side")
     func anAliasNamesTheRecordItStandsFor() throws {
         // Given
-        let types = try TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
+        let types = try TypeTable(types: ["Person": .record(["name": .string]), "Someone": .alias(.named("Person"))])
         let sut = TypeExpression.named("Someone")
 
         // When
@@ -158,7 +163,7 @@ struct TypeTests {
         #expect(TypeExpression.array(.string).rendered == "Array<String>")
         #expect(TypeExpression.dictionary(key: .string, value: .named("Task")).rendered == "Dictionary<String, Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "Array<Array<Int>>")
-        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
+        #expect(TypeDeclaration.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at the build")
@@ -239,24 +244,17 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a record whose fields all fit it")
-    func aDictionaryTakesAKnownRecord() {
-        // Given. A record is a dictionary whose fields happen to be known, and
-        // knowing them is not a reason to refuse it
-        let sut = TypeExpression.dictionary(key: .string, value: .any)
+    @Test("a declared record and a map of its fields are two types")
+    func aRecordAndADictionaryAreTwoTypes() throws {
+        // Given. A record names the fields it holds; a map holds keys that are
+        // data, and neither is a value of the other
+        let types = try TypeTable(types: ["App.Axes": .record(["axes": .string])])
+        let record = TypeExpression.named("App.Axes")
+        let map = TypeExpression.dictionary(key: .string, value: .string)
 
         // When / Then
-        #expect(sut.accepts(.record(["axes": .string, "depth": .int])))
-        #expect(TypeExpression.dictionary(key: .string, value: .string).accepts(.record(["axes": .string])))
-        #expect(!TypeExpression.dictionary(key: .string, value: .int).accepts(.record(["axes": .string])))
-    }
-
-    @Test("a record slot does not take a bare dictionary")
-    func aRecordDoesNotTakeADictionary() {
-        // Given. A record names fields it requires; a dictionary promises none
-
-        // When / Then
-        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(key: .string, value: .string)))
+        #expect(!record.accepts(map, in: types))
+        #expect(!map.accepts(record, in: types))
     }
 
     @Test("a nullable slot takes its value, null, and nothing else")

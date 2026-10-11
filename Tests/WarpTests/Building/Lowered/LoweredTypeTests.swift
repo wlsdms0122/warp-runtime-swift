@@ -20,9 +20,9 @@ struct LoweredTypeTests {
         types: [
             "Bank.Account": .record(["balance": .int, "owner": .named("Bank.Owner")]),
             "Bank.Owner": .record(["name": .string]),
-            "Bank.Acct": .named("Bank.Account"),
-            "App.Whole": .int,
-            "App.Maybe": .nullable(.int)
+            "Bank.Acct": .alias(.named("Bank.Account")),
+            "App.Whole": .alias(.int),
+            "App.Maybe": .alias(.nullable(.int))
         ],
         contracts: ["App.Ordered": [:]],
         satisfying: ["App.Ordered": ["Int", "Double", "String"]],
@@ -30,13 +30,23 @@ struct LoweredTypeTests {
         of: Linkage()
     )
 
+    // Every declared type as a document writes it where it is read: a record
+    // by its name, and an alias as what it stands for.
+    private var declaredTypes: [TypeExpression] {
+        types.types.map { name, declared in
+            guard case let .alias(type) = declared else { return .named(name) }
+
+            return type
+        }
+    }
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("a lowered type renders as the author wrote it, an alias as what it stands for")
     func aLoweredTypeRendersAsWritten() throws {
         // Given. Every declared type, and a few that name them
         let table = types.loweredTypes
-        let written: [TypeExpression] = Array(types.types.values) + [
+        let written: [TypeExpression] = declaredTypes + [
             .nullable(.named("Bank.Owner")),
             .parameter(name: "T"),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const)
@@ -53,16 +63,15 @@ struct LoweredTypeTests {
 
     @Test("a lowered type spells back to a type that lowers to it")
     func aLoweredTypeSpellsBack() throws {
-        // Given. Every declared type, and a few that name them, a record and
-        // a procedure type among them
+        // Given. Every declared type, and a few that name them, a procedure
+        // type among them
         let table = types.loweredTypes
-        let written: [TypeExpression] = Array(types.types.values) + [
+        let written: [TypeExpression] = declaredTypes + [
             .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
             .parameter(name: "T"),
             .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
             .procedure(nil),
-            .record(["a": .variable(.int), "b": .dictionary(key: .string, value: .named("App.Maybe"))]),
             .named("App.Ordered")
         ]
 
@@ -72,26 +81,6 @@ struct LoweredTypeTests {
 
             #expect(lowered.spelled(in: table).lowered(in: table) == lowered, "\(type.rendered)")
         }
-    }
-
-    @Test("a parameter one field reads two ways is reported by the two that disagreed")
-    func aFieldReadingTwoWaysReportsItsTwo() {
-        // Given. A record read as a dictionary whose first field reads `T` as
-        // a whole number and as text, and whose second reads it as truth
-        let table = types.loweredTypes
-        let slot = TypeExpression.dictionary(key: .string, value: .record(["a": .parameter(name: "T"), "b": .parameter(name: "T")])).lowered(in: table)
-        let handed = TypeExpression.record([
-            "x": .record(["a": .int, "b": .string]),
-            "y": .record(["a": .bool, "b": .bool])
-        ]).lowered(in: table)
-
-        // When
-        let substitution = Substitution(filling: [slot], against: [handed], in: table)
-
-        // Then
-        #expect(substitution.readings["T"] == .int)
-        #expect(substitution.disagreeing["T"] == .string)
-        #expect(Set(substitution.everyReading(of: "T").map { reading in reading.rendered(in: table) }) == ["Int", "String", "Bool"])
     }
 
     @Test("a parameter no call fills stands where a slot takes it by its structure, and nowhere else")
@@ -229,7 +218,7 @@ struct LoweredTypeTests {
         // names a declared nullable type.
         let module = try Module(
             types: [
-                "App.Maybe": .nullable(.int),
+                "App.Maybe": .alias(.nullable(.int)),
                 "App.Kinds": .record([
                     "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")]), .unstated, .unstated)
                 ])

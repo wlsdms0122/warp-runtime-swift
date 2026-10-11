@@ -59,7 +59,7 @@ struct ObjectReader {
         // the rows its bodies lifted, so those two are kept as written until
         // every part is in.
         var dependencies: [Fingerprint] = []
-        var types: [Name: TypeExpression] = [:]
+        var types: [Name: TypeDeclaration] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Name: Set<Name>] = [:]
         var leaned: [Claim: Place] = [:]
@@ -88,7 +88,7 @@ struct ObjectReader {
             // Held where they are read to the rule a document's are held to
             // at the load, so no lowering meets a name coming back to itself.
             case .types:
-                types = try keyed(part, of: "types", expression)
+                types = try keyed(part, of: "types", declaration)
 
                 if let name = types.keys.sorted().first(where: { name in Validator().comesBack(name, in: types) }) {
                     throw ObjectRefused("'\(name)' \(Validator.comingBack)")
@@ -312,6 +312,22 @@ struct ObjectReader {
         return read
     }
 
+    // A declared type: a record, its fields under the record's tag, or the
+    // type an alias stands for.
+    private func declaration(_ value: Value) throws -> TypeDeclaration {
+        var cursor = try FieldCursor(value, of: "type")
+
+        guard ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) == .record else {
+            return .alias(try expression(value))
+        }
+
+        let fields = try keyed(cursor.next(), of: "record", expression)
+
+        try cursor.end()
+
+        return .record(fields)
+    }
+
     private func expression(_ value: Value) throws -> TypeExpression {
         var cursor = try FieldCursor(value, of: "type")
         let read: TypeExpression
@@ -326,7 +342,8 @@ struct ObjectReader {
         case .string: read = .string
         case .array: read = .array(try expression(cursor.next()))
         case .dictionary: read = .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
-        case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
+        // A record type is written once, as a declared type's own.
+        case .record: throw ObjectRefused("'type' writes a record, which stands only as a type a document declares")
         case .procedure:
             read = .procedure(
                 try cursor.field().maybe(procedureType),

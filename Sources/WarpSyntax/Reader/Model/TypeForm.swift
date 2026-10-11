@@ -14,7 +14,6 @@ import Warp
 enum TypeForm {
     case procedure(mark: SlotMark?, constness: Constness, isolation: Isolation)
     case holding(TypeReader.Holding)
-    case record
 
     // MARK: - Property
     // MARK: - Initializer
@@ -23,8 +22,6 @@ enum TypeForm {
             self = .procedure(mark: mark, constness: constness, isolation: isolation)
         } else if let holding = TypeReader.Holding(rawValue: key.spelling) {
             self = .holding(holding)
-        } else if key == TypeReader.recordKey {
-            self = .record
         } else {
             return nil
         }

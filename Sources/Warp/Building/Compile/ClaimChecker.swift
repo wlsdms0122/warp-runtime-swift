@@ -170,7 +170,7 @@ struct ClaimChecker {
     private func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable
@@ -205,7 +205,7 @@ struct ClaimChecker {
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable

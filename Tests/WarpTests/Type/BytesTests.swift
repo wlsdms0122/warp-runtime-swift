@@ -67,7 +67,7 @@ struct BytesTests {
         // claims say of `Int`, which is what every byte is.
         let types = TypeTable(
             types: [
-                "Whole": .int
+                "Whole": .alias(.int)
             ],
             contracts: ["Ordered": [:], "Textual": [:]],
             satisfying: ["Ordered": ["Int", "Double", "String"], "Textual": ["String"]],
@@ -82,8 +82,7 @@ struct BytesTests {
             .named("Whole"),
             .named("Nobody"),
             .array(.int),
-            .dictionary(key: .string, value: .int),
-            .record([:])
+            .dictionary(key: .string, value: .int)
         ]
         let bounded: [(TypeExpression, [Name: Set<Name>])] = [
             (.parameter(name: "Element"), ["Element": ["Ordered"]]),

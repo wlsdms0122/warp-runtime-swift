@@ -19,6 +19,14 @@ struct FieldPlaceTests {
     // MARK: - Property
     private let builder = Builder()
 
+    // The records these tests read fields of.
+    private static let types: [Name: TypeDeclaration] = [
+        "App.Point": .record(["x": .int, "y": .int]),
+        "App.Pair": .record(["a": .int, "b": .int]),
+        "App.Outer": .record(["head": .int, "inner": .named("App.Inner")]),
+        "App.Inner": .record(["deep": .string, "beside": .int])
+    ]
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("a declared record's field is lowered to its place")
@@ -27,7 +35,7 @@ struct FieldPlaceTests {
         // the position is the layout's.
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -42,11 +50,12 @@ struct FieldPlaceTests {
 
     @Test("a field of a record literal is lowered to its place")
     func aLiteralFieldIsLoweredToItsPlace() async throws {
-        // Given. Nothing was declared, and the build still laid the literal out
+        // Given. The literal is written where the record is declared, and laid
+        // out the way the declaration is
         let sut = Procedure(
             body: [
                 Statement(
-                    binding: .constant("held"),
+                    binding: .constant("held", declared: .named("App.Pair")),
                     expression: .record(["b": .literal(.int(2)), "a": .literal(.int(1))])
                 )
             ],
@@ -83,12 +92,7 @@ struct FieldPlaceTests {
         // Given
         let sut = Procedure(
             signature: Signature(
-                parameters: [
-                    Parameter(name: "outer", type: .record([
-                        "head": .int,
-                        "inner": .record(["deep": .string, "beside": .int])
-                    ]))
-                ]
+                parameters: [Parameter(name: "outer", type: .named("App.Outer"))]
             ),
             body: [],
             result: .reference([.key("outer"), .key("inner"), .key("deep")])
@@ -101,28 +105,6 @@ struct FieldPlaceTests {
         #expect(steps == [.field(1, "inner", optional: false), .field(1, "deep", optional: false)])
     }
 
-    @Test("a named type is followed to the record it stands for")
-    func aNamedRecordIsLoweredToItsPlace() async throws {
-        // Given
-        let module = try Module(
-            types: ["Point": .record(["x": .int, "y": .int])],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "point", type: .named("Point"))]),
-                    body: [],
-                    result: .reference([.key("point"), .key("y")])
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([module] + Module.standard)
-
-        // Then
-        #expect(try steps(of: image) == [.field(1, "y", optional: false)])
-    }
-
     @Test("a value from outside carrying more than the slot declares is read at the slot's places")
     func aValueFromOutsideIsFittedToTheDeclaredLayout() async throws {
         // Given. The argument holds fields the slot does not declare. The
@@ -130,7 +112,7 @@ struct FieldPlaceTests {
         // is the place the field stands in.
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -140,7 +122,7 @@ struct FieldPlaceTests {
         let answer = try await run(
             sut,
             arguments: [
-                "point": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2), "z": .int(3)]))
+                "point": .record(Record(name: "App.Point", ["a": .int(0), "x": .int(1), "y": .int(2), "z": .int(3)]))
             ]
         )
 
@@ -156,12 +138,12 @@ struct FieldPlaceTests {
             signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
             body: [
                 Statement(
-                    binding: .variable("point", declared: .record(["x": .int, "y": .int])),
+                    binding: .variable("point", declared: .named("App.Point")),
                     expression: .record(["x": .literal(.int(1)), "y": .literal(.int(2))])
                 ),
                 Statement(
                     binding: .assignment([PathSegment.key("point")]),
-                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
+                    expression: .cast(.reference([.key("given")]), as: .named("App.Point"), optional: false)
                 )
             ],
             result: .reference([.key("point"), .key("y")])
@@ -172,7 +154,7 @@ struct FieldPlaceTests {
         let answer = try await run(
             sut,
             arguments: [
-                "given": .record(Record(name: nil, ["x": .int(1), "y": .int(2)]))
+                "given": .record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))
             ]
         )
 
@@ -201,7 +183,7 @@ struct FieldPlaceTests {
         let steps = try await resultSteps(of: sut)
         let answer = try await run(
             sut,
-            arguments: ["given": .record(Record(name: nil, ["a": .int(0), "y": .int(2)]))]
+            arguments: ["given": .dictionary(["a": .int(0), "y": .int(2)])]
         )
 
         // Then
@@ -209,45 +191,13 @@ struct FieldPlaceTests {
         #expect(answer == .int(2))
     }
 
-    @Test("a box holds exactly the fields it declared, so a write of more refuses")
-    func aWriteOfMoreThanTheBoxDeclaresRefuses() async throws {
-        // Given. The declaration is the whole of what the box holds, so a
-        // value of more fields cast to it fails, and nothing is cut to fit
-        let sut = Procedure(
-            signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
-            body: [
-                Statement(
-                    binding: .variable("point", declared: .record(["x": .int, "y": .int])),
-                    expression: .record(["x": .literal(.int(1)), "y": .literal(.int(2))])
-                ),
-                Statement(
-                    binding: .assignment([PathSegment.key("point")]),
-                    expression: .cast(.reference([.key("given")]), as: .record(["x": .int, "y": .int]), optional: false)
-                )
-            ],
-            result: .reference([.key("point")])
-        )
-
-        // When / Then
-        await #expect {
-            try await run(
-                sut,
-                arguments: [
-                    "given": .record(Record(name: nil, ["a": .int(0), "x": .int(1), "y": .int(2)]))
-                ]
-            )
-        } throws: { error in
-            "\(error)".contains("is not a field of { x: Int, y: Int }")
-        }
-    }
-
     @Test("a place and a name answer the same field")
     func bothWaysAnswerTheSameField() async throws {
-        // Given. One reads a type the build laid out and one a dictionary,
-        // whose keys are the value's
+        // Given. One reads a record the build laid out and one a map, whose
+        // keys are the value's
         let laid = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "point", type: .record(["x": .int, "y": .int]))]
+                parameters: [Parameter(name: "point", type: .named("App.Point"))]
             ),
             body: [],
             result: .reference([.key("point"), .key("y")])
@@ -257,11 +207,9 @@ struct FieldPlaceTests {
             body: [],
             result: .reference([.key("point"), .key("y")])
         )
-        let argument: [Name: Value] = ["point": .record(Record(name: nil, ["x": .int(1), "y": .int(2)]))]
-
         // When
-        let byPlace = try await run(laid, arguments: argument)
-        let byName = try await run(named, arguments: argument)
+        let byPlace = try await run(laid, arguments: ["point": .record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))])
+        let byName = try await run(named, arguments: ["point": .dictionary(["x": .int(1), "y": .int(2)])])
 
         // Then
         #expect(byPlace == .int(2))
@@ -274,10 +222,18 @@ struct FieldPlaceTests {
     // read what the build lowered.
     private func resultSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
-            [try Module(procedures: [entryName: procedure.with(access: .public)])] + Module.standard
+            [try Module(types: Self.types, procedures: [entryName: procedure.with(access: .public)])] + Module.standard
         )
 
         return try steps(of: image)
+    }
+
+    // The procedure run as the entry of a module declaring the records.
+    private func run(_ procedure: Procedure, arguments: [Name: Value]) async throws -> Value {
+        try await WarpTestSupport.run(
+            try Module(types: Self.types, procedures: [entryName: procedure.with(access: .public)]),
+            arguments: arguments
+        )
     }
 
     private func steps(of image: Image) throws -> [Step] {

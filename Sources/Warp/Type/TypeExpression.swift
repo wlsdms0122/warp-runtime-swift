@@ -17,9 +17,9 @@ import Foundation
 // of these rather than a separate kind of thing, which is why a module declares
 // a type the same way it declares anything, by binding a name to something.
 //
-// A record type is exact: a value fits with exactly its name, or exactly its
-// fields where it has none. What arrives from outside gains fields, so the door
-// it comes through fits it to the declaration first, and every other place
+// A record type is declared, in `types`, and named here: a value fits with
+// exactly its name. What arrives from outside gains fields, so the door it
+// comes through fits it to the declaration first, and every other place
 // holds a value as it is.
 public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertible {
     // Nothing ever *is* `Any`. It is what a declaration says when it accepts
@@ -47,9 +47,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // A map: keys of one type to values of one type, which a
     // `Value.dictionary` holds. The key's type answers `Hashable`.
     case dictionary(key: TypeExpression, value: TypeExpression)
-
-    // Named fields with types, exactly the ones a value holds.
-    case record([Name: TypeExpression])
 
     // A value that can be called: the types it is applied with, in position
     // order, and what it answers. Nil is a declaration that has not been
@@ -253,13 +250,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .dictionary(key, value):
             return "Dictionary<\(key.rendered), \(value.rendered)>"
 
-        case let .record(fields):
-            let written = fields
-                .sorted { left, right in left.key < right.key }
-                .map { name, field in "\(name): \(field.rendered)" }
-
-            return "{ \(written.joined(separator: ", ")) }"
-
         case let .named(name):
             return name.spelling
 
@@ -283,11 +273,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case let .dictionary(key, value):
             key.mentions.union(value.mentions)
-
-        case let .record(fields):
-            fields.values.reduce(into: Set()) { mentioned, field in
-                mentioned.formUnion(field.mentions)
-            }
 
         case let .procedure(type, _, _):
             type?.mentions ?? []
@@ -321,9 +306,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .dictionary(key, value):
             return key.parameterNames.union(value.parameterNames)
 
-        case let .record(fields):
-            return fields.values.reduce(into: Set()) { named, field in named.formUnion(field.parameterNames) }
-
         case let .procedure(type, _, _):
             return type?.parameterNames ?? []
 
@@ -350,9 +332,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .dictionary(key, value):
             return key.isGeneric || value.isGeneric
 
-        case let .record(fields):
-            return fields.values.contains { field in field.isGeneric }
-
         case let .procedure(type, _, _):
             return type?.isGeneric ?? false
 
@@ -376,7 +355,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .array, .dictionary, .record, .procedure, .variable,
+            .array, .dictionary, .procedure, .variable,
             .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
@@ -390,16 +369,16 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .any, .null, .never, .parameter, .nullable:
             return false
 
-        case .bool, .int, .double, .string, .array, .dictionary, .record, .procedure, .variable,
+        case .bool, .int, .double, .string, .array, .dictionary, .procedure, .variable,
             .inout, .named, .projection, .composition, .selfType:
             return true
         }
     }
 
     // Whether a document writes this type as a string, which a `?` trails and
-    // a slot mark stands in front of. An inline record and a procedure type
-    // that writes its signature are written as a mapping under one key, and
-    // so is a list or a map of one of those.
+    // a slot mark stands in front of. A procedure type that writes its
+    // signature is written as a mapping under one key, and so is a list or a
+    // map of one.
     var hasSpelling: Bool {
         switch self {
         case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
@@ -408,9 +387,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case let .procedure(type, _, _):
             return type == nil
-
-        case .record:
-            return false
 
         case let .dictionary(key, value):
             return key.hasSpelling && value.hasSpelling
@@ -438,7 +414,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return inner
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .array, .dictionary, .record, .procedure, .inout,
+            .array, .dictionary, .procedure, .inout,
             .nullable, .named, .parameter, .projection, .composition, .selfType:
             return self
         }
@@ -462,9 +438,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case let .dictionary(key, value):
             return .dictionary(key: key.replacingSelf(with: type), value: value.replacingSelf(with: type))
-
-        case let .record(fields):
-            return .record(fields.mapValues { field in field.replacingSelf(with: type) })
 
         case let .procedure(procedure, constness, isolation):
             return .procedure(procedure?.replacingSelf(with: type), constness, isolation)
@@ -494,8 +467,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Whether a value of `other` may stand where this is declared. Exact on
-    // records, a declared one by its name and a nameless one by its fields,
-    // and one-directional: `Any` on the left accepts anything because nothing
+    // a declared record, by its name, and one-directional: `Any` on the left accepts anything because nothing
     // was declared, and a value read as `Any` on the right stands only where
     // `Any` is declared, until a cast says what it is.
     //

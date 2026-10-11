@@ -1445,8 +1445,8 @@ indirect enum LoweredType: Sendable, Equatable {
                 )
             )
 
-        // An inline record is its fields: a nameless value holding exactly
-        // these fits it, and settling builds the slot's layout.
+        // A record's structure as its row lays it out: a value holding
+        // exactly these fields fits it, and settling builds on the layout.
         case let .record(held):
             try refuseNamed(value, at: path(), in: table)
 
@@ -1663,8 +1663,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return "Dictionary<\(key.rendered(in: table)), \(value.rendered(in: table))>"
 
+        // A declared record by its name, and a literal's reading under none
+        // by its fields.
         case let .record(held):
-            return Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
+            return held.layout.name?.spelling
+                ?? Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
 
         case let .named(row):
             return table.labels[row].spelling
@@ -1873,8 +1876,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return .dictionary(key: key.spelled(in: table), value: value.spelled(in: table))
 
+        // A record is written once, where it is declared, and spelled by its
+        // name; a literal's reading under no name has no spelling.
         case let .record(record):
-            return .record(Dictionary(uniqueKeysWithValues: record.named.map { name, field in (name, field.spelled(in: table)) }))
+            return record.layout.name.map(TypeExpression.named) ?? .any
 
         case let .procedure(signature, constness, isolation):
             guard let signature else { return .procedure(nil, constness, isolation) }

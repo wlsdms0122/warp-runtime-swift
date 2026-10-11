@@ -15,7 +15,7 @@ enum ObjectCoverageFixture {
         // up an object the reading would refuse.
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
-            types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
+            types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": recordOfEveryTypeExpression],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
@@ -84,8 +84,9 @@ enum ObjectCoverageFixture {
         description: "what it takes"
     )
 
-    // Every case of `TypeExpression`, each holding something no other holds.
-    static let everyTypeExpression: TypeExpression = .record([
+    // Every case of `TypeExpression`, each holding something no other holds,
+    // as the fields of a declared record.
+    static let recordOfEveryTypeExpression: TypeDeclaration = .record([
         "any": .any,
         "never": .never,
         "null": .null,

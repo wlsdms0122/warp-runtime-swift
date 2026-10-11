@@ -154,6 +154,10 @@ public struct Writer: Sendable {
         try TypeWriter(readBy: readBy).value(of: type)
     }
 
+    public func value(of declared: TypeDeclaration) throws -> Value {
+        try TypeWriter(readBy: readBy).value(of: declared)
+    }
+
     public func value(of parameter: Parameter) throws -> Value {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 

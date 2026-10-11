@@ -369,7 +369,7 @@ struct ContractTests {
     func aClaimNamesWhatItIsAbout() async throws {
         // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .int],
+            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .alias(.int)],
             claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -456,7 +456,7 @@ struct ContractTests {
     func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
-            types: ["App.Thing": .int],
+            types: ["App.Thing": .alias(.int)],
             contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -587,7 +587,7 @@ struct ContractTests {
     // Two types that describe themselves, a contract asking for it, and a
     // generic procedure standing between the caller and both.
     private func describing(
-        types extra: [Name: TypeExpression] = [:],
+        types extra: [Name: TypeDeclaration] = [:],
         procedures added: [Name: Procedure] = [:],
         body: Body,
         result: Warp.Expression

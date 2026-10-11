@@ -281,7 +281,7 @@ final class LoweredTypeTable: Sendable {
     // numbers it was lowered with. Either way a row is a row of one table and
     // nothing a link concludes reads one to decide what to say.
     static func lowering(
-        _ types: [Name: TypeExpression],
+        _ types: [Name: TypeDeclaration],
         satisfying: [Name: Set<Name>] = [:],
         holdsEveryClaim: Bool,
         fulfillment: Fulfillment? = nil,
@@ -296,7 +296,7 @@ final class LoweredTypeTable: Sendable {
         // is a slot the contract fills.
         let index = LoweredTypeTable(loweredTypes: [], labels: labels, satisfying: satisfying, of: linkage)
 
-        var loweredTypes = labels.map { label in (types[label] ?? .any).lowered(in: index) }
+        var loweredTypes = labels.map { label in types[label]?.lowered(as: label, in: index) ?? .any }
 
         let records = Set(loweredTypes.indices.filter { row in
             if case .record = loweredTypes[row] { true } else { false }

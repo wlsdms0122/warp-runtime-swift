@@ -235,14 +235,14 @@ struct TypeNotationTests {
         )
     }
 
-    @Test("the record form holds only an element with no spelling of its own")
-    func recordFormIsForNamelessElements() throws {
-        // Given / When. An array of records has no string spelling, so the
-        // record form is the one way to write it.
+    @Test("the array form holds only an element with no spelling of its own")
+    func arrayFormIsForUnspelledElements() throws {
+        // Given / When. An array of procedures that write their signature has
+        // no string spelling, so the form is the one way to write it.
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
+                    "parameters": [["name": "rows", "type": ["array": ["procedure": ["returns": "Int"]]]]],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
@@ -251,8 +251,21 @@ struct TypeNotationTests {
         // Then
         #expect(
             sut.procedures["entry"]?.signature.parameter(named: "rows")?.type
-                == .array(.record(["id": .string]))
+                == .array(.procedure(ProcedureType(returns: .int)))
         )
+
+        // And. A record is declared under `types` and named, so a slot
+        // written as a record is no type
+        #expect(throws: ReadingError.self) {
+            try loader.loadDocument([
+                "procedures": [
+                    "entry": [
+                        "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
+                        "body": [["let": "seen", "value": ["ref": "rows"]]]
+                    ]
+                ]
+            ])
+        }
 
         // And. An element with a spelling is written `Array<String>`. A document
         // says it that one way, and the form around it is a second spelling
