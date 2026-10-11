@@ -480,7 +480,7 @@ struct TypeChecker {
         fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
-        switch loweredTypes.answering(contract: name, reading: reading, orNull: orNull) {
+        switch loweredTypes.answering(contract: name, reading: reading, rigid: false, orNull: orNull) {
         // What leans on a claim is written down for the link to decide.
         case let .leansOn(types):
             for type in types {

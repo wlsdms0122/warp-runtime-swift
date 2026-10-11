@@ -900,12 +900,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // A composition takes what answers each of its contracts, asked of
         // the table with the same rigidity and, where the slot takes null as
         // well, knowing it does. A value read as `Any` or along a path a call
-        // decides answers none until a cast says what it is.
+        // decides answers none until a cast says what it is, and one leaning
+        // on a claim passes, for the link to decide.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { contract in
-                table.satisfies(contract: contract, reading: other, rigid: rigid, orNull: orNull)
+                if case .decided(false) = table.answering(contract: contract, reading: other, rigid: rigid, orNull: orNull) { false } else { true }
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):

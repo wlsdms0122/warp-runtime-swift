@@ -220,18 +220,50 @@ final class LoweredTypeTable: Sendable {
     }
 
     // Whether a reading answers a contract, by what the documents claim
-    // about its type. A reading whose type the build does not know answers
-    // none until a cast says what it is. `orNull` is a slot taking null as
-    // well: what arrives is null or answers.
-    func answering(contract name: Name, reading: LoweredType, orNull: Bool) -> Answering {
-        answering(contract: name, reading: reading, rigid: false, orNull: orNull)
-    }
+    // about its type: decided, or leaning on the claims about the types that
+    // come back, for whoever asked to write down. A reading whose type the
+    // build does not know answers none until a cast says what it is.
+    // `orNull` is a slot taking null as well: what arrives is null or
+    // answers.
+    func answering(
+        contract name: Name,
+        reading given: LoweredType,
+        rigid: Bool,
+        orNull: Bool
+    ) -> Answering {
+        guard let reading = read(given, orNull: orNull) else { return .decided(true) }
 
-    // Whether a reading stands where a contract bounds a slot. A claim this
-    // table cannot decide passes, for the link to decide, unless `rigid`:
-    // then a named type is held to what the documents standing so far say.
-    func satisfies(contract name: Name, reading: LoweredType, rigid: Bool, orNull: Bool) -> Bool {
-        if case .decided(false) = answering(contract: name, reading: reading, rigid: rigid, orNull: orNull) { false } else { true }
+        switch reading {
+        case .never:
+            return .decided(true)
+
+        case .any, .projection:
+            return .decided(false)
+
+        // A parameter stands for whatever fills it, and a call fills it with
+        // something every bound was asked of, so one bounded by the contract
+        // answers and one bounded by nothing that answers is refused: a slot
+        // says what a call may fill it with. A composition is read as the
+        // contracts it names, so it answers those alone.
+        case let .parameter(_, bounds), let .composition(bounds):
+            return .decided(bounds.contains(name))
+
+        // What may be null is a value of the type or null, so it answers
+        // where both do.
+        case let .nullable(inner):
+            return answering(contract: name, reading: inner, rigid: rigid, orNull: false)
+                .and(answering(contract: name, reading: .null, rigid: rigid, orNull: false))
+
+        // A reading of a type a value is an instance of answers as that type
+        // does: by what the documents claim about it, so the type comes back
+        // and the asker writes it down. Asked rigidly, or where the table
+        // holds every claim there is, it is held to what the documents say.
+        default:
+            guard let type = reading.nominal(in: self) else { return .decided(true) }
+            guard !rigid, !holdsEveryClaim else { return .decided(answers(contract: name, arrived: type) != false) }
+
+            return .leansOn([type])
+        }
     }
 
     // The declarations as the run reads them. A link says which order its rows
@@ -313,47 +345,6 @@ final class LoweredTypeTable: Sendable {
 
         default:
             return reading
-        }
-    }
-
-    private func answering(
-        contract name: Name,
-        reading given: LoweredType,
-        rigid: Bool,
-        orNull: Bool
-    ) -> Answering {
-        guard let reading = read(given, orNull: orNull) else { return .decided(true) }
-
-        switch reading {
-        case .never:
-            return .decided(true)
-
-        case .any, .projection:
-            return .decided(false)
-
-        // A parameter stands for whatever fills it, and a call fills it with
-        // something every bound was asked of, so one bounded by the contract
-        // answers and one bounded by nothing that answers is refused: a slot
-        // says what a call may fill it with. A composition is read as the
-        // contracts it names, so it answers those alone.
-        case let .parameter(_, bounds), let .composition(bounds):
-            return .decided(bounds.contains(name))
-
-        // What may be null is a value of the type or null, so it answers
-        // where both do.
-        case let .nullable(inner):
-            return answering(contract: name, reading: inner, rigid: rigid, orNull: false)
-                .and(answering(contract: name, reading: .null, rigid: rigid, orNull: false))
-
-        // A reading of a type a value is an instance of answers as that type
-        // does: by what the documents claim about it, so the type comes back
-        // and the asker writes it down. Asked rigidly, or where the table
-        // holds every claim there is, it is held to what the documents say.
-        default:
-            guard let type = reading.nominal(in: self) else { return .decided(true) }
-            guard !rigid, !holdsEveryClaim else { return .decided(answers(contract: name, arrived: type) != false) }
-
-            return .leansOn([type])
         }
     }
 }
