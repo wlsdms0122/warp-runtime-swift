@@ -636,8 +636,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return element
 
-        // A dictionary's names are data, so a key the run computes reads an
-        // entry the way an index reads an element.
+        // Brackets on a map read an entry the way they read a list's
+        // element.
         case let .dictionary(_, value):
             return value
 

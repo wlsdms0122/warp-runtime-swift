@@ -49,9 +49,9 @@ struct Activation: Sendable {
         }
     }
 
-    // Every index reference read to a position, or to a key where the
-    // container is a map: a write lands on one place, and a hold is extended
-    // by places.
+    // Every index reference read to the value it holds: a write lands on one
+    // place, and a hold is extended by places, which the container they
+    // reach says the position or the key of.
     func projections(of address: Address) throws -> [Projection] {
         try address.steps.map { step in
             switch step {
@@ -65,29 +65,7 @@ struct Activation: Sendable {
                 return .index(index)
 
             case let .at(inner, _):
-                let index = try value(at: inner)
-
-                switch index {
-                case let .int(index):
-                    return .index(index)
-
-                // A dictionary's names are data, so a key the run read
-                // writes an entry the way a written key does.
-                case let .string(key):
-                    guard let name = try? Name(key) else {
-                        throw ExecutionError(
-                            "'\(spelled(address).rendered)' writes under '\(key)', which is not a name"
-                        )
-                    }
-
-                    return .name(name)
-
-                default:
-                    throw ExecutionError(
-                        "'\(spelled(address).rendered)' indexes with"
-                            + " '\(spelled(inner).rendered)', which is \(index.nominal), expected Int or String"
-                    )
-                }
+                return .index(try value(at: inner))
             }
         }
     }
@@ -101,7 +79,7 @@ struct Activation: Sendable {
     // A dot reads a name and nothing else, and the build judged every one and
     // wrote the judgement into the step. What may genuinely be absent, a missing
     // entry or a null on the way, is read as null only where the author spelled
-    // `?.`, and refused everywhere else.
+    // `?.` or `?[`, and refused everywhere else.
     private func lookup(_ address: Address) -> Walk {
         let (slot, steps) = (address.slot, address.steps)
         var current: Value
@@ -140,35 +118,14 @@ struct Activation: Sendable {
             let read: Walk
 
             switch step {
-            case let .index(index, _):
-                read = indexed(current, at: index, walked: walked)
+            case let .index(index, optional):
+                read = indexed(current, at: index, optional: optional, walked: walked, segment: segment)
 
-            // The name is a path of its own, read against the same frame.
+            // The index is a path of its own, read against the same frame.
             case let .at(inner, optional):
-                func name() -> String {
-                    spelled(inner).rendered
-                }
-
                 switch lookup(inner) {
-                case let .found(.int(index)):
-                    read = indexed(current, at: index, walked: walked)
-
-                // A dictionary's names are data, so a key the run read
-                // reads an entry the way a written key does.
-                case let .found(.string(key)):
-                    read = keyed(
-                        current,
-                        at: key,
-                        optional: optional,
-                        walked: walked,
-                        segment: segment
-                    )
-
-                case let .found(value):
-                    return .unfit(
-                        "\(walked().rendered): index reference \(name()) is \(value.nominal),"
-                            + " expected Int or String"
-                    )
+                case let .found(index):
+                    read = indexed(current, at: index, optional: optional, walked: walked, segment: segment)
 
                 case let .unfit(reason):
                     return .unfit(reason)
@@ -186,16 +143,16 @@ struct Activation: Sendable {
 
                 read = .found(record.values[position])
 
-            case let .name(key, optional):
+            case let .name(name, optional):
                 switch current {
                 case .record, .dictionary: break
                 default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
-                guard let next = current[key] else {
+                guard let next = current[name] else {
                     guard optional else {
                         return .unfit(
-                            "\(walked().rendered): '\(key)' is not there."
+                            "\(walked().rendered): '\(name)' is not there."
                                 + " Only `\(segment().mark)` reads absence"
                         )
                     }
@@ -218,54 +175,49 @@ struct Activation: Sendable {
         return .found(current)
     }
 
-    // One reading for both index spellings. What is indexed is whatever has
-    // elements: the projection owns the `Array<Int>` equation, lazily, so
-    // one element read does not unpack a compact spelling. Past the end is a
-    // defect, not absence: the array is there and says how long it is.
-    private func indexed(_ current: Value, at index: Int, walked: () -> Path) -> Walk {
-        guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected Array")
+    // One reading for both index spellings, decided by what is indexed: a
+    // list by a position and a map by a key. A list is whatever has
+    // elements: the projection owns the `Array<Int>` equation, lazily, so one
+    // element read does not unpack a compact spelling. Past the end is a
+    // defect, not absence: the list is there and says how long it is. An
+    // entry the map does not hold follows the mark.
+    private func indexed(
+        _ current: Value,
+        at index: Value,
+        optional: Bool,
+        walked: () -> Path,
+        segment: () -> PathSegment
+    ) -> Walk {
+        if case let .dictionary(map) = current {
+            guard let entry = map[key: index] else {
+                guard optional else {
+                    return .unfit(
+                        "\(walked().rendered) reads an entry the map does not hold."
+                            + " Only `\(segment().mark)` reads absence"
+                    )
+                }
+
+                return .found(.null)
+            }
+
+            return .found(entry)
         }
 
-        guard index >= 0, index < elements.count else {
+        guard let elements = current.elements else {
+            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected Array or Dictionary")
+        }
+
+        guard case let .int(position) = index else {
+            return .unfit("\(walked().rendered) indexes a list by \(index.nominal), expected Int")
+        }
+
+        guard position >= 0, position < elements.count else {
             return .unfit(
                 "\(walked().rendered) indexes past the end of a list of \(elements.count)"
             )
         }
 
-        return .found(elements[elements.index(elements.startIndex, offsetBy: index)])
-    }
-
-    // One reading for a key the run read. What is keyed is whatever holds
-    // fields, and an absent entry follows the mark the way a written key does.
-    private func keyed(
-        _ current: Value,
-        at key: String,
-        optional: Bool,
-        walked: () -> Path,
-        segment: () -> PathSegment
-    ) -> Walk {
-        switch current {
-        case .record, .dictionary: break
-        default: return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
-        }
-
-        guard let name = try? Name(key) else {
-            return .unfit("\(walked().rendered) reads '\(key)', which is not a name")
-        }
-
-        guard let next = current[name] else {
-            guard optional else {
-                return .unfit(
-                    "\(walked().rendered): '\(key)' is not there."
-                        + " Only `\(segment().mark)` reads absence"
-                )
-            }
-
-            return .found(.null)
-        }
-
-        return .found(next)
+        return .found(elements[elements.index(elements.startIndex, offsetBy: position)])
     }
 
     private func spelled(_ step: Step) -> PathSegment {

@@ -737,10 +737,10 @@ struct TypeChecker {
             }
 
             switch (segment, current) {
-            // An index written as a reference is a name the run reads, which
-            // element is read, not what the elements are. The name is a path of
-            // its own, judged like one, and the walk goes on with the element
-            // type the way a literal index does.
+            // Brackets on a list read an element at a position: a whole
+            // number written there, or a name the run reads, which is a path
+            // of its own judged like one. The walk goes on with the element
+            // type either way.
             case let (.indexRef(inner, _), .array(element)):
                 if let refusal = indexReference(inner, in: environment, with: context, at: place) {
                     return .refused(refusal)
@@ -748,14 +748,30 @@ struct TypeChecker {
 
                 if let refused = indexed(element) { return refused }
 
-            case let (.index, .array(element)):
+            case let (.index(index, _), .array(element)):
+                if let refusal = position(index, at: walked, in: context.loweredTypes) {
+                    return .refused(refusal)
+                }
+
                 if let refused = indexed(element) { return refused }
 
-            // A dictionary's names are data, so a key the run reads finds an
-            // entry the way a written key does. Absence follows the mark, the
-            // rule every entry reading shares.
-            case let (.indexRef(inner, optionally), .dictionary(_, entry)):
-                if let refusal = keyReference(inner, in: environment, with: context, at: place) {
+            // Brackets on a map read the entry under a key of its key type,
+            // written there or read by the run. Which keys are there is the
+            // run's fact, so absence follows the mark, the rule every entry
+            // reading shares.
+            case let (.indexRef(inner, optionally), .dictionary(key, entry)):
+                if let refusal = keyReference(inner, keyedBy: key, in: environment, with: context, at: place) {
+                    return .refused(refusal)
+                }
+
+                if let refusal = needless(.entry) { return refusal }
+
+                if optionally { optional = true }
+
+                current = entry
+
+            case let (.index(index, optionally), .dictionary(key, entry)):
+                if let refusal = written(key: index, keyedBy: key, at: walked, in: context.loweredTypes) {
                     return .refused(refusal)
                 }
 
@@ -768,8 +784,7 @@ struct TypeChecker {
             case (.index, _), (.indexRef, _):
                 return .refused(
                     "\(walked.rendered) indexes into \(current.rendered(in: context.loweredTypes)),"
-                        + " and an array is indexed by a position or a name the run reads,"
-                        + " a dictionary by a name the run reads alone"
+                        + " and brackets read a list by a position and a map by a key"
                 )
 
             // A dictionary holds entries of one type under names that are
@@ -840,8 +855,8 @@ struct TypeChecker {
 
     // What a path write reaches from the box its head names, or why it may
     // not. Each field on the way is one a declared type wrote `var`, or a
-    // field of a type no declaration named; an element is written through
-    // its index. A type that may be null is not written into, and neither is
+    // field of a type no declaration named; an element or an entry is
+    // written through brackets. A type that may be null is not written into, and neither is
     // `Any`.
     private func writable(
         _ path: Path,
@@ -889,11 +904,17 @@ struct TypeChecker {
             case let (.name, .dictionary(_, entry)):
                 current = entry
 
-            // A name between the brackets is a path of its own, judged as
-            // what the container reads it as: a position in a list and a key
-            // in a map.
-            case let (.indexRef(inner, _), .dictionary(_, entry)):
-                if let refusal = keyReference(inner, in: environment, with: context, at: place) {
+            // What stands between the brackets is judged as a read's is: a
+            // position in a list and a key in a map.
+            case let (.indexRef(inner, _), .dictionary(key, entry)):
+                if let refusal = keyReference(inner, keyedBy: key, in: environment, with: context, at: place) {
+                    return .refused(refusal)
+                }
+
+                current = entry
+
+            case let (.index(index, _), .dictionary(key, entry)):
+                if let refusal = written(key: index, keyedBy: key, at: walked, in: context.loweredTypes) {
                     return .refused(refusal)
                 }
 
@@ -906,7 +927,11 @@ struct TypeChecker {
 
                 current = element
 
-            case let (.index, .array(element)):
+            case let (.index(index, _), .array(element)):
+                if let refusal = position(index, at: walked, in: context.loweredTypes) {
+                    return .refused(refusal)
+                }
+
                 current = element
 
             case (.name, .any), (.index, .any), (.indexRef, .any):
@@ -929,8 +954,8 @@ struct TypeChecker {
 
             case (.index, _), (.indexRef, _):
                 return .refused(
-                    "\(walked.rendered) writes an element into \(current.rendered(in: context.loweredTypes)),"
-                        + " and only an array is written by position"
+                    "\(walked.rendered) writes through brackets into \(current.rendered(in: context.loweredTypes)),"
+                        + " and brackets write a list by a position and a map by a key"
                 )
             }
         }
@@ -1075,10 +1100,11 @@ struct TypeChecker {
     }
 
     // The one machine that judges a key the run reads, answering the
-    // refusal or nil. A dictionary's names are strings, so what stands between
-    // the brackets stands where a `String` is read.
+    // refusal or nil. What stands between the brackets on a map stands where
+    // its key type is read.
     private func keyReference(
         _ inner: Path,
+        keyedBy key: LoweredType,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
@@ -1088,11 +1114,42 @@ struct TypeChecker {
             return reason
 
         case let .reads(innerType):
-            guard !LoweredType.string.accepts(innerType, in: context.loweredTypes) else { return nil }
+            guard !key.accepts(innerType, in: context.loweredTypes) else { return nil }
 
             return "key reference \(inner.rendered) reads"
-                + " \(innerType.rendered(in: context.loweredTypes)), expected String"
+                + " \(innerType.rendered(in: context.loweredTypes)),"
+                + " expected \(key.rendered(in: context.loweredTypes))"
         }
+    }
+
+    // A key written or settled between the brackets, judged the way a key
+    // the run reads is: it stands where the map's key type is read, as what
+    // the value is.
+    private func written(
+        key: Value,
+        keyedBy keyType: LoweredType,
+        at walked: Path,
+        in table: LoweredTypeTable
+    ) -> String? {
+        let reading = LoweredType(of: key, in: table)
+
+        guard !keyType.accepts(reading, in: table) else { return nil }
+
+        return "\(walked.rendered) reads its key as \(reading.rendered(in: table)),"
+            + " expected \(keyType.rendered(in: table))"
+    }
+
+    // A position written or settled between the brackets: a whole number,
+    // and one below zero is no position.
+    private func position(_ index: Value, at walked: Path, in table: LoweredTypeTable) -> String? {
+        guard case let .int(position) = index else {
+            return "\(walked.rendered) reads its index as"
+                + " \(LoweredType(of: index, in: table).rendered(in: table)), expected Int"
+        }
+
+        guard position < 0 else { return nil }
+
+        return "\(walked.rendered) indexes a list at \(position), and a whole number below zero is no position"
     }
 
     // One index path a fold settles. The recursion of the gathering above,
@@ -1112,41 +1169,14 @@ struct TypeChecker {
             return .indexRef(inner, optional: optionally)
         }
 
-        let settled: Value
-
-        do {
-            settled = try await folding.read(inner, at: place)
-        } catch {
-            throw BuildError("reading constant '\(head)': \(error)", at: place)
-        }
-
         // The mark rides the fold: which element or entry is read settles
         // now, whether the list or the map is there to be read stays the
-        // run's question. A key is a name, so text that is not one names no
-        // entry.
-        switch settled {
-        case let .int(index):
-            guard index >= 0 else {
-                throw BuildError(
-                    "index reference \(inner.rendered) is \(index), and a whole number below zero is no position",
-                    at: place
-                )
-            }
-
-            return .index(index, optional: optionally)
-
-        case let .string(key):
-            guard let name = try? Name(key) else {
-                throw BuildError("key reference \(inner.rendered) is '\(key)', which is not a name", at: place)
-            }
-
-            return .name(name, optional: optionally)
-
-        default:
-            throw BuildError(
-                "index reference \(inner.rendered) is \(settled.nominal), expected Int or String",
-                at: place
-            )
+        // run's question. Whether the value stands as a position or a key is
+        // judged where the folded path is.
+        do {
+            return .index(try await folding.read(inner, at: place), optional: optionally)
+        } catch {
+            throw BuildError("reading constant '\(head)': \(error)", at: place)
         }
     }
 
@@ -1306,6 +1336,12 @@ struct TypeChecker {
                 // reads (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
                 let folded = try await foldedIndexReferences(path, at: place, folding: folding)
+
+                // What an index settled to stands as if it were written there,
+                // and is judged as such.
+                if folded != path, case let .refused(reason) = reading(of: folded, in: environment, with: context, at: place) {
+                    throw BuildError(reason, at: place)
+                }
 
                 guard let head = folding.boundHead(of: folded) else {
                     return Inspection(rewritten: .reference(folded), reading: read, flow: reached)
@@ -2556,7 +2592,19 @@ struct TypeChecker {
             var binding = statement.binding
 
             if case let .assignment(path)? = binding, case let .judging(folding, _, _) = ask, let folding {
-                binding = .assignment(try await foldedIndexReferences(path, at: here, folding: folding))
+                let folded = try await foldedIndexReferences(path, at: here, folding: folding)
+
+                // What an index settled to stands as if it were written
+                // there, and is judged as such.
+                if
+                    folded != path,
+                    let box = path.head.flatMap({ head in environment[head] }),
+                    case let .refused(reason) = writable(folded, from: box, in: environment, with: context, at: here)
+                {
+                    throw BuildError(reason, at: here)
+                }
+
+                binding = .assignment(folded)
             }
 
             rewritten.append(

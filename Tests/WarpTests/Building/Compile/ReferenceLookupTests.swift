@@ -116,8 +116,8 @@ struct ReferenceLookupTests {
             "half": .double(1.0)
         ])
 
-        // When / Then. An index is an Int or a key, so a fraction is neither,
-        // whole or not
+        // When / Then. A list is indexed by a position, an Int, so a
+        // fraction is none, whole or not
         guard case let .unfit(reason) = await lookup(
             [.name("items"), .indexRef([.name("half")])],
             in: folding
@@ -127,7 +127,7 @@ struct ReferenceLookupTests {
             return
         }
 
-        #expect(reason.contains("expected Int or String"))
+        #expect(reason.contains("indexes a list by Double, expected Int"))
     }
 
     @Test("an index reference that names nothing is unfit, not null")

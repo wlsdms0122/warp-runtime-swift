@@ -813,15 +813,17 @@ struct ValidationTests {
         }
     }
 
-    @Test("an index below zero is no position, however the path was made")
-    func anIndexBelowZeroIsRefused() throws {
+    @Test("what stands between the brackets is data, however the path was made")
+    func anIndexIsData() async throws {
         // Given
         let items = Statement(binding: .variable("items"), expression: .array([.literal(.int(1))]))
+        let carried = try await procedureValue()
 
-        // When / Then. A read and a write
-        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(-1)]))]))
-        #expect(!validates(body: [items, Statement(binding: .assignment([.name("items"), .index(-1)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(0)]))]))
+        // When / Then. A read and a write. Which value is a position is the
+        // build's to judge, by what is indexed
+        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(carried)]))]))
+        #expect(!validates(body: [items, Statement(binding: .assignment([.name("items"), .index(carried)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(-1)]))]))
     }
 
     @Test("every name a path reads is a value's name, however the path was made", arguments: [

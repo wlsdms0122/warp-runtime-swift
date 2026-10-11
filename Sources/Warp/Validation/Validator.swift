@@ -866,20 +866,16 @@ struct Validator: Sendable {
     }
 
     // What a path's steps are held to wherever it is written: a name it
-    // reads is a value's, the one name a path reads back as one key, and a
-    // whole number written between the brackets is a position, which one
-    // below zero is not.
+    // reads is a value's, the one name a path reads back as one key, and
+    // what stands between the brackets is data, as every literal is.
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
             case let .name(name, _):
                 try held(name, as: .value, at: place)
 
-            case let .index(index, _) where index < 0:
-                throw ValidationError(
-                    "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
-                    at: place
-                )
+            case let .index(index, _) where index.holdsProcedure:
+                throw ValidationError(Value.procedureIsNotData, at: place)
 
             case .index, .indexRef:
                 continue

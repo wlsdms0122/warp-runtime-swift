@@ -27,7 +27,7 @@ struct PathParserTests {
         #expect(parsed == [.name("items"), .index(0), .name("name"), .indexRef([.name("i")])])
     }
 
-    @Test("a whole number between brackets is a position, whatever its size")
+    @Test("a whole number between brackets is a whole number, whatever its size")
     func aBracketedWholeNumberIsNoName() throws {
         // Given
         let sut = PathParser()
@@ -137,6 +137,36 @@ struct PathParserTests {
         #expect(throws: PathSyntaxError.self) { try sut.parse("a[0]]") }
 
         #expect(try sut.parse("a[i[0]]") == [.name("a"), .indexRef([.name("i"), .index(0)])])
+    }
+
+    @Test("a text between double quotes in the brackets parses and renders as itself")
+    func aQuotedTextRoundTrips() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. Inside the quotes a dot, a bracket and a space are the
+        // text's, `\"` a quote and `\\` a backslash, and the empty text is a
+        // text
+        #expect(try sut.parse(#"d["a"]"#) == [.name("d"), .index("a")])
+        #expect(try sut.parse(#"d[ "a.b[0] c" ]"#) == [.name("d"), .index("a.b[0] c")])
+        #expect(try sut.parse(#"d["say \"hi\" \\"]"#) == [.name("d"), .index(#"say "hi" \"#)])
+        #expect(try sut.parse(#"d[""]?["x"]"#) == [.name("d"), .index(""), .index("x", optional: true)])
+        #expect(try sut.parse(#"d[k["a"]]"#) == [.name("d"), .indexRef([.name("k"), .index("a")])])
+
+        for text in [#"d["a"]"#, #"d["say \"hi\" \\"]"#, #"d[""]?["x"]"#] {
+            #expect(try sut.parse(text).rendered == text)
+        }
+    }
+
+    @Test("a text between the brackets is closed, holds only itself and escapes two characters")
+    func aQuotedTextIsRefusedWhereItIsNoText() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a]"#) }
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a"b]"#) }
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a\n"]"#) }
     }
 
     // MARK: - Public

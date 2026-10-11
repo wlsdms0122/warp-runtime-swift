@@ -14,13 +14,16 @@ import Foundation
 // A dot reads a name out of what the walk has reached, and only that. A
 // procedure is reached by a written call, which spells the declaration it
 // means, so a path never decides which declaration a bare name stands for.
+// Brackets read what a list or a map holds at the value between them: a
+// constant, or a path the run reads. Which of the two the value is, a
+// position or a key, is the container's fact, not the segment's.
 //
 // Each segment carries whether the author wrote it optional (`?.` on a name,
 // `?[` on an index), the one mark that says absence is expected here. A plain
 // segment refuses what an optional one reads as null.
 public enum PathSegment: Sendable, Equatable {
     case name(Name, optional: Bool)
-    case index(Int, optional: Bool)
+    case index(Value, optional: Bool)
     case indexRef(Path, optional: Bool)
 
     // Where a segment came down. The walk's fact, not the segment's, and the
@@ -64,7 +67,7 @@ public enum PathSegment: Sendable, Equatable {
     }
 
     // The name a dot segment reads. Nil for an index, which reads a
-    // position, not a name.
+    // position or a key, not a name.
     public var named: Name? {
         switch self {
         case let .name(name, _):
@@ -92,7 +95,7 @@ public enum PathSegment: Sendable, Equatable {
     // The plain spellings. Most segments are written without the mark, and a
     // construction site that says nothing about absence means it.
     public static func name(_ name: Name) -> PathSegment { .name(name, optional: false) }
-    public static func index(_ index: Int) -> PathSegment { .index(index, optional: false) }
+    public static func index(_ index: Value) -> PathSegment { .index(index, optional: false) }
     public static func indexRef(_ path: Path) -> PathSegment { .indexRef(path, optional: false) }
 
     // The refusal a mark earns where the types prove there is nothing to read
@@ -107,8 +110,8 @@ public enum PathSegment: Sendable, Equatable {
         guard optional, !unwrapped else { return nil }
 
         switch landing {
-        // Which names a dictionary holds is the run's fact, so a mark here
-        // always has an absence to expect. The one landing that earns no
+        // Which keys a map holds is the run's fact, so a mark here always
+        // has an absence to expect. The one landing that earns no
         // refusal.
         case .entry:
             return nil

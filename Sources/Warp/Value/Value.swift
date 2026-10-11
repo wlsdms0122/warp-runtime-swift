@@ -756,10 +756,10 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The part a path names, in a record by the place the build put the field
-    // at, in a dictionary by key and in an array by position. Every index was
-    // read to a position before this, and the build judged the path against
-    // the value's declared type, so a part not held is refused as what it
-    // is: an entry not written yet, or a type with no such part.
+    // at, in a map by key and in an array by position. Every index was read
+    // to a value before this, and the build judged the path against the
+    // value's declared type, so a part not held is refused as what it is: an
+    // entry not written yet, or a type with no such part.
     func reading(at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return self }
 
@@ -780,7 +780,16 @@ public indirect enum Value: Sendable, Equatable {
 
             return try field.reading(at: rest, under: rendered)
 
-        case let (.array(elements), .index(index)):
+        case let (.dictionary(map), .index(key)):
+            guard let entry = map[key: key] else {
+                throw ExecutionError(
+                    "'\(rendered)' reads \(Path([step.spelled]).rendered), which is not written yet"
+                )
+            }
+
+            return try entry.reading(at: rest, under: rendered)
+
+        case let (.array(elements), .index(.int(index))):
             guard elements.indices.contains(index) else {
                 throw ExecutionError(
                     "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
@@ -815,7 +824,10 @@ public indirect enum Value: Sendable, Equatable {
         case let (.record, .name(name)), let (.dictionary, .name(name)):
             return try self[name]?.written(at: rest, under: rendered)
 
-        case let (.array(elements), .index(index)):
+        case let (.dictionary(map), .index(key)):
+            return try map[key: key]?.written(at: rest, under: rendered)
+
+        case let (.array(elements), .index(.int(index))):
             guard elements.indices.contains(index) else { return nil }
 
             return try elements[index].written(at: rest, under: rendered)
@@ -828,10 +840,10 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one part replaced: the part the path names, in a record
-    // by the place the build put the field at, in a dictionary by name and in
-    // an array by position. The rest is kept as it was. The build judged the
+    // by the place the build put the field at, in a map by key and in an
+    // array by position. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
-    // position before this. A dictionary's names are its own, so one not
+    // value before this. A map's keys are its own, so an entry under one not
     // held yet is made.
     func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return value }
@@ -857,7 +869,12 @@ public indirect enum Value: Sendable, Equatable {
                 throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
             }
 
-        case let (.array(elements), .index(index)):
+        case let (.dictionary(map), .index(key)):
+            let entry = try (map[key: key] ?? .null).writing(value, at: rest, under: rendered)
+
+            return .dictionary(map.writing(key: key, with: entry))
+
+        case let (.array(elements), .index(.int(index))):
             guard elements.indices.contains(index) else {
                 throw ExecutionError(
                     "'\(rendered)' writes element \(index) of an array holding \(elements.count)"

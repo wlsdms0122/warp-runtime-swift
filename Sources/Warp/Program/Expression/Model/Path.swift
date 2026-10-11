@@ -28,7 +28,7 @@ public struct Path: Sendable, Equatable {
                 rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
 
             case let .index(index, optional):
-                rendered += (optional ? "?[" : "[") + "\(index)]"
+                rendered += (optional ? "?[" : "[") + spelling(of: index) + "]"
 
             case let .indexRef(indexPath, optional):
                 rendered += (optional ? "?[" : "[") + "\(indexPath.rendered)]"
@@ -105,4 +105,24 @@ public struct Path: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // A value between the brackets as a path writes it: a whole number in
+    // its digits and text between double quotes, `\"` a quote and `\\` a
+    // backslash inside them. A value of another kind has no spelling in a
+    // path, and shows the way `text` shows it.
+    private func spelling(of index: Value) -> String {
+        switch index {
+        case let .int(position):
+            return String(position)
+
+        case let .string(text):
+            let escaped = text
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+
+            return "\"\(escaped)\""
+
+        default:
+            return Rendering(index).text()
+        }
+    }
 }
