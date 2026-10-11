@@ -84,7 +84,7 @@ public struct ModuleReader: Decodable {
     // module rather than about the text, so the refusal is the module's.
     //
     // Nothing written is nothing claimed, and a slot written as null says the
-    // same. Whether a document may leave it out at all is the door's, which
+    // same. Whether a document may leave it out at all is the load's, which
     // reads the claim off the draft this answers.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>

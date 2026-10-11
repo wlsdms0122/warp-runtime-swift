@@ -13,7 +13,7 @@ import Warp
 extension Value {
     // How deep a document may nest. The bound is exact: every reader takes
     // a document within it and refuses the first container past it, and a
-    // value a caller built is held to it at the door a document is read at.
+    // value a caller built is held to it where a document is loaded.
     public static let nestingBound = 128
 
     // How many containers the deepest path through this value opens, counted

@@ -49,7 +49,8 @@ public struct TextEncoding {
     }
 
     // A refusal that knows where it happened and not yet how to say it. The
-    // line and column are worked out once, at the door, from the whole text.
+    // line and column are worked out once, where the text is read, from the
+    // whole text.
     private struct Unplaced: Error {
         // MARK: - Property
         let said: String

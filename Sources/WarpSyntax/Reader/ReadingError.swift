@@ -11,8 +11,8 @@ import Warp
 // What a document is refused with while it is being read.
 //
 // It carries the two halves of a place apart: the steps, known where the
-// refusal happens, and the document, known at the door the value came
-// through. Until a door says, there is no document and the place is nothing.
+// refusal happens, and the document, known where the reading began. Until
+// that says, there is no document and the place is nothing.
 //
 // A place only becomes more exact: `read(in:)` keeps the first document it
 // was told, `asked(at:)` keeps the deeper of two addresses, and
@@ -69,9 +69,9 @@ public struct ReadingError: WarpError {
     // the text is owed.
     public func placed(_ place: Place) -> Self { self }
 
-    // The same refusal, told which document it was reading. Said once, at the
-    // door: a refusal already told keeps what it was told, so a door inside a
-    // door cannot rename another's document.
+    // The same refusal, told which document it was reading. Said once, where
+    // the reading began: a refusal already told keeps what it was told, so a
+    // reading inside another cannot rename its document.
     func read(in document: Place.Document) -> ReadingError {
         guard self.document == nil else { return self }
 
