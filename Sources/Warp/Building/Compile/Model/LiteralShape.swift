@@ -169,16 +169,18 @@ enum LiteralShape: Sendable {
         }
     }
 
-    // How a refusal names it: written as the literal is, a list and a map in
-    // brackets, with each part spelled as the type it reads as.
+    // How a refusal names it: written as the literal is, a list in brackets
+    // and a map as its entries under `dictionary`, with each part spelled as
+    // the type it reads as.
     func rendered(in table: LoweredTypeTable) -> String {
         switch self {
         case let .list(items):
             return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
 
         case let .map(entries):
-            return "[" + entries.map { entry in "\(entry.key.rendered(in: table)): \(entry.value.rendered(in: table))" }
-                .joined(separator: ", ") + "]"
+            let written = entries.map { entry in "[\(entry.key.rendered(in: table)), \(entry.value.rendered(in: table))]" }
+
+            return "{ dictionary: [" + written.joined(separator: ", ") + "] }"
 
         case let .part(reading):
             return reading.rendered(in: table)
