@@ -377,7 +377,7 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
 
         // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
-        // exactly one: a record is not a choice, so the count is counted here.
+        // exactly one: a mapping is not a choice, so the count is counted here.
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
@@ -503,7 +503,7 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Private
-    // The documents a case lays beside its program. A list of records, each a
+    // The documents a case lays beside its program. A list of mappings, each a
     // document that reads; anything else is a case no two runners would read
     // alike. One that does not read is the case's own fault, since the
     // question was about the program.
@@ -613,7 +613,7 @@ struct Case: Sendable, CustomStringConvertible {
             entries = declared
 
         case let other?:
-            throw ConformanceError("the vocabulary a case asks for declares its procedures as a record, and not as \(other)")
+            throw ConformanceError("the vocabulary a case asks for declares its procedures as a mapping, and not as \(other)")
         }
 
         if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
@@ -660,7 +660,7 @@ struct Case: Sendable, CustomStringConvertible {
         return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
     }
 
-    // What the entry is given is a record or is not written. Anything else
+    // What the entry is given is a mapping or is not written. Anything else
     // is refused rather than read as nothing given: a case that wrote
     // `arguments 1` asked a question no runner can answer the same way.
     private static func given(_ written: Value?, of name: String) throws -> [Name: Value] {
@@ -672,7 +672,7 @@ struct Case: Sendable, CustomStringConvertible {
             return Dictionary(uniqueKeysWithValues: try given.named().map { entry in (entry.name, entry.value) })
 
         case let other?:
-            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")
+            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a mapping or is not written")
         }
     }
 

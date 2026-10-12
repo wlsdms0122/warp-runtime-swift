@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// A parameter, written as a record under the name its body reads it by. A
+// A parameter, written as a mapping under the name its body reads it by. A
 // notation may offer the pair form, `count: Int`; a document has the one
 // spelling.
 struct ParameterReader: Decodable {
@@ -24,8 +24,8 @@ struct ParameterReader: Decodable {
         let notation = decoder.notation
 
         // The pair form: one key that is the name, holding the type or the
-        // rest of the record. One key is always the pair where a notation
-        // offers it, `name` included, since the record holding nothing but a
+        // rest of the mapping. One key is always the pair where a notation
+        // offers it, `name` included, since the mapping holding nothing but a
         // name reads either way and the notation picks this one.
         if
             notation.pairedParameter,

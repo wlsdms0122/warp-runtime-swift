@@ -10,12 +10,13 @@ import Warp
 
 // The expression grammar. `Expression` has constructs and no spelling; this is the
 // spelling. No front end may hide an expression inside a string, so any
-// notation that can write a record can write every expression:
+// notation that can write a mapping can write every expression:
 //
 //   scalar                  . A literal, and strings are always literal text
 //   array                   . Elements are expressions
 //   { ref: a.b[0] }         . A name to resolve in the scope that reads it
 //   { record: { … } }       . A record whose fields are expressions
+//   { dictionary: [[k, v]] }. A map whose keys and values are expressions
 //   { call: <call> }        . A call where a value is wanted, the same form a
 //                              statement writes
 //   { closure: <procedure> }. A procedure written where a value is wanted
@@ -75,8 +76,8 @@ public struct ExpressionReader: Decodable {
                 return try read(mapping: fields, at: steps, in: decoder)
 
             // A form is keys the notation reserved, and a name under which a
-            // value stands is not one of them. So a record the document named
-            // is read as the literal it spells, name included, and a procedure
+            // value stands is not one of them. So a record value the document
+            // writes is read as the literal it spells, name included, and a procedure
             // as the value it is, for the `Validator` to refuse; reading
             // either as a form would drop what it is refused for.
             case .record, .procedure:
@@ -151,15 +152,15 @@ public struct ExpressionReader: Decodable {
         )
     }
 
-    // `{ record: { … } }`: the fields, each an expression, in the record's
-    // order, so that a record with two bad fields refuses the same one every
-    // run.
+    // `{ record: { … } }`: the fields, each an expression, in the key order
+    // of the mapping that writes them, so that a record literal with two bad
+    // fields refuses the same one every run.
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
     ) throws -> Warp.Expression {
-        // A named record is data written as itself, so it reads as the literal
+        // A record value is data written as itself, so it reads as the literal
         // it writes, and the load holds a literal to holding no record.
         if case .record = written {
             return .literal(written)
@@ -234,7 +235,7 @@ public struct ExpressionReader: Decodable {
 
         // A type has two spellings and a cast takes either: the string a
         // built-in or a declared name is written as, and the mapping a
-        // record or a procedure signature is written as.
+        // procedure, an array or a dictionary type is written as.
         let type: TypeExpression
 
         do {
@@ -296,7 +297,7 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         // A notation may decline to offer a template, and then these keys are
-        // refused rather than read as an ordinary record. Giving up a spelling
+        // refused rather than read as another form. Giving up a spelling
         // says a text may not write it; it does not hand the keys back to mean
         // something else.
         guard let interpolation = decoder.notation.interpolation else {
@@ -315,7 +316,7 @@ public struct ExpressionReader: Decodable {
 
         guard Set(try mapping.named().map(\.name)).subtracting(Interpolation.keys).isEmpty else {
             throw ExpressionFormError(
-                "a record with `format` holds `format`, the template, and `with`, its bindings,"
+                "a mapping with `format` holds `format`, the template, and `with`, its bindings,"
                     + " and nothing else (found keys: \(try mapping.named().map(\.name)))"
             )
         }
@@ -341,7 +342,7 @@ public struct ExpressionReader: Decodable {
 
         case let other?:
             throw ExpressionFormError(
-                "`format`'s `with` takes a record of bindings,"
+                "`format`'s `with` takes a mapping of bindings,"
                     + " got \(other.nominal)"
             )
         }

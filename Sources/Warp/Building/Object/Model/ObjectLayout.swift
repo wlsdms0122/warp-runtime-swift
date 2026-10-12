@@ -8,11 +8,11 @@
 import Foundation
 
 // How an object is laid out as a value: the format under *objects* in the
-// specification, the keys its record carries, and the tag each kind of every
+// specification, the keys its map carries, and the tag each kind of every
 // part is written with. The writer and the reader both spell the layout
 // through these, so it is said once.
 enum ObjectLayout {
-    // The keys of the record. The format is said under `object`, which is also
+    // The keys of the map. The format is said under `object`, which is also
     // what tells an object from a document at the door: a document says `warp`.
     enum Key: String, CaseIterable {
         case object
@@ -241,7 +241,7 @@ enum ObjectLayout {
     // one is not written.
     static let format = 1
 
-    // Every key an object carries, which a reading holds a record to before it
+    // Every key an object carries, which a reading holds a map to before it
     // reads any.
     static let keys = Set(Key.allCases.map(\.name))
 }

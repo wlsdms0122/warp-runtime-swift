@@ -34,7 +34,7 @@ struct ParameterFieldsReader: Decodable {
     }
 
     // The same fields read beside others the caller has already held the
-    // record's keys to.
+    // mapping's keys to.
     init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 

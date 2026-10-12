@@ -96,7 +96,7 @@ public struct ModuleReader: Decodable {
         return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
     }
 
-    // One of the slots a module declares a record of things under, read
+    // One of the slots a module declares a mapping of things under, read
     // standing on the slot so that what is refused inside it is addressed
     // there. Nothing written is nothing declared, which is what an absent slot
     // is and what a slot written as null says.

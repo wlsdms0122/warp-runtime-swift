@@ -26,7 +26,7 @@ struct BlockReader: Decodable {
     }
 
     // The same keys read beside others the caller has already held the
-    // record to.
+    // mapping to.
     init(reading decoder: Decoder) throws {
         self.block = Block(
             body: try decoder.descendingIfPresent(to: CodingKeys.body)?
