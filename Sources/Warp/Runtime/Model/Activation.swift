@@ -206,7 +206,8 @@ struct Activation: Sendable {
 
         guard position >= 0, position < elements.count else {
             return .unfit(
-                "\(walked().rendered) indexes past the end of a list of \(elements.count)"
+                "\(walked().rendered) indexes position \(position) of a list of \(elements.count),"
+                    + " which holds none there"
             )
         }
 

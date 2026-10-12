@@ -140,7 +140,7 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104])])
         } throws: { error in
-            "\(error)".contains("past the end")
+            "\(error)".contains("indexes position 1 of a list of 1, which holds none there")
         }
     }
 
