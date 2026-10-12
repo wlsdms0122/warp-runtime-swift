@@ -552,12 +552,8 @@ struct TypeChecker {
         // A declaration with nothing to fill is read as the build lowered it.
         guard declared.isGeneric else { return .fits(slots: slots) }
 
-        guard substitution.disagreeing.isEmpty else {
-            let named = substitution.disagreeing.keys.sorted().compactMap { parameter in
-                substitution.disagreement(of: parameter, in: loweredTypes)
-            }
-
-            return .refusal(named.joined(separator: ", "))
+        if let disagreement = substitution.disagreements(in: loweredTypes) {
+            return .refusal(disagreement)
         }
 
         let bounds = declared.bounds.sorted(by: { $0.key < $1.key })
@@ -1354,11 +1350,35 @@ struct TypeChecker {
         ask: Ask
     ) async throws -> Inspection {
         switch expression {
+        // A list or a map written out as a value is a literal the way one
+        // written part by part is, each element, key and value a literal of
+        // its own, so it is judged as that one.
+        case let .literal(.array(elements)):
+            return try await inspected(
+                .array(elements.map(Expression.literal)),
+                naming: name,
+                into: declared,
+                at: place,
+                in: environment,
+                with: context,
+                ask: ask
+            )
+
+        case let .literal(.dictionary(dictionary)):
+            return try await inspected(
+                .dictionary(dictionary.entries.map { entry in (key: .literal(entry.key), value: .literal(entry.value)) }),
+                naming: name,
+                into: declared,
+                at: place,
+                in: environment,
+                with: context,
+                ask: ask
+            )
+
         case let .literal(value):
             return Inspection(
                 rewritten: expression,
-                reading: LoweredType(literal: value, in: context.loweredTypes),
-                literalShape: LiteralShape(literal: value, in: context.loweredTypes)
+                reading: LoweredType(literal: value, in: context.loweredTypes)
             )
 
         // Nothing comes back from here, so there is no value to have a type.
@@ -2274,8 +2294,9 @@ struct TypeChecker {
 
             // A record literal at a type parameter is the declared record the
             // other arguments fill it with, so an argument holding one is read
-            // after the readings join. Until then it holds no value of its
-            // own and fills nothing.
+            // once the readings join. Until then it holds no value of its
+            // own and fills nothing, and what it reads as there is what it
+            // fills the call with.
             let waiting = Set(call.arguments.indices.filter { position in
                 slots[position].type.namesParameter && holdsRecordLiteral(written[position])
             })
@@ -2297,11 +2318,19 @@ struct TypeChecker {
                 sent.append(inner.written.folded)
             }
 
-            let filled = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes).readings
-            let taking = slots.map { slot in slot.type.filling(filled) }
+            // The one filling of the call, which its site judges: its answer
+            // and every slot an argument is read into come from it.
+            let substitution = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes)
+            let taking = slots.map { slot in slot.type.filling(substitution.readings) }
+
+            // A parameter read two ways fills nothing a literal could be read
+            // as, so the call is refused for it before a literal is read.
+            if !waiting.isEmpty, let disagreement = substitution.disagreements(in: context.loweredTypes) {
+                throw BuildError("sending '\(call.selector)': \(disagreement)", at: place)
+            }
 
             for position in waiting.sorted() {
-                let inner = try await inspected(
+                inspections[position] = try await inspected(
                     written[position],
                     naming: nil,
                     into: taking[position],
@@ -2310,9 +2339,6 @@ struct TypeChecker {
                     with: context,
                     ask: ask
                 )
-
-                inspections[position] = inner
-                sent[position] = inner.written.folded
             }
 
             var arguments: [Expression] = []
@@ -2363,7 +2389,7 @@ struct TypeChecker {
             let reading = answered(
                 by: signature,
                 answering: context.answer(of: call.selector),
-                filling: filled
+                filling: substitution.readings
             )
 
             if mayFail {
