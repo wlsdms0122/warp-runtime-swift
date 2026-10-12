@@ -1285,6 +1285,25 @@ struct TypeChecker {
         throw BuildError(reason(), at: place)
     }
 
+    // Whether a record literal stands here as itself or as a part of a list
+    // or a map literal, where the place it is written into decides which
+    // record it is.
+    private func holdsRecordLiteral(_ expression: Expression) -> Bool {
+        switch expression {
+        case .record:
+            return true
+
+        case let .array(items):
+            return items.contains { item in holdsRecordLiteral(item) }
+
+        case let .dictionary(entries):
+            return entries.contains { entry in holdsRecordLiteral(entry.key) || holdsRecordLiteral(entry.value) }
+
+        default:
+            return false
+        }
+    }
+
     // An operand is data: the run reads it rather than running it. A call to a
     // declaration that answers only by running is refused here, where the
     // operand is written, rather than found when the reading reaches it.
@@ -1734,12 +1753,15 @@ struct TypeChecker {
                 rewritten[name] = inner.rewritten
             }
 
+            // Read where no declared record is, it holds no value the build
+            // can name, and a call reading it at a type parameter reads it
+            // again once the other arguments have filled it.
             guard let row, let held else {
                 return Inspection(
                     rewritten: ask.rewrites ? .record(rewritten) : expression,
                     calls: calls,
                     judgements: judgements,
-                    reading: .any,
+                    reading: .never,
                     flow: flowed
                 )
             }
@@ -2237,38 +2259,69 @@ struct TypeChecker {
                 at: place
             )
 
-            var arguments: [Expression] = []
-            var sent: [LoweredType] = []
-            var shapes: [Int: LiteralShape] = [:]
-            var calls: [CallSite] = []
-            var judgements = JudgementTable()
+            // A closure literal written here, at any depth, is completed by
+            // the type it is written into.
+            let written = call.arguments.indices.map { position in
+                slots[position].type.completing(call.arguments[position], in: context.loweredTypes)
+            }
 
-            for (position, written) in call.arguments.enumerated() {
-                // A closure literal written here, at any depth, is completed
-                // by the type it is written into.
-                let argument = slots[position].type.completing(written, in: context.loweredTypes)
+            // A record literal at a type parameter is the declared record the
+            // other arguments fill it with, so an argument holding one is read
+            // after the readings join. Until then it holds no value of its
+            // own and fills nothing.
+            let waiting = Set(call.arguments.indices.filter { position in
+                slots[position].type.namesParameter && holdsRecordLiteral(written[position])
+            })
+            var inspections: [Int: Inspection] = [:]
+            var sent: [LoweredType] = []
+
+            for position in call.arguments.indices {
                 let inner = try await inspected(
-                    argument,
+                    written[position],
                     naming: nil,
                     into: slots[position].type,
+                    at: argumentPlaces[position],
+                    in: environment,
+                    with: context,
+                    ask: waiting.contains(position) ? .probing : ask
+                )
+
+                inspections[position] = waiting.contains(position) ? nil : inner
+                sent.append(inner.written.folded)
+            }
+
+            let filled = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes).readings
+            let taking = slots.map { slot in slot.type.filling(filled) }
+
+            for position in waiting.sorted() {
+                let inner = try await inspected(
+                    written[position],
+                    naming: nil,
+                    into: taking[position],
                     at: argumentPlaces[position],
                     in: environment,
                     with: context,
                     ask: ask
                 )
 
+                inspections[position] = inner
+                sent[position] = inner.written.folded
+            }
+
+            var arguments: [Expression] = []
+            var shapes: [Int: LiteralShape] = [:]
+            var calls: [CallSite] = []
+            var judgements = JudgementTable()
+
+            for position in call.arguments.indices {
+                guard let inner = inspections[position] else { continue }
+
                 arguments.append(inner.rewritten)
-                sent.append(inner.written.folded)
                 shapes[position] = inner.literalShape
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 flow = flow.followed(by: inner.flow)
             }
-
-            let substitution = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes)
-            let filled = substitution.readings
-
-            let taking = slots.map { slot in slot.type.filling(filled) }
 
             try handedInPlace(
                 call.arguments,
