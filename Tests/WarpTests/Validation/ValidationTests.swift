@@ -551,6 +551,28 @@ struct ValidationTests {
         }
     }
 
+    @Test("a path's brackets hold a whole number, a text or a path, however the module was made", arguments: [
+        Value.double(1.5), .null, .bool(true), .array([.int(1)]), .bytes([1]), .dictionary(Value.Dictionary([:]))
+    ])
+    func aBracketHoldsWhatAPathIsWrittenWith(index: Value) throws {
+        // Given. A path written as text holds no other value between its
+        // brackets, so a front end that builds segments directly is held to
+        // the same three
+        let read = Procedure(
+            access: .public,
+            signature: Signature(parameters: [Parameter(name: "d", type: .dictionary(key: .named("Hashable"), value: .int))]),
+            body: [],
+            result: .reference([.name("d"), .index(index)])
+        )
+
+        // When / Then
+        #expect {
+            try Module(procedures: [entryName: read])
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("what stands between a path's brackets is a whole number")
+        }
+    }
+
     @Test("a reference must start with a name")
     func referenceMustHaveAHead() {
         // Given

@@ -862,19 +862,24 @@ struct Validator: Sendable {
     }
 
     // What a path's steps are held to wherever it is written: a name it
-    // reads is a value's, the one name a path reads back as one key, and
-    // what stands between the brackets is data, as every literal is.
+    // reads is a value's, the one name a path reads back as one step, and
+    // what stands between the brackets is a whole number, a text or a path,
+    // the three a path is written with there.
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
             case let .name(name, _):
                 try held(name, as: .value, at: place)
 
-            case let .index(index, _) where index.holdsProcedure:
-                throw ValidationError(Value.procedureIsNotData, at: place)
-
-            case .index, .indexRef:
+            case .index(.int, _), .index(.string, _), .indexRef:
                 continue
+
+            case .index:
+                throw ValidationError(
+                    "'\(path.rendered)' writes \(Path([segment.unmarked]).rendered), and what stands between"
+                        + " a path's brackets is a whole number, a text or a path",
+                    at: place
+                )
             }
         }
     }
