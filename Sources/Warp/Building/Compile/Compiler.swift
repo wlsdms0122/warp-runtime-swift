@@ -477,41 +477,22 @@ struct Compiler {
                     in: context
                 )
 
-                guard let declared = variable.declared, let holding = declaredType else {
-                    let holding = written.folded.boxed
+                // A variable holds what it declares, which the start was held
+                // to as it was read, or else what the start reads. An empty
+                // list or map holds no element, so a start of one says
+                // nothing of what the box will hold.
+                let holding = declaredType ?? written.folded.boxed
 
-                    // An empty list or map holds no element, so a start of
-                    // one says nothing of what the box will hold.
-                    guard !holding.holdsNoElement else {
-                        throw BuildError(
-                            "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds."
-                                + " A variable starting empty declares its type or casts its start",
-                            at: place
-                        )
-                    }
-
-                    started[name] = (settled, holding)
-                    return
-                }
-
-                // What the start reads is held to what the variable declares,
-                // the way a name's value is.
-                guard written.isHeld(by: holding, inPlace: false, in: context.loweredTypes) else {
+                guard declaredType != nil || !holding.holdsNoElement else {
                     throw BuildError(
-                        "starts as \(written.rendered(in: context.loweredTypes)), and declares \(declared)",
+                        "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
+                            + " and declares no type, so nothing says what it holds."
+                            + " A variable starting empty declares its type or casts its start",
                         at: place
                     )
                 }
 
-                do {
-                    started[name] = (
-                        try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes),
-                        holding
-                    )
-                } catch {
-                    throw BuildError("starts outside \(declared), which it declares: \(error)", at: place)
-                }
+                started[name] = (settled, holding)
             }
         }
 

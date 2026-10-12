@@ -211,7 +211,7 @@ struct TypeChecker {
 
     // The expression form, with what it was judged to hold. A constant's body
     // is one rather than a block, and a variable's start is written into
-    // the type the variable declares.
+    // the type the variable declares and held to it, as a name's value is.
     func resolvedSites(
         in expression: Expression,
         into declared: LoweredType?,
@@ -221,6 +221,7 @@ struct TypeChecker {
         folding: Folding?,
         writing fulfillment: Fulfillment
     ) async throws -> (Expression, [CallSite], JudgementTable, LiteralShape) {
+        let ask = Ask.judging(folding: folding, writing: fulfillment, answering: nil)
         let inner = try await inspected(
             expression,
             naming: nil,
@@ -228,10 +229,13 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: fulfillment, answering: nil)
+            ask: ask
         )
+        let written = LiteralShape(inner.literalShape, reading: inner.reading)
 
-        return (inner.rewritten, inner.calls, inner.judgements, LiteralShape(inner.literalShape, reading: inner.reading))
+        _ = try held(inner.reading, writing: written, declaredAs: declared, at: place, with: context, when: ask)
+
+        return (inner.rewritten, inner.calls, inner.judgements, written)
     }
 
     // A constant and a variable's start settle at the build, so what each is
