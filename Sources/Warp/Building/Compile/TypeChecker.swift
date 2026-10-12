@@ -22,10 +22,11 @@ import Foundation
 // against, so it refuses rather than deferring to the run. The author names
 // the type with `as`, and the walk goes on from there.
 //
-// A path reads a name and nothing else, so every segment a document writes
-// stays what it was written as. What each one lands on is judged here against
-// the type the walk reached, and a dot on a type that declares no such field
-// is refused rather than left for the run.
+// A path reads a name and nothing else. What each segment lands on is judged
+// here against the type the walk reached, and a dot on a type that declares no
+// such field is refused rather than left for the run. The walk that judges a
+// path places it for the image: a field of a record it proved at the field's
+// place, a key written between brackets as the key type reads it.
 struct TypeChecker {
     // What a call put in a generic declaration's type parameters, read once
     // by the walk: a parameter read two ways is refused rather than joined,
@@ -625,14 +626,14 @@ struct TypeChecker {
     // Walking a path through types the way the resolver walks it through
     // values. Each dot is judged by the type the walk has reached: a type
     // with fields reads one, and a type without them has no name there to
-    // read, which is refused. The segments stand as written.
+    // read, which is refused.
     //
     // A field the type does not declare is refused, `?.` or not. The type
     // proved the absence, and a spelling that reads expected absence does not
-    // overrule a proof. What may genuinely be absent at run (a `Dictionary`
-    // entry, a nullable's null) is where `?.` speaks: the plain spelling is
-    // refused there, and the optional one answers null and makes the whole
-    // path's reading nullable.
+    // overrule a proof. What may genuinely be absent at run is where a mark
+    // speaks: a nullable's null, which the plain spelling is refused on, and
+    // an entry a map may not hold, which `?[` answers null for. Either makes
+    // the whole path's reading nullable.
     //
     // Three types stop the walk, and each stops it for its own reason. On
     // `Any` the walk **refuses**: nothing was declared, so there is nothing a
@@ -779,10 +780,8 @@ struct TypeChecker {
             }
 
             // Whether the mark the author wrote here had anything to read past.
-            // Asked of the segment, which owns the rule and the sentence, so
-            // the walk's landings cannot drift. Every landing asks, including
-            // the one whose answer is always yes: a landing that skipped the
-            // question would keep its own copy of the rule.
+            // Asked of the segment, which owns the rule and the sentence, by
+            // every landing, an entry's included.
             func needless(_ landing: PathSegment.Landing) -> PathReading? {
                 segment.needlessMark(
                     at: walked,
