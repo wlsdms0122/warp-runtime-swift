@@ -136,10 +136,21 @@ final class LoweredTypeTable: Sendable {
         case let .array(items):
             return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
 
+        // A key is a value like any other, so a record in it is held as one
+        // in an entry is. That can make two keys one, which refuses as a map
+        // written with one key twice does.
         case let .dictionary(entries):
-            return .dictionary(try entries.mapValues { key, item in
-                try resolvingNames(in: item, at: "\(path())\(Path([.index(key)]).rendered)")
-            })
+            let resolved = try entries.entries.map { key, item in
+                let at = "\(path())\(Path([.index(key)]).rendered)"
+
+                return (key: try resolvingNames(in: key, at: at), value: try resolvingNames(in: item, at: at))
+            }
+
+            do {
+                return .dictionary(try Value.Dictionary(resolved))
+            } catch let refused as ValueRefused {
+                throw ArgumentError("\(path()): \(refused.message)")
+            }
 
         case let .record(record):
             let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
