@@ -503,7 +503,7 @@ struct Derivation {
         return path.segments.dropFirst().reduce(declared(head)) { reached, segment in
             switch segment {
             case .index, .indexRef:
-                return reached?.element(in: table)
+                return reached?.element
 
             case let .name(name, _):
                 return reached?.dotted(name, in: table)

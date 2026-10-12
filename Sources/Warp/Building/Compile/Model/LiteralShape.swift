@@ -153,7 +153,7 @@ enum LiteralShape: Sendable {
             return .part(place.written(reading, in: table))
 
         case let .list(items):
-            guard let element = place.element(in: table) else { return self }
+            guard let element = place.element else { return self }
 
             return .list(items.map { item in item.written(into: element, in: table) })
 
