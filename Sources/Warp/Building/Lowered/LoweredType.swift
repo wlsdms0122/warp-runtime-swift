@@ -264,7 +264,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .nullable(inner.boxed)
 
         case let .procedure(signature, _, _):
-            return .procedure(signature?.claiming(.unstated), constness: .unstated, isolation: .unstated)
+            return .procedure(signature?.with(failing: .unstated), constness: .unstated, isolation: .unstated)
 
         case .any, .never, .null, .bool, .int, .double, .string, .record, .variable, .inout,
             .named, .parameter, .composition, .projection:
@@ -371,7 +371,8 @@ indirect enum LoweredType: Sendable, Equatable {
             return .procedure(
                 LoweredProcedureType(
                     parameters: signature.parameters.map { parameter in parameter.isInout ? .inout(.never) : .never },
-                    returns: answer
+                    returns: answer,
+                    failing: .unstated
                 ),
                 constness: .unstated,
                 isolation: .unstated
@@ -497,10 +498,10 @@ indirect enum LoweredType: Sendable, Equatable {
         return true
     }
 
-    // What a slot said the procedure it holds may fail with, nil where it
-    // writes no signature to say it in.
-    var procedureFailing: Failing? {
-        guard case let .procedure(signature?, _, _)? = procedureHeld else { return nil }
+    // What a slot said the procedure it holds may fail with: nothing it
+    // claims where it writes no signature to say it in.
+    var procedureFailing: Failing {
+        guard case let .procedure(signature?, _, _)? = procedureHeld else { return .unstated }
 
         return signature.failing
     }
@@ -602,10 +603,10 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A constant's type: its settled value's, with each procedure it holds
     // read by the type the value's expression was judged at in that position
-    // (an element, an entry), the constness and isolation the build derived
-    // for that one value included. A record's fields are its declaration's. A procedure value says nothing
-    // about its signature, and the expression that made it wrote one;
-    // everything else is the value's. Null, `Any`, and a list or a map
+    // (an element, an entry), the constness, isolation and failing the build
+    // derived for that one value included. A record's fields are its
+    // declaration's. A procedure value says nothing about its signature, and
+    // the expression that made it wrote one; everything else is the value's. Null, `Any`, and a list or a map
     // showing no element, say nothing the judged type does not, so what
     // holds one is what the expression was judged as, a cast's type among
     // them. A map whose keys the value joins to `Any` is no map type, so it
@@ -946,7 +947,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
             guard let signature, let offered else { return signature == offered }
 
-            return offered.failing.fails(within: signature.failing) && offered.claiming(signature.failing) == signature
+            return offered.failing.fails(within: signature.failing) && offered.with(failing: signature.failing) == signature
 
         default:
             return self == written

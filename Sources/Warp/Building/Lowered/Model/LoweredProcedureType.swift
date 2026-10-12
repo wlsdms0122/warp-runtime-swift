@@ -18,7 +18,7 @@ struct LoweredProcedureType: Sendable, Equatable {
     let failing: Failing
 
     // MARK: - Initializer
-    init(parameters: [LoweredType], returns: LoweredType?, failing: Failing = .unstated) {
+    init(parameters: [LoweredType], returns: LoweredType?, failing: Failing) {
         self.parameters = parameters
         self.returns = returns
         self.failing = failing
@@ -30,8 +30,8 @@ struct LoweredProcedureType: Sendable, Equatable {
         LoweredProcedureType(parameters: try parameters.map(part), returns: try returns.map(part), failing: failing)
     }
 
-    // The same type claiming `failing` instead.
-    func claiming(_ failing: Failing) -> LoweredProcedureType {
+    // The same type failing with `failing` instead.
+    func with(failing: Failing) -> LoweredProcedureType {
         LoweredProcedureType(parameters: parameters, returns: returns, failing: failing)
     }
 
@@ -40,7 +40,7 @@ struct LoweredProcedureType: Sendable, Equatable {
     func joined(_ other: LoweredProcedureType) -> LoweredProcedureType? {
         guard parameters == other.parameters, returns == other.returns else { return nil }
 
-        return claiming(failing.joined(other.failing))
+        return with(failing: failing.joined(other.failing))
     }
 
     // MARK: - Private

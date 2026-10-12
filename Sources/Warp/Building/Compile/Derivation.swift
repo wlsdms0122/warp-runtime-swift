@@ -105,8 +105,8 @@ struct Derivation {
         among symbols: [Symbol],
         deriving failing: inout [Name: Failing],
         beside declared: [Name: LoweredType],
-        in table: LoweredTypeTable,
-        beyond: @escaping (Name) -> Failing?
+        beyond: @escaping (Name) -> Failing?,
+        in table: LoweredTypeTable
     ) {
         let own = Set(symbols.map(\.declared))
 
@@ -114,18 +114,10 @@ struct Derivation {
             failing[symbol.declared] = symbol.procedure.implementation.nativelyFailing ?? .these([])
         }
 
-        // Each body beside the type a slot declared each name before its
-        // first statement holds, as the constness walk reads them.
         let bodies = symbols
             .compactMap { symbol in
                 symbol.procedure.block.map { block in
-                    (
-                        symbol.declared,
-                        block,
-                        declared.merging(
-                            symbol.procedure.signature.environment(in: table).compactMapValues(\.declaredType)
-                        ) { _, parameter in parameter }
-                    )
+                    (symbol.declared, block, opening(of: symbol, beside: declared, in: table))
                 }
             }
             .sorted { $0.0 < $1.0 }
@@ -167,17 +159,7 @@ struct Derivation {
 
         for statement in block.body.statements {
             carried = carried.joined(self.failing(statement.expression, given: failing, bound: declaredTypes, in: table))
-
-            // A later name of the same spelling is a different name, so the
-            // table is read forward.
-            if let binding = statement.binding, let name = binding.introduced {
-                declaredTypes[name] = declaredType(
-                    of: binding,
-                    reading: statement.expression,
-                    given: { name in declaredTypes[name] },
-                    in: table
-                )
-            }
+            declaring(statement, into: &declaredTypes, in: table)
         }
 
         return carried.joined(
@@ -200,7 +182,7 @@ struct Derivation {
             self.failing(block, given: failing, bound: declared, in: table)
         }
 
-        let here = failingHere(expression, given: failing, bound: declared, in: table)
+        let here = failingHere(expression, given: failing, bound: { name in declared[name] }, in: table)
 
         switch expression {
         case .literal, .reference, .closure:
@@ -251,7 +233,7 @@ struct Derivation {
     func failingHere(
         _ expression: Expression,
         given failing: (Name) -> Failing?,
-        bound declared: [Name: LoweredType],
+        bound declared: (Name) -> LoweredType?,
         in table: LoweredTypeTable
     ) -> Failing {
         switch expression {
@@ -266,7 +248,7 @@ struct Derivation {
         // of it is what the slot it came out of says, and nothing is known
         // where it came out of none or the slot named nothing.
         case let .apply(callee, _):
-            return reached(callee, given: { name in declared[name] }, in: table)?.procedureFailing ?? .unstated
+            return reached(callee, given: declared, in: table)?.procedureFailing ?? .unstated
 
         case let .call(call):
             return failing(call.selector) ?? .unstated
@@ -365,9 +347,8 @@ struct Derivation {
         let own = Set(symbols.map(\.declared))
 
         // The body beside the names it may write and the type a slot declared
-        // each name before its first statement holds: the module's variables
-        // and its own parameters, since a call of a value is judged on what
-        // the slot it came out of says.
+        // each name before its first statement holds, since a call of a value
+        // is judged on what the slot it came out of says.
         let bodies = symbols.reduce(
             into: [Name: (block: Block, declaring: Set<Name>, bound: [Name: LoweredType])]()
         ) { table, symbol in
@@ -376,9 +357,7 @@ struct Derivation {
             table[symbol.declared] = (
                 block,
                 declaring(symbol.procedure.signature),
-                variables.merging(
-                    symbol.procedure.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
-                ) { _, parameter in parameter }
+                opening(of: symbol, beside: variables, in: loweredTypes)
             )
         }
 
@@ -437,18 +416,7 @@ struct Derivation {
                 declared.insert(name)
             }
 
-            // A later name of the same spelling is a different name, so the
-            // table is read forward.
-            if let binding = statement.binding, let name = binding.introduced {
-                let held = declaredType(
-                    of: binding,
-                    reading: statement.expression,
-                    given: { name in declaredTypes[name] },
-                    in: fact.table
-                )
-
-                declaredTypes[name] = held
-            }
+            declaring(statement, into: &declaredTypes, in: fact.table)
         }
 
         return block.result.map { result in
@@ -540,6 +508,38 @@ struct Derivation {
         case let .attempt(body, rescue):
             return holds(body) && holds(rescue)
         }
+    }
+
+    // The type a slot declared each name a body reads holds before its first
+    // statement: the module's variables, and its own parameters over them.
+    private func opening(
+        of symbol: Symbol,
+        beside variables: [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) -> [Name: LoweredType] {
+        variables.merging(symbol.procedure.signature.environment(in: table).compactMapValues(\.declaredType)) { _, parameter in
+            parameter
+        }
+    }
+
+    // The type a name a statement binds holds for the rest of its block. A
+    // later name of the same spelling is a different name, so the table is
+    // read forward.
+    private func declaring(
+        _ statement: Statement,
+        into declaredTypes: inout [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) {
+        guard let binding = statement.binding, let name = binding.introduced else { return }
+
+        let reading = declaredTypes
+
+        declaredTypes[name] = declaredType(
+            of: binding,
+            reading: statement.expression,
+            given: { name in reading[name] },
+            in: table
+        )
     }
 
     // The type this reads, as the slot it came out of says it, and nil where

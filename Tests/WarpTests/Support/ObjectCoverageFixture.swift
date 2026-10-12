@@ -115,7 +115,7 @@ enum ObjectCoverageFixture {
     // Every case of `LoweredType` an object writes, each holding something
     // no other holds, as the parameters of a procedure type.
     static let everyLoweredType: LoweredType = .procedure(
-        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double)),
+        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double), failing: .unstated),
         constness: .unstated,
         isolation: .isolated
     )
@@ -131,7 +131,7 @@ enum ObjectCoverageFixture {
         .array(.string),
         .dictionary(key: .string, value: .bool),
         .procedure(
-            LoweredProcedureType(parameters: [.int], returns: .double),
+            LoweredProcedureType(parameters: [.int], returns: .double, failing: .these(["aborted"])),
             constness: .const,
             isolation: .unstated
         ),

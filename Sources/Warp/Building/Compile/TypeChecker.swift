@@ -2003,7 +2003,7 @@ struct TypeChecker {
                 calls: calls,
                 judgements: judgements,
                 reading: TypeExpression.procedure(
-                    procedure.signature.type.claiming(failing),
+                    procedure.signature.type.with(failing: failing),
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
@@ -3126,7 +3126,7 @@ struct TypeChecker {
         !Derivation().failingHere(
             expression,
             given: context.failing(of:),
-            bound: environment.compactMapValues(\.declaredType),
+            bound: { name in environment[name]?.declaredType },
             in: context.loweredTypes
         ).failsNothing
     }

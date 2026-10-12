@@ -58,8 +58,8 @@ public struct ProcedureType: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // The same type claiming `failing` instead.
-    func claiming(_ failing: Failing) -> ProcedureType {
+    // The same type failing with `failing` instead.
+    func with(failing: Failing) -> ProcedureType {
         ProcedureType(parameters: parameters, returns: returns, failing: failing)
     }
 
