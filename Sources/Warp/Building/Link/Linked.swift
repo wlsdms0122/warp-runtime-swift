@@ -346,12 +346,13 @@ public final class Linked: Sendable {
     }
 
     // Values from outside, one at each slot, settled together in the door's
-    // one order: each value's record names held and the value fitted to its
-    // slot, the type parameters the slots name filled by what the fitted
-    // values read as, and each value judged at its slot so filled.
+    // one order: every record each value holds held to the record its name
+    // declares, fitted to it, the type parameters the slots name filled by
+    // what the fitted values read as, and each value judged at its slot so
+    // filled.
     private func settled(_ values: [Value]) throws -> [Value] {
         let fitted = try zip(slots, values).map { slot, value in
-            try slot.type.fitted(outside: value, at: "input '\(slot.name)'", in: table)
+            try table.resolvingNames(in: value, at: "input '\(slot.name)'")
         }
         let filling = try filling(by: fitted)
 

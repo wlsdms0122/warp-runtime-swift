@@ -285,24 +285,6 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Whether a value of this may hold a record, which is all the walk
-    // writes or leaves out: what holds none comes back as it is, unwalked.
-    var reachesRecord: Bool {
-        switch self {
-        case .named:
-            return true
-
-        case let .array(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.reachesRecord
-
-        case let .dictionary(key, value):
-            return key.reachesRecord || value.reachesRecord
-
-        default:
-            return false
-        }
-    }
-
     // One value of every kind a decided type can hold, for asking the judge
     // rather than restating it.
     private static let samples: [Value] = [
@@ -1374,34 +1356,15 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // A value from outside fitted to this type before it is held to it: a
-    // record's fields its declaration does not name left out, at whatever
-    // depth a record, a list, a map or what may be null holds one. Only the
-    // doors fit a value to a type.
-    func fitted(_ value: Value, in table: LoweredTypeTable) -> Value {
-        shaped(value, in: table)
-    }
-
-    // The door's first two steps, in its one order: every record a value
-    // from outside holds under a name held to the record the name declares,
-    // then the value fitted to this type. What the value reads as after
-    // these is what a door that is a call fills type parameters from.
-    func fitted(
-        outside value: Value,
-        at path: @autoclosure () -> String,
-        in table: LoweredTypeTable
-    ) throws -> Value {
-        fitted(try table.resolvingNames(in: value, at: path()), in: table)
-    }
-
-    // A value from outside at a door that fills no type parameter: fitted,
-    // then judged against this type.
+    // A value from outside at a door that fills no type parameter: every
+    // record it holds held to the record its name declares, then the value
+    // judged against this type.
     func settling(
         outside value: Value,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        try settling(fitted(outside: value, at: path(), in: table), at: path(), in: table)
+        try settling(try table.resolvingNames(in: value, at: path()), at: path(), in: table)
     }
 
     // What a cast does, said once. The judgement is `settling`'s; what this
@@ -1975,42 +1938,6 @@ indirect enum LoweredType: Sendable, Equatable {
 
     private func mismatch(_ value: Value, at path: String, in table: LoweredTypeTable) -> ArgumentError {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.nominal)")
-    }
-
-    // The walk `fitted` takes: a record holding fields its declaration does
-    // not name keeps only those it names, at whatever depth a record, a list,
-    // a map or what may be null holds one, and keeps its own name.
-    private func shaped(_ value: Value, in table: LoweredTypeTable) -> Value {
-        switch (self, value) {
-        case let (.named(row), _):
-            return table.loweredTypes[row].shaped(value, in: table)
-
-        case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
-            return inner.shaped(value, in: table)
-
-        case let (.array(element), .array(items)) where element.reachesRecord:
-            return .array(items.map { item in element.shaped(item, in: table) })
-
-        case let (.dictionary(key, entry), .dictionary(entries)) where key.reachesRecord || entry.reachesRecord:
-            return .dictionary(
-                entries.entries.reduce(Value.Dictionary([:])) { shaped, written in
-                    shaped.writing(key: key.shaped(written.key, in: table), with: entry.shaped(written.value, in: table))
-                }
-            )
-
-        case let (.record(declared), .record(record)):
-            return .record(
-                Record(
-                    name: record.name,
-                    Dictionary(uniqueKeysWithValues: zip(record.names, record.values).compactMap { name, held in
-                        declared[name].map { field in (name, field.fieldUnwrapped.shaped(held, in: table)) }
-                    })
-                )
-            )
-
-        default:
-            return value
-        }
     }
 
     // The walk `written` and `completing` share: an expression standing where
