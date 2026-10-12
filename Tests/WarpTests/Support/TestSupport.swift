@@ -34,7 +34,7 @@ func walking(
             Call(
                 selector: "Standard.Comparable.lessThan",
                 arguments: [
-                    .reference([.key(round), .key("index")]),
+                    .reference([.name(round), .name("index")]),
                     .call(Call(selector: "Standard.Collection.count", arguments: [.reference(material)]))
                 ]
             )
@@ -43,7 +43,7 @@ func walking(
             body: Body([
                 Statement(
                     binding: .constant(element),
-                    expression: .reference(material.appending(contentsOf: [.indexRef([.key(round), .key("index")])]))
+                    expression: .reference(material.appending(contentsOf: [.indexRef([.name(round), .name("index")])]))
                 )
             ] + body.statements)
         )

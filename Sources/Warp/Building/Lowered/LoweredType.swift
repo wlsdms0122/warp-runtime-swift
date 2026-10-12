@@ -28,8 +28,9 @@ indirect enum LoweredType: Sendable, Equatable {
     case wholeLiteral
 
     case array(LoweredType)
-    case dictionary(LoweredType)
+    case dictionary(key: LoweredType, value: LoweredType)
 
+    // A declared record's row: what a mention of it, `named`, stands for.
     case record(LoweredRecord)
 
     // What a slot asks of a procedure value: the types it is applied with, in
@@ -102,17 +103,18 @@ indirect enum LoweredType: Sendable, Equatable {
         case .parameter:
             return true
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+        case let .array(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.namesParameter
 
-        case let .record(record):
-            return record.fields.contains { field in field.namesParameter }
+        case let .dictionary(key, value):
+            return key.namesParameter || value.namesParameter
 
         case let .procedure(signature, _, _):
             return (signature?.parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (signature?.returns?.namesParameter ?? false)
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
+        // A declared record writes no type parameter.
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .record, .named, .composition, .projection:
             return false
         }
     }
@@ -124,18 +126,18 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .parameter(label, bounds):
             return [label: bounds]
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+        case let .array(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.typeParameters
 
-        case let .record(record):
-            return record.fields.reduce(into: [:]) { found, field in found.merge(field.typeParameters) { first, _ in first } }
+        case let .dictionary(key, value):
+            return key.typeParameters.merging(value.typeParameters) { first, _ in first }
 
         case let .procedure(signature, _, _):
             return ((signature?.parameters ?? []) + [signature?.returns].compactMap { $0 }).reduce(into: [:]) { found, part in
                 found.merge(part.typeParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .named, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .record, .named, .composition, .projection:
             return [:]
         }
     }
@@ -150,6 +152,18 @@ indirect enum LoweredType: Sendable, Equatable {
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .record, .procedure, .nullable,
             .named, .parameter, .composition, .projection:
+            return self
+        }
+    }
+
+    // What a literal written where this is read is written into: the type
+    // through `?`, `var` and `inout`, which hold no value of their own.
+    var literalPlace: LoweredType {
+        switch self {
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.literalPlace
+
+        default:
             return self
         }
     }
@@ -200,7 +214,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether this names one of the kinds a value simply is.
     var isDecidedKind: Bool {
         switch self {
-        case .bool, .int, .double, .string, .null, .array, .dictionary, .record:
+        case .bool, .int, .double, .string, .null, .array, .dictionary:
             return true
 
         default:
@@ -218,16 +232,13 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return .array(element.asHeld)
 
-        case let .dictionary(entry):
-            return .dictionary(entry.asHeld)
+        case let .dictionary(key, value):
+            return .dictionary(key: key.asHeld, value: value.asHeld)
 
         case let .nullable(inner):
             return .nullable(inner.asHeld)
 
-        case let .record(record):
-            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.asHeld)))
-
-        case .any, .never, .null, .bool, .int, .double, .string, .procedure, .variable, .inout,
+        case .any, .never, .null, .bool, .int, .double, .string, .record, .procedure, .variable, .inout,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -246,19 +257,16 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return .array(element.boxed)
 
-        case let .dictionary(entry):
-            return .dictionary(entry.boxed)
+        case let .dictionary(key, value):
+            return .dictionary(key: key.boxed, value: value.boxed)
 
         case let .nullable(inner):
             return .nullable(inner.boxed)
 
-        case let .record(record):
-            return .record(LoweredRecord(layout: record.layout, fields: record.fields.map(\.boxed)))
-
         case let .procedure(signature, _, _):
             return .procedure(signature, constness: .unstated, isolation: .unstated)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .variable, .inout,
+        case .any, .never, .null, .bool, .int, .double, .string, .record, .variable, .inout,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -281,11 +289,14 @@ indirect enum LoweredType: Sendable, Equatable {
     // writes or leaves out: what holds none comes back as it is, unwalked.
     var reachesRecord: Bool {
         switch self {
-        case .named, .record:
+        case .named:
             return true
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
+        case let .array(inner), let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.reachesRecord
+
+        case let .dictionary(key, value):
+            return key.reachesRecord || value.reachesRecord
 
         default:
             return false
@@ -317,14 +328,14 @@ indirect enum LoweredType: Sendable, Equatable {
     // what a box of it will hold.
     var holdsNoElement: Bool {
         switch self {
-        case .array(.never), .dictionary(.never):
+        case .array(.never), .dictionary(_, .never):
             return true
 
-        case let .array(inner), let .dictionary(inner), let .nullable(inner):
+        case let .array(inner), let .nullable(inner):
             return inner.holdsNoElement
 
-        case let .record(record):
-            return record.fields.contains { field in field.holdsNoElement }
+        case let .dictionary(key, value):
+            return key.holdsNoElement || value.holdsNoElement
 
         default:
             return false
@@ -345,17 +356,10 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return bounded == .any ? .any : .array(bounded)
 
-        case let .dictionary(entry):
-            let bounded = entry.boundedAlone
+        case let .dictionary(key, value):
+            let bounded = (key: key.boundedAlone, value: value.boundedAlone)
 
-            return bounded == .any ? .any : .dictionary(bounded)
-
-        case let .record(record):
-            let fields = record.fields.map(\.boundedAlone)
-
-            guard fields.contains(where: { field in field != .any }) else { return .any }
-
-            return .record(LoweredRecord(layout: record.layout, fields: fields))
+            return bounded == (.any, .any) ? .any : .dictionary(key: bounded.key, value: bounded.value)
 
         case let .nullable(inner):
             let bounded = inner.boundedAlone
@@ -441,23 +445,17 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(elements):
             self = .array(LoweredType(joining: elements.map { element in LoweredType(of: element, in: table) }))
 
-        // A record under a name reads as the record the name declares, an
-        // alias's name its record's. A document's type names its fields by
-        // Swift's equality, so two spellings the value keeps apart are one
-        // field here, the first by bytes.
+        // A record reads as the record its name declares, an alias's name
+        // its record's, and as `Any` under a name this table declares none
+        // under, which a door refuses before anything reads it.
         case let .record(record):
-            self = record.name.flatMap { name in table.record(named: name).map(LoweredType.named) }
-                ?? .record(
-                    Dictionary(
-                        zip(record.names, record.values).map { name, value in (name, LoweredType(of: value, in: table)) }
-                    ) { first, _ in first }
-                )
+            self = table.record(named: record.name).map(LoweredType.named) ?? .any
 
-        // A dictionary's names are data, so what it reads as is what its
-        // entries hold, not which names it holds them under today.
+        // A map reads as what its keys and its values hold, joined.
         case let .dictionary(dictionary):
             self = .dictionary(
-                LoweredType(joining: dictionary.entries.map { entry in LoweredType(of: entry.value, in: table) })
+                key: LoweredType(joining: dictionary.keys.map { key in LoweredType(of: key, in: table) }),
+                value: LoweredType(joining: dictionary.values.map { value in LoweredType(of: value, in: table) })
             )
         }
     }
@@ -473,16 +471,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(elements):
             self = .array(LoweredType(joining: elements.map { element in LoweredType(literal: element, in: table) }))
 
-        case let .record(record) where record.name == nil:
-            self = .record(
-                Dictionary(
-                    zip(record.names, record.values).map { name, value in (name, LoweredType(literal: value, in: table)) }
-                ) { first, _ in first }
-            )
-
         case let .dictionary(dictionary):
             self = .dictionary(
-                LoweredType(joining: dictionary.entries.map { entry in LoweredType(literal: entry.value, in: table) })
+                key: LoweredType(joining: dictionary.keys.map { key in LoweredType(literal: key, in: table) }),
+                value: LoweredType(joining: dictionary.values.map { value in LoweredType(literal: value, in: table) })
             )
 
         default:
@@ -498,21 +490,6 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // Whether this is a nameless record or a map, through `?` and a field's
-    // `var`: a structure no declared record's value is.
-    var isNamelessStructure: Bool {
-        switch self {
-        case .record, .dictionary:
-            return true
-
-        case let .nullable(inner), let .variable(inner):
-            return inner.isNamelessStructure
-
-        default:
-            return false
-        }
-    }
-
     // What a slot said about the procedure it holds. A body applying a name a
     // slot declared this way is judged on the slot's word, since the slot is
     // what says which values may arrive there.
@@ -545,7 +522,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .procedure(signature, _, _):
             return signature?.parameters.contains { parameter in parameter.isInout } ?? false
 
-        case let .nullable(inner), let .array(inner), let .dictionary(inner), let .variable(inner), let .inout(inner):
+        case let .nullable(inner), let .array(inner), let .dictionary(_, inner), let .variable(inner), let .inout(inner):
             return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
 
         case let .record(record):
@@ -594,7 +571,7 @@ indirect enum LoweredType: Sendable, Equatable {
     func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, type: LoweredType)? {
         switch self {
         case let .record(held):
-            guard let position = held.layout.position(of: field) else { return nil }
+            guard let position = held.position(of: field) else { return nil }
 
             return (position, held.fields[position])
 
@@ -609,15 +586,11 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a dot reading this name reaches: an entry, where this is a
-    // dictionary, whose names are data, or the field a record type declares
-    // under the name, as what the field holds. Nil where a dot reaches
-    // nothing the type declares.
+    // What a dot reading this name reaches: the field a record type
+    // declares under the name, as what the field holds. Nil where a dot
+    // reaches nothing the type declares.
     func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
         switch self {
-        case let .dictionary(entry):
-            return entry
-
         case let .named(row):
             return table.loweredTypes[row].dotted(name, in: table)
 
@@ -636,10 +609,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return element
 
-        // A dictionary's names are data, so a key the run computes reads an
-        // entry the way an index reads an element.
-        case let .dictionary(entry):
-            return entry
+        // Brackets on a map read an entry the way they read a list's
+        // element.
+        case let .dictionary(_, value):
+            return value
 
         case let .variable(inner), let .inout(inner):
             return inner.element(in: table)
@@ -651,8 +624,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A constant's type: its settled value's, with each procedure it holds
     // read by the type the value's expression was judged at in that position
-    // (an element, an entry, a field), the constness and isolation the build
-    // derived for that one value included. A procedure value says nothing
+    // (an element, an entry), the constness and isolation the build derived
+    // for that one value included. A record's fields are its declaration's. A procedure value says nothing
     // about its signature, and the expression that made it wrote one;
     // everything else is the value's. Null, and a list or a map showing no
     // element, say nothing the judged type does not, so what holds one is
@@ -673,20 +646,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(element), .array(judgedElement)):
             return .array(element.refined(by: judgedElement))
 
-        case let (.dictionary(entry), .dictionary(judgedEntry)):
-            return .dictionary(entry.refined(by: judgedEntry))
-
-        case let (.record(record), .record(judgedRecord)):
-            return .record(
-                LoweredRecord(
-                    layout: record.layout,
-                    fields: record.named.map { name, field in
-                        judgedRecord[name].map { judgedField in
-                            field.refined(by: judgedField.fieldUnwrapped)
-                        } ?? field
-                    }
-                )
-            )
+        case let (.dictionary(key, value), .dictionary(judgedKey, judgedValue)):
+            return .dictionary(key: key.refined(by: judgedKey), value: value.refined(by: judgedValue))
 
         default:
             return self
@@ -695,8 +656,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Two readings of one slot, joined part by part: null beside a value is
     // what may be null, two lists join by their elements and two maps by
-    // their entries, two records of the same fields field by field, and two
-    // procedures to a procedure. Where two parts still disagree the part
+    // their keys and their values, and two procedures to a procedure. Where two parts still disagree the part
     // holds neither, which is what `Any` says. A join that guessed would be a
     // refusal an author cannot act on.
     //
@@ -753,13 +713,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(mine), .array(theirs)):
             return .array(mine.joined(theirs))
 
-        case let (.dictionary(mine), .dictionary(theirs)):
-            return .dictionary(mine.joined(theirs))
-
-        case let (.record(mine), .record(theirs)) where mine.layout.fields == theirs.layout.fields:
-            return .record(
-                LoweredRecord(layout: mine.layout, fields: zip(mine.fields, theirs.fields).map { field, given in field.joined(given) })
-            )
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            return .dictionary(key: myKey.joined(theirKey), value: mine.joined(theirs))
 
         default:
             return .any
@@ -775,9 +730,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The type a value read as this is an instance of, under the name a claim
     // writes and `Value.nominal` answers once the value arrives: a declared
-    // record by its name, bytes as the list they are, and a record with no
-    // name as the map it is. Nil where the reading names no one type: a type
-    // only a value decides, and `Never`.
+    // record by its name, and bytes as the list they are. Nil where the
+    // reading names no one type: a type only a value decides, and `Never`.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
         case .null:
@@ -798,8 +752,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case .array:
             return TypeSpelling.array
 
-        case .dictionary, .record:
+        case .dictionary:
             return TypeSpelling.dictionary
+
+        case let .record(record):
+            return record.name
 
         case .procedure:
             return TypeSpelling.procedure
@@ -815,27 +772,13 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // A record of these fields, laid out the way the build lays every record
-    // out: by the order of the field spellings.
-    static func record(_ fields: [Name: LoweredType]) -> LoweredType {
-        let ordered = fields.sorted { left, right in left.key < right.key }
-
-        return .record(
-            LoweredRecord(
-                layout: Layout(name: nil, ordered: ordered.map(\.key)),
-                fields: ordered.map(\.value)
-            )
-        )
-    }
-
     // The reading judges: whether one type may stand where another is
     // declared, whether two types are one type, whether some value could
     // satisfy two types at once. The build asks them of readings; the run
     // asks the first of a closure value a cast reads as a procedure type.
     //
     // Whether a value of `other` may stand where this is declared. Exact on
-    // records, a declared one by its name and a nameless one by its fields,
-    // and one-directional: `Any` on the left accepts anything
+    // records, by their names, and one-directional: `Any` on the left accepts anything
     // because nothing was declared, and a value read as `Any` on the right
     // stands only where `Any` is declared, until a cast says what it is.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -912,9 +855,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return false
 
         // A declared record is nominal: a value of it fits only its own
-        // name, whatever the structure, and nothing else is a value of it. A
-        // place changes no value, so a record and a nameless one meet only
-        // where a literal is written into one, or at a door.
+        // name, whatever the structure, and nothing else is a value of it.
         case (.named, _), (_, .named):
             return self == other
 
@@ -927,24 +868,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(mine), .array(theirs)):
             return mine.accepts(theirs, in: table)
 
-        case let (.dictionary(mine), .dictionary(theirs)):
-            return mine.accepts(theirs, in: table)
-
-        // A record is a dictionary whose fields happen to be known: a record
-        // whose every field is the entry type is such a mapping. Not the
-        // other way round, since a `Dictionary<T>` promises nothing about which
-        // fields exist.
-        case let (.dictionary(mine), .record(theirs)):
-            return theirs.fields.allSatisfy { field in mine.accepts(field, in: table) }
-
-        // A record type is its fields: what stands here declares exactly
-        // these, each taking what stands at it. A place changes no value, so
-        // a record of more fields is not one of fewer.
-        case let (.record(mine), .record(theirs)):
-            return Set(mine.layout.fields) == Set(theirs.layout.fields)
-                && mine.named.allSatisfy { name, field in
-                    theirs[name].map { given in field.accepts(given, in: table) } ?? false
-                }
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            return myKey.accepts(theirKey, in: table) && mine.accepts(theirs, in: table)
 
         case let (.procedure(required, wantedConstness, wantedIsolation),
                   .procedure(given, offeredConstness, offeredIsolation)):
@@ -993,8 +918,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // Whether a write into a box handed in place, of this type, holds. The
     // caller reads its box as what filled each type parameter here, so where
     // this writes a parameter only that parameter lands. Around one, a
-    // nullable, a list or a dictionary takes what it takes anywhere, a record
-    // whose every field the entry takes as a dictionary included; a type
+    // nullable, a list or a dictionary takes what it takes anywhere; a type
     // holding one some other way is written only as itself. A type naming
     // none takes what it accepts.
     func takesInPlace(_ written: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -1014,13 +938,11 @@ indirect enum LoweredType: Sendable, Equatable {
             return true
 
         case let (.nullable(mine), .nullable(theirs)),
-            let (.array(mine), .array(theirs)),
-            let (.dictionary(mine), .dictionary(theirs)):
+            let (.array(mine), .array(theirs)):
             return mine.takesInPlace(theirs, in: table)
 
-        // A record whose every field the entry takes is such a dictionary.
-        case let (.dictionary(mine), .record(theirs)):
-            return theirs.fields.allSatisfy { field in mine.takesInPlace(field, in: table) }
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            return myKey.takesInPlace(theirKey, in: table) && mine.takesInPlace(theirs, in: table)
 
         case let (.nullable(mine), _):
             return mine.takesInPlace(written, in: table)
@@ -1046,12 +968,50 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // Whether some value read as `reading` could be one of this type, which
-    // a cast names. Not `accepts`: two records that name no field in common
+    // a cast names. Not `accepts`: a list of `Int` and a list of `String`
     // accept each other in neither direction and are still both satisfied
-    // by a value carrying every field. It refuses only where the types
-    // provably disagree, and leaves everything else to the run.
+    // by the empty list. It refuses only where the types provably disagree,
+    // and leaves everything else to the run.
     func couldBothHold(reading other: LoweredType, in table: LoweredTypeTable) -> Bool {
-        couldBothHold(other, in: table, assumingQuestions: [])
+        // What a field holds is read without its `var`.
+        guard fieldUnwrapped == self, other.fieldUnwrapped == other else {
+            return fieldUnwrapped.couldBothHold(reading: other.fieldUnwrapped, in: table)
+        }
+
+        if provesNothing || other.provesNothing { return true }
+
+        // Null is a value both hold, so one exists whatever else they say.
+        if declaresNull(in: table), other.declaresNull(in: table) { return true }
+
+        // Literals are read as their kind first: whether a value could be
+        // both is a question about kinds.
+        switch (widened, other.widened) {
+        case let (.nullable(inner), theirs):
+            return inner.couldBothHold(reading: theirs, in: table)
+
+        case let (mine, .nullable(inner)):
+            return mine.couldBothHold(reading: inner, in: table)
+
+        // A declared record is its name: one record shares its values with
+        // itself and with no other, and a value of a decided kind is none
+        // of them.
+        case let (.named(mine), .named(theirs)):
+            return mine == theirs
+
+        case let (.named, other), let (other, .named):
+            return !other.isDecidedKind
+
+        // Two decided kinds, which is where a value either is both or is
+        // neither. Anything else this walk does not read into is the run's.
+        case let (mine, theirs):
+            guard mine.isDecidedKind, theirs.isDecidedKind else { return true }
+
+            // Asked of the judge that will settle it, not of a second opinion
+            // about what it would say. One sample per kind is enough here.
+            return LoweredType.samples.contains { sample in
+                mine.settles(sample, in: table) && theirs.settles(sample, in: table)
+            }
+        }
     }
 
     // The judge asked as a question. Settling is the one rule for what a
@@ -1063,9 +1023,8 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The reading that holds two readings of one type parameter where one
-    // takes the other, walked in step through lists, dictionaries, what may
-    // be null and record fields, a record read as a dictionary by each of its
-    // fields. Which was read first says nothing. At each position a reading
+    // takes the other, walked in step through lists, dictionaries and what
+    // may be null. Which was read first says nothing. At each position a reading
     // of `Any` makes its position `Any`. Elsewhere it is the one that takes
     // the other. Nil where neither takes the other.
     func holdingBoth(_ given: LoweredType, in table: LoweredTypeTable) -> LoweredType? {
@@ -1138,41 +1097,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(mine), .array(theirs)):
             mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table)
 
-        case let (.dictionary(mine), .dictionary(theirs)):
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            myKey.binding(against: theirKey, into: &substitution, taking: &taking, holding: &holding, in: table)
             mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table)
-
-        // A record read as a dictionary fills a parameter with each of its
-        // fields, as a list literal fills one with each of its elements: what
-        // each field reads a parameter as is read on its own, what two fields
-        // read it as joins part by part, and that join is read as one more
-        // reading of it. Each field's value is held to a composition where it
-        // stands.
-        case let (.dictionary(mine), .record(theirs)):
-            // One with no field holds no entry, the way an empty map holds
-            // none.
-            guard !theirs.fields.isEmpty else {
-                mine.binding(against: .never, into: &substitution, taking: &taking, holding: &holding, in: table)
-
-                return
-            }
-
-            var fields = Substitution()
-
-            for field in theirs.fields {
-                var fieldReadings = Substitution()
-
-                mine.binding(against: field, into: &fieldReadings, taking: &taking, holding: &holding, in: table)
-                fields.read(fieldReadings, joining: .joined, in: table)
-            }
-
-            substitution.read(fields, in: table)
-
-        case let (.record(mine), .record(theirs)):
-            for (name, field) in mine.named {
-                guard let opposite = theirs[name] else { continue }
-
-                field.binding(against: opposite, into: &substitution, taking: &taking, holding: &holding, in: table)
-            }
 
         // What a procedure handed here takes is what it accepts, not a value
         // the call hands, so it is read into `taking`: it fills a parameter
@@ -1232,16 +1159,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return .array(element.filling(filled))
 
-        case let .dictionary(entry):
-            return .dictionary(entry.filling(filled))
-
-        case let .record(fields):
-            return .record(
-                LoweredRecord(
-                    layout: fields.layout,
-                    fields: fields.fields.map { field in field.filling(filled) }
-                )
-            )
+        case let .dictionary(key, value):
+            return .dictionary(key: key.filling(filled), value: value.filling(filled))
 
         case let .procedure(signature, constness, isolation):
             return .procedure(
@@ -1301,18 +1220,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return .array(try element.replacingRows(by: type))
 
-        case let .dictionary(entry):
-            return .dictionary(try entry.replacingRows(by: type))
+        case let .dictionary(key, value):
+            return .dictionary(key: try key.replacingRows(by: type), value: try value.replacingRows(by: type))
 
         case let .record(held):
-            return .record(
-                LoweredRecord(
-                    layout: held.layout,
-                    fields: try held.fields.map { field in
-                        try field.replacingRows(by: type)
-                    }
-                )
-            )
+            return .record(try held.mapFields { field in try field.replacingRows(by: type) })
 
         case let .procedure(signature, constness, isolation):
             return .procedure(
@@ -1364,12 +1276,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case .never:
             throw ArgumentError("\(path()): declares Never, and nothing is ever that")
 
-        // A declared record is nominal. A record arriving under this name is
-        // held to the declared fields and keeps it; one under no name or
-        // another name is refused, whatever its fields, since a literal, a
-        // value from outside and a cast write the name before this reads it.
         case let .named(row):
-            return try settlingNamed(value, row: row, at: path(), in: table)
+            return try table.loweredTypes[row].settling(value, at: path(), in: table)
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
@@ -1402,28 +1310,41 @@ indirect enum LoweredType: Sendable, Equatable {
                 }
             )
 
-        // A dictionary slot holds the names as data, so a nameless record
-        // settling here is the map it is, its layout's names written beside
-        // their values.
-        case let .dictionary(entry):
-            try refuseNamed(value, at: path(), in: table)
+        // A map slot judges every key and every value.
+        case let .dictionary(key, entry):
+            guard case let .dictionary(held) = value else { throw mismatch(value, at: path(), in: table) }
 
-            guard let held = value.asDictionary else { throw mismatch(value, at: path(), in: table) }
-
-            if entry.passesEverything { return .dictionary(held) }
+            if key.passesEverything, entry.passesEverything { return .dictionary(held) }
 
             return .dictionary(
-                try held.mapValues { name, item in
-                    try entry.settling(item, at: "\(path()).\(name)", in: table)
-                }
+                Value.Dictionary(
+                    ordered: try held.entries.map { written in
+                        let at = "\(path())[\(Rendering(written.key).text())]"
+
+                        return (
+                            key: try key.settling(written.key, at: at, in: table),
+                            value: try entry.settling(
+                                written.value,
+                                at: "\(path())\(Path([.index(written.key)]).rendered)",
+                                in: table
+                            )
+                        )
+                    }
+                )
             )
 
-        // An inline record is its fields: a nameless value holding exactly
-        // these fits it, and settling builds the slot's layout.
+        // A declared record is nominal. A record under its name is held to
+        // the declared fields and built on the record's layout; one under
+        // another name is refused, whatever its fields, since a door holds
+        // an alias's name to its record before anything judges it.
         case let .record(held):
-            try refuseNamed(value, at: path(), in: table)
+            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
 
-            return .record(try settlingFields(value, of: held, at: path(), in: table))
+            guard record.name == held.name else {
+                throw ArgumentError("\(path()): is a \(record.name), and the slot declares \(held.name)")
+            }
+
+            return .record(try settlingFields(record, of: held, at: path(), in: table))
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
@@ -1454,12 +1375,11 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // A value from outside fitted to this type before it is held to it: a
-    // record's fields this does not declare left out, a map of fields where
-    // a record type is read made the record it spells, and named by it where
-    // the record is declared, at whatever depth a record, a list, a map or
-    // what may be null holds one. Only the doors fit a value to a type.
+    // record's fields its declaration does not name left out, at whatever
+    // depth a record, a list, a map or what may be null holds one. Only the
+    // doors fit a value to a type.
     func fitted(_ value: Value, in table: LoweredTypeTable) -> Value {
-        shaped(value, leavingOut: true, in: table)
+        shaped(value, in: table)
     }
 
     // The door's first two steps, in its one order: every record a value
@@ -1484,21 +1404,11 @@ indirect enum LoweredType: Sendable, Equatable {
         try settling(fitted(outside: value, at: path(), in: table), at: path(), in: table)
     }
 
-    // A value a cast reads, named the way this type names it: a nameless
-    // record or a map of fields where a declared record is read takes the
-    // record's name, at the same depths, and keeps every field it holds.
-    // Whether it fits is the judge's to say. A cast and the doors are the
-    // only places that write a name onto a value the run holds; a slot
-    // judging a value writes none.
-    func named(_ value: Value, in table: LoweredTypeTable) -> Value {
-        shaped(value, leavingOut: false, in: table)
-    }
-
     // What a cast does, said once. The judgement is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {
-            return try settling(named(value, in: table), at: "as \(rendered(in: table))", in: table)
+            return try settling(value, at: "as \(rendered(in: table))", in: table)
         } catch let mismatch as ArgumentError {
             // Only a mismatch is read as the author's expectation. Naming what
             // is absorbed rather than what is not keeps the default closed:
@@ -1580,7 +1490,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // Spelled as `TypeExpression` spells it, for the message alone.
         case let .projection(of, path):
-            return "\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)"
+            return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
         case .never:
             return TypeSpelling.never.spelling
@@ -1633,11 +1543,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return "Array<\(element.rendered(in: table))>"
 
-        case let .dictionary(entry):
-            return "Dictionary<\(entry.rendered(in: table))>"
+        case let .dictionary(key, value):
+            return "Dictionary<\(key.rendered(in: table)), \(value.rendered(in: table))>"
 
         case let .record(held):
-            return Self.rendered(fields: held.named.map { name, field in (name, field.rendered(in: table)) })
+            return held.name.spelling
 
         case let .named(row):
             return table.labels[row].spelling
@@ -1649,8 +1559,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A value written as a literal, as a place of this type holds it: each
     // whole number standing where this declares a Double is the fraction it
-    // names, and a nameless record where a declared record is read takes
-    // its name, at whatever depth of a list or a record it stands.
+    // names, at whatever depth of a list or a map it stands. A record is its
+    // declaration's, its fields held to it where it was made.
     // Everything else is the value as written, and whether it fits is the
     // judge's to say.
     func written(_ value: Value, in table: LoweredTypeTable) -> Value {
@@ -1659,11 +1569,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .double(Double(whole))
 
         case let (.named(row), _):
-            let written = table.loweredTypes[row].written(value, in: table)
-
-            guard case let .record(record) = written, record.name == nil else { return written }
-
-            return .record(record.named(table.labels[row]))
+            return table.loweredTypes[row].written(value, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.written(value, in: table)
@@ -1671,16 +1577,14 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(element), .array(items)):
             return .array(items.map { item in element.written(item, in: table) })
 
-        case let (.dictionary(entry), .dictionary(entries)):
-            return .dictionary(entries.mapValues { _, held in entry.written(held, in: table) })
-
-        case let (.dictionary(entry), .record(record)) where record.name == nil:
-            return .record(record.mapValues { _, held in entry.written(held, in: table) })
-
-        case let (.record(declared), .record(record)) where record.name == nil:
-            return .record(record.mapValues { name, held in
-                declared[name].map { field in field.fieldUnwrapped.written(held, in: table) } ?? held
-            })
+        case let (.dictionary(key, entry), .dictionary(entries)):
+            return .dictionary(
+                Value.Dictionary(
+                    ordered: entries.entries.map { written in
+                        (key: key.written(written.key, in: table), value: entry.written(written.value, in: table))
+                    }
+                )
+            )
 
         default:
             return value
@@ -1688,55 +1592,20 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same for an expression written into a place of this type: the
-    // literals in it, at the depths a list, a record and the answer of a
-    // block or an attempt hand on. A record built from parts there takes
-    // the name where it is built (`naming`).
+    // literals in it, at the depths a list, a map, a record and the answer of
+    // a block or an attempt hand on.
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, at: nil, in: table) { place, standing, _ in
+        reaching(expression, in: table) { place, standing in
             guard case let .literal(value) = standing else { return nil }
 
             return .literal(place.written(value, in: table))
         }
     }
 
-    // The records an expression written into a place of this type builds
-    // where a declared record is read, by the place each is built at, with
-    // the name it takes there: the build held each part to its field, so
-    // the record is the declared one and the run builds it under the name,
-    // with nothing to cast. What builds no record is not walked, so its place
-    // is never spelled.
-    func naming(_ expression: Expression, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
-        switch expression {
-        case .record, .array, .block, .attempt, .loop:
-            break
-
-        default:
-            return [:]
-        }
-
-        var names: [Place: Name] = [:]
-
-        _ = reaching(expression, at: place(), in: table) { type, standing, place in
-            if case .record = standing, case .named = type, let nominal = type.row, let place {
-                names[place] = table.labels[nominal]
-            }
-
-            return nil
-        }
-
-        return names
-    }
-
-    // The same for a block standing at a place, whose answer stands where
-    // this is read.
-    func naming(_ block: Block, at place: @autoclosure () -> Place, in table: LoweredTypeTable) -> [Place: Name] {
-        block.result.map { result in naming(result, at: place().child(.result), in: table) } ?? [:]
-    }
-
     // What a reading is once what it reads is written where this is
     // declared: a whole literal standing where this declares a Double is the
-    // fraction it names, at whatever depth of a list or a record it stands,
-    // the way `written` writes the value itself. Every other reading is what
+    // fraction it names, at whatever depth of a list or a map it stands, the
+    // way `written` writes the value itself. Every other reading is what
     // it was.
     func written(_ reading: LoweredType, in table: LoweredTypeTable) -> LoweredType {
         switch (self, reading) {
@@ -1752,21 +1621,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(element), .array(read)):
             return .array(element.written(read, in: table))
 
-        case let (.dictionary(entry), .dictionary(read)):
-            return .dictionary(entry.written(read, in: table))
-
-        case let (.dictionary(entry), .record(read)) where read.layout.name == nil:
-            return .record(LoweredRecord(layout: read.layout, fields: read.fields.map { field in entry.written(field, in: table) }))
-
-        case let (.record(declared), .record(read)) where read.layout.name == nil:
-            return .record(
-                LoweredRecord(
-                    layout: read.layout,
-                    fields: read.named.map { name, field in
-                        declared[name].map { place in place.fieldUnwrapped.written(field, in: table) } ?? field
-                    }
-                )
-            )
+        case let (.dictionary(key, entry), .dictionary(readKey, read)):
+            return .dictionary(key: key.written(readKey, in: table), value: entry.written(read, in: table))
 
         default:
             return reading
@@ -1786,7 +1642,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // not decide when what it answers is judged. An answer a call fills is no
     // place's to say, and anything else stands as written.
     func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, at: nil, in: table) { place, standing, _ in
+        reaching(expression, in: table) { place, standing in
             guard case let .closure(written) = standing else { return nil }
 
             guard written.signature.returns == nil, case let .procedure(signature, _, _) = place, let returns = signature?.returns else {
@@ -1837,11 +1693,13 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(element):
             return .array(element.spelled(in: table))
 
-        case let .dictionary(entry):
-            return .dictionary(entry.spelled(in: table))
+        case let .dictionary(key, value):
+            return .dictionary(key: key.spelled(in: table), value: value.spelled(in: table))
 
+        // A record is written once, where it is declared, and spelled by its
+        // name.
         case let .record(record):
-            return .record(Dictionary(uniqueKeysWithValues: record.named.map { name, field in (name, field.spelled(in: table)) }))
+            return .named(record.name)
 
         case let .procedure(signature, constness, isolation):
             guard let signature else { return .procedure(nil, constness, isolation) }
@@ -1890,10 +1748,13 @@ indirect enum LoweredType: Sendable, Equatable {
             (.wholeLiteral, .wholeLiteral), (.double, .double), (.string, .string):
             return true
 
-        case let (.array(mine), .array(theirs)), let (.dictionary(mine), .dictionary(theirs)),
+        case let (.array(mine), .array(theirs)),
             let (.variable(mine), .variable(theirs)), let (.inout(mine), .inout(theirs)),
             let (.nullable(mine), .nullable(theirs)):
             return mine == theirs
+
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            return myKey == theirKey && mine == theirs
 
         case let (.record(mine), .record(theirs)):
             return mine == theirs
@@ -1926,8 +1787,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // saying which, walked in step. Each position below is asked the same.
     // A reading of `Any` at a position is `Any` there, as it is for the
     // whole parameter: it is the loosest reading there is, and `accepts`
-    // cannot order it. A record's field is read without its `var`, which is
-    // a fact about the field and not about the value joined.
+    // cannot order it.
     private func merged(with given: LoweredType, takingGiven takesGiven: Bool, in table: LoweredTypeTable) -> LoweredType {
         guard self != .any, given != .any else { return .any }
 
@@ -1937,14 +1797,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.array(element), .array(other)):
             return .array(element.merged(with: other, in: table))
 
-        case let (.dictionary(element), .dictionary(other)):
-            return .dictionary(element.merged(with: other, in: table))
-
-        case let (.dictionary(element), other) where other.record(in: table) != nil,
-             let (other, .dictionary(element)) where other.record(in: table) != nil:
-            let fields = other.record(in: table)?.fields ?? []
-
-            return .dictionary(fields.reduce(element) { merged, field in merged.merged(with: field.fieldUnwrapped, in: table) })
+        case let (.dictionary(key, element), .dictionary(otherKey, other)):
+            return .dictionary(key: key.merged(with: otherKey, in: table), value: element.merged(with: other, in: table))
 
         case let (.nullable(inner), .nullable(other)):
             return .nullable(inner.merged(with: other, in: table))
@@ -1965,112 +1819,6 @@ indirect enum LoweredType: Sendable, Equatable {
         guard self != given else { return self }
 
         return merged(with: given, takingGiven: accepts(given, in: table), in: table)
-    }
-
-    // The record this stands for: a nameless one as it is, a declared one
-    // as its row lays it out.
-    private func record(in table: LoweredTypeTable) -> LoweredRecord? {
-        switch self {
-        case let .record(record):
-            return record
-
-        case let .named(row):
-            guard case let .record(record) = table.loweredTypes[row] else { return nil }
-
-            return record
-
-        default:
-            return nil
-        }
-    }
-
-    // A declared record may hold itself, so each question is remembered as
-    // it is asked: one met again has come back, and is assumed to hold.
-    //
-    // This is what a cast names and `other` is what it reads.
-    private func couldBothHold(
-        _ other: LoweredType,
-        in table: LoweredTypeTable,
-        assumingQuestions: [(LoweredType, LoweredType)]
-    ) -> Bool {
-        // What a field holds is read without its `var`.
-        guard fieldUnwrapped == self, other.fieldUnwrapped == other else {
-            return fieldUnwrapped.couldBothHold(other.fieldUnwrapped, in: table, assumingQuestions: assumingQuestions)
-        }
-
-        let question = (self, other)
-
-        // A declared record is its name, through `?`: one record shares its
-        // values with itself and with no other. A value read as one is of no
-        // nameless record or map either, since nothing takes a name off. The
-        // other way a cast writes the name onto a nameless value of the
-        // record's fields, so that is asked of the structure below. The one
-        // value both of two apart could hold is null.
-        let myRecord = self.row
-        let theirRecord = other.row
-
-        if let myRecord, let theirRecord {
-            return myRecord == theirRecord || (declaresNull(in: table) && other.declaresNull(in: table))
-        }
-
-        if theirRecord != nil, isNamelessStructure {
-            return declaresNull(in: table) && other.declaresNull(in: table)
-        }
-
-        if case let .named(row) = self {
-            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
-
-            return table.loweredTypes[row].couldBothHold(other, in: table, assumingQuestions: assumingQuestions + [question])
-        }
-
-        if provesNothing || other.provesNothing { return true }
-
-        // Null is a value both hold, so one exists whatever else they say.
-        if declaresNull(in: table), other.declaresNull(in: table) { return true }
-
-        // Literals are read as their kind first: whether a value could be
-        // both is a question about kinds.
-        switch (widened, other.widened) {
-        case let (.nullable(inner), theirs):
-            return inner.couldBothHold(theirs, in: table, assumingQuestions: assumingQuestions)
-
-        case let (mine, .nullable(inner)):
-            return mine.couldBothHold(inner, in: table, assumingQuestions: assumingQuestions)
-
-        case let (_, .named(row)):
-            guard !assumingQuestions.contains(where: { asked in asked == question }) else { return true }
-
-            return couldBothHold(table.loweredTypes[row], in: table, assumingQuestions: assumingQuestions + [question])
-
-        // A record type is its fields, so two of other fields share no value,
-        // and two of the same fields share one where every field could.
-        case let (.record(mine), .record(theirs)):
-            return Set(mine.layout.fields) == Set(theirs.layout.fields)
-                && mine.named.allSatisfy { name, field in
-                    theirs[name].map { given in field.couldBothHold(given, in: table, assumingQuestions: assumingQuestions) } ?? false
-                }
-
-        // A dictionary and a record are one value at run time read two ways, so
-        // every field the record names must be able to be an entry. A list
-        // and a map are not asked about their elements: an empty one is of
-        // every element type there is.
-        case let (.dictionary(entry), .record(held)):
-            return held.fields.allSatisfy { field in entry.couldBothHold(field, in: table, assumingQuestions: assumingQuestions) }
-
-        case let (.record(held), .dictionary(entry)):
-            return held.fields.allSatisfy { field in field.couldBothHold(entry, in: table, assumingQuestions: assumingQuestions) }
-
-        // Two decided kinds, which is where a value either is both or is
-        // neither. Anything else this walk does not read into is the run's.
-        case let (mine, theirs):
-            guard mine.isDecidedKind, theirs.isDecidedKind else { return true }
-
-            // Asked of the judge that will settle it, not of a second opinion
-            // about what it would say. One sample per kind is enough here.
-            return LoweredType.samples.contains { sample in
-                mine.settles(sample, in: table) && theirs.settles(sample, in: table)
-            }
-        }
     }
 
     // The names joined with `&`, as a composition or a bound is spelled.
@@ -2104,77 +1852,38 @@ indirect enum LoweredType: Sendable, Equatable {
         return value
     }
 
-    private func settlingNamed(
-        _ value: Value,
-        row: Int,
-        at path: @autoclosure () -> String,
-        in table: LoweredTypeTable
-    ) throws -> Value {
-        let label = table.labels[row]
-
-        // Every name a value carries is a record's own, since a door holds
-        // an alias's name to its record before anything judges it.
-        if case let .record(record) = value, record.name != label {
-            try refuseNamed(value, at: path(), in: table)
-        }
-
-        // A value under no name is no value of the record: a literal, a
-        // record built where the record is read, a value from outside and a
-        // cast write the name before it is judged here, and a judgement
-        // writes none. A row a type stands on is a record's.
-        guard
-            case let .record(record) = value,
-            record.name != nil,
-            case let .record(held) = table.loweredTypes[row]
-        else {
-            throw mismatch(value, at: path(), in: table)
-        }
-
-        return .record(try settlingFields(value, of: held, at: path(), in: table).named(label))
-    }
-
-    // A record under a name is a value of that name alone, of no structural
-    // type and of no other record, and a place takes no name off.
-    private func refuseNamed(_ value: Value, at path: @autoclosure () -> String, in table: LoweredTypeTable) throws {
-        if case let .record(record) = value, let name = record.name {
-            throw ArgumentError("\(path()): is a \(name), and the slot declares \(rendered(in: table))")
-        }
-    }
-
-    // A value holding exactly the fields of `held`, each settled against its
+    // A record holding exactly the fields of `held`, each settled against its
     // type, built on the record's layout. Whose name it carries is asked
     // before this.
     private func settlingFields(
-        _ value: Value,
+        _ record: Record,
         of held: LoweredRecord,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Record {
-        guard value.holdsFields else { throw mismatch(value, at: path(), in: table) }
+        let layout = held.layout
 
         // A record laid out as this one is holds exactly its fields, which is
         // what a value of a record type the build judged is.
-        if case let .record(record) = value, record.layout.fields == held.layout.fields {
+        if record.names == held.names {
             return Record(
-                layout: held.layout,
+                layout: layout,
                 values: try zip(held.named, record.values).map { pair, given in
                     try pair.1.settling(given, at: "\(path()).\(pair.0)", in: table)
                 }
             )
         }
 
-        let extra = Set(value.asDictionary?.names ?? []).subtracting(held.layout.fields)
-
-        if let field = extra.min() {
+        if let field = Set(record.names).subtracting(held.names).min() {
             throw ArgumentError(
                 "\(path()).\(field): is not a field of \(rendered(in: table)), and a record holds exactly its fields"
             )
         }
 
         return Record(
-            layout: held.layout,
+            layout: layout,
             values: try held.named.map { name, field in
-                guard let given = value[name] else {
+                guard let given = record[name] else {
                     throw ArgumentError(
                         "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
                     )
@@ -2268,78 +1977,57 @@ indirect enum LoweredType: Sendable, Equatable {
         ArgumentError("\(path): expected \(rendered(in: table)), got \(value.nominal)")
     }
 
-    // The walk `fitted` and `named` share.
-    private func shaped(_ value: Value, leavingOut: Bool, in table: LoweredTypeTable) -> Value {
+    // The walk `fitted` takes: a record holding fields its declaration does
+    // not name keeps only those it names, at whatever depth a record, a list,
+    // a map or what may be null holds one, and keeps its own name.
+    private func shaped(_ value: Value, in table: LoweredTypeTable) -> Value {
         switch (self, value) {
         case let (.named(row), _):
-            let shaped = table.loweredTypes[row].shaped(value, leavingOut: leavingOut, in: table)
-
-            guard case let .record(record) = shaped, record.name == nil else { return shaped }
-
-            return .record(record.named(table.labels[row]))
+            return table.loweredTypes[row].shaped(value, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
-            return inner.shaped(value, leavingOut: leavingOut, in: table)
+            return inner.shaped(value, in: table)
 
         case let (.array(element), .array(items)) where element.reachesRecord:
-            return .array(items.map { item in element.shaped(item, leavingOut: leavingOut, in: table) })
+            return .array(items.map { item in element.shaped(item, in: table) })
 
-        case let (.dictionary(entry), .dictionary(entries)) where entry.reachesRecord:
-            return .dictionary(entries.mapValues { _, held in entry.shaped(held, leavingOut: leavingOut, in: table) })
-
-        // A nameless record read as a map holds its entries as fields.
-        case let (.dictionary(entry), .record(record)) where entry.reachesRecord:
-            return .record(Record(name: record.name, Dictionary(uniqueKeysWithValues: record.names.compactMap { name in
-                record[name].map { held in (name, entry.shaped(held, leavingOut: leavingOut, in: table)) }
-            })))
+        case let (.dictionary(key, entry), .dictionary(entries)) where key.reachesRecord || entry.reachesRecord:
+            return .dictionary(
+                entries.entries.reduce(Value.Dictionary([:])) { shaped, written in
+                    shaped.writing(key: key.shaped(written.key, in: table), with: entry.shaped(written.value, in: table))
+                }
+            )
 
         case let (.record(declared), .record(record)):
-            return .record(Record(name: record.name, fields(record.names, of: { name in record[name] }, along: declared, leavingOut: leavingOut, in: table)))
-
-        // A map read as a record type holds its entries as the record's
-        // fields.
-        case let (.record(declared), .dictionary(entries)):
-            return .record(Record(name: nil, fields(entries.names, of: { name in entries[name] }, along: declared, leavingOut: leavingOut, in: table)))
+            return .record(
+                Record(
+                    name: record.name,
+                    Dictionary(uniqueKeysWithValues: zip(record.names, record.values).compactMap { name, held in
+                        declared[name].map { field in (name, field.fieldUnwrapped.shaped(held, in: table)) }
+                    })
+                )
+            )
 
         default:
             return value
         }
     }
 
-    // The fields a record or a map holds, shaped along a record type: each
-    // the type declares by its field's type, and each it does not kept or
-    // left out.
-    private func fields(
-        _ names: [Name],
-        of read: (Name) -> Value?,
-        along declared: LoweredRecord,
-        leavingOut: Bool,
-        in table: LoweredTypeTable
-    ) -> [Name: Value] {
-        Dictionary(uniqueKeysWithValues: names.compactMap { name in
-            guard let held = read(name) else { return nil }
-            guard let field = declared[name] else { return leavingOut ? nil : (name, held) }
-
-            return (name, field.fieldUnwrapped.shaped(held, leavingOut: leavingOut, in: table))
-        })
-    }
-
-    // The walk `written`, `completing` and `naming` share: an expression
-    // standing where this is read, through what may be null and the names
-    // around it, at the depths a list, a record and the answer of a block, an
-    // attempt or a loop hand on, each at its place where one is asked for.
-    // `replacing` is asked first at each depth, with the type read there, and
-    // answers what stands in place of the expression, or nil to walk on.
+    // The walk `written` and `completing` share: an expression standing where
+    // this is read, through what may be null and the names around it, at the
+    // depths a list, a map, a record and the answer of a block, an attempt or
+    // a loop hand on. `replacing` is asked first at each depth, with the type
+    // read there, and answers what stands in place of the expression, or nil
+    // to walk on.
     private func reaching(
         _ expression: Expression,
-        at place: Place?,
         in table: LoweredTypeTable,
-        replacing: (LoweredType, Expression, Place?) -> Expression?
+        replacing: (LoweredType, Expression) -> Expression?
     ) -> Expression {
-        func answering(_ block: Block, at place: Place?) -> Block {
+        func answering(_ block: Block) -> Block {
             Block(
                 body: block.body,
-                result: block.result.map { result in reaching(result, at: place?.child(.result), in: table, replacing: replacing) }
+                result: block.result.map { result in reaching(result, in: table, replacing: replacing) }
             )
         }
 
@@ -2348,13 +2036,13 @@ indirect enum LoweredType: Sendable, Equatable {
         // it included.
         switch expression {
         case let .block(block):
-            return .block(answering(block, at: place?.child(.held)))
+            return .block(answering(block))
 
         case let .attempt(block, rescue):
-            return .attempt(answering(block, at: place?.child(.held)), rescue: answering(rescue, at: place?.child(.rescue)))
+            return .attempt(answering(block), rescue: answering(rescue))
 
         case let .loop(condition, body):
-            return .loop(while: condition, body: answering(body, at: place?.child(.held)))
+            return .loop(while: condition, body: answering(body))
 
         default:
             break
@@ -2362,22 +2050,16 @@ indirect enum LoweredType: Sendable, Equatable {
 
         switch self {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
-            return inner.reaching(expression, at: place, in: table, replacing: replacing)
+            return inner.reaching(expression, in: table, replacing: replacing)
 
-        // A declared record is asked as itself before what it stands for, so
-        // what writes a literal there knows the name it is written into.
         case let .named(row):
-            if let standing = replacing(self, expression, place) {
-                return standing
-            }
-
-            return table.loweredTypes[row].reaching(expression, at: place, in: table, replacing: replacing)
+            return table.loweredTypes[row].reaching(expression, in: table, replacing: replacing)
 
         default:
             break
         }
 
-        if let standing = replacing(self, expression, place) {
+        if let standing = replacing(self, expression) {
             return standing
         }
 
@@ -2385,18 +2067,26 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(items):
             guard let element = element(in: table) else { return expression }
 
-            return .array(items.enumerated().map { position, item in
-                element.reaching(item, at: place?.child(.element(position)), in: table, replacing: replacing)
-            })
+            return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
 
         case let .record(fields):
             return .record(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
                     (name, dotted(name, in: table).map { dotted in
-                        dotted.reaching(field, at: place?.child(.field(name)), in: table, replacing: replacing)
+                        dotted.reaching(field, in: table, replacing: replacing)
                     } ?? field)
                 })
             )
+
+        case let .dictionary(entries):
+            guard case let .dictionary(key, value) = slotUnwrapped else { return expression }
+
+            return .dictionary(entries.map { entry in
+                (
+                    key: key.reaching(entry.key, in: table, replacing: replacing),
+                    value: value.reaching(entry.value, in: table, replacing: replacing)
+                )
+            })
 
         default:
             return expression

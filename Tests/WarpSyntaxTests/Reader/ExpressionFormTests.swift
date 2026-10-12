@@ -84,7 +84,7 @@ struct ExpressionFormTests {
         let reference = try loader.expression(from: ["ref": "items[0].name"])
 
         // Then
-        #expect(reference.referencePath == [.key("items"), .index(0), .key("name")])
+        #expect(reference.referencePath == [.name("items"), .index(0), .name("name")])
     }
 
     @Test("a record's field named like a tag is a field, and reaches nothing")
@@ -184,7 +184,7 @@ struct ExpressionFormTests {
         // And. The binding is substituted, so the placeholder never names
         // anything the template was not given.
         #expect(spelled.selector == Notation.testing.interpolation?.read)
-        #expect(spelled.arguments.first?.referencePath == [.key("name")])
+        #expect(spelled.arguments.first?.referencePath == [.name("name")])
     }
 
     @Test("an index reference inside a placeholder stays inside the template")
@@ -210,7 +210,7 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(path == [.key("items"), .indexRef([.key("cursor")])])
+        #expect(path == [.name("items"), .indexRef([.name("cursor")])])
     }
 
     @Test("a placeholder drilling into a computed binding is refused")
@@ -237,7 +237,7 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(record["target"]?.referencePath == [.key("target")])
+        #expect(record["target"]?.referencePath == [.name("target")])
     }
 
     @Test("a bare mapping where a value is wanted is refused")

@@ -17,6 +17,8 @@ import Warp
 struct ValueWalk {
     // One step of the walk. A container that holds something is followed by
     // what it holds and then its close; an empty one is closed where it opens.
+    // A map's entry is `key`, the key's own steps, then the value's; a
+    // record's field is `field` and then the value's steps.
     enum Step {
         case null
         case bool(Bool)
@@ -25,24 +27,33 @@ struct ValueWalk {
         case string(String)
         case bytes([UInt8])
         case array(count: Int)
-        case record(name: Name?, count: Int)
-        case key(Name)
+        case map(count: Int)
+        case record(name: Name, count: Int)
+        case key
+        case field(Name)
         case arrayClose
+        case mapClose
         case recordClose
     }
 
-    // A container being written into: what of it is still to go.
+    // What is still to go: what a container holds, or the value of an entry
+    // whose key is being walked.
     private enum Opened {
         case elements(ArraySlice<Value>)
+        case entries(ArraySlice<(key: Value, value: Value)>)
         case fields(ArraySlice<(name: Name, value: Value)>)
+        case value(Value)
     }
 
     // MARK: - Property
     // The value to take apart next: the whole tree first, and then each
-    // field's value after its key.
+    // field's value after its name and each entry's key after its mark.
     private var pending: Value?
 
     private var opened: [Opened] = []
+
+    // How many containers are open around the next step.
+    private var containers = 0
 
     // MARK: - Initializer
     init(_ value: Value) {
@@ -61,19 +72,33 @@ struct ValueWalk {
 
         switch container {
         case var .elements(rest):
-            guard let element = rest.popFirst() else { return .arrayClose }
+            guard let element = rest.popFirst() else { return closing(.arrayClose) }
 
             opened.append(.elements(rest))
 
             return try step(element)
 
+        // The value waits beneath the key, so a key that is a container is
+        // walked whole before the value it stands for.
+        case var .entries(rest):
+            guard let entry = rest.popFirst() else { return closing(.mapClose) }
+
+            opened.append(.entries(rest))
+            opened.append(.value(entry.value))
+            pending = entry.key
+
+            return .key
+
         case var .fields(rest):
-            guard let field = rest.popFirst() else { return .recordClose }
+            guard let field = rest.popFirst() else { return closing(.recordClose) }
 
             opened.append(.fields(rest))
             pending = field.value
 
-            return .key(field.name)
+            return .field(field.name)
+
+        case let .value(value):
+            return try step(value)
         }
     }
 
@@ -106,43 +131,47 @@ struct ValueWalk {
             return .bytes(bytes)
 
         case let .array(elements):
-            try opening()
-
-            if !elements.isEmpty {
-                opened.append(.elements(elements[...]))
-            }
+            try opening(elements.isEmpty ? nil : .elements(elements[...]))
 
             return .array(count: elements.count)
 
-        case let .record(record):
-            return try opening(record.asDictionary, named: record.name)
-
+        // In the key order the map holds them in, which is the order written.
         case let .dictionary(held):
-            return try opening(held, named: nil)
+            try opening(held.isEmpty ? nil : .entries(held.entries[...]))
+
+            return .map(count: held.count)
+
+        // In the order the layout holds the names in, which is their bytes'.
+        case let .record(record):
+            let fields = zip(record.names, record.values).map { name, value in (name: name, value: value) }
+
+            try opening(fields.isEmpty ? nil : .fields(fields[...]))
+
+            return .record(name: record.name, count: fields.count)
 
         case .procedure:
             throw EncodingRefused("a procedure is code, and data is what a document spells")
         }
     }
 
-    // Fields under names, with the name of the layout they stood on where
-    // there was one. Held in byte order, the order written.
-    private mutating func opening(_ held: Value.Dictionary, named name: Name?) throws -> Step {
-        try opening()
-
-        if !held.isEmpty {
-            opened.append(.fields(held.entries[...]))
-        }
-
-        return .record(name: name, count: held.count)
-    }
-
     // The same count a reader keeps: containers open around this one, and
     // this one is one more of them. Counted where a container opens, so an
-    // empty one past the bound is refused the same as a full one.
-    private func opening() throws {
-        guard opened.count < Value.nestingBound else {
+    // empty one past the bound is refused the same as a full one, which
+    // closes where it opens and leaves nothing to walk.
+    private mutating func opening(_ held: Opened?) throws {
+        guard containers < Value.nestingBound else {
             throw EncodingRefused("the value nests deeper than a document may")
         }
+
+        guard let held else { return }
+
+        opened.append(held)
+        containers += 1
+    }
+
+    private mutating func closing(_ step: Step) -> Step {
+        containers -= 1
+
+        return step
     }
 }

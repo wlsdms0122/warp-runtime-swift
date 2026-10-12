@@ -35,6 +35,33 @@ struct MutatorTests {
         )
     }
 
+    @Test("walks every entry of a map, whatever its keys")
+    func everyEntryOfAMapIsWalked() throws {
+        // Given
+        let map = Value.dictionary(
+            try Value.Dictionary([
+                (key: .int(1), value: .int(1)),
+                (key: .string("a"), value: .int(2)),
+                (key: .array([.bool(true)]), value: .int(3))
+            ])
+        )
+
+        let replaced = Value.dictionary(
+            try Value.Dictionary([
+                (key: .int(1), value: .int(-1)),
+                (key: .string("a"), value: .int(2)),
+                (key: .array([.bool(true)]), value: .int(3))
+            ])
+        )
+
+        // When
+        let mutations = sut.mutations(of: map)
+
+        // Then. The map and the value under each of its keys is a place
+        #expect(sut.placeCount(of: map) == 4)
+        #expect(mutations.contains { mutation in mutation.path == "1" && mutation.value == replaced })
+    }
+
     // MARK: - Public
     // MARK: - Private
 }

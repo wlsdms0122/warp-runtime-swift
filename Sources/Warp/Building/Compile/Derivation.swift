@@ -166,6 +166,9 @@ struct Derivation {
         case let .record(record):
             return record.values.reduce(here) { carried, field in carried.joined(read(field)) }
 
+        case let .dictionary(entries):
+            return entries.reduce(here) { carried, entry in carried.joined(read(entry.key)).joined(read(entry.value)) }
+
         case let .call(call):
             return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
 
@@ -210,7 +213,7 @@ struct Derivation {
         case let .call(call):
             return failing(call.selector) ?? .unstated
 
-        case .literal, .reference, .closure, .array, .record, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .array, .record, .dictionary, .block, .conditional, .loop, .attempt, .leave:
             return .these([])
         }
     }
@@ -437,6 +440,9 @@ struct Derivation {
         case let .record(record):
             return record.values.allSatisfy(holds)
 
+        case let .dictionary(entries):
+            return entries.allSatisfy { entry in holds(entry.key) && holds(entry.value) }
+
         case let .call(call):
             guard fact.callee(call.selector) else { return false }
 
@@ -480,9 +486,9 @@ struct Derivation {
 
     // The type this reads, as the slot it came out of says it, and nil where
     // it came out of none. The head is a name a slot declared, and the walk
-    // follows that type past it: an index reads an element of an array or a
-    // dictionary, and a dot reads an entry of a dictionary or a field a record
-    // type declares. An array or a dictionary of them says it about every
+    // follows that type past it: brackets read an element of a list or an
+    // entry of a map, and a dot reads a field a record type declares. An
+    // array or a dictionary of them says it about every
     // element, and the value was settled against that type when it was handed
     // over, so what the type says of the part is what the slot said. A name no
     // slot declared says nothing, and anything that is not a name has no slot
@@ -499,7 +505,7 @@ struct Derivation {
             case .index, .indexRef:
                 return reached?.element(in: table)
 
-            case let .key(name, _):
+            case let .name(name, _):
                 return reached?.dotted(name, in: table)
             }
         }

@@ -1169,7 +1169,7 @@ enum Library {
                 "Standard.Collection.values" {
                   body [
                     {
-                      let "names"
+                      let "keys"
                       value {
                         call {
                           arguments [
@@ -1191,9 +1191,9 @@ enum Library {
                         loop {
                           body [
                             {
-                              let "name"
+                              let "key"
                               value {
-                                ref "names[walk.index]"
+                                ref "keys[walk.index]"
                               }
                             }
                             {
@@ -1205,7 +1205,7 @@ enum Library {
                                       ref "held"
                                     }
                                     {
-                                      ref "dictionary[name]"
+                                      ref "dictionary[key]"
                                     }
                                   ]
                                   procedure "Standard.Collection.appending"
@@ -1223,7 +1223,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "names"
+                                        ref "keys"
                                       }
                                     ]
                                     procedure "Standard.Collection.count"
@@ -1237,11 +1237,14 @@ enum Library {
                       }
                     }
                   ]
-                  description "What a map holds, by its names in order."
+                  bounds {
+                    Key "Hashable"
+                  }
+                  description "What a map holds, by its keys in the key order."
                   parameters [
                     {
                       name "dictionary"
-                      type "Dictionary<some Entry>"
+                      type "Dictionary<some Key, some Entry>"
                     }
                   ]
                   result {

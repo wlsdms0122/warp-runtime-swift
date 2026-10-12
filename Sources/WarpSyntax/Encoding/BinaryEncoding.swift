@@ -13,10 +13,10 @@ import Warp
 // - **A whole number and a fraction are different bytes.** They are different
 //   tags.
 // - **The same document is the same bytes, both ways.** The writer writes
-//   record keys in byte order and every number minimally, and the reader
-//   refuses bytes the writer would not have written, so byte equality and
-//   document equality are the same question, which is what makes a document
-//   signable and cacheable.
+//   a map's keys in the key order, a record's fields in byte order and every
+//   number minimally, and the reader refuses bytes the writer would not have
+//   written, so byte equality and document equality are the same question,
+//   which is what makes a document signable and cacheable.
 // - **What cannot arrive is refused before it arrives.** Truncation, trailing
 //   bytes, an unknown tag, a key out of order. Each is a refusal with a name,
 //   not a value somebody guessed.
@@ -34,19 +34,20 @@ public struct BinaryEncoding {
         case double = 0x04
         case string = 0x05
         case array = 0x06
-        case record = 0x07
+        case map = 0x07
         case bytes = 0x08
-        case namedRecord = 0x09
+        case record = 0x09
     }
 
-    // A container being put back together: what it still expects, what it holds
-    // so far, and (for a record) the key the next value belongs to and the last
-    // key seen, so order is held against the one before. A sum rather
-    // than two optionals, so "neither" and "both" are not states the code has
-    // to promise never to reach.
+    // A container being put back together: what it still expects and what it
+    // holds so far. A map waits for a key where `key` is nil and for the value
+    // under one where it is not, and the key before is the last one held, so
+    // order is held against it. A record holds the name of the field the next
+    // value belongs to and that name's bytes, its order held the same way.
     private enum Opened {
         case array(expecting: Int, held: [Value])
-        case record(expecting: Int, held: [(name: Name, value: Value)], key: Name, previous: [UInt8], name: Name?)
+        case map(expecting: Int, held: [(key: Value, value: Value)], key: Value?)
+        case record(expecting: Int, held: [(name: Name, value: Value)], field: Name, previous: [UInt8], name: Name)
     }
 
     // A place in the bytes.
@@ -152,9 +153,19 @@ public struct BinaryEncoding {
     // MARK: - Private
     // A record read out of the bytes, refused in this encoding's words where
     // its name is one no value may carry.
-    private func record(_ held: [(name: Name, value: Value)], named name: Name?) throws -> Value {
+    private func record(_ held: [(name: Name, value: Value)], named name: Name) throws -> Value {
         do {
             return try .holding(held, named: name)
+        } catch let refusal as ValueRefused {
+            throw EncodingRefused(refusal.message)
+        }
+    }
+
+    // A map read out of the bytes. Its keys arrived ascending, so none is the
+    // same as another.
+    private func map(_ held: [(key: Value, value: Value)]) throws -> Value {
+        do {
+            return .dictionary(try Value.Dictionary(held))
         } catch let refusal as ValueRefused {
             throw EncodingRefused(refusal.message)
         }
@@ -196,24 +207,25 @@ public struct BinaryEncoding {
 
                 write(UInt64(count), into: &bytes)
 
-            // A record under a name is written under its own tag with the name
-            // in front, so a reader that met the tag knows a name follows.
-            case let .record(name, count):
-                if let name {
-                    bytes.append(Tag.namedRecord.rawValue)
-
-                    write(Array(name.spelling.utf8), into: &bytes)
-                } else {
-                    bytes.append(Tag.record.rawValue)
-                }
+            case let .map(count):
+                bytes.append(Tag.map.rawValue)
 
                 write(UInt64(count), into: &bytes)
 
-            case let .key(name):
+            // A record is written under its own tag with its name in front, so
+            // a reader that met the tag knows a name follows.
+            case let .record(name, count):
+                bytes.append(Tag.record.rawValue)
+
+                write(Array(name.spelling.utf8), into: &bytes)
+                write(UInt64(count), into: &bytes)
+
+            case let .field(name):
                 write(Array(name.spelling.utf8), into: &bytes)
 
-            // A count said how much was held, so nothing marks the end.
-            case .arrayClose, .recordClose:
+            // A key is a value written in full, and a count said how much was
+            // held, so nothing marks either.
+            case .key, .arrayClose, .mapClose, .recordClose:
                 break
             }
         }
@@ -311,10 +323,26 @@ public struct BinaryEncoding {
                     opened.append(.array(expecting: count, held: held))
                 }
 
-            case .record, .namedRecord:
+            // An entry costs its key and its value, a byte each at the least.
+            case .map:
                 try opening(opened)
 
-                let name = try tag == .namedRecord ? name(from: &reading) : nil
+                let count = try length(from: &reading, of: "a map", costing: 2)
+
+                if count == 0 {
+                    completed = .dictionary([:])
+                } else {
+                    var held: [(key: Value, value: Value)] = []
+
+                    held.reserveCapacity(count)
+
+                    opened.append(.map(expecting: count, held: held, key: nil))
+                }
+
+            case .record:
+                try opening(opened)
+
+                let name = try name(from: &reading)
                 let count = try length(from: &reading, of: "a record", costing: 2)
 
                 if count == 0 {
@@ -324,9 +352,9 @@ public struct BinaryEncoding {
 
                     held.reserveCapacity(count)
 
-                    let (key, raw) = try field(from: &reading, after: nil)
+                    let (field, raw) = try field(from: &reading, after: nil)
 
-                    opened.append(.record(expecting: count, held: held, key: key, previous: raw, name: name))
+                    opened.append(.record(expecting: count, held: held, field: field, previous: raw, name: name))
                 }
             }
 
@@ -348,21 +376,41 @@ public struct BinaryEncoding {
                         opened.append(.array(expecting: expecting - 1, held: held))
                     }
 
-                case let .record(expecting, held, key, previous, name):
+                // A key arrived. Strictly ascending in the key order, which
+                // refuses a shuffle and a key the same as the one before with
+                // the same sentence: these are bytes the writer would not write.
+                case let .map(expecting, held, nil):
+                    if let previous = held.last?.key, Value.Dictionary.order(previous, value) != .orderedAscending {
+                        throw EncodingRefused("the map's keys are not written in order")
+                    }
+
+                    opened.append(.map(expecting: expecting, held: held, key: value))
+
+                case let .map(expecting, held, key?):
                     var held = held
-                    // Ordered and unique because the keys arrived strictly
+                    held.append((key: key, value: value))
+
+                    if expecting == 1 {
+                        completed = try map(held)
+                    } else {
+                        opened.append(.map(expecting: expecting - 1, held: held, key: nil))
+                    }
+
+                case let .record(expecting, held, field, previous, name):
+                    var held = held
+                    // Ordered and unique because the names arrived strictly
                     // ascending and in NFC: byte order refuses a byte-equal
                     // duplicate, and NFC leaves one name one byte spelling to
                     // be equal in. The record's sort meets them in order.
-                    held.append((name: key, value: value))
+                    held.append((name: field, value: value))
 
                     if expecting == 1 {
                         completed = try record(held, named: name)
                     } else {
-                        let (next, raw) = try field(from: &reading, after: previous)
+                        let (next, raw) = try self.field(from: &reading, after: previous)
 
                         opened.append(
-                            .record(expecting: expecting - 1, held: held, key: next, previous: raw, name: name)
+                            .record(expecting: expecting - 1, held: held, field: next, previous: raw, name: name)
                         )
                     }
                 }
@@ -370,23 +418,24 @@ public struct BinaryEncoding {
         }
     }
 
-    // The next field a record waits for. Strictly ascending, which refuses a
-    // duplicate and a shuffle with the same sentence: these are bytes the
-    // writer would not write. NFC, so that byte order is an order on names. A
-    // name with a second byte spelling would sort to a second place.
+    // The name of the next field a record waits for. Strictly ascending,
+    // which refuses a duplicate and a shuffle with the same sentence: these
+    // are bytes the writer would not write. NFC, so that byte order is an
+    // order on names. A name with a second byte spelling would sort to a
+    // second place.
     private func field(
         from reading: inout Cursor,
         after previous: [UInt8]?
     ) throws -> (Name, [UInt8]) {
-        let key = try text(from: &reading)
-        let raw = Array(key.utf8)
+        let spelling = try text(from: &reading)
+        let raw = Array(spelling.utf8)
 
         if let previous, !previous.lexicographicallyPrecedes(raw) {
-            throw EncodingRefused("the record's keys are not written in order")
+            throw EncodingRefused("the record's fields are not written in order")
         }
 
         do {
-            return (try Name(key), raw)
+            return (try Name(spelling), raw)
         } catch let refusal as NameRefused {
             throw EncodingRefused(refusal.message)
         }

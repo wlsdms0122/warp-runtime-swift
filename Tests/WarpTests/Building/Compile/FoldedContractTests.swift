@@ -116,7 +116,7 @@ struct FoldedContractTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("zzz")])
+                    result: .reference([.name("zzz")])
                 )
             ]
         )
@@ -202,7 +202,7 @@ struct FoldedContractTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )

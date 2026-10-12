@@ -41,6 +41,12 @@ extension Expression: Traversable {
             record.sorted { mine, theirs in mine.key < theirs.key }
                 .flatMap { name, field in inner(field, as: .field(name)) }
 
+        // In the order written, each key before its value.
+        case let .dictionary(entries):
+            entries.enumerated().flatMap { position, entry in
+                inner(entry.key, as: .entryKey(position)) + inner(entry.value, as: .entryValue(position))
+            }
+
         // What a call or an application is written with, walked in position
         // order and each given its own place: two of them reported from the
         // same one would say a thing is wrong and not say which.

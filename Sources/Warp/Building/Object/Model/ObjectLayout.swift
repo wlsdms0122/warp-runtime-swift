@@ -49,6 +49,7 @@ enum ObjectLayout {
         case array
         case record
         case closure
+        case dictionary
     }
 
     // The declaration that wrote a closure.
@@ -81,7 +82,7 @@ enum ObjectLayout {
     }
 
     enum SegmentTag: Int {
-        case key
+        case name
         case index
         case indexRef
     }
@@ -140,6 +141,7 @@ enum ObjectLayout {
         case rescue
         case fields
         case bounds
+        case entries
     }
 
     enum ConditionHolderTag: Int {
@@ -160,6 +162,7 @@ enum ObjectLayout {
         case attempt
         case call
         case leave
+        case dictionary
     }
 
     enum ReachTag: Int {
@@ -168,26 +171,27 @@ enum ObjectLayout {
         case round
     }
 
-    // A type as a body stands on it.
+    // A type as a body stands on it. Each tag is the number the page gives
+    // it, written out, so a kind leaving takes its number with it and moves
+    // no other.
     enum LoweredTypeTag: Int {
-        case any
-        case never
-        case null
-        case bool
-        case int
-        case double
-        case string
-        case array
-        case dictionary
-        case record
-        case procedure
-        case variable
-        case `inout`
-        case nullable
-        case named
-        case parameter
-        case composition
-        case projection
+        case any = 0
+        case never = 1
+        case null = 2
+        case bool = 3
+        case int = 4
+        case double = 5
+        case string = 6
+        case array = 7
+        case dictionary = 8
+        case procedure = 10
+        case variable = 11
+        case `inout` = 12
+        case nullable = 13
+        case named = 14
+        case parameter = 15
+        case composition = 16
+        case projection = 17
     }
 
     enum ImplementationTag: Int {
@@ -204,7 +208,7 @@ enum ObjectLayout {
     // A step of an address.
     enum StepTag: Int {
         case field
-        case key
+        case name
         case index
         case at
     }
@@ -224,6 +228,7 @@ enum ObjectLayout {
         case call
         case dispatch
         case leave
+        case dictionary
     }
 
     enum ArgumentTag: Int {

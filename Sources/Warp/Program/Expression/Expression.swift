@@ -18,6 +18,7 @@ import Foundation
 //   reference . A name to resolve in the scope that reads it
 //   array     . Elements are expressions
 //   record    . Fields are expressions
+//   dictionary. Entries are a key and a value, each an expression
 //   call      . The procedure it names and its arguments by position
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
@@ -35,6 +36,11 @@ public indirect enum Expression: Sendable {
     case reference(Path)
     case array([Expression])
     case record([Name: Expression])
+
+    // A map: its entries in the order they are written, each a key and a
+    // value. The entries are made in order, so a key written twice keeps the
+    // later value.
+    case dictionary([(key: Expression, value: Expression)])
 
     // A procedure written where a value is wanted. Evaluating it captures the
     // scope it was written in, which is the whole of what makes it a closure.
@@ -86,6 +92,10 @@ public indirect enum Expression: Sendable {
         // A record's field.
         case field(Name)
 
+        // A map literal's entry at a position, its key or its value.
+        case entryKey(Int)
+        case entryValue(Int)
+
         // The block a closure literal carries.
         case closure
 
@@ -115,6 +125,8 @@ public indirect enum Expression: Sendable {
             switch self {
             case let .element(position): [.index(position)]
             case let .field(name): [.part(.fields), .key(name.spelling)]
+            case let .entryKey(position): [.part(.entries), .index(position), .index(0)]
+            case let .entryValue(position): [.part(.entries), .index(position), .index(1)]
             case .closure: [.part(.closure)]
             case let .subject(optional): [.part(.subject(optional: optional))]
             case .callee: [.part(.callee)]
@@ -151,6 +163,7 @@ public indirect enum Expression: Sendable {
         case .reference: .reference
         case .array: .array
         case .record: .record
+        case .dictionary: .dictionary
         case .closure: .closure
         case .cast: .cast
         case .apply: .call
@@ -181,11 +194,6 @@ public indirect enum Expression: Sendable {
             let values = array.compactMap(\.constantValue)
 
             return values.count == array.count ? .array(values) : nil
-
-        case let .record(record):
-            let values = record.compactMapValues(\.constantValue)
-
-            return values.count == record.count ? .record(Record(name: nil, values)) : nil
 
         default:
             return nil
@@ -248,6 +256,9 @@ public indirect enum Expression: Sendable {
         case let .record(record):
             return record.values.contains { field in field.holdsConstruct }
 
+        case let .dictionary(entries):
+            return entries.contains { entry in entry.key.holdsConstruct || entry.value.holdsConstruct }
+
         case let .apply(callee, arguments):
             return callee.holdsConstruct
                 || arguments.contains { argument in argument.holdsConstruct }
@@ -278,6 +289,9 @@ public indirect enum Expression: Sendable {
 
         case let .record(record):
             return record.values.contains { field in field.callsValue }
+
+        case let .dictionary(entries):
+            return entries.contains { entry in entry.key.callsValue || entry.value.callsValue }
 
         case .apply:
             return true

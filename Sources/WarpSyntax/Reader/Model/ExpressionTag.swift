@@ -13,6 +13,7 @@ import Warp
 enum ExpressionTag: String, CaseIterable, Sendable {
     case reference = "ref"
     case record
+    case dictionary
     case call
     case closure
     case cast = "as"

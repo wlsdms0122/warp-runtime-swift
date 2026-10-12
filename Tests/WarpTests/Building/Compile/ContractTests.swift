@@ -304,7 +304,7 @@ struct ContractTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("of"), .key("balance")])
+                    result: .reference([.name("of"), .name("balance")])
                 )
             ]
         )
@@ -369,7 +369,7 @@ struct ContractTests {
     func aClaimNamesWhatItIsAbout() async throws {
         // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .int],
+            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .alias(.int)],
             claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -456,7 +456,7 @@ struct ContractTests {
     func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
-            types: ["App.Thing": .int],
+            types: ["App.Thing": .alias(.int)],
             contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -587,7 +587,7 @@ struct ContractTests {
     // Two types that describe themselves, a contract asking for it, and a
     // generic procedure standing between the caller and both.
     private func describing(
-        types extra: [Name: TypeExpression] = [:],
+        types extra: [Name: TypeDeclaration] = [:],
         procedures added: [Name: Procedure] = [:],
         body: Body,
         result: Warp.Expression
@@ -625,7 +625,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("balance "),
-                        spelling(.reference([.key("of"), .key("balance")]))
+                        spelling(.reference([.name("of"), .name("balance")]))
                     )
                 ),
                 "Bank.Card.describe": Procedure(
@@ -636,7 +636,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("card "),
-                        spelling(.reference([.key("of"), .key("last")]))
+                        spelling(.reference([.name("of"), .name("last")]))
                     )
                 )
             ].merging(added) { _, given in given }

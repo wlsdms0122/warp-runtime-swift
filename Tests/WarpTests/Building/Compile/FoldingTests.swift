@@ -30,7 +30,7 @@ struct FoldingTests {
     @Test("ref resolution preserves the type")
     func refResolutionPreservesType() async throws {
         // Given
-        let reference: Path = [.key("count")]
+        let reference: Path = [.name("count")]
 
         // When
         let value = try await sut.read(reference, at: .given("test"))
@@ -42,7 +42,7 @@ struct FoldingTests {
     @Test("a null value flows through a ref untouched")
     func nullPassesThroughRef() async throws {
         // Given
-        let reference: Path = [.key("maybe")]
+        let reference: Path = [.name("maybe")]
 
         // When
         let value = try await sut.read(reference, at: .given("test"))
@@ -63,11 +63,11 @@ struct FoldingTests {
         #expect(value == .string("amount=null"))
     }
 
-    @Test("a field nobody set reads as null where the author marked it")
+    @Test("an entry nobody set reads as null where the author marked it")
     func absentPathReadsAsNull() async throws {
         // Given. The head of every reference is checked at load, so what is
-        // left to be absent at run time is a field nobody set
-        let reference: Path = [.key("record"), .key("gone", optional: true)]
+        // left to be absent at run time is an entry nobody set
+        let reference: Path = [.name("record"), .index("gone", optional: true)]
 
         // When / Then
         #expect(try await sut.read(reference, at: .given("test")) == .null)
@@ -76,7 +76,7 @@ struct FoldingTests {
     @Test("a type-misusing path throws ReferenceUnfit")
     func typeMisuseThrowsUnfit() async {
         // Given
-        let reference: Path = [.key("count"), .key("field")]
+        let reference: Path = [.name("count"), .name("field")]
 
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
@@ -87,8 +87,8 @@ struct FoldingTests {
     @Test("nested structure resolves element by element")
     func nestedStructureResolves() async throws {
         // Given
-        let reference = Expression.record([
-            "n": .reference([.key("count")]),
+        let reference = map([
+            "n": .reference([.name("count")]),
             "list": .array([.literal(.string("x"))])
         ])
 
@@ -113,20 +113,20 @@ struct FoldingTests {
 
     @Test("a quoted payload passes verbatim, unevaluated")
     func quotedPayloadPassesVerbatim() async throws {
-        // Given. The payload is data: a ref-shaped record inside stays a record
-        let reference = Expression.literal(.record(Record(name: nil, [
+        // Given. The payload is data: a ref-shaped map inside stays a map
+        let reference = Expression.literal(.dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
-        ])))
+        ]))
 
         // When
         let value = try await read(reference)
 
         // Then. Nothing evaluated, nothing rendered
-        #expect(value == .record(Record(name: nil, [
+        #expect(value == .dictionary([
             "ref": .string("count"),
             "note": .string("${count}")
-        ])))
+        ]))
     }
 
     // MARK: - Public

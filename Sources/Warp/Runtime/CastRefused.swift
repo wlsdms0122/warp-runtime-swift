@@ -38,8 +38,8 @@ public struct CastRefused: RecoverableFailure {
 
     // Both halves ride in the payload's box, so a rescue can say which cast
     // it was and branch on what turned up.
-    public var details: [Name: Value] {
-        ["expected": .string(expected), "actual": .string(actual)]
+    public var details: Value.Dictionary {
+        Value.Dictionary(["expected": .string(expected), "actual": .string(actual)])
     }
 
     // MARK: - Initializer

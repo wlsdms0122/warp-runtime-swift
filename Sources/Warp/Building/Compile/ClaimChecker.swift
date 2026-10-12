@@ -170,7 +170,7 @@ struct ClaimChecker {
     private func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable
@@ -205,7 +205,7 @@ struct ClaimChecker {
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable
@@ -366,8 +366,14 @@ struct ClaimChecker {
         }
 
         // The contract's procedure as the claim reads it: `Self` is the type
-        // the claim is about, wherever it stands.
-        let substituted = asked.replacingSelf(with: claimed)
+        // the claim is about, wherever it stands, its own parameters held to
+        // what the language holds them to.
+        let replaced = asked.replacingSelf(with: claimed)
+        let substituted = Signature(
+            parameters: replaced.parameters,
+            returns: replaced.returns,
+            bounds: replaced.bounds.merging(TypeExpression.nominalBounds) { mine, _ in mine }
+        )
         let takes = given.lowered(in: loweredTypes).map(\.type)
         let asks = substituted.lowered(in: loweredTypes).map(\.type)
         let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)

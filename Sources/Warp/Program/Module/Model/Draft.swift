@@ -62,7 +62,7 @@ public struct Draft: Sendable {
     // module resolves this; here it is still only what was written.
     public private(set) var imports: Set<Name>?
 
-    public let types: [Name: TypeExpression]
+    public let types: [Name: TypeDeclaration]
 
     // Contracts this module declares: a name bound to the procedures a value's
     // type must answer to stand under it. Each procedure is a signature the
@@ -113,7 +113,7 @@ public struct Draft: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
@@ -240,7 +240,7 @@ public struct Draft: Sendable {
 
         return Reading(
             sends: sent.subtracting(declaredProcedures),
-            mentions: named.subtracting(declaredTypes),
+            mentions: named.subtracting(declaredTypes).subtracting(Prelude.names),
             closures: counts
         )
     }

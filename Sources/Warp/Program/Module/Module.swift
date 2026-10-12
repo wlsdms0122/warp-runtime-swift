@@ -53,7 +53,7 @@ public struct Module: Sendable {
     // `TypeExpression`, which is the same thing a procedure is with a body in
     // place of a type. A module declares, and what it declares differs only in
     // what kind of thing the name stands for.
-    public var types: [Name: TypeExpression] { source.types }
+    public var types: [Name: TypeDeclaration] { source.types }
 
     // Contracts this module declares: a name bound to the procedures a value's
     // type must answer to stand under it. A contract is an open set of types,
@@ -123,7 +123,7 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
@@ -150,7 +150,7 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],

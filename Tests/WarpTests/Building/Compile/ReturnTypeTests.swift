@@ -31,7 +31,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -57,7 +57,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -102,7 +102,7 @@ struct ReturnTypeTests {
         #expect(refusal?.message.contains("declaration promises Int") == true)
     }
 
-    @Test("a record literal answered where a declared record is promised takes the name, and a nameless value does not")
+    @Test("a record literal answered where a declared record is promised takes the name, and one a name that declares nothing holds refuses")
     func aLiteralAnsweredTakesTheDeclaredName() async throws {
         // Given. The same list written straight into the answer, and held
         // first by a name that says nothing of the record
@@ -122,13 +122,13 @@ struct ReturnTypeTests {
 
         let written = try module(answering: .array([.record(["id": .literal(.string("a"))])]))
         let held = try module(
-            answering: .reference([.key("made")]),
+            answering: .reference([.name("made")]),
             holding: [Statement(binding: .constant("made"), expression: .array([.record(["id": .literal(.string("a"))])]))]
         )
 
         // When / Then. A literal is written where the promise stands, so it
-        // is a `Task`; a name holds a list of nameless records, and a place
-        // gives no value a name
+        // is a `Task`; a name that declares nothing reads no declared record,
+        // so the literal it holds has none to be
         let image = try await builder.build([written])
 
         #expect(try await Executor().run(image) == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
@@ -136,7 +136,7 @@ struct ReturnTypeTests {
         await #expect {
             try await builder.build([held])
         } throws: { error in
-            error is BuildError && "\(error)".contains("declaration promises Array<Task>")
+            error is BuildError && "\(error)".contains("a record literal is written where a declared record is read")
         }
     }
 

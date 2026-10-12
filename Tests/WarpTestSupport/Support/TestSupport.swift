@@ -121,7 +121,17 @@ public func validates(body: Body, visible: Set<Name> = []) -> Bool {
 // A reference from segment names, written directly. A path is what the language
 // has, and the spelling belongs to whatever produced it.
 public func reference(_ names: Name...) -> Warp.Expression {
-    .reference(Path(names.map { name in .key(name) }))
+    .reference(Path(names.map { name in .name(name) }))
+}
+
+// A map literal keyed by text: what a test answers several values at once
+// with, each under its own key.
+public func map(_ entries: [Name: Warp.Expression]) -> Warp.Expression {
+    .dictionary(
+        entries.sorted { one, other in one.key < other.key }.map { name, value in
+            (key: .literal(.string(name.spelling)), value: value)
+        }
+    )
 }
 
 // MARK: - Conditions

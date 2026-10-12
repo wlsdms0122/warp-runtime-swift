@@ -12,26 +12,22 @@ import Foundation
 // violations) do not carry the marker, so they surface instead.
 //
 // While a rescue runs, the failure is a value: the run binds `payload` under
-// the attempt's name, so a rescue body reads `<name>.message` and, under
+// the attempt's name, so a rescue body reads `<name>.message` and, in the map
 // `<name>.details`, whatever else that failure carries.
 public protocol RecoverableFailure: WarpError {
     // What this failure names itself.
     var type: String { get }
 
-    // Whatever this failure carries beyond the envelope.
-    var details: [Name: Value] { get }
+    // Whatever this failure carries beyond the envelope, under text keys.
+    var details: Value.Dictionary { get }
 }
 
 public extension RecoverableFailure {
-    var details: [Name: Value] { [:] }
+    var details: Value.Dictionary { Value.Dictionary([:]) }
 
-    // Built here and not by a conformer, so every payload is the envelope
-    // `FailurePayload` declares.
+    // Built here and not by a conformer, so every payload is the record
+    // `Failure` the language declares.
     var payload: Value {
-        .dictionary([
-            FailurePayload.type: .string(type),
-            FailurePayload.message: .string(message),
-            FailurePayload.details: .dictionary(details)
-        ])
+        .record(Record(layout: Prelude.failure, values: [.dictionary(details), .string(message), .string(type)]))
     }
 }

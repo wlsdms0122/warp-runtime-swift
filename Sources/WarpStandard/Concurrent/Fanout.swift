@@ -26,23 +26,21 @@ struct Fanout: Sendable {
     // group needs for its child results.
     private struct Outcome: Sendable {
         // MARK: - Property
-        let key: Name?
+        let key: Value
         let position: Int
         let value: Value?
         let failure: (any Error)?
-
-        var label: Name { key ?? Name(normal: "[\(position)]") }
 
         // MARK: - Initializer
         // MARK: - Public
         // MARK: - Private
     }
 
-    // One closure to run: its name if its author gave one, and where it sat.
-    // How a piece is reported is `Outcome`'s to derive.
+    // One closure to run: its key, the map's key it stood under or its
+    // position in a list, and where it sat.
     private struct Piece: Sendable {
         // MARK: - Property
-        let key: Name?
+        let key: Value
         let position: Int
         let closure: Closure
 
@@ -64,7 +62,7 @@ struct Fanout: Sendable {
 
     // MARK: - Public
     // Every piece, waited for. A failure fails the whole procedure, and every
-    // piece's failure is reported, keyed by the piece's label: which failures
+    // piece's failure is reported, under the piece's key: which failures
     // there are is not allowed to depend on timing.
     func all<P: NativeProcedure>(
         _ invocation: Invocation<P>
@@ -76,7 +74,7 @@ struct Fanout: Sendable {
 
         guard failures.isEmpty else { throw failure(among: failures) }
 
-        return try answered(outcomes, keyed: keyed)
+        return answered(outcomes, keyed: keyed)
     }
 
     // The first success, with the rest asked to stop. Which piece wins is the
@@ -84,9 +82,9 @@ struct Fanout: Sendable {
     func first<P: NativeProcedure>(
         _ invocation: Invocation<P>
     ) async throws -> Value where P.Parameters == FanoutOperand {
-        // The keys of a record are not wasted on a `first`. The winner's is
+        // The keys of a map are not wasted on a `first`. The winner's is
         // not reported, but a failure's is: when nothing wins, every piece's
-        // failure comes back keyed by the name its author gave it.
+        // failure comes back under the key its author gave it.
         let (pieces, _) = try closures(of: invocation)
 
         // A `first` with nothing in it has nothing to win it, and waiting for
@@ -107,27 +105,24 @@ struct Fanout: Sendable {
     }
 
     // MARK: - Private
-    // One piece per name, in the order the names stand.
+    // One piece per entry, in the key order the map holds them in.
     private func pieces(of held: Value.Dictionary) throws -> [Piece] {
         try held.entries.enumerated().map { position, entry in
             Piece(
-                key: entry.name,
+                key: entry.key,
                 position: position,
                 closure: try closure(entry.value)
             )
         }
     }
 
-    // What the fan-out was handed. Closures to run, under names for named
-    // pieces or an array for positional ones. Which one arrived decides the
-    // type of the answer.
+    // What the fan-out was handed. Closures to run, under keys in a map or
+    // at positions in an array, a position being a list piece's key. Which
+    // one arrived decides the type of the answer.
     private func closures<P: NativeProcedure>(
         of invocation: Invocation<P>
     ) throws -> ([Piece], keyed: Bool) where P.Parameters == FanoutOperand {
         switch invocation[.pieces] {
-        case let .record(record):
-            return (try pieces(of: record.asDictionary), keyed: true)
-
         case let .dictionary(held):
             return (try pieces(of: held), keyed: true)
 
@@ -135,7 +130,7 @@ struct Fanout: Sendable {
             return (
                 try elements.enumerated().map { position, element in
                     Piece(
-                        key: nil,
+                        key: .int(position),
                         position: position,
                         closure: try closure(element)
                     )
@@ -209,8 +204,9 @@ struct Fanout: Sendable {
         _ piece: Piece,
         via invocation: Invocation<P>
     ) async throws -> Value {
-        // The frame carries the bare name. Rendering is what brackets it.
-        let frame = piece.key?.spelling ?? "\(piece.position)"
+        // The frame carries the key as `text` spells it, and the trace
+        // brackets it.
+        let frame = Rendering(piece.key).text()
 
         guard let environment = invocation.environment else {
             return try await invocation.call(
@@ -229,52 +225,42 @@ struct Fanout: Sendable {
         }
     }
 
-    private func failures(among outcomes: [Outcome]) -> [Name: any Error] {
-        outcomes.reduce(into: [:]) { failures, outcome in
-            if let failure = outcome.failure {
-                failures[outcome.label] = failure
-            }
-        }
+    // In the pieces' order, which for a map is its key order: a walk of
+    // the failures must not decide which author mistake gets reported.
+    private func failures(among outcomes: [Outcome]) -> [Outcome] {
+        outcomes
+            .filter { outcome in outcome.failure != nil }
+            .sorted { left, right in left.position < right.position }
     }
 
-    // Deterministic by piece label. A dictionary walk must not decide which
-    // author mistake gets reported.
-    private func failure(among failures: [Name: any Error]) -> any Error {
-        let ordered = failures.sorted { left, right in left.key < right.key }
-
-        if let authorMistake = ordered.first(where: { _, error in
-            !(error is any RecoverableFailure)
-        }) {
-            return authorMistake.value
+    private func failure(among failures: [Outcome]) -> any Error {
+        if let authorMistake = failures.first(where: { outcome in
+            !(outcome.failure is any RecoverableFailure)
+        })?.failure {
+            return authorMistake
         }
 
         return ConcurrentFailed(
-            failures: failures.compactMapValues { error in (error as? any RecoverableFailure)?.payload }
+            failures: failures.reduce(into: Value.Dictionary([:])) { gathered, outcome in
+                if let payload = (outcome.failure as? any RecoverableFailure)?.payload {
+                    gathered = gathered.writing(key: outcome.key, with: payload)
+                }
+            }
         )
     }
 
-    private func answered(_ outcomes: [Outcome], keyed: Bool) throws -> Value {
-        guard keyed else {
-            return .array(
-                outcomes
-                    .sorted { left, right in left.position < right.position }
-                    .compactMap(\.value)
-            )
-        }
+    // A list's answers in its order, a map's under the keys it held.
+    private func answered(_ outcomes: [Outcome], keyed: Bool) -> Value {
+        let ordered = outcomes.sorted { left, right in left.position < right.position }
 
-        // Through the door every value born outside a link comes through: the
-        // keys are the author's, and two pieces under one key is the author's
-        // mistake to hear about.
+        guard keyed else { return .array(ordered.compactMap(\.value)) }
+
         return .dictionary(
-            try Value.Dictionary(
-                outcomes
-                    .sorted { left, right in left.position < right.position }
-                    .compactMap { outcome in
-                        guard let key = outcome.key, let value = outcome.value else { return nil }
-
-                        return (name: key, value: value)
-                    }
-            )
+            ordered.reduce(into: Value.Dictionary([:])) { answers, outcome in
+                if let value = outcome.value {
+                    answers = answers.writing(key: outcome.key, with: value)
+                }
+            }
         )
     }
 }

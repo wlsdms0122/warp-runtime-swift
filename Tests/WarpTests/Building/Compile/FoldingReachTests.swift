@@ -267,7 +267,7 @@ struct FoldingReachTests {
         // Given. The contract's document names a type of a third, and the
         // claim and its declaration stand in a document the program never
         // names, so the program stands on the contract and the third alone
-        let thing = try Module(types: ["Z.Thing": .int])
+        let thing = try Module(types: ["Z.Thing": .alias(.int)])
         let contract = try Module(
             imports: ["Z.Thing"],
             contracts: [

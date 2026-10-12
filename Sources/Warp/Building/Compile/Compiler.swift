@@ -496,9 +496,7 @@ struct Compiler {
                 }
 
                 // What the start reads is held to what the variable declares,
-                // the way a name's value is: a nameless record takes a
-                // declared record's name only as a literal or a record built
-                // where the declared record is read.
+                // the way a name's value is.
                 guard written.isHeld(by: holding, inPlace: false, in: context.loweredTypes) else {
                     throw BuildError(
                         "starts as \(written.rendered(in: context.loweredTypes)), and declares \(declared)",
@@ -527,9 +525,9 @@ struct Compiler {
     // by the one rule, and carries its own place. A closure it holds runs
     // later, so settling proves nothing about the sends inside it, and they
     // pass the gate every gathered call does. What it is written from is read
-    // rather than run, so it passes the gate an operand does. A record it
-    // builds where what it is written into reads a declared record is built
-    // as that record.
+    // rather than run, so it passes the gate an operand does. A record
+    // literal in it is read as the declared record of the place it is
+    // written into.
     private func settled(
         _ expression: Expression,
         as name: Name,
@@ -542,8 +540,9 @@ struct Compiler {
         leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
-        let (judged, calls, sites, written) = try await TypeChecker().resolvedSites(
+        let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
             in: expression,
+            into: declared,
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
             with: context,
@@ -553,12 +552,6 @@ struct Compiler {
 
         try TypeChecker().checked(calls, in: context, writing: fulfillment)
         try TypeChecker().refuseRunning(in: judged, at: place, given: context, writing: fulfillment)
-
-        var judgements = sites
-
-        if let declared {
-            judgements.record(names: declared.naming(judged, at: place, in: context.loweredTypes))
-        }
 
         do {
             let value = try await Folding(

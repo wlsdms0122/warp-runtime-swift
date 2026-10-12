@@ -40,9 +40,9 @@ struct NullableTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("read"), expression: .reference([.key("task"), .key("size", optional: true)]))
+                        Statement(binding: .constant("read"), expression: .reference([.name("task"), .name("size", optional: true)]))
                     ],
-                    result: .call(Call(selector: "half", arguments: [.reference([.key("read")])]))
+                    result: .call(Call(selector: "half", arguments: [.reference([.name("read")])]))
                 )
             ]
         )
@@ -71,14 +71,14 @@ struct NullableTests {
                         returns: .nullable(.int)
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("size", optional: true)])
+                    result: .reference([.name("task"), .name("size", optional: true)])
                 )
             ]
         )
 
         // When / Then. The value that arrived reads its field, and the null the
         // host handed answers null
-        #expect(try await run(sut, arguments: ["task": .dictionary(["size": .int(7)])]) == .int(7))
+        #expect(try await run(sut, arguments: ["task": .record(Record(name: "App.Task", ["size": .int(7)]))]) == .int(7))
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
 
@@ -94,7 +94,7 @@ struct NullableTests {
                     body: [
                         Statement(binding: .constant("gone"), expression: .literal(.null))
                     ],
-                    result: .reference([.key("gone"), .key("name")])
+                    result: .reference([.name("gone"), .name("name")])
                 )
             ]
         )
@@ -120,7 +120,7 @@ struct NullableTests {
                         returns: .nullable(.int)
                     ),
                     body: [],
-                    result: .reference([.key("limit")])
+                    result: .reference([.name("limit")])
                 )
             ]
         )
@@ -145,7 +145,7 @@ struct NullableTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("limit")])
+                    result: .reference([.name("limit")])
                 )
             ]
         )
@@ -171,7 +171,7 @@ struct NullableTests {
                         returns: .string
                     ),
                     body: [],
-                    result: .reference([.key("of")])
+                    result: .reference([.name("of")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -182,10 +182,10 @@ struct NullableTests {
                     body: [
                         Statement(binding: .constant("called"), expression: .call(Call(
                             selector: "labelled",
-                            arguments: [.reference([.key("text")])]
+                            arguments: [.reference([.name("text")])]
                         )))
                     ],
-                    result: .reference([.key("called")])
+                    result: .reference([.name("called")])
                 )
             ]
         )
@@ -203,13 +203,14 @@ struct NullableTests {
         // Given. The constant is a record, so a field it does not carry is the
         // build's refusal, not a run's surprise
         let sut = try Module(
-            constants: ["config": .record(["host": .literal(.string("a"))])],
+            types: ["App.Config": .record(["host": .string])],
+            constants: ["config": .cast(.record(["host": .literal(.string("a"))]), as: .named("App.Config"), optional: false)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
                     body: [],
-                    result: .reference([.key("config"), .key("port")])
+                    result: .reference([.name("config"), .name("port")])
                 )
             ]
         )
@@ -227,7 +228,7 @@ struct NullableTests {
         // Given. The reader refuses `Any?` by spelling; a name may hide the
         // same type, and the rule is the model's, held where names resolve
         let hidingAny = try Module(
-            types: ["Loose": .any],
+            types: ["Loose": .alias(.any)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -252,7 +253,7 @@ struct NullableTests {
         // And a nullable behind the name (`B = Int?`, then `B?`) is the doubled
         // `?` by another spelling.
         let hidingNullable = try Module(
-            types: ["Maybe": .nullable(.int)],
+            types: ["Maybe": .alias(.nullable(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -291,14 +292,14 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("name", optional: true)])
+                    result: .reference([.name("task"), .name("name", optional: true)])
                 )
             ]
         )
 
         // When / Then
         #expect(
-            try await run(sut, arguments: ["task": .dictionary(["name": .string("a")])])
+            try await run(sut, arguments: ["task": .record(Record(name: "Task", ["name": .string("a")]))])
                 == .string("a")
         )
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
@@ -309,16 +310,17 @@ struct NullableTests {
         // Given. The field is proven present, so the spelling that expects
         // absence says nothing, the way `Int??` says nothing on a type
         let onAField = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("task"), .key("id", optional: true)])
+                    result: .reference([.name("task"), .name("id", optional: true)])
                 )
             ]
         )
@@ -345,7 +347,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0)])
+                    result: .reference([.name("items"), .index(0)])
                 )
             ]
         )
@@ -374,7 +376,7 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0, optional: true)])
+                    result: .reference([.name("items"), .index(0, optional: true)])
                 )
             ]
         )
@@ -402,7 +404,7 @@ struct NullableTests {
                         returns: .nullable(.string)
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(5, optional: true)])
+                    result: .reference([.name("items"), .index(5, optional: true)])
                 )
             ]
         )
@@ -427,7 +429,7 @@ struct NullableTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .index(0, optional: true)])
+                    result: .reference([.name("items"), .index(0, optional: true)])
                 )
             ]
         )
@@ -457,8 +459,8 @@ struct NullableTests {
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("i")], optional: true)
+                        .name("items"),
+                        .indexRef([.name("i")], optional: true)
                     ])
                 )
             ]

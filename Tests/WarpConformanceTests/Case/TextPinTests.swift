@@ -80,13 +80,13 @@ struct TextPinTests {
             elements.forEach { element in walk(element, visit) }
 
         case let .dictionary(entries):
-            entries.entries.forEach { entry in
+            ((try? entries.named()) ?? []).forEach { entry in
                 visit(.name(entry.name))
                 walk(entry.value, visit)
             }
 
         case let .record(record):
-            if let name = record.name { visit(.name(name)) }
+            visit(.name(record.name))
             record.names.forEach { name in visit(.name(name)) }
             record.values.forEach { held in walk(held, visit) }
         }

@@ -18,6 +18,7 @@ warpt 1
               body [
                 {
                   let "made"
+                  type "App.Made"
                   value {
                     record {
                       x 1
@@ -59,6 +60,14 @@ warpt 1
         ref "seen"
       }
       returns "Int"
+    }
+  }
+  types {
+    "App.Made" {
+      record {
+        x "Int"
+        y "Int"
+      }
     }
   }
   warp 1

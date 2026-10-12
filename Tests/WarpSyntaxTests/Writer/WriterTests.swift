@@ -29,28 +29,29 @@ struct WriterTests {
     // document happens to have, which is exactly where a writer goes wrong.
     private static let assembled: [Module] = [
         // Both cast spellings, over both ways a type is written. A name, and
-        // the mapping a record is. A type written back as a string it cannot be
+        // one applied to another. A type written back as a string it cannot be
         // read from would survive neither direction.
         try! Module(
+            types: ["App.Counted": .record(["count": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "payload", type: .any)]),
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["count": .int]),
+                                .reference([.name("payload")]),
+                                as: .named("App.Counted"),
                                 optional: false
                             )
                         ),
                         Statement(binding: .constant("asked"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .array(.string),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("named"), .key("count")])
+                    result: .reference([.name("named"), .name("count")])
                 )
             ]
         ),
@@ -70,7 +71,7 @@ struct WriterTests {
                                             .call(
                                                 Call(
                                                     selector: "Standard.Text.text",
-                                                    arguments: [.reference([.key("procedure")])]
+                                                    arguments: [.reference([.name("procedure")])]
                                                 )
                                             ),
                                             .literal(.string("!"))
@@ -81,14 +82,14 @@ struct WriterTests {
                             )
                         ),
                         Statement(binding: .constant("held"), expression: .record([
-                                "line": .reference([.key("joined")]),
+                                "line": .reference([.name("joined")]),
                                 "size": .call(
-                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("procedure")])])
+                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.name("procedure")])])
                                 )
                             ])
                         )
                     ],
-                    result: .reference([.key("held")])
+                    result: .reference([.name("held")])
                 )
             ]
         ),
@@ -104,9 +105,9 @@ struct WriterTests {
                             ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
-                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("payload")])
+                    result: .reference([.name("payload")])
                 )
             ]
         )
@@ -135,7 +136,7 @@ struct WriterTests {
                     ["name": "names", "type": "Array<String>"],
                     ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "Dictionary<Any>",
+                "returns": "Dictionary<String, Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -212,7 +213,7 @@ struct WriterTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ],
             "typed": [
                 "parameters": [
@@ -221,7 +222,7 @@ struct WriterTests {
                     ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
+                    ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
                 "bounds": ["T": "Scalar"],
@@ -246,7 +247,7 @@ struct WriterTests {
                         ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "Dictionary<Any>",
+                    "returns": "Dictionary<String, Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -254,7 +255,7 @@ struct WriterTests {
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
-                    "result": ["record": ["result": ["ref": "pair"]]]
+                    "result": ["dictionary": [["result", ["ref": "pair"]]]]
                 ]
             ]
         ],
@@ -307,7 +308,7 @@ struct WriterTests {
                         ]],
                         ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ],
@@ -353,7 +354,7 @@ struct WriterTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "tried"]]]
+                    "result": ["dictionary": [["result", ["ref": "tried"]]]]
                 ]
             ]
         ],
@@ -445,7 +446,7 @@ struct WriterTests {
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
-                    "result": ["record": ["result": ["ref": "line"]]]
+                    "result": ["dictionary": [["result", ["ref": "line"]]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
@@ -672,11 +673,7 @@ struct WriterTests {
                             ]
                         ]
                     ],
-                    "result": ["record": [
-                        "picked": ["ref": "pick"],
-                        "sizes": ["ref": "walked"],
-                        "line": ["ref": "line"]
-                    ]]
+                    "result": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]
                 ]
             ]
         ]
@@ -694,9 +691,9 @@ struct WriterTests {
 
         // Then
         #expect(before == after)
-        #expect(before["picked"] == .string("matched"))
-        #expect(before["sizes"] == .int(3))
-        #expect(before["line"] == .string("hey/matched"))
+        #expect(before.map?["picked"] == .string("matched"))
+        #expect(before.map?["sizes"] == .int(3))
+        #expect(before.map?["line"] == .string("hey/matched"))
     }
 
     @Test("a spelling is written back as the call it stood for")
@@ -721,8 +718,8 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let call = body.first?["value"]?["conditional"]?["when"]?["call"]
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
+            let call = body.first?.map?["value"]?.map?["conditional"]?.map?["when"]?.map?["call"]
         else {
             Issue.record("a conditional is written with a condition under `when`")
 
@@ -730,9 +727,9 @@ struct WriterTests {
         }
 
         // The procedure the spelling reached, written as the call it always was.
-        #expect(call["procedure"] == .string("Standard.Logic.equal"))
-        #expect(call["of"] == nil)
-        #expect(call["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
+        #expect(call.map?["procedure"] == .string("Standard.Logic.equal"))
+        #expect(call.map?["of"] == nil)
+        #expect(call.map?["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
     @Test("a record whose field is named like a tag is written under `record` and read back as a record")
@@ -746,7 +743,7 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
                         ),
-                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.key("payload")])])
+                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.name("payload")])])
                         )
                     ]
                 )
@@ -759,7 +756,7 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
             block.body.statements.count == 2,
             case let .record(payload) = block.body.statements[0].expression,
@@ -770,10 +767,10 @@ struct WriterTests {
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
-        #expect(body.last?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
+        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
+        #expect(body.last?.map?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
         #expect(payload["ref"]?.constantValue == .string("not-a-path"))
-        #expect(held["ref"]?.referencePath == [.key("payload")])
+        #expect(held["ref"]?.referencePath == [.name("payload")])
     }
 
     @Test("a notation that gave up a construct key cannot write what it said")
@@ -884,7 +881,7 @@ struct WriterTests {
             }
 
         case let .dictionary(record):
-            return record.entries.reduce(into: Set(record.names)) { found, entry in
+            return ((try? record.named()) ?? []).reduce(into: Set(((try? record.named()) ?? []).map(\.name))) { found, entry in
                 found.formUnion(keys(in: entry.value))
             }
 

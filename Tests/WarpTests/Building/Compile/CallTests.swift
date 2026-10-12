@@ -23,12 +23,9 @@ struct CallTests {
     func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
         let echo = Procedure(
-            signature: Signature(
-                parameters: [Parameter(name: "text", type: .string)],
-                returns: .record(["said": .string])
-            ),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
             body: [],
-            result: .record(["said": reference("text")])
+            result: map(["said": reference("text")])
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
@@ -46,10 +43,10 @@ struct CallTests {
         let outputs = try await run(
             Procedure(
                 body: sut,
-                result: .record([
+                result: map([
                     "counted": reference("counted"),
                     "shouted": reference("shouted"),
-                    "echoed": reference("echoed", "said")
+                    "echoed": .reference([.name("echoed"), .index("said")])
                 ])
             ),
             beside: ["echo": echo],
@@ -57,9 +54,9 @@ struct CallTests {
         )
 
         // Then
-        #expect(outputs["counted"] == .int(2))
-        #expect(outputs["shouted"] == .string("HI"))
-        #expect(outputs["echoed"] == .string("back"))
+        #expect(outputs.map?["counted"] == .int(2))
+        #expect(outputs.map?["shouted"] == .string("HI"))
+        #expect(outputs.map?["echoed"] == .string("back"))
     }
 
     @Test("an argument outside what a procedure declares is refused at the build")
@@ -233,10 +230,7 @@ struct CallTests {
     func recursiveProcedureBuildsOnce() async throws {
         // Given
         let countdown = Procedure(
-            signature: Signature(
-                parameters: [Parameter(name: "n", type: .int)],
-                returns: .record(["done": .bool])
-            ),
+            signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .bool),
             body: [
                 Statement(
                     expression: .conditional(
@@ -250,7 +244,7 @@ struct CallTests {
                     )
                 )
             ],
-            result: .record(["done": .literal(.bool(true))])
+            result: .literal(.bool(true))
         )
         let sut = Procedure(
             body: [
@@ -258,14 +252,14 @@ struct CallTests {
                     Call(selector: "countdown", arguments: [.literal(.int(1))])
                 ))
             ],
-            result: .record(["done": reference("run", "done")])
+            result: reference("run")
         )
 
         // When
         let outputs = try await run(sut, beside: ["countdown": countdown])
 
         // Then
-        #expect(outputs["done"] == .bool(true))
+        #expect(outputs == .bool(true))
     }
 
     @Test("an argument past the callee's parameters is refused")
@@ -280,7 +274,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -316,7 +310,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -349,7 +343,7 @@ struct CallTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -362,7 +356,7 @@ struct CallTests {
                     body: [
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("text")])]
+                            arguments: [.reference([.name("text")])]
                         )))
                     ]
                 )

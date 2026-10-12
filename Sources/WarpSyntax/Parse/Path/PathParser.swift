@@ -9,8 +9,9 @@ import Foundation
 import Warp
 
 // A document's path: what `{ ref: }` reads and `set` writes. A name, then
-// `.name` for a field, `[3]` for a literal index and `[i]` for an index read
-// from a name. `?.` and `?[` read an absence as null.
+// `.name` for a field, and `[3]`, `["a"]` or `[i]` for what a list or a map
+// holds at a whole number, a text or a value read from a name. `?.` and `?[`
+// read an absence as null.
 struct PathParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
@@ -73,7 +74,7 @@ struct PathParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.key(try name(key), optional: optional))
+                segments.append(.name(try name(key), optional: optional))
                 optional = false
                 expectsKey = false
                 appended = true
@@ -92,8 +93,32 @@ struct PathParser: Sendable {
             return appended
         }
 
+        // Whether a text between the brackets is open, and whether the
+        // character before was its backslash. Inside one, every character is
+        // the text's: a bracket or a dot spells nothing.
+        var quoted = false
+        var escaped = false
+
         for character in text {
+            if quoted {
+                buffer.append(character)
+
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    quoted = false
+                }
+
+                continue
+            }
+
             switch character {
+            case "\"" where depth > 0:
+                quoted = true
+                buffer.append(character)
+
             case "[":
                 if depth == 0 {
                     try flushKey()
@@ -156,6 +181,10 @@ struct PathParser: Sendable {
             }
         }
 
+        guard !quoted else {
+            throw PathSyntaxError("the path ends inside a text, and a text is closed by `\"`")
+        }
+
         guard depth == 0 else {
             throw PathSyntaxError("the path ends inside `[`, and a `[` is closed by `]`")
         }
@@ -193,11 +222,15 @@ struct PathParser: Sendable {
         }
     }
 
-    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an
-    // empty `[]` refuses.
+    // `[3]` and `["a"]` are written values; `[i]` and `[${i}]` are index
+    // references; an empty `[]` refuses.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
             .trimmingCharacters(in: Path.whiteSpace)
+
+        if inner.hasPrefix("\"") {
+            return .index(.string(try text(inner)), optional: optional)
+        }
 
         if inner.hasPrefix("${"), inner.hasSuffix("}") {
             inner = String(inner.dropFirst(2).dropLast())
@@ -205,7 +238,7 @@ struct PathParser: Sendable {
         }
 
         if let literal = Int(inner) {
-            return .index(literal, optional: optional)
+            return .index(.int(literal), optional: optional)
         }
 
         guard !inner.isEmpty else {
@@ -220,5 +253,42 @@ struct PathParser: Sendable {
         }
 
         return .indexRef(try parse(inner), optional: optional)
+    }
+
+    // A text between double quotes: `\"` is a quote and `\\` a backslash,
+    // every other character stands for itself, and the closing quote ends
+    // what stands between the brackets. The walk over the path closed it.
+    private func text(_ quoted: String) throws -> String {
+        var text = ""
+        var escaped = false
+        var closed = false
+
+        for character in quoted.dropFirst() {
+            guard !closed else {
+                throw PathSyntaxError(
+                    "\(quoted) holds more than a text. A text between the brackets ends at its closing quote"
+                )
+            }
+
+            if escaped {
+                guard character == "\"" || character == "\\" else {
+                    throw PathSyntaxError(
+                        "`\\\(character)` in \(quoted) is no escape. Inside the quotes `\\\"`"
+                            + " is a quote and `\\\\` a backslash"
+                    )
+                }
+
+                text.append(character)
+                escaped = false
+            } else if character == "\\" {
+                escaped = true
+            } else if character == "\"" {
+                closed = true
+            } else {
+                text.append(character)
+            }
+        }
+
+        return text
     }
 }

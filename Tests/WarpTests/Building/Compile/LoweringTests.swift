@@ -55,11 +55,11 @@ struct LoweringTests {
                         Statement(binding: .constant("inner"), expression: .block(
                             Block(
                                 body: [Statement(binding: .constant("x"), expression: .literal(.int(2)))],
-                                result: .reference([.key("x")])
+                                result: .reference([.name("x")])
                             )
                         ))
                     ],
-                    result: .array([.reference([.key("x")]), .reference([.key("inner")])])
+                    result: .array([.reference([.name("x")]), .reference([.name("inner")])])
                 )
             ]
         )
@@ -91,12 +91,12 @@ struct LoweringTests {
                         Statement(binding: .constant("held"), expression: .closure(
                             Procedure(
                                 body: [Statement(binding: .constant("x"), expression: .literal(.int(2)))],
-                                result: .reference([.key("x")])
+                                result: .reference([.name("x")])
                             )
                         )),
-                        Statement(binding: .constant("got"), expression: .apply(.reference([.key("held")]), arguments: []))
+                        Statement(binding: .constant("got"), expression: .apply(.reference([.name("held")]), arguments: []))
                     ],
-                    result: .array([.reference([.key("x")]), .reference([.key("got")])])
+                    result: .array([.reference([.name("x")]), .reference([.name("got")])])
                 )
             ]
         )
@@ -120,10 +120,10 @@ struct LoweringTests {
                         Statement(binding: .constant("b"), expression: .literal(.int(2))),
                         Statement(binding: .constant("c"), expression: .literal(.int(3))),
                         Statement(binding: .constant("held"), expression: .closure(
-                            Procedure(body: [], result: .reference([.key("b")]))
+                            Procedure(body: [], result: .reference([.name("b")]))
                         ))
                     ],
-                    result: .apply(.reference([.key("held")]), arguments: [])
+                    result: .apply(.reference([.name("held")]), arguments: [])
                 )
             ]
         )
@@ -153,18 +153,14 @@ struct LoweringTests {
         // names, so the body reads the constant the way it reads any name
         let module = try Module(
             constants: [
-                "digits": .cast(
-                    .record(["0": .literal(.int(0)), "1": .literal(.int(1))]),
-                    as: .dictionary(.int),
-                    optional: false
-                )
+                "digits": map(["0": .literal(.int(0)), "1": .literal(.int(1))])
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "key", type: .string)]),
-                    body: [Statement(binding: .constant("found"), expression: .reference([.key("digits"), .indexRef([.key("key")])]))],
-                    result: .reference([.key("found")])
+                    body: [Statement(binding: .constant("found"), expression: .reference([.name("digits"), .indexRef([.name("key")])]))],
+                    result: .reference([.name("found")])
                 )
             ]
         )
@@ -198,7 +194,7 @@ struct LoweringTests {
             .loop(
                 while: .call(Call(
                     selector: "Standard.Comparable.lessThan",
-                    arguments: [.reference([.key(round), .key("index")]), .literal(.int(1))]
+                    arguments: [.reference([.name(round), .name("index")]), .literal(.int(1))]
                 )),
                 body: Block(body: body, result: result)
             )
@@ -217,12 +213,12 @@ struct LoweringTests {
                         Statement(binding: .constant("told"), expression: loop(
                             "told",
                             [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
-                            result: .reference([.key("seen")])
+                            result: .reference([.name("seen")])
                         )),
                         Statement(binding: .constant("nested"), expression: loop(
                             "nested",
                             [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
-                            result: .reference([.key("nested"), .key("index")])
+                            result: .reference([.name("nested"), .name("index")])
                         ))
                     ],
                     result: .literal(.null)
@@ -273,9 +269,9 @@ struct LoweringTests {
                     ),
                     body: [],
                     result: .array([
-                        .reference([.key("of")]),
-                        .reference([.key("first")]),
-                        .reference([.key("second")])
+                        .reference([.name("of")]),
+                        .reference([.name("first")]),
+                        .reference([.name("second")])
                     ])
                 )
             ]
@@ -310,7 +306,7 @@ struct LoweringTests {
                 "App.tally": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
-                    result: .reference([.key("count")])
+                    result: .reference([.name("count")])
                 )
             ]
         )
@@ -330,12 +326,12 @@ struct LoweringTests {
         // it names: there is no representation to disagree about, so a variable
         // holding an int is what an `inout Count` slot declares.
         let sut = try Module(
-            types: ["Count": .int],
+            types: ["Count": .alias(.int)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
-                    result: .call(Call(selector: "App.bump", arguments: [.reference([.key("n")])]))
+                    result: .call(Call(selector: "App.bump", arguments: [.reference([.name("n")])]))
                 ),
                 "App.bump": Procedure(
                     signature: Signature(
@@ -343,7 +339,7 @@ struct LoweringTests {
                         returns: .named("Count")
                     ),
                     body: [],
-                    result: .reference([.key("of")])
+                    result: .reference([.name("of")])
                 )
             ]
         )
@@ -360,7 +356,7 @@ struct LoweringTests {
         // the top of the slot. A name is what it names wherever it is written,
         // so the walk reaches it there too.
         let sut = try Module(
-            types: ["Count": .int],
+            types: ["Count": .alias(.int)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -373,7 +369,7 @@ struct LoweringTests {
                             )
                         ))
                     ],
-                    result: .call(Call(selector: "App.take", arguments: [.reference([.key("body")])]))
+                    result: .call(Call(selector: "App.take", arguments: [.reference([.name("body")])]))
                 ),
                 "App.take": Procedure(
                     signature: Signature(
@@ -400,14 +396,14 @@ struct LoweringTests {
 
     @Test("what is handed in place is held to the type the slot declares")
     func aHandedVariableIsTheSlotsOwnType() async throws {
-        // Given. A variable holding an unnamed record, handed in place to a
-        // slot declaring `Tag`. A nameless record is no value of a declared
-        // record, so it is refused, and the same record held as a `Tag`
-        // stands. The procedure writes through the caller's box, so what the
-        // caller reads back is what the procedure left there.
+        // Given. A variable holding an `Other`, handed in place to a slot
+        // declaring `Tag`. Two declared records are two types, so it is
+        // refused, and the same fields held as a `Tag` stand. The procedure
+        // writes through the caller's box, so what the caller reads back is
+        // what the procedure left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
-                types: ["Tag": .record(["a": .int])],
+                types: ["Other": .record(["a": .int]), "Tag": .record(["a": .int])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
@@ -415,7 +411,7 @@ struct LoweringTests {
                         result: .call(Call(
                             selector: "Standard.Logic.equal",
                             arguments: [
-                                .call(Call(selector: "App.tag", arguments: [.reference([.key("held")])])),
+                                .call(Call(selector: "App.tag", arguments: [.reference([.name("held")])])),
                                 .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
                             ]
                         ))
@@ -426,19 +422,22 @@ struct LoweringTests {
                             returns: .named("Tag")
                         ),
                         body: [],
-                        result: .reference([.key("of")])
+                        result: .reference([.name("of")])
                     )
                 ]
             )
         }
 
-        // When / Then. The unnamed record is refused, and the same record held
-        // as a `Tag` stands
+        // When / Then. The `Other` is refused, and the same fields held as a
+        // `Tag` stand
         await #expect {
-            try await builder.build([try module(holding: .record(["a": .literal(.int(1))]))] + Module.standard)
+            try await builder.build(
+                [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Other"), optional: false))]
+                    + Module.standard
+            )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("sending 'App.tag' with of, which holds { a: Int } where inout Tag is declared")
+                && "\(error)".contains("sending 'App.tag' with of, which holds Other where inout Tag is declared")
         }
 
         let image = try await builder.build(
@@ -463,7 +462,7 @@ struct LoweringTests {
                 "App.alpha": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
                     body: [],
-                    result: .reference([.key("of")])
+                    result: .reference([.name("of")])
                 )
             ]
         )
@@ -487,7 +486,7 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],
-                    result: .call(Call(selector: "App.echo", arguments: [.reference([.key("held")])]))
+                    result: .call(Call(selector: "App.echo", arguments: [.reference([.name("held")])]))
                 ),
                 "App.echo": Procedure(
                     signature: Signature(of: EchoEffect.self, returns: .int),

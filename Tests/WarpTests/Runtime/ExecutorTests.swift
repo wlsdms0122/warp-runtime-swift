@@ -32,8 +32,8 @@ struct ExecutorTests {
                         Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
                         Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
                     ],
-                    result: .record([
-                            "result": .reference([.key("loud")])
+                    result: map([
+                            "result": .reference([.name("loud")])
                         ])
                 )
             ]
@@ -43,7 +43,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["who": .string("spec")])
 
         // Then
-        #expect(outputs["result"] == .string("hello, spec!"))
+        #expect(outputs.map?["result"] == .string("hello, spec!"))
     }
 
     @Test("a recoverable failure runs the rescue path")
@@ -63,12 +63,12 @@ struct ExecutorTests {
                                         body: [
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
-                                        result: .reference([.key("recovery")])
+                                        result: .reference([.name("recovery")])
                                     ))
                         )
                     ],
-                    result: .record([
-                            "result": .reference([.key("fragile")])
+                    result: map([
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -78,7 +78,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
         // Then. The rescue's result is what the attempt answers
-        #expect(outputs["result"] == .string("recovered"))
+        #expect(outputs.map?["result"] == .string("recovered"))
     }
 
     @Test("the failure is a value inside the rescue, and only there")
@@ -102,12 +102,12 @@ struct ExecutorTests {
                                                 )
                                             )
                                         ],
-                                        result: .reference([.key("reason")])
+                                        result: .reference([.name("reason")])
                                     ))
                         )
                     ],
-                    result: .record([
-                            "result": .reference([.key("fragile")])
+                    result: map([
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -119,7 +119,7 @@ struct ExecutorTests {
         // Then. Inside the rescue, `fragile` was the failure payload; after it,
         // `fragile` is the rescue's output (a string here), so the payload
         // never leaks past the rescue
-        #expect(outputs["result"] == .string("saw: the world did not cooperate"))
+        #expect(outputs.map?["result"] == .string("saw: the world did not cooperate"))
     }
 
     @Test("an unrescued failure propagates")
@@ -183,9 +183,9 @@ struct ExecutorTests {
         }
     }
 
-    @Test("an entry the data does not carry reads as null where the author wrote ?.")
+    @Test("an entry the data does not carry reads as null where the author wrote ?[")
     func absentEntryReadsAsNullThroughOptional() async throws {
-        // Given. `?.` expects absence: it answers null, nothing is thrown,
+        // Given. `?[` expects absence: it answers null, nothing is thrown,
         // and the rescue never runs
         let spec = try Module(
             procedures: [
@@ -193,20 +193,20 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "data", type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(key: .string, value: .any))
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.key("data"), .key("missing", optional: true)]))
+                                        Statement(binding: .constant("fragile"), expression: .reference([.name("data"), .index("missing", optional: true)]))
                                     ]), rescue: Block(body: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                     ]))
                         )
                     ],
-                    result: .record([
-                            "result": .reference([.key("fragile")])
+                    result: map([
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -216,25 +216,25 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["data": .dictionary([:])])
 
         // Then
-        #expect(outputs["result"] == .null)
+        #expect(outputs.map?["result"] == .null)
     }
 
     @Test("an entry the data does not carry refuses where nothing said it may be absent")
     func absentEntryWithoutOptionalIsUnfit() async throws {
-        // Given. The plain dot promises the entry is there, so an absent one is
-        // a defect the run refuses rather than a null it invents
+        // Given. The plain bracket promises the entry is there, so an absent
+        // one is a defect the run refuses rather than a null it invents
         let spec = try Module(
             procedures: [
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "data", type: .dictionary(.any))
+                            Parameter(name: "data", type: .dictionary(key: .string, value: .any))
                         ],
                         returns: .any
                     ),
                     body: [],
-                    result: .reference([.key("data"), .key("missing")])
+                    result: .reference([.name("data"), .index("missing")])
                 )
             ]
         )
@@ -262,9 +262,9 @@ struct ExecutorTests {
                         Statement(binding: .variable("maybe"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                equals(.reference([.key("kind")]), .literal(.string("a"))),
+                                equals(.reference([.name("kind")]), .literal(.string("a"))),
                                 then: [
-                                    Statement(binding: .assignment([.key("maybe")]), expression: .literal(.string("made")))
+                                    Statement(binding: .assignment([.name("maybe")]), expression: .literal(.string("made")))
                                 ],
                                 else: nil
                             )
@@ -281,8 +281,8 @@ struct ExecutorTests {
                                     ]))
                         )
                     ],
-                    result: .record([
-                            "result": .reference([.key("fragile")])
+                    result: map([
+                            "result": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -292,7 +292,7 @@ struct ExecutorTests {
         let outputs = try await run(spec, arguments: ["kind": .string("b")])
 
         // Then
-        #expect(outputs["result"] == .string("name=null"))
+        #expect(outputs.map?["result"] == .string("name=null"))
     }
 
     @Test("abort throws carrying its rendered message")
@@ -345,12 +345,12 @@ struct ExecutorTests {
                                         body: [
                                             Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
                                         ],
-                                        result: .reference([.key("recovery")])
+                                        result: .reference([.name("recovery")])
                                     ))
                         )
                     ],
-                    result: .record([
-                            "result": .reference([.key("bail")])
+                    result: map([
+                            "result": .reference([.name("bail")])
                         ])
                 )
             ]
@@ -360,7 +360,7 @@ struct ExecutorTests {
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .string("recovered"))
+        #expect(outputs.map?["result"] == .string("recovered"))
     }
 
     // MARK: - Public

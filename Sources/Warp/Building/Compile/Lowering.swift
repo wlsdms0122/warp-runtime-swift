@@ -617,19 +617,14 @@ struct Lowering {
     }
 
     // What lowered code stands as, for the readings the build can prove
-    // without judging anything: a record literal stands on the layout this
-    // walk made for it, a call on what its row answers, a cast on what it
-    // casts to, and a path on what it reaches. Nil everywhere else, which
-    // leaves the fields below it to be read by name.
+    // without judging anything: a record literal stands as the declared
+    // record it was built under, a call on what its row answers, a cast on
+    // what it casts to, and a path on what it reaches. Nil everywhere else,
+    // which leaves the fields below it to be read by name.
     private func standing(_ code: Operation, on slots: SlotAllocator) -> LoweredType? {
         switch code {
         case let .record(held):
-            return .record(
-                LoweredRecord(
-                    layout: held.layout,
-                    fields: held.fields.map { field in standing(field, on: slots) ?? .any }
-                )
-            )
+            return loweredTypes.record(named: held.layout.name).map(LoweredType.named)
 
         case let .local(address):
             return address.steps.reduce(slots.held(at: address.slot)) { reached, step in
@@ -640,7 +635,7 @@ struct Lowering {
                 case .index, .at:
                     return reached?.element(in: loweredTypes)
 
-                case .key:
+                case .name:
                     return nil
                 }
             }
@@ -684,6 +679,14 @@ struct Lowering {
 
         case let .record(record):
             return try lower(record: record, in: scope, on: context, at: place)
+
+        case let .dictionary(entries):
+            return .dictionary(try entries.enumerated().map { position, entry in
+                (
+                    key: try lower(entry.key, naming: nil, in: scope, on: context, at: place.child(.entryKey(position))),
+                    value: try lower(entry.value, naming: nil, in: scope, on: context, at: place.child(.entryValue(position)))
+                )
+            })
 
         case let .closure(procedure):
             return try lower(closure: procedure, in: scope, on: context, at: place)
@@ -739,9 +742,15 @@ struct Lowering {
     ) throws -> Operation {
         let ordered = record.sorted { $0.key < $1.key }
 
+        // The type check read the literal as the declared record its place
+        // reads, which the record is built under.
+        guard let name = context.judgements.name(ofRecordAt: place) else {
+            throw BuildError.unjudged("a record literal", at: place)
+        }
+
         return .record(
             RecordOperation(
-                layout: Layout(name: context.judgements.name(ofRecordAt: place), ordered: ordered.map(\.key)),
+                layout: Layout(name: name, ordered: ordered.map(\.key)),
                 fields: try ordered.map { name, field in
                     try lower(field, naming: nil, in: scope, on: context, at: place.child(.field(name)))
                 }
@@ -913,7 +922,7 @@ struct Lowering {
 
         if let round, let slot {
             inner.slots[round] = slot
-            context.slots.hold(slot, .record(.round))
+            context.slots.hold(slot, loweredTypes.prelude(TypeSpelling.round))
         }
 
         let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))
@@ -1073,11 +1082,11 @@ struct Lowering {
 
         let steps = try path.segments.dropFirst().map { segment -> Step in
             switch segment {
-            case let .key(name, optional):
+            case let .name(name, optional):
                 guard let place = reached?.place(of: name, in: loweredTypes) else {
                     reached = nil
 
-                    return .key(name, optional: optional)
+                    return .name(name, optional: optional)
                 }
 
                 reached = place.type

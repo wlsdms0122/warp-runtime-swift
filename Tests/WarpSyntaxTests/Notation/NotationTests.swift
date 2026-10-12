@@ -78,7 +78,7 @@ struct NotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ], from: .canonical)
@@ -87,7 +87,7 @@ struct NotationTests {
         let outputs = try await run(module, arguments: ["word": .string("hey")])
 
         // Then
-        #expect(outputs["result"] == .string("matched"))
+        #expect(outputs.map?["result"] == .string("matched"))
     }
 
     @Test("a record a notation does not claim is the expression it is")
@@ -139,8 +139,8 @@ struct NotationTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let condition = body.first?["value"]?["conditional"]?["when"],
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
+            let condition = body.first?.map?["value"]?.map?["conditional"]?.map?["when"],
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(.record(fields), _, _) = block.body.statements.first?.expression
         else {
@@ -149,7 +149,7 @@ struct NotationTests {
             return
         }
 
-        #expect(condition["record"]?["of"] == Value.dictionary(["ref": .string("word")]))
+        #expect(condition.map?["record"]?.map?["of"] == Value.dictionary(["ref": .string("word")]))
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 

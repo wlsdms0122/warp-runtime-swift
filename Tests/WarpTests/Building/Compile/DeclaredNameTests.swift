@@ -111,7 +111,7 @@ struct DeclaredNameTests {
                     access: .public,
                     body: [
                         Statement(binding: .variable("held", declared: .int), expression: .literal(.int(1))),
-                        Statement(binding: .assignment([.key("held")]), expression: .literal(.string("no")))
+                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("no")))
                     ],
                     result: reference("held")
                 )
@@ -123,6 +123,41 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("writes 'held' as String, and it holds Int")
+        }
+    }
+
+    @Test("a record literal written through a field without var is refused for the field")
+    func aLiteralWrittenThroughAFixedFieldIsRefusedForTheField() async throws {
+        // Given. `p` declares the record the literal would be read as, and
+        // not `var`, so the path is what stops the write
+        let sut = try Module(
+            types: [
+                "App.A": .record(["k": .string]),
+                "App.W": .record(["p": .named("App.A")])
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .variable("w", declared: .named("App.W")),
+                            expression: .record(["p": .record(["k": .literal(.string("x"))])])
+                        ),
+                        Statement(
+                            binding: .assignment([.name("w"), .name("p")]),
+                            expression: .record(["k": .literal(.string("y"))])
+                        )
+                    ],
+                    result: reference("w")
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("w.p writes through 'p', which the type declares without `var`")
         }
     }
 
@@ -138,7 +173,7 @@ struct DeclaredNameTests {
                     body: [
                         Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
                     ],
-                    result: .record(["got": reference("held")])
+                    result: reference("held")
                 )
             ]
         )
@@ -147,7 +182,7 @@ struct DeclaredNameTests {
         let answer = try await Executor().run(try Builder().build([sut] + Module.standard))
 
         // Then
-        #expect(answer == .record(Record(name: nil, ["got": .double(1)])))
+        #expect(answer == .double(1))
     }
 
     @Test("a declaration inside a module variable is held the way one inside a procedure is")
@@ -195,7 +230,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: [.reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
                         )
                     ],
@@ -205,7 +240,7 @@ struct DeclaredNameTests {
                     signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
                     body: [
                         Statement(
-                            binding: .assignment([.key("step")]),
+                            binding: .assignment([.name("step")]),
                             expression: .closure(Procedure(signature: takes, body: [], result: .literal(.int(9))))
                         )
                     ]
@@ -237,7 +272,7 @@ struct DeclaredNameTests {
                         ),
                         Statement(
                             expression: .call(
-                                Call(selector: "swap", arguments: [.reference([.key("step")])])
+                                Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
                         )
                     ],

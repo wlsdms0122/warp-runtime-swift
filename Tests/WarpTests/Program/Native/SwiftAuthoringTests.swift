@@ -48,7 +48,7 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
             ],
-            result: .record(["greeting": .reference([.key("greet")])])
+            result: map(["greeting": .reference([.name("greet")])])
         )
 
         // When
@@ -58,21 +58,21 @@ struct SwiftAuthoringTests {
         let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
-        #expect(outputs["greeting"] == .string("hello, world"))
+        #expect(outputs.map?["greeting"] == .string("hello, world"))
     }
 
     @Test("control flow and the signature are reachable from Swift alone")
     func controlFlow() async throws {
         // Given
         let builder = Builder()
-        let index = Expression.reference([.key("counted"), .key("index")])
+        let index = Expression.reference([.name("counted"), .name("index")])
         let procedure = Procedure(
             signature: Signature(parameters: [Parameter(name: "rounds", type: .int)]),
             body: [
                 Statement(binding: .constant("counted"), expression: .loop(
                         while: differs(
                             index,
-                            .reference([.key("rounds")])
+                            .reference([.name("rounds")])
                             ),
                         body: Block(
                             body: [Statement(binding: .constant("tick"), expression: index)],
@@ -84,17 +84,17 @@ struct SwiftAuthoringTests {
                 Statement(
                     expression: .conditional(
                         equals(
-                            .reference([.key("counted")]),
+                            .reference([.name("counted")]),
                             .literal(.int(3))
                             ),
                         then: [
-                            Statement(binding: .assignment([.key("verdict")]), expression: .literal(.string("counted to three")))
+                            Statement(binding: .assignment([.name("verdict")]), expression: .literal(.string("counted to three")))
                         ],
                         else: nil
                     )
                 )
             ],
-            result: .record(["verdict": .reference([.key("verdict")])])
+            result: map(["verdict": .reference([.name("verdict")])])
         )
 
         // When. Comparing is a procedure, so this builds with the bundle that
@@ -110,7 +110,7 @@ struct SwiftAuthoringTests {
         )
 
         // Then
-        #expect(outputs["verdict"] == .string("counted to three"))
+        #expect(outputs.map?["verdict"] == .string("counted to three"))
     }
 
     @Test("a native effect needs no decoder to run")
@@ -123,7 +123,7 @@ struct SwiftAuthoringTests {
                     Call(selector: "App.shout", arguments: [.literal(.string("hey"))])
                 ))
             ],
-            result: .record(["shout": .reference([.key("shout")])])
+            result: map(["shout": .reference([.name("shout")])])
         )
 
         // When
@@ -133,7 +133,7 @@ struct SwiftAuthoringTests {
         let outputs = try await Executor().run(image, entry: "greet")
 
         // Then
-        #expect(outputs["shout"] == .string("HEY"))
+        #expect(outputs.map?["shout"] == .string("HEY"))
     }
 
     @Test("a library procedure, a native procedure and a written one are all one expression")
@@ -145,7 +145,7 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
                 Statement(binding: .constant("counted"), expression: .call(
-                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("names")])])
+                    Call(selector: "Standard.Collection.count", arguments: [.reference([.name("names")])])
                 )),
                 Statement(binding: .constant("shouted"), expression: .call(
                     Call(selector: "App.shout", arguments: [.literal(.string("hi"))])
@@ -154,10 +154,10 @@ struct SwiftAuthoringTests {
                     Call(selector: "echo", arguments: [.literal(.string("yo"))])
                 ))
             ],
-            result: .record([
-                "counted": .reference([.key("counted")]),
-                "shouted": .reference([.key("shouted")]),
-                "called": .reference([.key("called"), .key("said")])
+            result: map([
+                "counted": .reference([.name("counted")]),
+                "shouted": .reference([.name("shouted")]),
+                "called": .reference([.name("called"), .name("said")])
             ])
         )
         // A second declaration, in the same module. A call names a symbol, and
@@ -165,22 +165,28 @@ struct SwiftAuthoringTests {
         let echo = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "text", type: .string)],
-                returns: .record(["said": .string])
+                returns: .named("App.Said")
             ),
             body: [],
-            result: .record(["said": .reference([.key("text")])])
+            result: .record(["said": .reference([.name("text")])])
         )
 
         // When
         let image = try await builder.build(
-            [try Module(procedures: ["speak": procedure.with(access: .public), "echo": echo]), .shouting] + Module.standard
+            [
+                try Module(
+                    types: ["App.Said": .record(["said": .string])],
+                    procedures: ["speak": procedure.with(access: .public), "echo": echo]
+                ),
+                .shouting
+            ] + Module.standard
         )
         let outputs = try await Executor().run(image, entry: "speak")
 
         // Then
-        #expect(outputs["counted"] == .int(1))
-        #expect(outputs["shouted"] == .string("HI"))
-        #expect(outputs["called"] == .string("yo"))
+        #expect(outputs.map?["counted"] == .int(1))
+        #expect(outputs.map?["shouted"] == .string("HI"))
+        #expect(outputs.map?["called"] == .string("yo"))
     }
 
     @Test("a native procedure reads its first argument by the parameter's own key")
@@ -191,7 +197,7 @@ struct SwiftAuthoringTests {
                 "entry": Procedure(
                     access: .public,
                     body: [],
-                    result: .record([
+                    result: map([
                         "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))
                     ])
                 ),
@@ -206,7 +212,7 @@ struct SwiftAuthoringTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .int(20))
+        #expect(outputs.map?["result"] == .int(20))
     }
 
     @Test("a native procedure and a written one are declared the same way")
@@ -228,9 +234,9 @@ struct SwiftAuthoringTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("loud"), expression: .reference([.key("of")]))
+                        Statement(binding: .constant("loud"), expression: .reference([.name("of")]))
                     ],
-                    result: .reference([.key("loud")])
+                    result: .reference([.name("loud")])
                 )
             ]
         )

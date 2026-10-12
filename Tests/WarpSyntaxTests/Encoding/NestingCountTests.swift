@@ -69,6 +69,22 @@ struct NestingCountTests {
         }
     }
 
+    @Test("a map's key opens what it holds like any value, at every door")
+    func aKeyIsCountedLikeAValue() throws {
+        // Given. A map whose one key is a path of containers, so the map and
+        // the key's containers stand on one path
+        let within = Value.dictionary(try Value.Dictionary([(key: Self.nested(Value.nestingBound - 1), value: .null)]))
+        let past = Value.dictionary(try Value.Dictionary([(key: Self.nested(Value.nestingBound), value: .null)]))
+
+        // When / Then
+        #expect(within.nesting == Value.nestingBound)
+        #expect(past.nesting == Value.nestingBound + 1)
+        #expect(try BinaryEncoding().value(from: try BinaryEncoding().data(from: within)) == within)
+        #expect(try TextEncoding().value(from: try TextEncoding().text(from: within)) == within)
+        #expect(throws: EncodingRefused.self) { try BinaryEncoding().data(from: past) }
+        #expect(throws: EncodingRefused.self) { try TextEncoding().text(from: past) }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // `deep` containers on one path, the innermost holding nothing.

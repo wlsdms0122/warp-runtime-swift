@@ -139,7 +139,7 @@ struct SharedGroundTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "product": reference("product"),
                         "quotient": reference("quotient"),
                         "sum": reference("sum")
@@ -174,13 +174,13 @@ struct SharedGroundTests {
                                 )),
                                 then: [
                                     Statement(
-                                        binding: .assignment([.key("verdict")]),
+                                        binding: .assignment([.name("verdict")]),
                                         expression: .literal(.string("small"))
                                     )
                                 ],
                                 else: [
                                     Statement(
-                                        binding: .assignment([.key("verdict")]),
+                                        binding: .assignment([.name("verdict")]),
                                         expression: .literal(.string("large"))
                                     )
                                 ]

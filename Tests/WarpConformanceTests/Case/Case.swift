@@ -60,7 +60,11 @@ struct Case: Sendable, CustomStringConvertible {
         var identity: Identity? {
             if let document { return document }
 
-            guard case let .array(held)? = written["document"], case let .bytes(bytes)? = held.first else { return nil }
+            guard
+                case let .dictionary(object) = written,
+                case let .array(held)? = object["document"],
+                case let .bytes(bytes)? = held.first
+            else { return nil }
 
             return Identity(bytes)
         }
@@ -334,14 +338,14 @@ struct Case: Sendable, CustomStringConvertible {
     var description: String { name }
 
     // MARK: - Initializer
-    init(from written: Value, in file: String) throws {
+    init(from read: Value, in file: String) throws {
         self.file = file
 
         // The version first, and before the type, for the reason a document
         // reads its own first: a later case may say something this runner has
         // no name for, and "I am too old for this" is a different answer from
         // "this is not a case".
-        guard let declared = written[Self.versionKey] else {
+        guard case let .dictionary(written) = read, let declared = written[Self.versionKey] else {
             throw ConformanceError(
                 "this is not a case. It does not say which test it is written for"
                     + " (`\(Self.versionKey)`)"
@@ -377,7 +381,7 @@ struct Case: Sendable, CustomStringConvertible {
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
-            let (held, expected) = expect.entries.first
+            let (held, expected) = try expect.named().first
         else {
             throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells`, `builds` and `refuses`")
         }
@@ -534,12 +538,10 @@ struct Case: Sendable, CustomStringConvertible {
     // A case holds what every case writes and the keys its subject reads, and
     // nothing else: a key outside them, a misspelled one included, is a
     // question the runner would not ask.
-    private static func reads(_ written: Value, _ subject: Set<Name>, about named: String) throws {
-        guard case let .dictionary(fields) = written else { return }
-
+    private static func reads(_ fields: Value.Dictionary, _ subject: Set<Name>, about named: String) throws {
         let every: Set<Name> = [versionKey, "name", "note", "expect"]
 
-        if let (key, _) = fields.entries.first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
+        if let (key, _) = try fields.named().first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
             throw ConformanceError("a case about \(named) writes `\(key)`, which it does not read")
         }
     }
@@ -548,7 +550,7 @@ struct Case: Sendable, CustomStringConvertible {
     // laid beside it or read under an identity. A case writing any of those
     // asked something the runner would not ask, and it is refused rather than
     // left unasked.
-    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
+    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value.Dictionary) throws -> Asked {
         try reads(written, ["bytes", "text"], about: "an encoding")
 
         // The binary encoding is canonical, so bytes that read as a value
@@ -614,7 +616,7 @@ struct Case: Sendable, CustomStringConvertible {
             throw ConformanceError("the vocabulary a case asks for declares its procedures as a record, and not as \(other)")
         }
 
-        if let taken = module.names.first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
+        if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
                 "the vocabulary a case asks for writes '\(taken)'. A vocabulary writes `imports`"
                     + " and declares `types`, `contracts`, `satisfies` and `procedures`, and how it is"
@@ -622,14 +624,14 @@ struct Case: Sendable, CustomStringConvertible {
             )
         }
 
-        let procedures: [Supplied] = try entries.entries.map { entry in
+        let procedures: [Supplied] = try entries.named().map { entry in
             guard case let .dictionary(record) = entry.value else {
                 throw ConformanceError("'\(entry.name)' is written the way a procedure is")
             }
 
             let declaration = Value.dictionary(
                 Dictionary(
-                    uniqueKeysWithValues: record.entries
+                    uniqueKeysWithValues: try record.named()
                         .filter { field in !Supplied.ownKeys.contains(field.name) }
                         .map { field in (field.name, field.value) }
                 )
@@ -648,7 +650,7 @@ struct Case: Sendable, CustomStringConvertible {
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
         // document's, and the version the runner says for itself.
-        var stripped = Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
+        var stripped = Dictionary(uniqueKeysWithValues: try module.named().map { field in (field.name, field.value) })
 
         stripped["warp"] = .int(1)
         stripped["procedures"] = procedures.isEmpty
@@ -667,7 +669,7 @@ struct Case: Sendable, CustomStringConvertible {
             return [:]
 
         case let .dictionary(given)?:
-            return Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
+            return Dictionary(uniqueKeysWithValues: try given.named().map { entry in (entry.name, entry.value) })
 
         case let other?:
             throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")

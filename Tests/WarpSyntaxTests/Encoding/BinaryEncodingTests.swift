@@ -80,13 +80,13 @@ struct BinaryEncodingTests {
         let golden: [UInt8] = [
             0x57, 0x41, 0x52, 0x50,   // WARP
             0x01,                     // format 1
-            0x07, 0x05,               // a record of five
-            0x01, 0x61, 0x03, 0x02,                     // "a": int 1 (zigzag 2)
-            0x01, 0x62, 0x06, 0x02, 0x02, 0x00,         // "b": [true, null]
-            0x01, 0x63, 0x05, 0x02, 0x68, 0x69,         // "c": "hi"
-            0x01, 0x64, 0x04,                           // "d": the fraction 1.5
+            0x07, 0x05,               // a map of five
+            0x05, 0x01, 0x61, 0x03, 0x02,               // "a": int 1 (zigzag 2)
+            0x05, 0x01, 0x62, 0x06, 0x02, 0x02, 0x00,   // "b": [true, null]
+            0x05, 0x01, 0x63, 0x05, 0x02, 0x68, 0x69,   // "c": "hi"
+            0x05, 0x01, 0x64, 0x04,                     // "d": the fraction 1.5
             0x3f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x01, 0x65, 0x08, 0x02, 0x6a, 0x73          // "e": two bytes
+            0x05, 0x01, 0x65, 0x08, 0x02, 0x6a, 0x73    // "e": two bytes
         ]
 
         // When / Then
@@ -182,14 +182,14 @@ struct BinaryEncodingTests {
 
     @Test("nested claims cannot sum past the document")
     func nestedClaimsShareOneBudget() {
-        // Given. Fifty records, each opened with four bytes and each claiming a
-        // hundred fields. Each claim alone fits the bytes that remain, which is
-        // how a check local to one claim approved all fifty and set aside
-        // memory for five thousand fields of a two-hundred-byte document.
+        // Given. Fifty maps, each opened with five bytes and each claiming a
+        // hundred entries. Each claim alone fits the bytes that remain, which
+        // is how a check local to one claim approved all fifty and set aside
+        // memory for five thousand entries of a two-hundred-byte document.
         var bytes: [UInt8] = [0x57, 0x41, 0x52, 0x50, 0x01]
 
         for _ in 0..<50 {
-            bytes += [0x07, 0x64, 0x01, 0x61]   // a record of "a hundred", field "a"
+            bytes += [0x07, 0x64, 0x05, 0x01, 0x61]   // a map of "a hundred", key "a"
         }
 
         bytes.append(0x00)
@@ -202,16 +202,18 @@ struct BinaryEncodingTests {
         }
     }
 
-    @Test("a record with its keys out of order is refused")
-    func aShuffledRecordIsRefused() {
-        // Given. "b" before "a": bytes the writer would never produce, so
-        // reading them would mean two spellings of one document
-        let bytes = Data([
-            0x57, 0x41, 0x52, 0x50, 0x01,
-            0x07, 0x02,
-            0x01, 0x62, 0x00,   // "b": null
-            0x01, 0x61, 0x00    // "a": null
-        ])
+    @Test(
+        "a map with its keys out of order is refused",
+        arguments: [
+            [0x05, 0x01, 0x62, 0x00, 0x05, 0x01, 0x61, 0x00],   // "b" before "a"
+            [0x05, 0x01, 0x61, 0x00, 0x03, 0x02, 0x00],         // text before a number
+            [0x03, 0x04, 0x00, 0x03, 0x02, 0x00]                // 2 before 1
+        ] as [[UInt8]]
+    )
+    func aShuffledMapIsRefused(entries: [UInt8]) {
+        // Given. Bytes the writer would never produce, so reading them would
+        // mean two spellings of one document
+        let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x07, 0x02] + entries)
 
         // When / Then
         #expect {
@@ -221,15 +223,62 @@ struct BinaryEncodingTests {
         }
     }
 
-    @Test("a record that names a field twice is refused")
-    func aDuplicateKeyIsRefused() {
-        // Given. The same field twice with different values. Last-one-wins is
-        // an answer, but it is the reader deciding what the writer meant.
+    @Test(
+        "a map that holds a key twice is refused",
+        arguments: [
+            [0x05, 0x01, 0x61, 0x03, 0x02, 0x05, 0x01, 0x61, 0x03, 0x04],   // "a" and "a"
+            [0x03, 0x02, 0x00, 0x04, 0x3f, 0xf0, 0, 0, 0, 0, 0, 0, 0x00],   // 1 and 1.0
+            [0x08, 0x01, 0x01, 0x00, 0x06, 0x01, 0x03, 0x02, 0x00]          // x"01" and [1]
+        ] as [[UInt8]]
+    )
+    func aDuplicateKeyIsRefused(entries: [UInt8]) {
+        // Given. One key twice, by the value model's sameness. Last-one-wins
+        // is an answer, but it is the reader deciding what the writer meant.
+        let bytes = Data([0x57, 0x41, 0x52, 0x50, 0x01, 0x07, 0x02] + entries)
+
+        // When / Then
+        #expect {
+            try BinaryEncoding().value(from: bytes)
+        } throws: { error in
+            "\(error)".contains("order")
+        }
+    }
+
+    @Test("a map's keys are values, written ascending by kind and then within it")
+    func aMapIsKeyedByValues() throws {
+        // Given. A key of every kind a map's keys are ordered by
+        let map = Value.dictionary(
+            try Value.Dictionary([
+                (key: .array([.int(1)]), value: .int(5)),
+                (key: .string(""), value: .int(4)),
+                (key: .int(3), value: .int(3)),
+                (key: .bool(true), value: .int(2)),
+                (key: .null, value: .int(1))
+            ])
+        )
+
+        let body: [UInt8] = [
+            0x07, 0x05,
+            0x00, 0x03, 0x02,               // null: 1
+            0x02, 0x03, 0x04,               // true: 2
+            0x03, 0x06, 0x03, 0x06,         // 3: 3
+            0x05, 0x00, 0x03, 0x08,         // "": 4
+            0x06, 0x01, 0x03, 0x02, 0x03, 0x0a   // [1]: 5
+        ]
+
+        // When / Then
+        #expect(try BinaryEncoding().data(from: map) == Data([0x57, 0x41, 0x52, 0x50, 0x01] + body))
+        #expect(try BinaryEncoding().value(from: Data([0x57, 0x41, 0x52, 0x50, 0x01] + body)) == map)
+    }
+
+    @Test("a record with its fields out of order is refused")
+    func aShuffledRecordIsRefused() {
+        // Given. "b" before "a" in a record of `A.P`
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
-            0x07, 0x02,
-            0x01, 0x61, 0x03, 0x02,   // "a": 1
-            0x01, 0x61, 0x03, 0x04    // "a": 2
+            0x09, 0x03, 0x41, 0x2e, 0x50, 0x02,
+            0x01, 0x62, 0x00,   // b: null
+            0x01, 0x61, 0x00    // a: null
         ])
 
         // When / Then
@@ -248,8 +297,8 @@ struct BinaryEncodingTests {
         // twice, losing one without a word.
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
-            0x07, 0x01,
-            0x03, 0x65, 0xcc, 0x81, 0x00    // "é" (NFD): null
+            0x09, 0x03, 0x41, 0x2e, 0x50, 0x01,
+            0x03, 0x65, 0xcc, 0x81, 0x00    // é (NFD): null
         ])
 
         // When / Then
@@ -262,11 +311,28 @@ struct BinaryEncodingTests {
         // And the same name in NFC is a document
         let normal = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
-            0x07, 0x01,
-            0x02, 0xc3, 0xa9, 0x00          // "é" (NFC): null
+            0x09, 0x03, 0x41, 0x2e, 0x50, 0x01,
+            0x02, 0xc3, 0xa9, 0x00          // é (NFC): null
         ])
 
-        #expect(try BinaryEncoding().value(from: normal) == .dictionary(["é": .null]))
+        #expect(try BinaryEncoding().value(from: normal) == Value.holding([(name: "é", value: .null)], named: "A.P"))
+    }
+
+    @Test("a map's text key is data, kept as its bytes spell it")
+    func aTextKeyIsNeverNormalised() throws {
+        // Given. É as e-plus-mark under a map, where a key is a value and a
+        // string value travels byte-for-byte as written
+        let bytes = Data([
+            0x57, 0x41, 0x52, 0x50, 0x01,
+            0x07, 0x01,
+            0x05, 0x03, 0x65, 0xcc, 0x81, 0x00    // "é" (NFD): null
+        ])
+
+        // When
+        let read = try BinaryEncoding().value(from: bytes)
+
+        // Then
+        #expect(try BinaryEncoding().data(from: read) == bytes)
     }
 
     @Test("bytes that end inside bytes are refused")
@@ -375,10 +441,10 @@ struct BinaryEncodingTests {
         "a byte order mark is text like any other, in a String and in a key",
         arguments: [
             (Value.string("\u{FEFF}A"), [0x05, 0x04, 0xEF, 0xBB, 0xBF, 0x41]),
-            (Value.dictionary(["\u{FEFF}": .int(1)]), [0x07, 0x01, 0x03, 0xEF, 0xBB, 0xBF, 0x03, 0x02]),
+            (Value.dictionary(["\u{FEFF}": .int(1)]), [0x07, 0x01, 0x05, 0x03, 0xEF, 0xBB, 0xBF, 0x03, 0x02]),
             (
                 Value.dictionary(["b": .int(1), "\u{FEFF}a": .int(2)]),
-                [0x07, 0x02, 0x01, 0x62, 0x03, 0x02, 0x04, 0xEF, 0xBB, 0xBF, 0x61, 0x03, 0x04]
+                [0x07, 0x02, 0x05, 0x01, 0x62, 0x03, 0x02, 0x05, 0x04, 0xEF, 0xBB, 0xBF, 0x61, 0x03, 0x04]
             )
         ] as [(Value, [UInt8])]
     )

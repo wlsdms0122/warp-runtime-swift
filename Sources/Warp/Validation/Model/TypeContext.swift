@@ -9,12 +9,8 @@ import Foundation
 
 // Where a type is written, which is what decides the words that may stand in
 // it. Each is a fact of the text: a type parameter lives where a call fills
-// it, `Self` where a contract is answered, and `var` where a path writes
-// through a field of a declared type.
+// it, and `Self` where a contract is answered.
 enum TypeContext: Sendable {
-    // A type declared in `types`.
-    case declaration
-
     // A procedure's signature, which declares the type parameters it names.
     case signature
 
@@ -26,7 +22,8 @@ enum TypeContext: Sendable {
     case contract
 
     // The type a value is said to have: what a name, a module variable
-    // included, says it holds, and what a cast reads a value as.
+    // included, says it holds, what a cast reads a value as, and what a
+    // declared type's field holds or an alias stands for.
     case value
 
     // MARK: - Property
@@ -34,7 +31,7 @@ enum TypeContext: Sendable {
     var takesSelf: Bool {
         switch self {
         case .contract: true
-        case .declaration, .signature, .closure, .value: false
+        case .signature, .closure, .value: false
         }
     }
 
@@ -44,27 +41,7 @@ enum TypeContext: Sendable {
     var declaresTypeParameters: Bool {
         switch self {
         case .signature, .contract: true
-        case .declaration, .closure, .value: false
-        }
-    }
-
-    // Whether a record's field may be written `var`: a path writes through a
-    // declared type's field.
-    var takesWritableFields: Bool {
-        switch self {
-        case .declaration: true
-        case .signature, .closure, .contract, .value: false
-        }
-    }
-
-    // Where a type written inside one written here stands. A declared type's
-    // own fields are the ones a path writes through by `var`; a record
-    // inside one is an inline record, whose fields are written through as
-    // they are.
-    var nested: TypeContext {
-        switch self {
-        case .declaration: .value
-        case .signature, .closure, .contract, .value: self
+        case .closure, .value: false
         }
     }
 
@@ -75,7 +52,7 @@ enum TypeContext: Sendable {
         switch self {
         case .signature, .contract: true
         case let .closure(declared): declared.contains(name)
-        case .declaration, .value: false
+        case .value: false
         }
     }
 

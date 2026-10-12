@@ -103,7 +103,7 @@ struct Fanout {
     // its own type and answering what it was sent. It imports nothing, which is
     // what leaves its compile a question about itself.
     private static func document(_ held: Range<Int>) throws -> Module {
-        var types: [Name: TypeExpression] = [:]
+        var types: [Name: TypeDeclaration] = [:]
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
@@ -115,7 +115,7 @@ struct Fanout {
     }
 
     private static func procedure(_ number: Int) throws -> Procedure {
-        let held = Warp.Expression.reference([.key("held"), .key("value")])
+        let held = Warp.Expression.reference([.name("held"), .name("value")])
 
         return Procedure(
             signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
@@ -123,7 +123,7 @@ struct Fanout {
                 Statement(
                     binding: .constant("held"),
                     expression: .cast(
-                        .record(["value": .reference([.key("value")])]),
+                        .record(["value": .reference([.name("value")])]),
                         as: .named(try type(number)),
                         optional: false
                     )

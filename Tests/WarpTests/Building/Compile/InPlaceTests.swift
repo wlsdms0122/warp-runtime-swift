@@ -79,7 +79,7 @@ struct InPlaceTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .assignment([.key("total")]),
+                            binding: .assignment([.name("total")]),
                             expression: .call(
                                 Call(selector: "Standard.Numeric.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
@@ -108,14 +108,14 @@ struct InPlaceTests {
         // names it holds them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .cast(.record(["x": .literal(.int(0))]), as: .dictionary(.int), optional: false)],
+            variables: ["seen": map(["x": .literal(.int(0))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.string)),
                     body: [
                         Statement(
-                            binding: .assignment([.key("seen")]),
+                            binding: .assignment([.name("seen")]),
                             expression: .call(
                                 Call(
                                     selector: "Standard.Collection.setting",
@@ -162,13 +162,13 @@ struct InPlaceTests {
         // start says nothing about what the box will hold, the declaration
         // does, and a write of something else is held to it.
         let sut = try Module(
-            variables: ["seen": ModuleVariable(.record([:]), declared: .dictionary(.int))],
+            variables: ["seen": ModuleVariable(map([:]), declared: .dictionary(key: .string, value: .int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .dictionary(.int)),
+                    signature: Signature(returns: .dictionary(key: .string, value: .int)),
                     body: [
-                        Statement(binding: .assignment([.key("seen")]), expression: .literal(.string("not a dictionary")))
+                        Statement(binding: .assignment([.name("seen")]), expression: .literal(.string("not a dictionary")))
                     ],
                     result: reference("seen")
                 )
@@ -179,7 +179,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<Int>")
+            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<String, Int>")
         }
     }
 
@@ -220,7 +220,7 @@ struct InPlaceTests {
                                     body: [
                                         Statement(
                                             expression: .call(
-                                                Call(selector: "poke", arguments: [.reference([.key("xs"), .index(1)])])
+                                                Call(selector: "poke", arguments: [.reference([.name("xs"), .index(1)])])
                                             )
                                         )
                                     ]
@@ -234,7 +234,7 @@ struct InPlaceTests {
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never),
                     body: [
-                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(9))),
                         Statement(
                             expression: .call(
                                 Call(selector: "Standard.Control.abort", arguments: [.literal(.string("after"))])
@@ -264,11 +264,11 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(0)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))], returns: .array(.int)),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.int(9)))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.int(9)))],
                     result: reference("items")
                 )
             ]
@@ -290,11 +290,11 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(1)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "second", type: .inout(.int))], returns: .int),
-                    body: [Statement(binding: .assignment([.key("items")]), expression: .array([.literal(.int(7))]))],
+                    body: [Statement(binding: .assignment([.name("items")]), expression: .array([.literal(.int(7))]))],
                     result: reference("second")
                 )
             ]
@@ -320,18 +320,18 @@ struct InPlaceTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
+                            binding: .variable("table", declared: .dictionary(key: .string, value: .int)),
+                            expression: map([:])
                         ),
                         Statement(
-                            expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: [.reference([.name("table"), .index("k")])]))
                         )
                     ],
-                    result: reference("table", "k")
+                    result: .reference([.name("table"), .index("k")])
                 ),
                 "fill": Procedure(
                     signature: Signature(parameters: [Parameter(name: "slot", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.key("slot")]), expression: .literal(.int(3)))],
+                    body: [Statement(binding: .assignment([.name("slot")]), expression: .literal(.int(3)))],
                     result: .literal(.null)
                 )
             ]
@@ -352,14 +352,14 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
             ]
@@ -384,14 +384,14 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.string))]),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
             ]
@@ -560,12 +560,12 @@ struct InPlaceTests {
             "plain": taking,
             "nullable": .nullable(.named("App.Hook")),
             "array": .array(taking),
-            "dictionary": .dictionary(taking),
-            "record field": .record(["hook": taking]),
+            "dictionary": .dictionary(key: .string, value: taking),
+            "record field": .named("App.Holder"),
             "declared name": .named("App.Hook")
         ]
         let calling = try? Module(
-            types: ["App.Hook": taking],
+            types: ["App.Hook": .alias(taking), "App.Holder": .record(["hook": taking])],
             procedures: [
                 "App.calling": Procedure(
                     signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped] ?? .any)]),
@@ -591,8 +591,8 @@ struct InPlaceTests {
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
         // Given. `App.list` writes its own `some T` beside a value read as
-        // `Any`, and `App.records` a record of an empty list beside one of
-        // `Any`, into lists each was handed in place
+        // `Any`, and `App.maps` a map of an empty list beside one of `Any`,
+        // into lists each was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [
@@ -607,30 +607,30 @@ struct InPlaceTests {
                     ),
                     body: [
                         Statement(
-                            binding: .assignment([.key("xs")]),
-                            expression: .array([.reference([.key("x")]), .reference([.key("junk")])])
+                            binding: .assignment([.name("xs")]),
+                            expression: .array([.reference([.name("x")]), .reference([.name("junk")])])
                         )
                     ],
                     result: .literal(.int(0))
                 )
             ]
         )
-        let records = try Module(
+        let maps = try Module(
             procedures: [
-                "App.records": Procedure(
+                "App.maps": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "ds", type: .inout(.array(.dictionary(.array(generic))))),
+                            Parameter(name: "ds", type: .inout(.array(.dictionary(key: .string, value: .array(generic))))),
                             Parameter(name: "junk", type: .any)
                         ],
                         returns: .int
                     ),
                     body: [
                         Statement(
-                            binding: .assignment([.key("ds")]),
+                            binding: .assignment([.name("ds")]),
                             expression: .array([
-                                .record(["k": .array([])]),
-                                .record(["k": .array([.reference([.key("junk")])])])
+                                map(["k": .array([])]),
+                                map(["k": .array([.reference([.name("junk")])])])
                             ])
                         )
                     ],
@@ -643,13 +643,13 @@ struct InPlaceTests {
         let listRefusal = await #expect(throws: BuildError.self) {
             try await Builder().build([list] + Module.standard)
         }
-        let recordsRefusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([records] + Module.standard)
+        let mapsRefusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([maps] + Module.standard)
         }
 
         // Then
         #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<Array<some T>>>")
+        #expect(mapsRefusal?.message == "writes 'ds' as [[String: []], [String: Array<Any>]], and it holds Array<Dictionary<String, Array<some T>>>")
     }
 
     // MARK: - Public

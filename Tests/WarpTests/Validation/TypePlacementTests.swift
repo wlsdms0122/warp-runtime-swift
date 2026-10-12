@@ -22,7 +22,7 @@ struct TypePlacementTests {
         // When / Then. A declared type has no call to fill a parameter
         #expect {
             try Module(
-                types: ["Weird": .parameter(name: "T")],
+                types: ["Weird": .alias(.parameter(name: "T"))],
                 procedures: [
                     "keep": Procedure(
                         signature: Signature(
@@ -51,9 +51,9 @@ struct TypePlacementTests {
         #expect {
             try Module(
                 types: [
-                    "Callback": .procedure(ProcedureType(
+                    "Callback": .alias(.procedure(ProcedureType(
                         parameters: [.parameter(name: "T")]
-                    ))
+                    )))
                 ],
                 procedures: [
                     entryName: Procedure(
@@ -123,37 +123,6 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("var is not written on a field of a record a name or a module variable says it holds")
-    func varOnAHeldRecordFieldRefuses() throws {
-        // Given. A record type written inline declares no type, so it has no
-        // field a path writes through
-        let held = TypeExpression.record(["a": .variable(.int)])
-
-        // When / Then
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [Statement(binding: .constant("x", declared: held), expression: .record(["a": .literal(.int(1))]))],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
-        }
-
-        #expect {
-            try Module(
-                variables: ["x": ModuleVariable(.record(["a": .literal(.int(1))]), declared: held)],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("variables.x.fields.a: writes `var Int`")
-        }
-    }
-
     @Test("a ? that says nothing new is refused where it is written", arguments: [
         TypeExpression.nullable(.nullable(.int)), .nullable(.null), .nullable(.any), .nullable(.never),
         .nullable(.parameter(name: "T"))
@@ -180,16 +149,14 @@ struct TypePlacementTests {
     }
 
     @Test("a ? and a slot mark stand only where a type is written as a spelling", arguments: [
-        (TypeExpression.nullable(.record(["a": .int])), "a `?` trails a type's spelling"),
-        (.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
-        (.nullable(.array(.record(["a": .int]))), "a `?` trails a type's spelling"),
-        (.inout(.record(["a": .int])), "a mark stands in front of a type's spelling"),
+        (TypeExpression.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
+        (.nullable(.array(.procedure(ProcedureType(returns: .int)))), "a `?` trails a type's spelling"),
         (.inout(.array(.procedure(ProcedureType(returns: .int)))), "a mark stands in front of a type's spelling")
     ])
     func aMarkWithNoSpellingIsRefused(type: TypeExpression, refusal: String) throws {
-        // When / Then. An inline record and a written signature are mappings
-        // under one key, with nothing for a `?` to trail or a mark to stand
-        // before; a module made in Swift is held to it where it is made
+        // When / Then. A written signature is a mapping under one key, with
+        // nothing for a `?` to trail or a mark to stand before; a module made
+        // in Swift is held to it where it is made
         #expect {
             try Module(
                 procedures: [
@@ -224,16 +191,16 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("var stands on a field of the record a declared type is, and on no record inside it", arguments: [
-        TypeExpression.array(.record(["a": .variable(.int)])),
-        .record(["b": .record(["c": .variable(.int)])]),
-        .dictionary(.record(["a": .variable(.int)]))
+    @Test("var stands on a field of the record a declared type is, and nowhere inside an alias", arguments: [
+        TypeExpression.variable(.int),
+        .array(.variable(.int)),
+        .dictionary(key: .string, value: .variable(.int))
     ])
     func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
-        // When / Then. An inline record's fields are written through as they
-        // are, so `var` there says nothing
+        // When / Then. A field is a declared record's, and nothing else is
+        // written through
         #expect {
-            try Module(types: ["App.T": type])
+            try Module(types: ["App.T": .alias(type)])
         } throws: { error in
             error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
         }
@@ -276,7 +243,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(
-                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.key("inner")]))]
+                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.name("inner")]))]
                         ),
                         body: [],
                         result: .literal(.null)

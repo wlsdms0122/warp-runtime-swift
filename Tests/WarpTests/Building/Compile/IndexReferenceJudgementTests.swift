@@ -37,8 +37,8 @@ struct IndexReferenceJudgementTests {
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("names"), .indexRef([.key("C")])])
+                        .name("items"),
+                        .indexRef([.name("names"), .indexRef([.name("C")])])
                     ])
                 )
             ]
@@ -61,20 +61,21 @@ struct IndexReferenceJudgementTests {
         // Given. The element type is known whatever the index is, so the absent
         // field is the build's to refuse
         let sut = try Module(
+            types: ["App.Item": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
                             Parameter(name: "i", type: .int),
-                            Parameter(name: "items", type: .array(.record(["id": .string])))
+                            Parameter(name: "items", type: .array(.named("App.Item")))
                         ]
                     ),
                     body: [],
                     result: .reference([
-                        .key("items"),
-                        .indexRef([.key("i")]),
-                        .key("nope")
+                        .name("items"),
+                        .indexRef([.name("i")]),
+                        .name("nope")
                     ])
                 )
             ]
@@ -103,7 +104,7 @@ struct IndexReferenceJudgementTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("items"), .indexRef([.key("name")])])
+                    result: .reference([.name("items"), .indexRef([.name("name")])])
                 )
             ]
         )
@@ -130,7 +131,7 @@ struct IndexReferenceJudgementTests {
                         ]
                     ),
                     body: [],
-                    result: .reference([.key("text"), .indexRef([.key("i")])])
+                    result: .reference([.name("text"), .indexRef([.name("i")])])
                 )
             ]
         )
@@ -139,7 +140,7 @@ struct IndexReferenceJudgementTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("a dictionary by a name the run reads alone")
+            error is BuildError && "\(error)".contains("brackets read a list by a position and a map by a key")
         }
     }
 

@@ -116,7 +116,7 @@ struct VocabularyTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"], "head": ["ref": "head"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]], ["head", ["ref": "head"]]]]
         ], importing: ["Extra.longerThan", "Standard.Collection.first"])
 
         // When
@@ -127,8 +127,8 @@ struct VocabularyTests {
         )
 
         // Then
-        #expect(outputs["result"] == .string("long"))
-        #expect(outputs["head"] == .string("spectacle"))
+        #expect(outputs.map?["result"] == .string("long"))
+        #expect(outputs.map?["head"] == .string("spectacle"))
     }
 
     @Test("a procedure left out of the link is a procedure that does not exist")

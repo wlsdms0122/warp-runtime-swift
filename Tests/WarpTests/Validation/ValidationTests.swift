@@ -148,7 +148,7 @@ struct ValidationTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .assignment([.key("limit")]), expression: .literal(.int(9)))
+                            Statement(binding: .assignment([.name("limit")]), expression: .literal(.int(9)))
                         ]
                     )
                 ]
@@ -411,7 +411,7 @@ struct ValidationTests {
     @Test("a document writes only the variables it declares")
     func aDocumentWritesOnlyItsOwnVariables() {
         // Given. One write of `total`
-        let write = Statement(binding: .assignment([.key("total")]), expression: .literal(.int(1)))
+        let write = Statement(binding: .assignment([.name("total")]), expression: .literal(.int(1)))
 
         // When / Then. Taken at the load of the document declaring
         // `total`, and refused at the load of one that does not
@@ -542,7 +542,7 @@ struct ValidationTests {
                             ]
                         ),
                         body: [],
-                        result: .reference([.key("items", optional: true), .index(0)])
+                        result: .reference([.name("items", optional: true), .index(0)])
                     )
                 ]
             )
@@ -565,7 +565,7 @@ struct ValidationTests {
         // Given. `items[cursor]` reads `cursor`, so a typo in it is the same
         // mistake as a typo anywhere else
         let sut = Warp.Expression.reference(
-            [.key("items"), .indexRef([.key("cursor")])]
+            [.name("items"), .indexRef([.name("cursor")])]
         )
 
         // When / Then
@@ -579,9 +579,9 @@ struct ValidationTests {
             [items, Statement(binding: .assignment(path), expression: .literal(.int(2)))]
         }
 
-        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor")])])))
-        #expect(!validates(body: write([.key("items"), .indexRef([.key("cursor", optional: true)])]), visible: ["cursor"]))
-        #expect(validates(body: write([.key("items"), .indexRef([.key("cursor")])]), visible: ["cursor"]))
+        #expect(!validates(body: write([.name("items"), .indexRef([.name("cursor")])])))
+        #expect(!validates(body: write([.name("items"), .indexRef([.name("cursor", optional: true)])]), visible: ["cursor"]))
+        #expect(validates(body: write([.name("items"), .indexRef([.name("cursor")])]), visible: ["cursor"]))
     }
 
     @Test("a reference inside a call's operand is checked like any other")
@@ -600,7 +600,7 @@ struct ValidationTests {
         // run's own values arrive as arguments like everything else.
         let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
         let taken = Procedure(
-            signature: Signature(parameters: [Parameter(name: "run", type: .dictionary(.any))]),
+            signature: Signature(parameters: [Parameter(name: "run", type: .dictionary(key: .string, value: .any))]),
             body: [Statement(binding: .constant("read"), expression: reference("run", "id"))]
         )
 
@@ -737,16 +737,16 @@ struct ValidationTests {
 
     @Test("a name in the types namespace is held to one grammar where a module built in Swift spells it", arguments: [
         ("procedures.App.keep.parameters[0]", [:], TypeExpression.named("a b"), [:]),
-        ("types.Int", ["Int": .string], .int, [:]),
+        ("types.Int", ["Int": .alias(.string)], .int, [:]),
         ("procedures.App.keep.bounds.T", [:], .parameter(name: "T"), ["T": ["Array<Int>"]]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Self"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "A.B"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Int"), [:]),
         ("procedures.App.keep.bounds.some", [:], .parameter(name: "some"), ["some": ["App.Shown"]])
-    ] as [(String, [Name: TypeExpression], TypeExpression, [Name: Set<Name>])])
+    ] as [(String, [Name: TypeDeclaration], TypeExpression, [Name: Set<Name>])])
     func aTypeNamespaceNameHoldsOneGrammar(
         place: String,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         parameter: TypeExpression,
         bounds: [Name: Set<Name>]
     ) throws {
@@ -775,17 +775,11 @@ struct ValidationTests {
         // reaches the field
         #expect {
             try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "value", type: .record(["a.b": .int]))]),
-                        body: [],
-                        result: .literal(.int(1))
-                    )
-                ]
+                types: ["App.Held": .record(["a.b": .int])],
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0].fields")
+            error is ValidationError && "\(error)".hasPrefix("types.App.Held.fields")
                 && "\(error)".contains("is no name a path reads")
         }
 
@@ -803,10 +797,10 @@ struct ValidationTests {
         }
     }
 
-    @Test("a literal holds no map, which a document writes as a record cast to it")
-    func aLiteralMapIsRefused() throws {
+    @Test("a literal may hold a map, which a document writes as the map literal that makes it")
+    func aLiteralMapStands() throws {
         // When / Then
-        #expect {
+        #expect(throws: Never.self) {
             try Module(
                 procedures: [
                     entryName: Procedure(
@@ -816,20 +810,20 @@ struct ValidationTests {
                     )
                 ]
             )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal holds a map")
         }
     }
 
-    @Test("an index below zero is no position, however the path was made")
-    func anIndexBelowZeroIsRefused() throws {
+    @Test("what stands between the brackets is data, however the path was made")
+    func anIndexIsData() async throws {
         // Given
         let items = Statement(binding: .variable("items"), expression: .array([.literal(.int(1))]))
+        let carried = try await procedureValue()
 
-        // When / Then. A read and a write
-        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(-1)]))]))
-        #expect(!validates(body: [items, Statement(binding: .assignment([.key("items"), .index(-1)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.key("items"), .index(0)]))]))
+        // When / Then. A read and a write. Which value is a position is the
+        // build's to judge, by what is indexed
+        #expect(!validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(carried)]))]))
+        #expect(!validates(body: [items, Statement(binding: .assignment([.name("items"), .index(carried)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [items, Statement(binding: .constant("x"), expression: .reference([.name("items"), .index(-1)]))]))
     }
 
     @Test("every name a path reads is a value's name, however the path was made", arguments: [
@@ -840,12 +834,12 @@ struct ValidationTests {
         let record = Statement(binding: .variable("d"), expression: .record(["a": .literal(.int(1))]))
 
         // When / Then. A read and a write
-        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key(step)]))]))
-        #expect(!validates(body: [record, Statement(binding: .assignment([.key("d"), .key(step)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.key("d"), .key("a")]))]))
+        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name(step)]))]))
+        #expect(!validates(body: [record, Statement(binding: .assignment([.name("d"), .name(step)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name("a")]))]))
     }
 
-    @Test("a literal names no record, at whatever depth it holds one", arguments: [
+    @Test("a literal holds no record, at whatever depth it holds one", arguments: [
         Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
         .array([.record(Record(name: "Int", ["x": .int(1)]))])
     ])
@@ -856,7 +850,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal writes a record's name")
+            error is ValidationError && "\(error)".contains("a literal holds a record")
         }
     }
 
@@ -962,7 +956,7 @@ struct ValidationTests {
         // Given
         let sut = Procedure(
             body: [Statement(binding: .constant("made"), expression: .literal(.int(1)))],
-            result: .record(["ok": reference("made"), "bad": reference("never")])
+            result: map(["ok": reference("made"), "bad": reference("never")])
         )
 
         // When / Then
@@ -1118,7 +1112,7 @@ struct ValidationTests {
                         expression: .closure(Procedure(implementation: .query(OneQuery())))
                     )
                 ],
-                result: .apply(.reference([.key("f")]), arguments: [])
+                result: .apply(.reference([.name("f")]), arguments: [])
             )])
         }
 
@@ -1144,7 +1138,7 @@ struct ValidationTests {
         #expect(
             !validates(body: [
                 Statement(binding: .variable("probe"), expression: .literal(.int(0))),
-                Statement(binding: .assignment([.key("probe")]), expression: sut)
+                Statement(binding: .assignment([.name("probe")]), expression: sut)
             ])
         )
     }
@@ -1162,7 +1156,7 @@ struct ValidationTests {
                             parameters: [Parameter(name: "greeting", type: .string)]
                         ),
                         body: [],
-                        result: .reference([.key("greeting")])
+                        result: .reference([.name("greeting")])
                     ))
                 )
             ],
@@ -1185,10 +1179,10 @@ struct ValidationTests {
     func aNameComingBackRefusesAtTheLoad() throws {
         // Given. A record may name itself, and a name that is no record
         // spells no type where it reaches itself, through names or a structure
-        let cycles: [[Name: TypeExpression]] = [
-            ["Loop": .named("Loop")],
-            ["A": .named("B"), "B": .named("A")],
-            ["List": .array(.named("List"))]
+        let cycles: [[Name: TypeDeclaration]] = [
+            ["Loop": .alias(.named("Loop"))],
+            ["A": .alias(.named("B")), "B": .alias(.named("A"))],
+            ["List": .alias(.array(.named("List")))]
         ]
 
         for types in cycles {

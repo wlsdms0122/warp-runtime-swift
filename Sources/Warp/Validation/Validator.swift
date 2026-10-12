@@ -83,9 +83,9 @@ struct Validator: Sendable {
             }
         }
 
-        for (name, type) in module.types.sorted(by: { one, other in one.key < other.key }) {
+        for (name, declared) in module.types.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .type, at: .type(name.spelling, in: .of(module)))
-            try written(type, in: .declaration, at: .type(name.spelling, in: .of(module)))
+            try written(declared, at: .type(name.spelling, in: .of(module)))
 
             guard !comesBack(name, in: module.types) else {
                 throw ValidationError(Self.comingBack, at: .type(name.spelling, in: .of(module)))
@@ -140,7 +140,7 @@ struct Validator: Sendable {
             }
 
             for contract in contracts.sorted() {
-                try held(contract, as: .type, at: place)
+                try held(contract, as: .mention, at: place)
             }
         }
 
@@ -165,7 +165,7 @@ struct Validator: Sendable {
     // of every module's types here and of every object's where it is read;
     // across documents the module graph stands each after what it names, so
     // no later stage meets one.
-    func comesBack(_ name: Name, in types: [Name: TypeExpression]) -> Bool {
+    func comesBack(_ name: Name, in types: [Name: TypeDeclaration]) -> Bool {
         func standsAsAName(_ mentioned: Name) -> Bool {
             if case .record = types[mentioned] { true } else { false }
         }
@@ -495,24 +495,17 @@ struct Validator: Sendable {
         // one as a literal is carrying something no text spells and nothing
         // reads back. A caller assembling a program in Swift is the only one that
         // can build it, and this is the door it comes through. Nor does a
-        // literal name a record: a name is a type's, and a literal written
-        // with one would hold a value of a type nothing declared or imported.
+        // literal hold a record: a record is the value of a declared record,
+        // made by a record literal written where one is read.
         case let .literal(value):
             guard !value.holdsProcedure else {
                 throw ValidationError(Value.procedureIsNotData, at: place)
             }
 
-            guard !value.holdsName else {
+            guard !value.holdsRecord else {
                 throw ValidationError(
-                    "a literal writes a record's name, and a record takes one only from a declared record"
-                        + " it is written into, a door it comes through or a cast",
-                    at: place
-                )
-            }
-
-            guard !value.holdsDictionary else {
-                throw ValidationError(
-                    "a literal holds a map, and a map is written as a record cast to the `Dictionary<T>` it is",
+                    "a literal holds a record, and a record is written by a record literal where its declared"
+                        + " record is read",
                     at: place
                 )
             }
@@ -534,6 +527,14 @@ struct Validator: Sendable {
 
                 try held(field, asValueAt: here)
                 try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
+            }
+
+        case let .dictionary(entries):
+            for (position, entry) in entries.enumerated() {
+                for (part, here) in [(entry.key, place.child(.entryKey(position))), (entry.value, place.child(.entryValue(position)))] {
+                    try held(part, asValueAt: here)
+                    try validate(part, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
+                }
             }
 
         // A cast names a type and reads a value as it. The type is the build's
@@ -865,20 +866,16 @@ struct Validator: Sendable {
     }
 
     // What a path's steps are held to wherever it is written: a name it
-    // reads is a value's, the one name a path reads back as one key, and a
-    // whole number written between the brackets is a position, which one
-    // below zero is not.
+    // reads is a value's, the one name a path reads back as one key, and
+    // what stands between the brackets is data, as every literal is.
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
-            case let .key(name, _):
+            case let .name(name, _):
                 try held(name, as: .value, at: place)
 
-            case let .index(index, _) where index < 0:
-                throw ValidationError(
-                    "index segment '[\(index)]' is below zero, and a whole number below zero is no position",
-                    at: place
-                )
+            case let .index(index, _) where index.holdsProcedure:
+                throw ValidationError(Value.procedureIsNotData, at: place)
 
             case .index, .indexRef:
                 continue
@@ -901,7 +898,7 @@ struct Validator: Sendable {
             try held(parameter, as: .typeParameter, at: here)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .type, at: here)
+                try held(contract, as: .mention, at: here)
             }
         }
 
@@ -961,7 +958,7 @@ struct Validator: Sendable {
             return
 
         case let .named(name):
-            try held(name, as: .type, at: place)
+            try held(name, as: .mention, at: place)
 
         // One contract is written by its name, so a composition joins two
         // or more.
@@ -975,7 +972,7 @@ struct Validator: Sendable {
             }
 
             for name in names.sorted() {
-                try held(name, as: .type, at: place)
+                try held(name, as: .mention, at: place)
             }
 
         // The build's own note to itself: a type it read out of a body, which
@@ -984,7 +981,7 @@ struct Validator: Sendable {
             throw ValidationError(
                 "writes `\(type.rendered)`, which is a type the build"
                     + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.key(of)] + path.segments).rendered)` is a path"
+                    + " and `\(Path([.name(of)] + path.segments).rendered)` is a path"
                     + " only that body can read",
                 at: place
             )
@@ -1009,8 +1006,12 @@ struct Validator: Sendable {
 
             try held(name, as: .typeParameter, at: place)
 
-        case let .array(inner), let .dictionary(inner):
-            try written(inner, in: context.nested, at: place)
+        case let .array(inner):
+            try written(inner, in: context, at: place)
+
+        case let .dictionary(key, value):
+            try written(key, in: context, at: place)
+            try written(value, in: context, at: place)
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
@@ -1026,22 +1027,7 @@ struct Validator: Sendable {
                 )
             }
 
-            try written(inner, in: context.nested, at: place)
-
-        // A field of a record type is reached by a path alone, so its name is
-        // a value's.
-        case let .record(fields):
-            for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
-                let here = place.part(.fields).key(name.spelling)
-
-                try held(name, as: .value, at: here)
-
-                if context.takesWritableFields {
-                    try marked(field, at: here)
-                }
-
-                try written(context.takesWritableFields ? field.fieldUnwrapped : field, in: context.nested, at: here)
-            }
+            try written(inner, in: context, at: place)
 
         // A procedure type's parameters are slots, each of which may be
         // handed in place.
@@ -1050,10 +1036,10 @@ struct Validator: Sendable {
 
             for (position, parameter) in procedure.parameters.enumerated() {
                 try marked(parameter, at: place.index(position))
-                try written(parameter.slotUnwrapped, in: context.nested, at: place.index(position))
+                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context.nested, at: place.part(.returns))
+            try written(procedure.returns ?? .any, in: context, at: place.part(.returns))
 
         case .inout:
             throw ValidationError(
@@ -1065,9 +1051,29 @@ struct Validator: Sendable {
         case .variable:
             throw ValidationError(
                 "writes `\(type.rendered)`, and `var` is written on a field of the record a type in"
-                    + " `types` declares. Any other record's field is written through as it is",
+                    + " `types` declares",
                 at: place
             )
+        }
+    }
+
+    // A declared type held to where it is written. A record's field is
+    // reached by a path alone, so its name is a value's, and it may be
+    // written `var`, which a path writes through; an alias's type is written
+    // as any type is.
+    private func written(_ declared: TypeDeclaration, at place: Place) throws {
+        switch declared {
+        case let .record(fields):
+            for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
+                let here = place.part(.fields).key(name.spelling)
+
+                try held(name, as: .value, at: here)
+                try marked(field, at: here)
+                try written(field.fieldUnwrapped, in: .value, at: here)
+            }
+
+        case let .alias(type):
+            try written(type, in: .value, at: place)
         }
     }
 

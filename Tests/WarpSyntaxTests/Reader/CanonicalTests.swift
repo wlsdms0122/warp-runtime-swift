@@ -47,7 +47,7 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -55,8 +55,8 @@ struct CanonicalTests {
         let more = try await run(sut, arguments: ["count": .int(2)])
 
         // Then
-        #expect(one["result"] == .string("one"))
-        #expect(more["result"] == .string("more"))
+        #expect(one.map?["result"] == .string("one"))
+        #expect(more.map?["result"] == .string("more"))
     }
 
     @Test("a loop reads a condition written as a plain call")
@@ -86,14 +86,14 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "seen"]]]
+            "result": ["dictionary": [["result", ["ref": "seen"]]]]
         ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .int(3))
+        #expect(outputs.map?["result"] == .int(3))
     }
 
     @Test("a spelling and the call it stands for are the same program")
@@ -114,7 +114,7 @@ struct CanonicalTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ], importing: ["Standard.Logic.equal"])
         }
 
@@ -139,8 +139,8 @@ struct CanonicalTests {
         // Then
         #expect(hit.0 == hit.1)
         #expect(miss.0 == miss.1)
-        #expect(hit.0["result"] == .string("matched"))
-        #expect(miss.0["result"] == .string("missed"))
+        #expect(hit.0.map?["result"] == .string("matched"))
+        #expect(miss.0.map?["result"] == .string("missed"))
     }
 
     @Test("a condition that is simply a name is read as one")
@@ -160,14 +160,14 @@ struct CanonicalTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ])
 
         // When
         let outputs = try await run(sut, arguments: ["ready": .bool(true)])
 
         // Then
-        #expect(outputs["result"] == .string("go"))
+        #expect(outputs.map?["result"] == .string("go"))
     }
 
     @Test("a program that does not hold together is still one document")

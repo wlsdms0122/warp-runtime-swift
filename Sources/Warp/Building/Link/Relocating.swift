@@ -279,7 +279,7 @@ final class Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try relocated(dispatch, in: context))
 
-        case .literal, .local, .array, .record, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .local, .array, .record, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
         }
     }

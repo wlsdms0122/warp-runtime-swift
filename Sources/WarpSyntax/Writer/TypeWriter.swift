@@ -42,6 +42,18 @@ struct TypeWriter {
         return written
     }
 
+    // A declared type: a record under `record`, its fields beside their
+    // types, and an alias as the type it stands for.
+    func value(of declared: TypeDeclaration) throws -> Value {
+        switch declared {
+        case let .record(fields):
+            return .dictionary([TypeDeclarationReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
+
+        case let .alias(type):
+            return try value(of: type)
+        }
+    }
+
     // The bounds, written once, at the signature that declares the names.
     func bounds(of signature: Signature) -> Value? {
         guard !signature.bounds.isEmpty else { return nil }
@@ -74,7 +86,7 @@ struct TypeWriter {
         // holding one is said rather than written as something else.
         case let .projection(of, path):
             throw WritingError(
-                "`\(TypeSpelling.some) \(Path([.key(of)] + path.segments).rendered)` is a type"
+                "`\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)` is a type"
                     + " the build read out of a body,"
                     + " and no document writes one. A declaration says what a call"
                     + " fills"
@@ -91,23 +103,30 @@ struct TypeWriter {
         // own key where the element has none. An array of procedures is the
         // case with none.
         case let .array(element):
-            return try value(of: element, in: .array)
+            guard case let .string(spelling) = try form(of: element) else {
+                return .dictionary([Name(normal: TypeReader.Holding.array.rawValue): try value(of: element)])
+            }
 
-        case let .dictionary(element):
-            return try value(of: element, in: .dictionary)
+            return .string("\(TypeReader.Holding.array.spelling)<\(spelling)>")
+
+        case let .dictionary(key, value):
+            guard case let .string(keySpelling) = try form(of: key), case let .string(valueSpelling) = try form(of: value) else {
+                return .dictionary([
+                    Name(normal: TypeReader.Holding.dictionary.rawValue): .dictionary([
+                        TypeReader.DictionaryTypeReader.CodingKeys.key.name: try self.value(of: key),
+                        TypeReader.DictionaryTypeReader.CodingKeys.value.name: try self.value(of: value)
+                    ])
+                ])
+            }
+
+            return .string("\(TypeReader.Holding.dictionary.spelling)<\(keySpelling), \(valueSpelling)>")
 
         // Spelled with the trailing `?` the reader takes, which is why the
-        // declared half has to have a name of its own. A record has no spelling
-        // for a `?` to trail.
+        // declared half has to have a name of its own.
         case let .nullable(inner):
             return .string(
                 "\(try named(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
             )
-
-        // A record and a procedure are both written as a mapping, and the one
-        // key is what tells them apart.
-        case let .record(fields):
-            return .dictionary([TypeReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
 
         // Both marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries
@@ -139,26 +158,16 @@ struct TypeWriter {
         }
     }
 
-    // A built-in holding another type, under the reading's own key for it.
-    private func value(of element: TypeExpression, in holding: TypeReader.Holding) throws -> Value {
-        guard case let .string(spelling) = try form(of: element) else {
-            return .dictionary([Name(normal: holding.rawValue): try value(of: element)])
-        }
-
-        return .string("\(holding.spelling)<\(spelling)>")
-    }
-
     // A marked slot is written with the mark in front of the inner type,
     // whichever form that type takes: a bare name, or a procedure form under
-    // its one key. An inline record has no front to write a mark on, and a
-    // declaration's field is the one place a procedure type goes anyway.
+    // its one key.
     private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
         switch try form(of: inner) {
         case let .string(written):
             return .string(mark.marking(written))
 
         case let .dictionary(form) where form.count == 1
-            && TypeReader.readsAsAProcedure(form.entries[0].name):
+            && ((try? form.named()[0].name).map(TypeReader.readsAsAProcedure) ?? false):
             // A key carries one mark, and a key carrying two reads back as a
             // record whose field is named after them.
             if let inside = SlotMark.marked(inner) {
@@ -169,7 +178,7 @@ struct TypeWriter {
             }
 
             return .dictionary([
-                try Name(mark.marking(form.entries[0].name.spelling)): form.entries[0].value
+                try Name(mark.marking(try form.named()[0].name.spelling)): form.entries[0].value
             ])
 
         default:

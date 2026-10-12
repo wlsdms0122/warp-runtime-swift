@@ -264,13 +264,14 @@ struct ObjectReadingTests {
 
     @Test("is refused where a layout's names are not in order")
     func aLayoutOutOfOrder() async throws {
-        // Given. A declaration that writes no `returns`, so what the build read
-        // off its body stands in the object as a lowered record, layout and
-        // types apart.
+        // Given. A body answering a record literal, which the object writes as
+        // the record's layout beside the code filling each field.
         let sut = try Module(
+            types: ["App.Pair": .record(["a": .int, "b": .string])],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .named("App.Pair")),
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
                 )
@@ -279,27 +280,33 @@ struct ObjectReadingTests {
 
         var parts = try await parts(of: sut)
 
-        guard case var .array(answers) = parts["answers"],
-            case var .array(entry) = answers[0],
-            case var .array(answer) = entry[1],
-            case var .array(record) = answer[1],
+        guard case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[6],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case var .array(record) = operation[1],
             case var .array(layout) = record[0],
             case let .array(names) = layout[1],
             names.count > 1
         else {
-            Issue.record("a declaration that wrote no answer stands one as a lowered record")
+            Issue.record("an object writes a record literal as its layout and its fields")
 
             return
         }
 
-        // The names swapped and the types left where they were. A reading that
-        // put the names back in order would pair each with the other's type.
+        // The names swapped and the fields left where they were. A reading that
+        // put the names back in order would pair each with the other's code.
         layout[1] = .array(names.reversed())
         record[0] = .array(layout)
-        answer[1] = .array(record)
-        entry[1] = .array(answer)
-        answers[0] = .array(entry)
-        parts = parts.writing("answers", with: .array(answers))
+        operation[1] = .array(record)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then
         #expect {
@@ -401,16 +408,21 @@ struct ObjectReadingTests {
 
     @Test("is refused where a record value's fields stand out of order")
     func aRecordOutOfOrder() async throws {
-        // Given. A real object whose body answers a record literal, which it
-        // writes as a record with no name, its fields turned around. A reading
-        // that sorted them would read two writings as one object.
+        // Given. A real object whose body answers a constant holding a record,
+        // which the build folds to the record value it is, its fields turned
+        // around. A reading that sorted them would read two writings as one
+        // object.
         let sut = try Module(
+            types: ["App.Pair": .record(["a": .int, "b": .int])],
+            constants: [
+                "pair": .cast(.record(["a": .literal(.int(1)), "b": .literal(.int(2))]), as: .named("App.Pair"), optional: false)
+            ],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .any),
+                    signature: Signature(returns: .named("App.Pair")),
                     body: [],
-                    result: .literal(.record(Record(name: nil, ["a": .int(1), "b": .int(2)])))
+                    result: reference("pair")
                 )
             ]
         )
@@ -472,7 +484,7 @@ struct ObjectReadingTests {
                             body: Block(
                                 body: [
                                     Statement(
-                                        binding: .assignment([.key("n")]),
+                                        binding: .assignment([.name("n")]),
                                         expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
                                     ),
                                     Statement(binding: .constant("k"), expression: reference("n"))

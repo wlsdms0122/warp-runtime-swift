@@ -80,7 +80,7 @@ struct OneSpellingTests {
         }
     }
 
-    @Test("a named record under the record tag is the literal it writes, refused for its name")
+    @Test("a named record under the record tag is the literal it writes, refused for the record it holds")
     func aNamedRecordUnderTheTagIsRefused() throws {
         // Given
         let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
@@ -94,7 +94,7 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal writes a record's name")
+            error is ValidationError && "\(error)".contains("a literal holds a record")
         }
     }
 
@@ -153,7 +153,7 @@ struct OneSpellingTests {
             try Loader().load(document, identity: nil)
         } throws: { error in
             (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
-                && "\(error)".contains("A record type is written")
+                && "\(error)".contains("A record is declared under its name in `types` as `{ record: { … } }`")
         }
     }
 
