@@ -17,7 +17,7 @@ struct MutatorTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("walks the fields of a named record the way it walks a dictionary's")
+    @Test("walks a record's fields the way it walks a map's entries")
     func aNamedRecordIsWalked() {
         // Given
         let point = Value.record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))

@@ -45,7 +45,7 @@ struct NotationGateTests {
         }
     }
 
-    @Test("a statement written as something other than a record is refused")
+    @Test("a statement written as something other than a mapping is refused")
     func statementMustBeARecord() {
         // Given / When / Then
         #expect(throws: ReadingError.self) {

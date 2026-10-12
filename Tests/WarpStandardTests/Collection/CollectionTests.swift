@@ -255,7 +255,7 @@ struct CollectionTests {
         )
     }
 
-    @Test("a dictionary is walked and rebuilt without naming its fields")
+    @Test("a map is walked and rebuilt by its keys")
     func aDictionaryIsDataRatherThanAType() async throws {
         // Given
         let sut = try Module(
