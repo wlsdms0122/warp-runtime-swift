@@ -55,7 +55,7 @@ public struct Record: Sendable, Equatable {
         self.init(layout: layout, values: values)
     }
 
-    // The inner door: the maker already stands on the layout.
+    // Values the maker already laid out on the layout.
     init(layout: Layout, values: [Value]) {
         assert(layout.fields.count == values.count, "a record has one value per field its layout names")
 

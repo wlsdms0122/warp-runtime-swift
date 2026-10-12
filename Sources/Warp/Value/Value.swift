@@ -87,11 +87,12 @@ public indirect enum Value: Sendable, Equatable {
                 .sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
         }
 
-        // The inner door: entries in the key order, under keys none of which
-        // is the same as another. An object's list of entries carries both
-        // facts once its reading judged the order, so what stands on it comes
-        // through here rather than being sorted again. A value born outside a
-        // link has neither behind it and comes through the door above.
+        // Entries already in the key order, under keys none of which is the
+        // same as another, where the maker holds both facts itself. An
+        // object's list of entries carries both once its reading judged the
+        // order, so what stands on it comes through here rather than being
+        // sorted again. Entries with neither behind them come through the
+        // initializer above.
         init(ordered entries: [(key: Value, value: Value)]) {
             self.entries = entries
         }
@@ -554,10 +555,9 @@ public indirect enum Value: Sendable, Equatable {
     // what has no elements to take, the way `elements` answers nil.
     //
     // This is for the procedures that only put a collection's own elements in
-    // another order or take fewer of them, and so never have to look at one.
-    // Saying which by position lets bytes be rearranged as the bytes they are:
-    // reading them out as values and writing them back would cost the boxing
-    // twice over, which is the cost being compact exists to avoid.
+    // another order or take fewer of them, and so never have to look at one:
+    // bytes are rearranged as the bytes they are, never read out as values
+    // and written back.
     //
     // A position this value does not have is answered the way a value with no
     // elements at all is: with nil. A caller's own arithmetic decides the
