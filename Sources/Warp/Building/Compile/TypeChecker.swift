@@ -2736,35 +2736,6 @@ struct TypeChecker {
                 ask: ask
             )
 
-            // A write's path is written into its places and settles its
-            // constant indexes the way a read's path does, so no constant
-            // name survives into the image.
-            var binding = statement.binding
-
-            if
-                case let .assignment(path)? = binding,
-                case let .judging(folding, _, _) = ask,
-                let box = path.head.flatMap({ head in environment[head] }),
-                case let .reaches(_, placed) = writable(path, from: box, in: environment, with: context, at: here)
-            {
-                binding = .assignment(placed)
-
-                if let folding {
-                    let folded = try await foldedIndexReferences(placed, at: here, folding: folding)
-
-                    // What an index settled to stands as if it were written
-                    // there, and is judged as such.
-                    if folded != placed, case let .refused(reason) = writable(folded, from: box, in: environment, with: context, at: here) {
-                        throw BuildError(reason, at: here)
-                    }
-
-                    binding = .assignment(folded)
-                }
-            }
-
-            rewritten.append(
-                Statement(binding: binding, expression: inner.rewritten)
-            )
             calls += inner.calls
             judgements.absorb(inner.judgements)
 
@@ -2790,6 +2761,8 @@ struct TypeChecker {
             // What the syntactic leaves get at the load, a call gets here, where
             // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
+                rewritten.append(Statement(binding: statement.binding, expression: inner.rewritten))
+
                 // What never finishes binds nothing, so a name on it
                 // promises a binding that cannot happen.
                 if statement.binding != nil {
@@ -2836,6 +2809,10 @@ struct TypeChecker {
             // write is held to.
             var into: LoweredType?
 
+            // What the statement binds, a write's path as it was placed where
+            // the write lands.
+            var binding = statement.binding
+
             switch statement.binding {
             case let .constant(id, _)?:
                 locals.insert(id)
@@ -2861,63 +2838,44 @@ struct TypeChecker {
             // judged against the type the path reaches, and leaves the
             // variable's type as it was.
             case let .assignment(path)?:
-                guard let id = path.head else { break }
-
-                let written = inner.written
-
-                switch environment[id] {
-                case let binding? where binding.heldType != nil:
-                    let held = try refuseUnfit(
-                        written,
-                        writtenTo: path,
-                        into: binding,
-                        in: environment,
-                        with: context,
-                        at: here,
-                        when: ask
-                    )
-
-                    into = held
-
-                    if case let .held(held) = binding.holding, path.segments.count == 1 {
-                        environment[id] = Binding(.held(held), held)
-
-                        if !locals.contains(id) {
-                            flowed.land((held, true), on: id)
-                        }
-                    }
-
-                case let binding? where binding.holding == .assigned:
-                    if path.segments.count == 1 {
-                        environment[id] = Binding(.assigned, inner.reading)
-
-                        if !locals.contains(id) {
-                            flowed.land((inner.reading, true), on: id)
-                        }
-                    } else {
-                        // A write through a path leaves the box reading as it
-                        // was, so what it writes is held to what the path
-                        // reaches.
-                        if let reached = try refuseUnfit(
-                            written,
-                            writtenTo: path,
-                            into: binding,
-                            in: environment,
-                            with: context,
-                            at: here,
-                            when: ask
-                        ) {
-                            into = reached
-                        }
-
-                        if !locals.contains(id), let current = environment[id]?.type {
-                            flowed.land((current, true), on: id)
-                        }
-                    }
+                guard let id = path.head, let box = environment[id] else { break }
 
                 // The load holds a write's head to a variable.
-                default:
+                guard box.heldType != nil || box.holding == .assigned else { break }
+
+                if box.heldType == nil, path.segments.count == 1 {
+                    environment[id] = Binding(.assigned, inner.reading)
+
+                    if !locals.contains(id) {
+                        flowed.land((inner.reading, true), on: id)
+                    }
+
                     break
+                }
+
+                guard
+                    let landed = try await landing(path, from: box, in: environment, with: context, at: here, when: ask)
+                else { break }
+
+                binding = .assignment(landed.placed)
+                into = try refuseUnfit(
+                    inner.written,
+                    writtenTo: path,
+                    at: landed.slot,
+                    of: box,
+                    with: context,
+                    at: here,
+                    when: ask
+                )
+
+                if case let .held(held) = box.holding, path.segments.count == 1 {
+                    environment[id] = Binding(.held(held), held)
+
+                    if !locals.contains(id) {
+                        flowed.land((held, true), on: id)
+                    }
+                } else if box.heldType == nil, !locals.contains(id), let current = environment[id]?.type {
+                    flowed.land((current, true), on: id)
                 }
 
             // A nameless statement writes no name for a later reading to
@@ -2927,16 +2885,9 @@ struct TypeChecker {
             }
 
             // Literals are read as the type they land in reads them.
-            if let into, ask.rewrites {
-                rewritten = Body(
-                    rewritten.statements.dropLast() + [
-                        Statement(
-                            binding: binding,
-                            expression: into.written(inner.rewritten, in: context.loweredTypes)
-                        )
-                    ]
-                )
-            }
+            let written = ask.rewrites ? into.map { into in into.written(inner.rewritten, in: context.loweredTypes) } : nil
+
+            rewritten.append(Statement(binding: binding, expression: written ?? inner.rewritten))
         }
 
         return (ask.rewrites ? rewritten : body, calls, judgements, environment, .null, flowed, locals)
@@ -3211,37 +3162,60 @@ struct TypeChecker {
         }
     }
 
-    // A write that leaves the box reading as what it is held to, or as it
-    // was through a path: refused where what is written does not fit what
-    // the path reaches, a type parameter there taking only a value of it.
-    // Answers the type the write was held to, or nil where it was refused.
-    private func refuseUnfit(
-        _ written: LiteralShape,
-        writtenTo path: Path,
-        into box: Binding,
+    // Where a write lands, and the path placed for it there: the box's own
+    // type for a whole write to a box held to one, else what the path
+    // reaches. The value runs before the write lands, and may itself write
+    // the head or a name the path indexes with, so the path is walked in the
+    // names as the value left them. Under a folding scope its constant
+    // indexes settle, so no constant name survives into the image, and what
+    // an index settled to stands as if it were written there and is judged
+    // as such. Nil where the probing ask meets a refusal.
+    private func landing(
+        _ path: Path,
+        from box: Binding,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place,
         when ask: Ask
-    ) throws -> LoweredType? {
-        let slot: LoweredType
-
+    ) async throws -> (slot: LoweredType, placed: Path)? {
         if path.segments.count == 1, let fixed = box.heldType {
-            slot = fixed
-        } else {
-            // The value runs before the write lands, and may itself write the
-            // head or a name the path indexes with, so the path is walked in
-            // the names as the value left them: what the write lands in.
-            switch writable(path, from: box, in: environment, with: context, at: place) {
-            case let .refused(reason):
-                try refuse(reason, at: place, when: ask)
-                return nil
-
-            case let .reaches(reached, _):
-                slot = reached
-            }
+            return (fixed, path)
         }
 
+        switch writable(path, from: box, in: environment, with: context, at: place) {
+        case let .refused(reason):
+            try refuse(reason, at: place, when: ask)
+            return nil
+
+        case let .reaches(reached, placed):
+            guard case let .judging(folding?, _, _) = ask else { return (reached, placed) }
+
+            let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
+
+            if
+                folded != placed,
+                case let .refused(reason) = writable(folded, from: box, in: environment, with: context, at: place)
+            {
+                throw BuildError(reason, at: place)
+            }
+
+            return (reached, folded)
+        }
+    }
+
+    // A write held to where it lands: refused where what is written does
+    // not fit what the path reaches, a type parameter there taking only a
+    // value of it. Answers the type the write was held to, or nil where it
+    // was refused.
+    private func refuseUnfit(
+        _ written: LiteralShape,
+        writtenTo path: Path,
+        at slot: LoweredType,
+        of box: Binding,
+        with context: TypingContext,
+        at place: Place,
+        when ask: Ask
+    ) throws -> LoweredType? {
         guard fits(written, into: slot, of: box, in: context.loweredTypes) else {
             try refuse(
                 "writes '\(path.rendered)' as \(written.rendered(in: context.loweredTypes)), and it holds"
