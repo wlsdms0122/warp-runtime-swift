@@ -2895,10 +2895,15 @@ struct TypeChecker {
             }
 
             // Literals are read as the type they land in reads them.
-            let written = ask.rewrites ? into.map { into in into.written(inner.rewritten, in: context.loweredTypes) } : nil
+            var value = inner.rewritten
+
+            if let into, ask.rewrites {
+                value = into.written(value, in: context.loweredTypes)
+            }
+
             let standing = Statement(
                 binding: placed.map { placed in .assignment(placed.path) } ?? statement.binding,
-                expression: written ?? inner.rewritten
+                expression: value
             )
 
             // Lowering reads a write's path at the place its statement stands
