@@ -433,7 +433,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .record(record):
             self = table.record(named: record.name).map(LoweredType.named) ?? .any
 
-        // A map reads as what its keys and its values hold, joined.
+        // A map reads as what its keys and its values hold, joined, and is a
+        // map where its keys join to `Any`: a door holds a value to the type
+        // it is an instance of. A constant's type is the build's, under
+        // `refined(by:)`.
         case let .dictionary(dictionary):
             self = .dictionary(
                 key: LoweredType(joining: dictionary.keys.map { key in LoweredType(of: key, in: table) }),
@@ -469,6 +472,13 @@ indirect enum LoweredType: Sendable, Equatable {
     // list or a map of any type.
     private init(joining readings: [LoweredType]) {
         self = readings.dropFirst().reduce(readings.first ?? .never) { joined, next in joined.joined(next) }
+    }
+
+    // A map keyed by `key` and holding `value`, as the build reads one: a
+    // key read as `Any` answers no `Hashable`, so a map of it is no map type
+    // and reads `Any` whole.
+    init(keyedBy key: LoweredType, holding value: LoweredType) {
+        self = key == .any ? .any : .dictionary(key: key, value: value)
     }
 
     // MARK: - Public
@@ -587,11 +597,14 @@ indirect enum LoweredType: Sendable, Equatable {
     // (an element, an entry), the constness and isolation the build derived
     // for that one value included. A record's fields are its declaration's. A procedure value says nothing
     // about its signature, and the expression that made it wrote one;
-    // everything else is the value's. Null, and a list or a map showing no
-    // element, say nothing the judged type does not, so what holds one is
-    // what the expression was judged as, a cast's type among them.
+    // everything else is the value's. Null, `Any`, and a list or a map
+    // showing no element, say nothing the judged type does not, so what
+    // holds one is what the expression was judged as, a cast's type among
+    // them. A map whose keys the value joins to `Any` is no map type, so it
+    // takes the judged key, and where the judged type keys no map it reads
+    // as that type, `Any` where nothing is written.
     func refined(by judged: LoweredType) -> LoweredType {
-        guard self != .null, !holdsNoElement else { return judged }
+        guard self != .null, self != .any, !holdsNoElement else { return judged }
 
         var written = judged
 
@@ -607,7 +620,10 @@ indirect enum LoweredType: Sendable, Equatable {
             return .array(element.refined(by: judgedElement))
 
         case let (.dictionary(key, value), .dictionary(judgedKey, judgedValue)):
-            return .dictionary(key: key.refined(by: judgedKey), value: value.refined(by: judgedValue))
+            return LoweredType(keyedBy: key.refined(by: judgedKey), holding: value.refined(by: judgedValue))
+
+        case (.dictionary(.any, _), _):
+            return judged
 
         default:
             return self
@@ -676,9 +692,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .array(mine.joined(theirs))
 
         case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
-            let key = myKey.joined(theirKey)
-
-            return key == .any ? .any : .dictionary(key: key, value: mine.joined(theirs))
+            return LoweredType(keyedBy: myKey.joined(theirKey), holding: mine.joined(theirs))
 
         default:
             return .any
