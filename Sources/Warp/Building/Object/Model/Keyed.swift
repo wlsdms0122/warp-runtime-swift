@@ -16,11 +16,7 @@ struct Keyed {
     let parts: [(key: ObjectLayout.Key, value: Value)]
 
     // MARK: - Initializer
-    init(_ value: Value) throws {
-        guard case let .dictionary(written) = value else {
-            throw ObjectRefused("'object' is not written as a map")
-        }
-
+    init(_ written: Value.Dictionary) throws {
         if let stray = written.keys.first(where: { key in !ObjectLayout.keys.contains { name in key == .string(name.spelling) } }) {
             throw ObjectRefused("'object' writes '\(Rendering(stray).text())', which this reads none of")
         }
@@ -35,14 +31,5 @@ struct Keyed {
     }
 
     // MARK: - Public
-    // What stands under a key, asked before the map is held to the layout:
-    // what the map says it is decides whether it is an object, and which
-    // format, so both are read raw.
-    static func peek(_ value: Value, _ key: Name) -> Value? {
-        guard case let .dictionary(written) = value else { return nil }
-
-        return written[key]
-    }
-
     // MARK: - Private
 }
