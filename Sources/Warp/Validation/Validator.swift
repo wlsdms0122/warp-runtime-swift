@@ -527,7 +527,10 @@ struct Validator: Sendable {
 
         case let .dictionary(entries):
             for (position, entry) in entries.enumerated() {
-                for (part, here) in [(entry.key, place.child(.entryKey(position))), (entry.value, place.child(.entryValue(position)))] {
+                for (part, here) in [
+                    (entry.key, place.child(.entryKey(position))),
+                    (entry.value, place.child(.entryValue(position)))
+                ] {
                     try held(part, asValueAt: here)
                     try validate(part, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
                 }
@@ -933,7 +936,9 @@ struct Validator: Sendable {
 
             try held(parameter.name, as: .value, at: here)
 
-            guard !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) else {
+            guard
+                !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name })
+            else {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
@@ -1016,7 +1021,10 @@ struct Validator: Sendable {
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
             guard inner.takesQuestionMark else {
-                throw ValidationError("writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)", at: place)
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)",
+                    at: place
+                )
             }
 
             guard inner.hasSpelling else {

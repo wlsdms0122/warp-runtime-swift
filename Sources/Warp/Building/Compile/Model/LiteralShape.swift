@@ -61,8 +61,10 @@ enum LiteralShape: Sendable {
         case let .dictionary(entries):
             self = .map(entries.entries.map { entry in
                 (
-                    key: LiteralShape(literal: entry.key, in: table) ?? .part(LoweredType(literal: entry.key, in: table)),
-                    value: LiteralShape(literal: entry.value, in: table) ?? .part(LoweredType(literal: entry.value, in: table))
+                    key: LiteralShape(literal: entry.key, in: table)
+                        ?? .part(LoweredType(literal: entry.key, in: table)),
+                    value: LiteralShape(literal: entry.value, in: table)
+                        ?? .part(LoweredType(literal: entry.value, in: table))
                 )
             })
 
@@ -178,7 +180,9 @@ enum LiteralShape: Sendable {
             return "[" + items.map { item in item.rendered(in: table) }.joined(separator: ", ") + "]"
 
         case let .map(entries):
-            let written = entries.map { entry in "[\(entry.key.rendered(in: table)), \(entry.value.rendered(in: table))]" }
+            let written = entries.map { entry in
+                "[\(entry.key.rendered(in: table)), \(entry.value.rendered(in: table))]"
+            }
 
             return "{ dictionary: [" + written.joined(separator: ", ") + "] }"
 

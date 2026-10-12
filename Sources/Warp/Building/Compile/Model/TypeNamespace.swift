@@ -36,7 +36,9 @@ struct TypeNamespace {
                 of: Prelude.handed
             )
         }
-        var contracts = Prelude.contracts.reduce(into: [Name: Placed<[Name: ContractProcedure]>]()) { contracts, declared in
+        var contracts = Prelude.contracts.reduce(
+            into: [Name: Placed<[Name: ContractProcedure]>]()
+        ) { contracts, declared in
             contracts[declared.key] = Placed(
                 declared.value,
                 at: .contract(declared.key.spelling, in: Prelude.document),
@@ -52,7 +54,12 @@ struct TypeNamespace {
                 // this collides with is the one this call overwrote. The only
                 // contracts gathered yet are the language's.
                 if let first = types[name] {
-                    throw BuildError.declaredTwice(name, by: first.spelled, and: declaration.spelled, at: declaration.place)
+                    throw BuildError.declaredTwice(
+                        name,
+                        by: first.spelled,
+                        and: declaration.spelled,
+                        at: declaration.place
+                    )
                 }
 
                 if let contract = contracts[name] {
@@ -86,7 +93,12 @@ struct TypeNamespace {
                 }
 
                 if let first = contracts[name] {
-                    throw BuildError.declaredTwice(name, by: first.spelled, and: declaration.spelled, at: declaration.place)
+                    throw BuildError.declaredTwice(
+                        name,
+                        by: first.spelled,
+                        and: declaration.spelled,
+                        at: declaration.place
+                    )
                 }
 
                 contracts[name] = declaration

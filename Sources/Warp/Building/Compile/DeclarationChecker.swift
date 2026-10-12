@@ -66,7 +66,11 @@ struct DeclarationChecker {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
                 if procedure.implementation.native != nil {
-                    try judge(hostAnswered: procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
+                    try judge(
+                        hostAnswered: procedure.signature,
+                        at: .procedure(name.spelling, in: .of(module)),
+                        in: table
+                    )
                 }
 
                 // A closure literal carries a signature the way a declaration

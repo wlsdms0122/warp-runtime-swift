@@ -46,7 +46,13 @@ public enum NameGrammar: Sendable {
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
         .union(TypeExpression.nominalTypes.keys)
         .union(Prelude.names)
-        .union([TypeSpelling.some, TypeSpelling.const, TypeSpelling.isolated, TypeSpelling.inout, TypeSpelling.variable])
+        .union([
+            TypeSpelling.some,
+            TypeSpelling.const,
+            TypeSpelling.isolated,
+            TypeSpelling.inout,
+            TypeSpelling.variable
+        ])
         .union(Name.scalarKeywords.keys.map(Name.init(normal:)))
 
     private static let dot = UInt8(ascii: ".")
