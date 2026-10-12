@@ -18,7 +18,7 @@ import WarpSyntax
 @Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
     // What a text spells and a reader could take wrongly: a scalar, a map's
-    // keys among them, or a name, whether a record's or a field's.
+    // keys among them, or a name, whether a struct's or a field's.
     private enum Spelling: Equatable, CustomStringConvertible {
         case scalar(Value)
         case name(Name)
@@ -85,10 +85,10 @@ struct TextPinTests {
                 walk(entry.value, visit)
             }
 
-        case let .record(record):
-            visit(.name(record.name))
-            record.names.forEach { name in visit(.name(name)) }
-            record.values.forEach { held in walk(held, visit) }
+        case let .struct(instance):
+            visit(.name(instance.name))
+            instance.names.forEach { name in visit(.name(name)) }
+            instance.values.forEach { held in walk(held, visit) }
         }
     }
 }

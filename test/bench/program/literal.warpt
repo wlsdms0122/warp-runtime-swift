@@ -20,7 +20,7 @@ warpt 1
                   let "made"
                   type "App.Made"
                   value {
-                    record {
+                    struct {
                       x 1
                       y 2
                     }
@@ -64,7 +64,7 @@ warpt 1
   }
   types {
     "App.Made" {
-      record {
+      struct {
         x "Int"
         y "Int"
       }

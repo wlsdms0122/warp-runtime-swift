@@ -454,7 +454,7 @@ struct ProcedureSendsTests {
 
     // A contract, a type answering it, and the declaration that answers.
     private static let describing = try! Module(
-        types: ["Bank.Account": .record(["balance": .int])],
+        types: ["Bank.Account": .struct(["balance": .int])],
         contracts: [
             "App.Describable": [
                 "describe": ContractProcedure(

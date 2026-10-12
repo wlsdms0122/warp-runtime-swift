@@ -27,7 +27,7 @@ struct TraversableTests {
         let sut = Warp.Expression.array([
             .cast(marker("cast operand"), as: .int, optional: false),
             .leave(Leave(reach: .procedure, value: marker("leave value"))),
-            .record(["field": marker("record field")]),
+            .struct(["field": marker("struct field")]),
             .closure(Procedure(
                 body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
                 result: marker("closure result")
@@ -62,7 +62,7 @@ struct TraversableTests {
 
         // Then. Every marker, by name
         #expect(found == [
-            "cast operand", "leave value", "record field",
+            "cast operand", "leave value", "struct field",
             "closure body", "closure result",
             "apply callee", "apply argument",
             "call first argument", "call second argument",
@@ -111,7 +111,7 @@ struct TraversableTests {
                 ),
                 Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
                 Statement(binding: .constant("listed"), expression: .array([closure()])),
-                Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .record(["held": closure()])),
+                Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .struct(["held": closure()])),
                 Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
                 Statement(expression: .apply(name("bump"), arguments: [name("count")]))
             ],
@@ -119,7 +119,7 @@ struct TraversableTests {
         )
         let place = Place.procedure("entry", in: .assembled)
         let context = TypingContext(
-            types: try TypeTable(types: ["App.Held": .record(["held": .procedure(nil)])]),
+            types: try TypeTable(types: ["App.Held": .struct(["held": .procedure(nil)])]),
             linked: [],
             rows: [:],
             own: [:],
@@ -217,7 +217,7 @@ struct TraversableTests {
         // read this walk report the first thing they refuse, so which sibling
         // an author is shown has to be a fact of the text; and the place they
         // report has to say which one it was.
-        let sut = Warp.Expression.record([
+        let sut = Warp.Expression.struct([
             "beta": .cast(.literal(.int(2)), as: .string, optional: false),
             "alpha": .cast(.literal(.int(1)), as: .string, optional: false),
             "gamma": .cast(.literal(.int(3)), as: .string, optional: false)

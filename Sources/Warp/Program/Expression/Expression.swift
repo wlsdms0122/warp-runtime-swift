@@ -17,7 +17,7 @@ import Foundation
 //                is, so an expression does not restate it
 //   reference . A name to resolve in the scope that reads it
 //   array     . Elements are expressions
-//   record    . Fields are expressions
+//   struct    . Fields are expressions
 //   dictionary. Entries are a key and a value, each an expression
 //   call      . The procedure it names and its arguments by position
 //
@@ -35,7 +35,7 @@ public indirect enum Expression: Sendable {
     case literal(Value)
     case reference(Path)
     case array([Expression])
-    case record([Name: Expression])
+    case `struct`([Name: Expression])
 
     // A map: its entries in the order they are written, each a key and a
     // value. The entries are made in order, so a key written twice keeps the
@@ -89,7 +89,7 @@ public indirect enum Expression: Sendable {
         // An array's element at a position.
         case element(Int)
 
-        // A record's field.
+        // A struct's field.
         case field(Name)
 
         // A map literal's entry at a position, its key or its value.
@@ -162,7 +162,7 @@ public indirect enum Expression: Sendable {
         case .literal: .literal
         case .reference: .reference
         case .array: .array
-        case .record: .record
+        case .struct: .struct
         case .dictionary: .dictionary
         case .closure: .closure
         case .cast: .cast
@@ -253,8 +253,8 @@ public indirect enum Expression: Sendable {
         case let .array(array):
             return array.contains { element in element.holdsConstruct }
 
-        case let .record(record):
-            return record.values.contains { field in field.holdsConstruct }
+        case let .struct(literal):
+            return literal.values.contains { field in field.holdsConstruct }
 
         case let .dictionary(entries):
             return entries.contains { entry in entry.key.holdsConstruct || entry.value.holdsConstruct }
@@ -287,8 +287,8 @@ public indirect enum Expression: Sendable {
         case let .array(array):
             return array.contains { element in element.callsValue }
 
-        case let .record(record):
-            return record.values.contains { field in field.callsValue }
+        case let .struct(literal):
+            return literal.values.contains { field in field.callsValue }
 
         case let .dictionary(entries):
             return entries.contains { entry in entry.key.callsValue || entry.value.callsValue }

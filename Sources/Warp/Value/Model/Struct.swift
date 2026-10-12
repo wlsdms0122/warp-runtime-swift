@@ -1,5 +1,5 @@
 //
-//  Record.swift
+//  Struct.swift
 //  Warp
 //
 //  Created by JSilver on 9/4/26.
@@ -8,9 +8,9 @@
 import Foundation
 
 // Fields at the places a `Layout` puts them. The names live in the layout, so
-// two records of one layout share one copy of them, and a field is read by
+// two structs of one layout share one copy of them, and a field is read by
 // finding its place once rather than by carrying its name alongside its value.
-public struct Record: Sendable, Equatable {
+public struct Struct: Sendable, Equatable {
     // MARK: - Property
     public let layout: Layout
 
@@ -34,7 +34,7 @@ public struct Record: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    // A record of the fields a caller hands in, under a layout of their names.
+    // A struct of the fields a caller hands in, under a layout of their names.
     init(name: Name, _ fields: [Name: Value]) {
         let ordered = fields.map { field in (name: field.key, value: field.value) }
             .sorted { one, other in one.name < other.name }
@@ -57,7 +57,7 @@ public struct Record: Sendable, Equatable {
 
     // Values the maker already laid out on the layout.
     init(layout: Layout, values: [Value]) {
-        assert(layout.fields.count == values.count, "a record has one value per field its layout names")
+        assert(layout.fields.count == values.count, "a struct has one value per field its layout names")
 
         self.layout = layout
         self.values = values
@@ -68,9 +68,9 @@ public struct Record: Sendable, Equatable {
         layout.position(of: field).map { place in values[place] }
     }
 
-    // This record with one field written. A layout says which fields there
+    // This struct with one field written. A layout says which fields there
     // are, so a name it does not hold is not written but refused.
-    public func writing(_ field: Name, with value: Value) throws -> Record {
+    public func writing(_ field: Name, with value: Value) throws -> Struct {
         guard let place = layout.position(of: field) else {
             throw ValueRefused("\(name) has no field '\(field)'")
         }
@@ -79,23 +79,23 @@ public struct Record: Sendable, Equatable {
     }
 
     // The same, at the place the layout puts the field.
-    func writing(at place: Int, with value: Value) -> Record {
+    func writing(at place: Int, with value: Value) -> Struct {
         var written = values
         written[place] = value
 
-        return Record(layout: layout, values: written)
+        return Struct(layout: layout, values: written)
     }
 
-    // This record with every value put through `transform`, under the same
+    // This struct with every value put through `transform`, under the same
     // layout.
-    public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Record {
-        Record(
+    public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Struct {
+        Struct(
             layout: layout,
             values: try zip(layout.fields, values).map { field, value in try transform(field, value) }
         )
     }
 
-    public static func == (lhs: Record, rhs: Record) -> Bool {
+    public static func == (lhs: Struct, rhs: Struct) -> Bool {
         lhs.layout == rhs.layout
             && zip(lhs.values, rhs.values).allSatisfy { mine, theirs in mine == theirs }
     }

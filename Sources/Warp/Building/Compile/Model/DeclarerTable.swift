@@ -22,7 +22,7 @@ import Foundation
 struct DeclarerTable {
     // MARK: - Property
     // Nothing for a document that has no fingerprint. The name is declared and
-    // the answer is that there is nothing to record, which is not the same as
+    // the answer is that there is nothing to struct, which is not the same as
     // a name nothing declares.
     private var declares: [Reference: Fingerprint?] = [:]
 

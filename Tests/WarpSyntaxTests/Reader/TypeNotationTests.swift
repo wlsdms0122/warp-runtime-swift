@@ -145,7 +145,7 @@ struct TypeNotationTests {
 
         // And. A nested procedure type carries no bounds of its own. Its
         // parameters are the declaring signature's slots, and the declaring
-        // signature owns their bounds. Two records binding one namespace would
+        // signature owns their bounds. Two structs binding one namespace would
         // be two claims about one thing.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
@@ -218,7 +218,7 @@ struct TypeNotationTests {
     func moduleDeclaresTypes() throws {
         // Given / When
         let sut = try loader.loadDocument([
-            "types": ["Task": ["record": ["id": "String", "done": "Bool"]]],
+            "types": ["Task": ["struct": ["id": "String", "done": "Bool"]]],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
@@ -228,7 +228,7 @@ struct TypeNotationTests {
         ])
 
         // Then
-        #expect(sut.types["Task"] == .record(["id": .string, "done": .bool]))
+        #expect(sut.types["Task"] == .struct(["id": .string, "done": .bool]))
         #expect(
             sut.procedures["entry"]?.signature.parameter(named: "tasks")?.type
                 == .array(.named("Task"))
@@ -254,13 +254,13 @@ struct TypeNotationTests {
                 == .array(.procedure(ProcedureType(returns: .int)))
         )
 
-        // And. A record is declared under its name in `types` and named
-        // everywhere else, so a slot written as a record is no type
+        // And. A struct is declared under its name in `types` and named
+        // everywhere else, so a slot written as a struct is no type
         #expect(throws: ReadingError.self) {
             try loader.loadDocument([
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "rows", "type": ["array": ["record": ["id": "String"]]]]],
+                        "parameters": [["name": "rows", "type": ["array": ["struct": ["id": "String"]]]]],
                         "body": [["let": "seen", "value": ["ref": "rows"]]]
                     ]
                 ]
@@ -322,7 +322,7 @@ struct TypeNotationTests {
     func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([
-            "types": ["Task": ["record": ["id": "String"]]],
+            "types": ["Task": ["struct": ["id": "String"]]],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
@@ -333,12 +333,12 @@ struct TypeNotationTests {
         ])
 
         // When / Then
-        let good = try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .string("a")]))])])
+        let good = try await run(sut, arguments: ["tasks": .array([.struct(Struct(name: "Task", ["id": .string("a")]))])])
 
-        #expect(good.map?["result"] == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
+        #expect(good.map?["result"] == .array([.struct(Struct(name: "Task", ["id": .string("a")]))]))
 
         await #expect(throws: ArgumentError.self) {
-            try await run(sut, arguments: ["tasks": .array([.record(Record(name: "Task", ["id": .int(1)]))])])
+            try await run(sut, arguments: ["tasks": .array([.struct(Struct(name: "Task", ["id": .int(1)]))])])
         }
     }
 

@@ -133,24 +133,24 @@ struct Activation: Sendable {
 
             // The place the build proved, which is where a write lands too.
             case let .field(position, _, _):
-                guard case let .record(record) = current else {
+                guard case let .struct(instance) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
-                guard record.values.indices.contains(position) else {
-                    return .unfit("\(walked().rendered) drills past the fields this record holds")
+                guard instance.values.indices.contains(position) else {
+                    return .unfit("\(walked().rendered) drills past the fields this struct holds")
                 }
 
-                read = .found(record.values[position])
+                read = .found(instance.values[position])
 
-            // A field by its name, of a record a call decides.
+            // A field by its name, of a struct a call decides.
             case let .name(name, _):
-                guard case let .record(record) = current else {
+                guard case let .struct(instance) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
                 }
 
-                guard let next = record[name] else {
-                    return .unfit("\(walked().rendered) drills past the fields this record holds")
+                guard let next = instance[name] else {
+                    return .unfit("\(walked().rendered) drills past the fields this struct holds")
                 }
 
                 read = .found(next)

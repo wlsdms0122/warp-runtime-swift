@@ -22,7 +22,7 @@ struct NullableTests {
     func aNullableReadingIsRefusedAtACall() async throws {
         // Given. The `?.` path answers `Int?`, and the callee declares `Int`
         let sut = try Module(
-            types: ["App.Task": .record(["size": .int])],
+            types: ["App.Task": .struct(["size": .int])],
             procedures: [
                 "half": Procedure(
                     signature: Signature(
@@ -55,12 +55,12 @@ struct NullableTests {
         }
     }
 
-    @Test("the optional dot on a record field reads it, and its answer may be null")
+    @Test("the optional dot on a struct field reads it, and its answer may be null")
     func anOptionalDotOverANullable() async throws {
-        // Given. The record may be null, so `?.` is the only spelling that
+        // Given. The struct may be null, so `?.` is the only spelling that
         // builds; what it answers is the field or null
         let sut = try Module(
-            types: ["App.Task": .record(["size": .int])],
+            types: ["App.Task": .struct(["size": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -78,7 +78,7 @@ struct NullableTests {
 
         // When / Then. The value that arrived reads its field, and the null the
         // host handed answers null
-        #expect(try await run(sut, arguments: ["task": .record(Record(name: "App.Task", ["size": .int(7)]))]) == .int(7))
+        #expect(try await run(sut, arguments: ["task": .struct(Struct(name: "App.Task", ["size": .int(7)]))]) == .int(7))
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
     }
 
@@ -200,11 +200,11 @@ struct NullableTests {
 
     @Test("a constant's dots are judged like a body's")
     func aConstantPathIsJudged() async throws {
-        // Given. The constant is a record, so a field it does not carry is the
+        // Given. The constant is a struct, so a field it does not carry is the
         // build's refusal, not a run's surprise
         let sut = try Module(
-            types: ["App.Config": .record(["host": .string])],
-            constants: ["config": .cast(.record(["host": .literal(.string("a"))]), as: .named("App.Config"), optional: false)],
+            types: ["App.Config": .struct(["host": .string])],
+            constants: ["config": .cast(.struct(["host": .literal(.string("a"))]), as: .named("App.Config"), optional: false)],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -277,11 +277,11 @@ struct NullableTests {
 
     @Test("what a nullable unwraps to is judged like any other type")
     func anUnwrapIsJudgedAgain() async throws {
-        // Given. `Task?` unwraps to a declared record through its name, and the
-        // record's rules hold after the unwrap: the declared field reads, the
+        // Given. `Task?` unwraps to a declared struct through its name, and the
+        // struct's rules hold after the unwrap: the declared field reads, the
         // undeclared one refuses
         let sut = try Module(
-            types: ["Task": .record(["name": .string])],
+            types: ["Task": .struct(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -299,7 +299,7 @@ struct NullableTests {
 
         // When / Then
         #expect(
-            try await run(sut, arguments: ["task": .record(Record(name: "Task", ["name": .string("a")]))])
+            try await run(sut, arguments: ["task": .struct(Struct(name: "Task", ["name": .string("a")]))])
                 == .string("a")
         )
         #expect(try await run(sut, arguments: ["task": .null]) == .null)
@@ -310,7 +310,7 @@ struct NullableTests {
         // Given. The field is proven present, so the spelling that expects
         // absence says nothing, the way `Int??` says nothing on a type
         let onAField = try Module(
-            types: ["App.Task": .record(["id": .string])],
+            types: ["App.Task": .struct(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,

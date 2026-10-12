@@ -17,15 +17,15 @@ struct ParameterDotTests {
     // MARK: - Property
     private let builder = Builder()
 
-    // The records the calls hand, each a value of one declared record.
+    // The structs the calls hand, each a value of one declared struct.
     private static let types: [Name: TypeDeclaration] = [
-        "App.Count": .record(["count": .string]),
-        "App.Wrap": .record(["inner": .named("App.Count")]),
-        "App.WholeCount": .record(["count": .int]),
-        "App.WholeWrap": .record(["inner": .named("App.WholeCount")]),
-        "App.Deep": .record(["deep": .int]),
-        "App.DeepCount": .record(["count": .named("App.Deep")]),
-        "App.DeepWrap": .record(["inner": .named("App.DeepCount")])
+        "App.Count": .struct(["count": .string]),
+        "App.Wrap": .struct(["inner": .named("App.Count")]),
+        "App.WholeCount": .struct(["count": .int]),
+        "App.WholeWrap": .struct(["inner": .named("App.WholeCount")]),
+        "App.Deep": .struct(["deep": .int]),
+        "App.DeepCount": .struct(["count": .named("App.Deep")]),
+        "App.DeepWrap": .struct(["inner": .named("App.DeepCount")])
     ]
 
     // MARK: - Initializer
@@ -33,7 +33,7 @@ struct ParameterDotTests {
     @Test("a dot on some T reads the field the call filled in")
     func aDotOnAParameterReadsData() async throws {
         // Given. The procedure's body reads `of.count`; the call fills T with a
-        // record carrying `count`, and the field wins because nothing here ever
+        // struct carrying `count`, and the field wins because nothing here ever
         // judged the dot a procedure
         let sut = try Module(
             types: Self.types,
@@ -50,7 +50,7 @@ struct ParameterDotTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .call(Call(selector: "peek", arguments: [.cast(.record(["count": .literal(.string("mine"))]), as: .named("App.Count"), optional: false)]))
+                    result: .call(Call(selector: "peek", arguments: [.cast(.struct(["count": .literal(.string("mine"))]), as: .named("App.Count"), optional: false)]))
                 )
             ]
         )
@@ -84,8 +84,8 @@ struct ParameterDotTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            .cast(.record([
-                                "inner": .record(["count": .literal(.string("mine"))])
+                            .cast(.struct([
+                                "inner": .struct(["count": .literal(.string("mine"))])
                             ]), as: .named("App.Wrap"), optional: false)
                         ]
                     ))
@@ -136,7 +136,7 @@ struct ParameterDotTests {
                         selector: "peek",
                         arguments: [
                             .literal(.bool(true)),
-                            .cast(.record(["inner": .record(["count": .literal(.string("mine"))])]), as: .named("App.Wrap"), optional: false)
+                            .cast(.struct(["inner": .struct(["count": .literal(.string("mine"))])]), as: .named("App.Wrap"), optional: false)
                         ]
                     ))
                 )
@@ -195,7 +195,7 @@ struct ParameterDotTests {
                             selector: "peek",
                             arguments: [
                                 .literal(.bool(true)),
-                                .cast(.record(["inner": .record(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
+                                .cast(.struct(["inner": .struct(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
                             ]
                         ))
                     )
@@ -248,8 +248,8 @@ struct ParameterDotTests {
                         selector: "peek",
                         arguments: [
                             .literal(.bool(true)),
-                            .cast(.record([
-                                "inner": .record(["count": .record(["deep": .literal(.int(1))])])
+                            .cast(.struct([
+                                "inner": .struct(["count": .struct(["deep": .literal(.int(1))])])
                             ]), as: .named("App.DeepWrap"), optional: false)
                         ]
                     ))
@@ -296,9 +296,9 @@ struct ParameterDotTests {
                     result: .call(Call(
                         selector: "peek",
                         arguments: [
-                            .cast(.record(["inner": .record(["count": .literal(.int(2))])]), as: .named("App.WholeWrap"), optional: false),
+                            .cast(.struct(["inner": .struct(["count": .literal(.int(2))])]), as: .named("App.WholeWrap"), optional: false),
                             .literal(.bool(true)),
-                            .cast(.record(["inner": .record(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
+                            .cast(.struct(["inner": .struct(["count": .literal(.int(1))])]), as: .named("App.WholeWrap"), optional: false)
                         ]
                     ))
                 )

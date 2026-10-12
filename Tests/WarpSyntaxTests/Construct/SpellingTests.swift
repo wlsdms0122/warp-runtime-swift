@@ -98,11 +98,11 @@ struct SpellingTests {
         }
     }
 
-    @Test("a construct is not registered under an expression's tag", arguments: ["record", "ref", "as", "closure"])
+    @Test("a construct is not registered under an expression's tag", arguments: ["struct", "ref", "as", "closure"])
     func aTagIsNoConstructKey(tag: String) {
         // Given / When / Then. A tag is read as its expression under a
         // statement's `value` too, so a construct under one would take a
-        // record or a reference for itself
+        // struct or a reference for itself
         #expect(throws: ConstructRegistryError.self) {
             try ConstructRegistry.standard.removing("conditional").registering(ConditionalForm.self, as: Name(tag))
         }

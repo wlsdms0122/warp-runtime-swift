@@ -168,14 +168,14 @@ struct SwiftAuthoringTests {
                 returns: .named("App.Said")
             ),
             body: [],
-            result: .record(["said": .reference([.name("text")])])
+            result: .struct(["said": .reference([.name("text")])])
         )
 
         // When
         let image = try await builder.build(
             [
                 try Module(
-                    types: ["App.Said": .record(["said": .string])],
+                    types: ["App.Said": .struct(["said": .string])],
                     procedures: ["speak": procedure.with(access: .public), "echo": echo]
                 ),
                 .shouting

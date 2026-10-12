@@ -25,7 +25,7 @@ import Foundation
 // A path reads a name and nothing else. What each segment lands on is judged
 // here against the type the walk reached, and a dot on a type that declares no
 // such field is refused rather than left for the run. The walk that judges a
-// path places it for the image: a field of a record it proved at the field's
+// path places it for the image: a field of a struct it proved at the field's
 // place, a key written between brackets as the key type reads it.
 struct TypeChecker {
     // What a call put in a generic declaration's type parameters, read once
@@ -397,13 +397,13 @@ struct TypeChecker {
         }
     }
 
-    // A record literal held to the declared record its place reads: exactly
+    // A struct literal held to the declared struct its place reads: exactly
     // the declared fields, each holding what its field takes, and every
     // composition a field mentions held to its bounds, with what leans on a
     // claim this table cannot decide written down for the link.
     private func refuseFields(
         _ written: [Name: LiteralShape],
-        of declared: LoweredRecord,
+        of declared: LoweredStruct,
         named label: Name,
         at place: Place,
         in table: LoweredTypeTable,
@@ -421,7 +421,7 @@ struct TypeChecker {
             let asked = declared.named.map { name, field in (name: name, spelled: field.rendered(in: table)) }
 
             throw BuildError(
-                "a record literal read as \(label) writes \(LoweredType.rendered(fields: given)),"
+                "a struct literal read as \(label) writes \(LoweredType.rendered(fields: given)),"
                     + " and \(label) declares \(LoweredType.rendered(fields: asked))",
                 at: place
             )
@@ -856,12 +856,12 @@ struct TypeChecker {
                         + " and brackets read a list by a position and a map by a key"
                 )
 
-            // A dot on a record reads the field it declares. A field it does
+            // A dot on a struct reads the field it declares. A field it does
             // not declare is a defect the text shows, refused here rather than
             // found at run, and so is a `?.` on one it does declare: the type
             // proves the field is there, so the spelling that expects absence
-            // says nothing, unless it just read past the record's own null.
-            case let (.name(key, optionally), .record(fields)):
+            // says nothing, unless it just read past the struct's own null.
+            case let (.name(key, optionally), .struct(fields)):
                 guard let position = fields.position(of: key) else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
@@ -912,7 +912,7 @@ struct TypeChecker {
     }
 
     // What a path write reaches from the box its head names, or why it may
-    // not. Each field on the way is one its declared record wrote `var`; an
+    // not. Each field on the way is one its declared struct wrote `var`; an
     // element or an entry is written through brackets. A type that may be
     // null is not written into, and neither is `Any`.
     private func writable(
@@ -936,7 +936,7 @@ struct TypeChecker {
             current = context.resolve(current)
 
             switch (segment, current) {
-            case let (.name(key, optionally), .record(fields)):
+            case let (.name(key, optionally), .struct(fields)):
                 guard let position = fields.position(of: key) else {
                     return .refused(
                         "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.loweredTypes))"
@@ -1045,8 +1045,8 @@ struct TypeChecker {
         case let .array(array):
             return array.lazy.compactMap { element in runs(in: element, given: context) }.first
 
-        case let .record(record):
-            return record.values.lazy.compactMap { field in runs(in: field, given: context) }.first
+        case let .struct(literal):
+            return literal.values.lazy.compactMap { field in runs(in: field, given: context) }.first
 
         case let .dictionary(entries):
             return entries.lazy.compactMap { entry in
@@ -1276,19 +1276,19 @@ struct TypeChecker {
         throw BuildError(reason(), at: place)
     }
 
-    // Whether a record literal stands here as itself or as a part of a list
+    // Whether a struct literal stands here as itself or as a part of a list
     // or a map literal, where the place it is written into decides which
-    // record it is.
-    private func holdsRecordLiteral(_ expression: Expression) -> Bool {
+    // struct it is.
+    private func holdsStructLiteral(_ expression: Expression) -> Bool {
         switch expression {
-        case .record:
+        case .struct:
             return true
 
         case let .array(items):
-            return items.contains { item in holdsRecordLiteral(item) }
+            return items.contains { item in holdsStructLiteral(item) }
 
         case let .dictionary(entries):
-            return entries.contains { entry in holdsRecordLiteral(entry.key) || holdsRecordLiteral(entry.value) }
+            return entries.contains { entry in holdsStructLiteral(entry.key) || holdsStructLiteral(entry.value) }
 
         default:
             return false
@@ -1338,7 +1338,7 @@ struct TypeChecker {
     // `name` is what the statement this expression is the value of
     // introduces, which a loop binds its round under and an attempt its
     // failure. `declared` is the type of the place the expression is written
-    // into, where one is: a record literal is read as the declared record
+    // into, where one is: a struct literal is read as the declared struct
     // it reads, and nil writes it into none.
     private func inspected(
         _ expression: Expression,
@@ -1564,8 +1564,8 @@ struct TypeChecker {
         // a spelling that says nothing is a reading gone wrong.
         case let .cast(value, type, optional):
             // The type the cast names is a place a literal in what it reads
-            // is written into, as a slot is: a record literal is read as the
-            // record it names, a whole literal as the fraction it names where
+            // is written into, as a slot is: a struct literal is read as the
+            // struct it names, a whole literal as the fraction it names where
             // it declares a Double, and a closure literal is completed by the
             // procedure type it names, at every depth.
             let claim = type.lowered(in: context.loweredTypes)
@@ -1735,20 +1735,20 @@ struct TypeChecker {
                 literalShape: .map(shapes)
             )
 
-        // A record literal is the declared record the place it is written
+        // A struct literal is the declared struct the place it is written
         // into reads, judged there field by field, exactly the declared
-        // fields, and built under the record's name. Its fields are read in
+        // fields, and built under the struct's name. Its fields are read in
         // name order, the order the run evaluates them in, so what one
         // field's write means to the next is the same fact at the run.
-        case let .record(record):
+        case let .struct(literal):
             let row = declared?.row
-            var held: LoweredRecord?
+            var held: LoweredStruct?
 
-            if let row, case let .record(fields) = context.loweredTypes.loweredTypes[row] {
+            if let row, case let .struct(fields) = context.loweredTypes.loweredTypes[row] {
                 held = fields
             } else {
                 try refuse(
-                    "a record literal is written where a declared record is read, and nothing here declares one",
+                    "a struct literal is written where a declared struct is read, and nothing here declares one",
                     at: place,
                     when: ask
                 )
@@ -1761,7 +1761,7 @@ struct TypeChecker {
             var flowed = Flow()
             var shapes: [Name: LiteralShape] = [:]
 
-            for (name, field) in record.sorted(by: { $0.key < $1.key }) {
+            for (name, field) in literal.sorted(by: { $0.key < $1.key }) {
                 let inner = try await inspected(
                     field,
                     naming: nil,
@@ -1780,12 +1780,12 @@ struct TypeChecker {
                 rewritten[name] = inner.rewritten
             }
 
-            // Read where no declared record is, it holds no value the build
+            // Read where no declared struct is, it holds no value the build
             // can name, and a call reading it at a type parameter reads it
             // again once the other arguments have filled it.
             guard let row, let held else {
                 return Inspection(
-                    rewritten: ask.rewrites ? .record(rewritten) : expression,
+                    rewritten: ask.rewrites ? .struct(rewritten) : expression,
                     calls: calls,
                     judgements: judgements,
                     reading: .never,
@@ -1799,10 +1799,10 @@ struct TypeChecker {
                 try refuseFields(shapes, of: held, named: label, at: place, in: context.loweredTypes, fulfillment: fulfillment)
             }
 
-            judgements.record(label, ofRecordAt: place)
+            judgements.record(label, ofStructAt: place)
 
             return Inspection(
-                rewritten: ask.rewrites ? .record(rewritten) : expression,
+                rewritten: ask.rewrites ? .struct(rewritten) : expression,
                 calls: calls,
                 judgements: judgements,
                 reading: .named(row),
@@ -2298,13 +2298,13 @@ struct TypeChecker {
                 slots[position].type.completing(call.arguments[position], in: context.loweredTypes)
             }
 
-            // A record literal at a type parameter is the declared record the
+            // A struct literal at a type parameter is the declared struct the
             // other arguments fill it with, so an argument holding one is read
             // once the readings join. Until then it holds no value of its
             // own and fills nothing, and what it reads as there is what it
             // fills the call with.
             let waiting = Set(call.arguments.indices.filter { position in
-                slots[position].type.namesParameter && holdsRecordLiteral(written[position])
+                slots[position].type.namesParameter && holdsStructLiteral(written[position])
             })
             var inspections: [Int: Inspection] = [:]
             var sent: [LoweredType] = []

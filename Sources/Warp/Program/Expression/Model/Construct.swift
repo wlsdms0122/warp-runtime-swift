@@ -18,7 +18,7 @@ public enum Construct: Sendable, Hashable {
     case literal
     case reference
     case array
-    case record
+    case `struct`
     case dictionary
     case closure
     case cast
@@ -43,7 +43,7 @@ public enum Construct: Sendable, Hashable {
         case .literal: "literal"
         case .reference: "reference"
         case .array: "array"
-        case .record: "record"
+        case .struct: "struct"
         case .dictionary: "dictionary"
         case .closure: "closure"
         case .cast: "cast"

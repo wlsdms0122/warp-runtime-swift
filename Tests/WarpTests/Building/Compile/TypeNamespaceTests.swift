@@ -21,13 +21,13 @@ struct TypeNamespaceTests {
     // however they are handed over.
     private let modules: [Module] = [
         try! Module(
-            types: ["A.T": .record(["x": .int]), "A.S": .alias(.string)],
+            types: ["A.T": .struct(["x": .int]), "A.S": .alias(.string)],
             procedures: [
                 "A.make": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("A.T")),
                     body: [],
-                    result: .record(["x": .literal(.int(3))])
+                    result: .struct(["x": .literal(.int(3))])
                 )
             ],
             identity: Identity([0x0a])
@@ -45,13 +45,13 @@ struct TypeNamespaceTests {
             identity: Identity([0x0b])
         ),
         try! Module(
-            types: ["C.V": .record(["u": .named("B.U")])],
+            types: ["C.V": .struct(["u": .named("B.U")])],
             procedures: [
                 "C.go": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("C.V")),
                     body: [],
-                    result: .record(["u": .call(Call(selector: "B.use"))])
+                    result: .struct(["u": .call(Call(selector: "B.use"))])
                 )
             ],
             identity: Identity([0x0c])

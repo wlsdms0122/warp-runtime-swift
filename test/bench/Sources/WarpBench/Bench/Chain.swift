@@ -56,7 +56,7 @@ struct Chain {
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
-            types[try type(number)] = .record(["value": .int])
+            types[try type(number)] = .struct(["value": .int])
             procedures[try step(number)] = try procedure(number)
         }
 
@@ -73,7 +73,7 @@ struct Chain {
                 Statement(
                     binding: .constant("held"),
                     expression: .cast(
-                        .record(["value": .reference([.name("value")])]),
+                        .struct(["value": .reference([.name("value")])]),
                         as: .named(try type(number)),
                         optional: false
                     )

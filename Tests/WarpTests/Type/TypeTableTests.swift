@@ -18,7 +18,7 @@ struct TypeTableTests {
     func aTableNamingNothingRefuses() {
         // When / Then
         #expect {
-            try TypeTable(types: ["Bank.Account": .record(["vault": .named("Bank.Vault")])])
+            try TypeTable(types: ["Bank.Account": .struct(["vault": .named("Bank.Vault")])])
         } throws: { error in
             "\(error)".contains("names type 'Bank.Vault', which no module in this link declares")
         }

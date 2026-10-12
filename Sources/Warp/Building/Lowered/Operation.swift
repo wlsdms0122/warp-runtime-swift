@@ -20,7 +20,7 @@ indirect enum Operation: Sendable {
 
     case array([Operation])
 
-    case record(RecordOperation)
+    case `struct`(StructOperation)
 
     // A map literal: each entry's key and value, in the order written, so a
     // key written twice keeps the later value.
@@ -75,7 +75,7 @@ indirect enum Operation: Sendable {
         case let .array(elements):
             return elements.allSatisfy { element in element.walk(visit) }
 
-        case let .record(held):
+        case let .struct(held):
             return held.fields.allSatisfy { field in field.walk(visit) }
 
         case let .dictionary(entries):
@@ -146,9 +146,9 @@ indirect enum Operation: Sendable {
         case let .array(elements):
             inside = .array(try elements.map { element in try element.rewritten(operation: operation, type: type) })
 
-        case let .record(held):
-            inside = .record(
-                RecordOperation(
+        case let .struct(held):
+            inside = .struct(
+                StructOperation(
                     layout: held.layout,
                     fields: try held.fields.map { field in try field.rewritten(operation: operation, type: type) }
                 )

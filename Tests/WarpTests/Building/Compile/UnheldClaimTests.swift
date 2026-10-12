@@ -36,7 +36,7 @@ struct UnheldClaimTests {
             ]
         )
         let typed = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // Claims the pair and declares no witness at all.
@@ -63,7 +63,7 @@ struct UnheldClaimTests {
                         Statement(
                             binding: .constant("account"),
                             expression: .cast(
-                                .record(["balance": .literal(.int(7))]),
+                                .struct(["balance": .literal(.int(7))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
@@ -105,8 +105,8 @@ struct UnheldClaimTests {
         )
         let typed = try Module(
             types: [
-                "Bank.Account": .record(["balance": .int]),
-                "Bank.Plain": .record(["note": .string])
+                "Bank.Account": .struct(["balance": .int]),
+                "Bank.Plain": .struct(["note": .string])
             ],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
@@ -135,7 +135,7 @@ struct UnheldClaimTests {
                         Statement(
                             binding: .constant("account"),
                             expression: .cast(
-                                .record(["balance": .literal(.int(7))]),
+                                .struct(["balance": .literal(.int(7))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
@@ -175,7 +175,7 @@ struct UnheldClaimTests {
             ]
         )
         let typed = try Module(
-            types: ["Bank.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .struct(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let claims = try Module(
@@ -191,7 +191,7 @@ struct UnheldClaimTests {
                         Statement(
                             binding: .constant("plain"),
                             expression: .cast(
-                                .record(["note": .literal(.string("x"))]),
+                                .struct(["note": .literal(.string("x"))]),
                                 as: .named("Bank.Plain"),
                                 optional: false
                             )
@@ -235,7 +235,7 @@ struct UnheldClaimTests {
             ]
         )
         let typed = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
@@ -258,7 +258,7 @@ struct UnheldClaimTests {
                         selector: "App.count",
                         arguments: [
                             .cast(
-                                .record(["balance": .literal(.int(7))]),
+                                .struct(["balance": .literal(.int(7))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )

@@ -15,7 +15,7 @@ enum ObjectCoverageFixture {
         // up an object the reading would refuse.
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
-            types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": recordOfEveryTypeExpression],
+            types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": structOfEveryTypeExpression],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
@@ -68,7 +68,7 @@ enum ObjectCoverageFixture {
                         .double(1.5),
                         .string("s"),
                         .bytes([1, 2]),
-                        .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
+                        .struct(Struct(name: "a.three", ["b": .int(2), "a": .int(1)])),
                         .dictionary(Value.Dictionary(ordered: [(key: "k", value: .int(3))])),
                         .procedure(Closure(writer: Closure.Writer(document: .written(Identity([4])), declaration: .procedure("a.ten")), nth: 0, linked: nil, captured: []))
                     ])
@@ -84,8 +84,8 @@ enum ObjectCoverageFixture {
     )
 
     // Every case of `TypeExpression`, each holding something no other holds,
-    // as the fields of a declared record.
-    static let recordOfEveryTypeExpression: TypeDeclaration = .record([
+    // as the fields of a declared struct.
+    static let structOfEveryTypeExpression: TypeDeclaration = .struct([
         "any": .any,
         "never": .never,
         "null": .null,
@@ -172,7 +172,7 @@ enum ObjectCoverageFixture {
     ]
 
     static let everyConstruct: [Construct] = [
-        .literal, .reference, .array, .record, .closure, .cast, .block,
+        .literal, .reference, .array, .struct, .closure, .cast, .block,
         .conditional, .loop, .attempt, .call, .leave(.procedure), .leave(.construct), .leave(.round)
     ]
 
@@ -187,7 +187,7 @@ enum ObjectCoverageFixture {
                 label: "assign"
             ),
             Instruction(binding: nil, code: .array([.literal(.null), .literal(.bool(true))]), label: "array"),
-            Instruction(binding: nil, code: .record(recordOperation), label: "record"),
+            Instruction(binding: nil, code: .struct(structOperation), label: "struct"),
             // The number is a reference of this document, and the closures
             // stand behind the spellings: one import and two declarations, so
             // the first closure is three.
@@ -249,7 +249,7 @@ enum ObjectCoverageFixture {
         .at(Address(slot: 4, steps: []), optional: true)
     ]
 
-    static let recordOperation = RecordOperation(
+    static let structOperation = StructOperation(
         layout: Layout(name: "a.four", ordered: ["x", "y"]),
         fields: [.literal(.int(10)), .literal(.int(11))]
     )

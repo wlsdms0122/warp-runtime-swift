@@ -27,7 +27,7 @@ struct DeclaredSpellingTests {
         // Given. `store` declares `Task`, and both `store` and the entry module
         // mention it as `Store.Task`
         let store = try Module(
-            types: ["Store.Task": .record(["id": .string])],
+            types: ["Store.Task": .struct(["id": .string])],
             procedures: [
                 "Store.keep": Procedure(
                     signature: Signature(
@@ -47,7 +47,7 @@ struct DeclaredSpellingTests {
                     body: [],
                     result: .call(Call(
                         selector: "Store.keep",
-                        arguments: [.record(["id": .literal(.string("a"))])]
+                        arguments: [.struct(["id": .literal(.string("a"))])]
                     ))
                 )
             ]
@@ -57,7 +57,7 @@ struct DeclaredSpellingTests {
         let image = try await builder.build([sut, store] + Module.standard)
 
         // Then. The declaration is under the declared spelling alone
-        #expect(image.types.types["Store.Task"] == .record(["id": .string]))
+        #expect(image.types.types["Store.Task"] == .struct(["id": .string]))
         #expect(image.types.types["Task"] == nil)
     }
 

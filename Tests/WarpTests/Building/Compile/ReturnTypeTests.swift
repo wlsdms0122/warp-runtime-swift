@@ -102,13 +102,13 @@ struct ReturnTypeTests {
         #expect(refusal?.message.contains("declaration promises Int") == true)
     }
 
-    @Test("a record literal answered where a declared record is promised takes the name, and one a name that declares nothing holds refuses")
+    @Test("a struct literal answered where a declared struct is promised takes the name, and one a name that declares nothing holds refuses")
     func aLiteralAnsweredTakesTheDeclaredName() async throws {
         // Given. The same list written straight into the answer, and held
-        // first by a name that says nothing of the record
+        // first by a name that says nothing of the struct
         func module(answering result: Warp.Expression, holding body: Body = []) throws -> Module {
             try Module(
-                types: ["Task": .record(["id": .string])],
+                types: ["Task": .struct(["id": .string])],
                 procedures: [
                     "entry": Procedure(
                         access: .public,
@@ -120,23 +120,23 @@ struct ReturnTypeTests {
             )
         }
 
-        let written = try module(answering: .array([.record(["id": .literal(.string("a"))])]))
+        let written = try module(answering: .array([.struct(["id": .literal(.string("a"))])]))
         let held = try module(
             answering: .reference([.name("made")]),
-            holding: [Statement(binding: .constant("made"), expression: .array([.record(["id": .literal(.string("a"))])]))]
+            holding: [Statement(binding: .constant("made"), expression: .array([.struct(["id": .literal(.string("a"))])]))]
         )
 
         // When / Then. A literal is written where the promise stands, so it
-        // is a `Task`; a name that declares nothing reads no declared record,
+        // is a `Task`; a name that declares nothing reads no declared struct,
         // so the literal it holds has none to be
         let image = try await builder.build([written])
 
-        #expect(try await Executor().run(image) == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
+        #expect(try await Executor().run(image) == .array([.struct(Struct(name: "Task", ["id": .string("a")]))]))
 
         await #expect {
             try await builder.build([held])
         } throws: { error in
-            error is BuildError && "\(error)".contains("a record literal is written where a declared record is read")
+            error is BuildError && "\(error)".contains("a struct literal is written where a declared struct is read")
         }
     }
 

@@ -59,8 +59,8 @@ struct ReachTests {
         // and names no declaration; both types answering it are rows
         let sut = try Module(
             types: [
-                "Bank.Account": .record(["balance": .int]),
-                "Bank.Card": .record(["last": .string])
+                "Bank.Account": .struct(["balance": .int]),
+                "Bank.Card": .struct(["last": .string])
             ],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: [
@@ -74,7 +74,7 @@ struct ReachTests {
                         Statement(
                             binding: .constant("account"),
                             expression: .cast(
-                                .record(["balance": .literal(.int(7))]),
+                                .struct(["balance": .literal(.int(7))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )

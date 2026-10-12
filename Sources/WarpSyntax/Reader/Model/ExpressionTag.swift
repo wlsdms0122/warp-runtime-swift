@@ -12,7 +12,7 @@ import Warp
 // mapping.
 enum ExpressionTag: String, CaseIterable, Sendable {
     case reference = "ref"
-    case record
+    case `struct`
     case dictionary
     case call
     case closure

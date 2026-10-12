@@ -12,18 +12,18 @@ import Foundation
 //
 // - a type's name: a type or a contract a module declares. Identifiers
 //   joined by dots, a dot being a character of the name.
-// - a mention: a type or a contract named in a type, and a record's name. A
+// - a mention: a type or a contract named in a type, and a struct's name. A
 //   type's name, or a name the language declares itself.
 // - a contract's mention: the contract a bound, a part joined with `&` or a
 //   claim names. A type's name, or the contract the language declares, since
-//   a record the language declares is no contract.
+//   a struct the language declares is no contract.
 // - a claimed type: the type a claim is about. A mention, or a type the
 //   language names a value an instance of.
 // - a type parameter's name: the `T` of `some T` and a key of `bounds`. One
 //   identifier, since the signature that names it is the only place it means
 //   anything.
 // - a value's name: a constant, a module variable, a parameter, a statement's
-//   name, a loop's round, an attempt's failure and a record type's field. What
+//   name, a loop's round, an attempt's failure and a struct type's field. What
 //   a path reads back as one name, since a path is how each one is reached,
 //   and there a dot is a step.
 // - a contract's procedure's name: the key it is asked under. One identifier,

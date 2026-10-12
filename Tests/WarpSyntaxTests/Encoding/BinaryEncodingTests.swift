@@ -271,9 +271,9 @@ struct BinaryEncodingTests {
         #expect(try BinaryEncoding().value(from: Data([0x57, 0x41, 0x52, 0x50, 0x01] + body)) == map)
     }
 
-    @Test("a record with its fields out of order is refused")
-    func aShuffledRecordIsRefused() {
-        // Given. "b" before "a" in a record of `A.P`
+    @Test("a struct with its fields out of order is refused")
+    func aShuffledStructIsRefused() {
+        // Given. "b" before "a" in a struct of `A.P`
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
             0x09, 0x03, 0x41, 0x2e, 0x50, 0x02,
@@ -293,7 +293,7 @@ struct BinaryEncodingTests {
     func aDenormalFieldIsRefused() throws {
         // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name whose NFC form is one character. Accepting
-        // it would let one name sort to two places and a record hold a field
+        // it would let one name sort to two places and a struct hold a field
         // twice, losing one without a word.
         let bytes = Data([
             0x57, 0x41, 0x52, 0x50, 0x01,
@@ -350,7 +350,7 @@ struct BinaryEncodingTests {
 
     @Test("a field name outside normal form C never reaches the way out")
     func aDenormalFieldIsRefusedWhenWriting() {
-        // Given. A record's field names are names, so there is no value
+        // Given. A struct's field names are names, so there is no value
         // carrying one for a writing to refuse: the refusal is at the
         // initializer a name comes through.
         let decomposed = "e\u{301}"

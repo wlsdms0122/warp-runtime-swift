@@ -601,8 +601,8 @@ struct Lowering {
                 try lower(element, naming: nil, in: scope, on: context, at: place.child(.element(position)))
             })
 
-        case let .record(record):
-            return try lower(record: record, in: scope, on: context, at: place)
+        case let .struct(literal):
+            return try lower(literal: literal, in: scope, on: context, at: place)
 
         case let .dictionary(entries):
             return .dictionary(try entries.enumerated().map { position, entry in
@@ -659,21 +659,21 @@ struct Lowering {
     // on the way down, and it carries no construct's locals but the one it
     // is lowering.
     private mutating func lower(
-        record: [Name: Expression],
+        literal: [Name: Expression],
         in scope: SlotScope,
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        let ordered = record.sorted { $0.key < $1.key }
+        let ordered = literal.sorted { $0.key < $1.key }
 
-        // The type check read the literal as the declared record its place
-        // reads, which the record is built under.
-        guard let name = context.judgements.name(ofRecordAt: place) else {
-            throw BuildError.unjudged("a record literal", at: place)
+        // The type check read the literal as the declared struct its place
+        // reads, which the struct is built under.
+        guard let name = context.judgements.name(ofStructAt: place) else {
+            throw BuildError.unjudged("a struct literal", at: place)
         }
 
-        return .record(
-            RecordOperation(
+        return .struct(
+            StructOperation(
                 layout: Layout(name: name, ordered: ordered.map(\.key)),
                 fields: try ordered.map { name, field in
                     try lower(field, naming: nil, in: scope, on: context, at: place.child(.field(name)))

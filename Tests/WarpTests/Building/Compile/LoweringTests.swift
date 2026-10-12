@@ -397,13 +397,13 @@ struct LoweringTests {
     @Test("what is handed in place is held to the type the slot declares")
     func aHandedVariableIsTheSlotsOwnType() async throws {
         // Given. A variable holding an `Other`, handed in place to a slot
-        // declaring `Tag`. Two declared records are two types, so it is
+        // declaring `Tag`. Two declared structs are two types, so it is
         // refused, and the same fields held as a `Tag` stand. The procedure
         // writes through the caller's box, so what the caller reads back is
         // what the procedure left there.
         func module(holding held: Warp.Expression) throws -> Module {
             try Module(
-                types: ["Other": .record(["a": .int]), "Tag": .record(["a": .int])],
+                types: ["Other": .struct(["a": .int]), "Tag": .struct(["a": .int])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
@@ -412,7 +412,7 @@ struct LoweringTests {
                             selector: "Standard.Logic.equal",
                             arguments: [
                                 .call(Call(selector: "App.tag", arguments: [.reference([.name("held")])])),
-                                .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
+                                .cast(.struct(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
                             ]
                         ))
                     ),
@@ -432,7 +432,7 @@ struct LoweringTests {
         // `Tag` stand
         await #expect {
             try await builder.build(
-                [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Other"), optional: false))]
+                [try module(holding: .cast(.struct(["a": .literal(.int(1))]), as: .named("Other"), optional: false))]
                     + Module.standard
             )
         } throws: { error in
@@ -441,7 +441,7 @@ struct LoweringTests {
         }
 
         let image = try await builder.build(
-            [try module(holding: .cast(.record(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard
+            [try module(holding: .cast(.struct(["a": .literal(.int(1))]), as: .named("Tag"), optional: false))] + Module.standard
         )
 
         #expect(try await Executor().run(image) == .bool(true))

@@ -10,7 +10,7 @@ import Warp
 
 // How a notation writes an expression specially, for a notation that writes
 // one. In a document a value slot holds an expression: a literal, a reference,
-// a call, a cast, a closure, a record, a map or an array of these. Everything
+// a call, a cast, a closure, a struct, a map or an array of these. Everything
 // else a slot is written as is a notation's: the mapping of an operator key and
 // its subject, which keys count as operators, whether one takes its expression
 // directly, which procedure each reaches, and which side of the send the

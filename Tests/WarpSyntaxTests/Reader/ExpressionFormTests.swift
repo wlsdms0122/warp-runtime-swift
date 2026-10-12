@@ -36,8 +36,8 @@ struct ExpressionFormTests {
     }
 
     @Test("a value the document named is data, and keeps the name")
-    func aNamedRecordStaysALiteral() throws {
-        // Given. A record standing under a name is a value of that type, not a
+    func aNamedStructStaysALiteral() throws {
+        // Given. A struct standing under a name is a value of that type, not a
         // mapping read by its tag
         let written = try TextEncoding().value(from: "warpt 1\nbank.Money { amount 7 }\n")
 
@@ -87,15 +87,15 @@ struct ExpressionFormTests {
         #expect(reference.referencePath == [.name("items"), .index(0), .name("name")])
     }
 
-    @Test("a record's field named like a tag is a field, and reaches nothing")
+    @Test("a struct's field named like a tag is a field, and reaches nothing")
     func aFieldNamedLikeATagStaysInert() throws {
-        // Given / When. Under `record`, a field's name is never a key the
+        // Given / When. Under `struct`, a field's name is never a key the
         // grammar reads, so a field called `ref` holds the text it was given
-        let reference = try loader.expression(from: ["record": ["ref": "secret", "value": 1]])
+        let reference = try loader.expression(from: ["struct": ["ref": "secret", "value": 1]])
 
         // Then
-        guard case let .record(fields) = reference else {
-            Issue.record("expected a record, got \(reference)")
+        guard case let .struct(fields) = reference else {
+            Issue.record("expected a struct, got \(reference)")
 
             return
         }
@@ -108,17 +108,17 @@ struct ExpressionFormTests {
     @Test("a half-spelled form mapping is rejected at load", arguments: [
         ["ref": "a", "extra": "b"] as Value,
         ["ref": 3],
-        ["record": ["a": 1], "extra": "b"],
-        ["record": "a"],
+        ["struct": ["a": 1], "extra": "b"],
+        ["struct": "a"],
         ["as": "Int"],
         ["with": ["a": 1]],
         ["format": "x", "extra": "b"],
         ["format": "x", "with": [1, 2]],
         ["format": ["a"], "with": ["a": 1]]
     ])
-    func ambiguousFormRecordRejected(fixture: Value) {
-        // When / Then. A half-spelled form is an author mistake, not a record;
-        // plain data carrying these keys is written under `record`
+    func ambiguousFormStructRejected(fixture: Value) {
+        // When / Then. A half-spelled form is an author mistake, not a struct;
+        // plain data carrying these keys is written under `struct`
         #expect(throws: ReadingError.self) {
             _ = try loader.expression(from: fixture)
         }
@@ -220,24 +220,24 @@ struct ExpressionFormTests {
         #expect(throws: ReadingError.self) {
             try loader.expression(from: [
                 "format": "hello, ${who.name}",
-                "with": ["who": ["record": ["name": "warp"]]]
+                "with": ["who": ["struct": ["name": "warp"]]]
             ])
         }
     }
 
-    @Test("a record is written under `record`, and each field is an expression")
-    func aRecordIsWrittenUnderItsTag() throws {
+    @Test("a struct is written under `struct`, and each field is an expression")
+    func aStructIsWrittenUnderItsTag() throws {
         // Given / When
-        let reference = try loader.expression(from: ["record": ["name": "report", "target": ["ref": "target"]]])
+        let reference = try loader.expression(from: ["struct": ["name": "report", "target": ["ref": "target"]]])
 
         // Then
-        guard case let .record(record) = reference else {
-            Issue.record("expected recordValue, got \(reference)")
+        guard case let .struct(literal) = reference else {
+            Issue.record("expected structValue, got \(reference)")
 
             return
         }
 
-        #expect(record["target"]?.referencePath == [.name("target")])
+        #expect(literal["target"]?.referencePath == [.name("target")])
     }
 
     @Test("a bare mapping where a value is wanted is refused")

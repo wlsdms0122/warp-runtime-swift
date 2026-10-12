@@ -126,14 +126,14 @@ struct DeclaredNameTests {
         }
     }
 
-    @Test("a record literal written through a field without var is refused for the field")
+    @Test("a struct literal written through a field without var is refused for the field")
     func aLiteralWrittenThroughAFixedFieldIsRefusedForTheField() async throws {
-        // Given. `p` declares the record the literal would be read as, and
+        // Given. `p` declares the struct the literal would be read as, and
         // not `var`, so the path is what stops the write
         let sut = try Module(
             types: [
-                "App.A": .record(["k": .string]),
-                "App.W": .record(["p": .named("App.A")])
+                "App.A": .struct(["k": .string]),
+                "App.W": .struct(["p": .named("App.A")])
             ],
             procedures: [
                 entryName: Procedure(
@@ -141,11 +141,11 @@ struct DeclaredNameTests {
                     body: [
                         Statement(
                             binding: .variable("w", declared: .named("App.W")),
-                            expression: .record(["p": .record(["k": .literal(.string("x"))])])
+                            expression: .struct(["p": .struct(["k": .literal(.string("x"))])])
                         ),
                         Statement(
                             binding: .assignment([.name("w"), .name("p")]),
-                            expression: .record(["k": .literal(.string("y"))])
+                            expression: .struct(["k": .literal(.string("y"))])
                         )
                     ],
                     result: reference("w")

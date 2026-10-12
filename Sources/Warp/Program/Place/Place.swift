@@ -98,7 +98,7 @@ public struct Place: Sendable, Hashable {
         case arguments
         case closure
 
-        // What a record is written with: its fields, each under its name.
+        // What a struct is written with: its fields, each under its name.
         case fields
 
         // What a map literal is written with: its entries in order, each a

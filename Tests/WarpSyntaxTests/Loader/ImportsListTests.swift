@@ -359,7 +359,7 @@ struct ImportsListTests {
                         ]],
                         [
                             "let": "deep",
-                            "value": ["record": ["a": [["call": ["procedure": "inNestedData"]]]]]
+                            "value": ["struct": ["a": [["call": ["procedure": "inNestedData"]]]]]
                         ]
                     ],
                     "result": ["ref": "tried"]

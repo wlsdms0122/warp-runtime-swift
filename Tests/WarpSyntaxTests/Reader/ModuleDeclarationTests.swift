@@ -186,8 +186,8 @@ struct ModuleDeclarationTests {
         // neither
         let sut = try loader.loadDocument([
             "types": [
-                "Bank.Account": ["record": ["balance": "Int"]],
-                "Bank.Card": ["record": ["last": "String"]]
+                "Bank.Account": ["struct": ["balance": "Int"]],
+                "Bank.Card": ["struct": ["last": "String"]]
             ],
             "contracts": [
                 "App.Describable": [
@@ -203,7 +203,7 @@ struct ModuleDeclarationTests {
                     "body": [
                         [
                             "let": "card",
-                            "value": ["as": ["of": ["record": ["last": "42"]], "type": "Bank.Card"]]
+                            "value": ["as": ["of": ["struct": ["last": "42"]], "type": "Bank.Card"]]
                         ]
                     ],
                     "result": ["dictionary": [["result", ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]]

@@ -23,7 +23,7 @@ warpt 1
           let "account"
           type "App.Account"
           value {
-            record {
+            struct {
               balance 1
             }
           }
@@ -82,7 +82,7 @@ warpt 1
   }
   types {
     "App.Account" {
-      record {
+      struct {
         balance "Int"
       }
     }

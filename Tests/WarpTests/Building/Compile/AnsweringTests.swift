@@ -202,7 +202,7 @@ struct AnsweringTests {
         // a path only that body can read, which nothing fills.
         func module(reading path: Path, answering answer: Path) throws -> Module {
             try Module(
-                types: ["App.Inner": .record(["inner": .int])],
+                types: ["App.Inner": .struct(["inner": .int])],
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -216,7 +216,7 @@ struct AnsweringTests {
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "peek",
-                                arguments: [.cast(.record(["inner": .literal(.int(1))]), as: .named("App.Inner"), optional: false)]
+                                arguments: [.cast(.struct(["inner": .literal(.int(1))]), as: .named("App.Inner"), optional: false)]
                             )))
                         ],
                         result: .reference(path)
@@ -226,7 +226,7 @@ struct AnsweringTests {
         }
 
         // When / Then. The parameter itself: filled with what the call put
-        // there, so the caller reads that record and is held to it
+        // there, so the caller reads that struct and is held to it
         _ = try await builder.build(
             [module(reading: [.name("said"), .name("inner")], answering: [.name("of")])]
                 + Module.standard

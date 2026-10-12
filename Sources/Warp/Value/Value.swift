@@ -28,13 +28,13 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under names, and the name of the declared record it is a value
-    // of. Two records of one structure under two names are two values.
-    case record(Record)
+    // Fields under names, and the name of the declared struct it is a value
+    // of. Two structs of one structure under two names are two values.
+    case `struct`(Struct)
 
     // Entries under keys that are values: what a document's mappings are,
     // what a host builds out of raw data, and what a map literal makes. A map
-    // is never a record.
+    // is never a struct.
     case dictionary(Dictionary)
 
     case procedure(Closure)
@@ -177,11 +177,11 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         // How two keys stand in the key order: by kind first (null, bool,
-        // number, text, list, map, record, and a procedure last), then false
+        // number, text, list, map, struct, and a procedure last), then false
         // before true, numbers by worth, text as `String` orders it, which is
         // its scalars in normal form C, lists element by element with a
         // shorter one first on a common start, maps entry by entry, and
-        // records by name and then field by field. Bytes are the list of
+        // structs by name and then field by field. Bytes are the list of
         // their numbers. Two keys the same value stand at one place; a
         // fraction that is not a number stands after every number, and a
         // procedure after everything, each at one place it shares with its
@@ -207,7 +207,7 @@ public indirect enum Value: Sendable, Equatable {
                     theirs.entries.lazy.flatMap { entry in [entry.key, entry.value] }
                 )
 
-            case let (.record(mine), .record(theirs)):
+            case let (.struct(mine), .struct(theirs)):
                 guard mine.name == theirs.name else {
                     return mine.name < theirs.name ? .orderedAscending : .orderedDescending
                 }
@@ -253,7 +253,7 @@ public indirect enum Value: Sendable, Equatable {
             case .string: 3
             case .array, .bytes: 4
             case .dictionary: 5
-            case .record: 6
+            case .struct: 6
             case .procedure: 7
             }
         }
@@ -339,28 +339,28 @@ public indirect enum Value: Sendable, Equatable {
     // Whether a procedure is anywhere in here, however deep.
     //
     // The types nest, so the question does: a procedure one array inside a
-    // record is still a procedure this value holds, and a check that looked
+    // struct is still a procedure this value holds, and a check that looked
     // only at the outside would pass a program that carries one and refuse the
     // same program written without the wrapper.
     public var holdsProcedure: Bool {
         holdsClosure { _ in true }
     }
 
-    // Whether a record is anywhere in here, however deep. A record is the
-    // value of a declared record, made where a literal is written into one or
-    // handed through a door under the record's name.
-    var holdsRecord: Bool {
+    // Whether a struct is anywhere in here, however deep. A struct is the
+    // value of a declared struct, made where a literal is written into one or
+    // handed through a door under the struct's name.
+    var holdsStruct: Bool {
         switch self {
         case .null, .bool, .int, .double, .string, .bytes, .procedure:
             return false
 
         case let .array(elements):
-            return elements.contains { element in element.holdsRecord }
+            return elements.contains { element in element.holdsStruct }
 
         case let .dictionary(held):
-            return held.entries.contains { key, value in key.holdsRecord || value.holdsRecord }
+            return held.entries.contains { key, value in key.holdsStruct || value.holdsStruct }
 
-        case .record:
+        case .struct:
             return true
         }
     }
@@ -411,7 +411,7 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The type this value is an instance of, under the name a claim writes:
-    // a record under the declared name it carries, and every other kind
+    // a struct under the declared name it carries, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
     // spelling, so they are `Array`.
     public var nominal: Name {
@@ -437,8 +437,8 @@ public indirect enum Value: Sendable, Equatable {
         case .dictionary:
             return TypeSpelling.dictionary
 
-        case let .record(record):
-            return record.name
+        case let .struct(instance):
+            return instance.name
 
         case .procedure:
             return TypeSpelling.procedure
@@ -451,9 +451,9 @@ public indirect enum Value: Sendable, Equatable {
         .dictionary(Dictionary(entries))
     }
 
-    // What a reading of fields under names makes: a record of the declared
-    // record the name says. One name holds one field, and a name written
-    // twice is refused. The name is a declared record's, so it is one a
+    // What a reading of fields under names makes: a struct of the declared
+    // struct the name says. One name holds one field, and a name written
+    // twice is refused. The name is a declared struct's, so it is one a
     // mention writes: a type's name, or a name the language declares.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
@@ -469,19 +469,19 @@ public indirect enum Value: Sendable, Equatable {
             throw ValueRefused(NameGrammar.mention.refusal(of: name))
         }
 
-        return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
+        return .struct(Struct(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
     }
 
-    // This value with one field written: a field a record's layout names,
-    // where it stands. Any other name is not the declaration's, so a record
+    // This value with one field written: a field a struct's layout names,
+    // where it stands. Any other name is not the declaration's, so a struct
     // refuses it rather than being quietly made something else, and what is
-    // no record holds no fields.
+    // no struct holds no fields.
     public func writing(_ name: Name, with value: Value) throws -> Value {
-        guard case let .record(record) = self else {
+        guard case let .struct(instance) = self else {
             throw ValueRefused("\(nominal) holds no fields, so '\(name)' cannot be written into it")
         }
 
-        return .record(try record.writing(name, with: value))
+        return .struct(try instance.writing(name, with: value))
     }
 
     // Whether a closure this value holds answers the predicate. Stops at the
@@ -490,7 +490,7 @@ public indirect enum Value: Sendable, Equatable {
         !walk { closure in !predicate(closure) }
     }
 
-    // Every closure this value holds, however deep: inside an array, a record
+    // Every closure this value holds, however deep: inside an array, a struct
     // or a dictionary, and inside what a closure captured by copy, which is a
     // value like any other. A cell captured as a hold is a box of the run
     // that made the closure, and what the box holds is that run's.
@@ -520,11 +520,11 @@ public indirect enum Value: Sendable, Equatable {
         case let .array(items):
             return .array(try items.map { item in try item.rewritten(closures: body) })
 
-        case let .record(record):
-            return .record(
-                Record(
-                    layout: record.layout,
-                    values: try record.values.map { value in try value.rewritten(closures: body) }
+        case let .struct(instance):
+            return .struct(
+                Struct(
+                    layout: instance.layout,
+                    values: try instance.values.map { value in try value.rewritten(closures: body) }
                 )
             )
 
@@ -542,13 +542,13 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // A field of a record, and nil for anything else. Several answers travel as
-    // one record because a procedure answers one value, so reading a field back
+    // A field of a struct, and nil for anything else. Several answers travel as
+    // one struct because a procedure answers one value, so reading a field back
     // out is the ordinary thing a host does with what a run gave it.
     public subscript(field: Name) -> Value? {
-        guard case let .record(record) = self else { return nil }
+        guard case let .struct(instance) = self else { return nil }
 
-        return record[field]
+        return instance[field]
     }
 
     // The elements at these positions, in the spelling this value is. Nil for
@@ -663,7 +663,7 @@ public indirect enum Value: Sendable, Equatable {
         case let (.array(left), .array(right)):
             return left.count == right.count && zip(left, right).allSatisfy { mine, theirs in mine == theirs }
 
-        case let (.record(left), .record(right)):
+        case let (.struct(left), .struct(right)):
             return left == right
 
         case let (.dictionary(left), .dictionary(right)):
@@ -677,7 +677,7 @@ public indirect enum Value: Sendable, Equatable {
     // Sameness as `equal` answers it. Strict except that worth unifies a
     // whole number with the fraction of the same worth, and bytes, being an
     // array, equal the array of the same elements, applied recursively
-    // through arrays, records and maps.
+    // through arrays, structs and maps.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
         case let (.int(whole), .double(fraction)), let (.double(fraction), .int(whole)):
@@ -696,9 +696,9 @@ public indirect enum Value: Sendable, Equatable {
             return left.count == right.count
                 && zip(left, right).allSatisfy { pair in pair.0.matches(pair.1) }
 
-        // Both hold their fields in name order, so two records match field by
+        // Both hold their fields in name order, so two structs match field by
         // field.
-        case let (.record(left), .record(right)):
+        case let (.struct(left), .struct(right)):
             return left.layout == right.layout
                 && zip(left.values, right.values).allSatisfy { mine, theirs in mine.matches(theirs) }
 
@@ -713,7 +713,7 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // The part a path names, in a record by the place the build put the field
+    // The part a path names, in a struct by the place the build put the field
     // at, in a map by key and in a list by position, bytes read through the
     // one projection that owns their equation. Every index was read
     // to a value before this, and the build judged the path against the
@@ -735,16 +735,16 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         switch (self, step) {
-        case let (.record(record), .field(position, name)):
-            guard record.values.indices.contains(position) else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+        case let (.struct(instance), .field(position, name)):
+            guard instance.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
             }
 
-            return try record.values[position].reading(at: rest, under: rendered)
+            return try instance.values[position].reading(at: rest, under: rendered)
 
-        case let (.record(record), .name(name)):
-            guard let field = record[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+        case let (.struct(instance), .name(name)):
+            guard let field = instance[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
             }
 
             return try field.reading(at: rest, under: rendered)
@@ -782,16 +782,16 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         switch (self, step) {
-        case let (.record(record), .field(position, name)):
-            guard record.values.indices.contains(position) else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+        case let (.struct(instance), .field(position, name)):
+            guard instance.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
             }
 
-            return try record.values[position].written(at: rest, under: rendered)
+            return try instance.values[position].written(at: rest, under: rendered)
 
-        case let (.record(record), .name(name)):
-            guard let field = record[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+        case let (.struct(instance), .name(name)):
+            guard let field = instance[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
             }
 
             return try field.written(at: rest, under: rendered)
@@ -806,7 +806,7 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // This value with one part replaced: the part the path names, in a record
+    // This value with one part replaced: the part the path names, in a struct
     // by the place the build put the field at, in a map by key and in a list
     // by position, a list answering in the spelling it was in where that
     // still holds. The rest is kept as it was. The build judged the
@@ -831,22 +831,22 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         switch (self, step) {
-        case let (.record(record), .field(position, name)):
-            guard record.values.indices.contains(position) else {
-                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
+        case let (.struct(instance), .field(position, name)):
+            guard instance.values.indices.contains(position) else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this struct holds")
             }
 
-            let written = try record.values[position].writing(value, at: rest, under: rendered)
+            let written = try instance.values[position].writing(value, at: rest, under: rendered)
 
-            return .record(record.writing(at: position, with: written))
+            return .struct(instance.writing(at: position, with: written))
 
-        // A field by its name, of a record a call decides.
-        case let (.record(record), .name(name)):
-            guard let field = record[name] else {
-                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
+        // A field by its name, of a struct a call decides.
+        case let (.struct(instance), .name(name)):
+            guard let field = instance[name] else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this struct holds")
             }
 
-            return .record(try record.writing(name, with: try field.writing(value, at: rest, under: rendered)))
+            return .struct(try instance.writing(name, with: try field.writing(value, at: rest, under: rendered)))
 
         case let (.dictionary(map), .index(key)):
             guard let held = map[key: key] else {
@@ -888,8 +888,8 @@ public indirect enum Value: Sendable, Equatable {
         case let .array(items):
             return items.allSatisfy { item in item.walk(body) }
 
-        case let .record(record):
-            return record.values.allSatisfy { value in value.walk(body) }
+        case let .struct(instance):
+            return instance.values.allSatisfy { value in value.walk(body) }
 
         case let .dictionary(dictionary):
             return dictionary.entries.allSatisfy { entry in entry.key.walk(body) && entry.value.walk(body) }

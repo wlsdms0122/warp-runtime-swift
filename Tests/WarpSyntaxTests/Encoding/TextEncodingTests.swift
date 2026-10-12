@@ -241,7 +241,7 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a record writes a field name where one is due")
+    @Test("a struct writes a field name where one is due")
     func aValueWhereAKeyIsDueIsRefused() throws {
         // When / Then
         for text in ["warpt 1\nA.P { 1 2 }", "warpt 1\nA.P { [ ] null }", "warpt 1\nA.P { {} null }", "warpt 1\nA.P { null 1 }"] {
@@ -288,8 +288,8 @@ struct TextEncodingTests {
         }
     }
 
-    @Test("a record named by one identifier has no writing as a map's key")
-    func aRecordNamedByAnIdentifierIsNoKey() throws {
+    @Test("a struct named by one identifier has no writing as a map's key")
+    func aStructNamedByAnIdentifierIsNoKey() throws {
         // Given. Where a key stands `P { … }` reads as the text P and a map
         let map = Value.dictionary(try Value.Dictionary([(key: try Value.holding([], named: "P"), value: .int(1))]))
 
@@ -428,7 +428,7 @@ struct TextEncodingTests {
 
     @Test("a field name outside normal form C never reaches the way out")
     func aDenormalFieldIsRefusedWhenWriting() {
-        // Given. A record's field names are names, so there is no value
+        // Given. A struct's field names are names, so there is no value
         // carrying one for a writing to refuse: the refusal is at the
         // initializer a name comes through.
         let decomposed = "e\u{301}"
@@ -469,10 +469,10 @@ struct TextEncodingTests {
         #expect {
             try TextEncoding().value(from: "warpt 1\nA.P {\n  a 1\n  2\n}\n")
         } throws: { error in
-            Self.refused(error, "a record writes a field name here", at: 4, 3)
+            Self.refused(error, "a struct writes a field name here", at: 4, 3)
         }
 
-        // And. Text that ends inside a record: the reader stands past the last
+        // And. Text that ends inside a struct: the reader stands past the last
         // line.
         #expect {
             try TextEncoding().value(from: "warpt 1\n{\n  a\n")

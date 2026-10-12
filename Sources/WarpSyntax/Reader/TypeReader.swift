@@ -21,7 +21,7 @@ import Warp
 //                                with, what it answers and what it may fail
 //                                with. Bare `Procedure` says only that it is one
 //
-// A mapping is one of these by its one key. A record is a structure a
+// A mapping is one of these by its one key. A struct is a structure a
 // module declares under `types`, and a type names it.
 struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
@@ -158,8 +158,8 @@ struct TypeReader: Decodable {
     // What a type that is neither a spelling nor a form is refused with.
     static let unread = "a type is a name like `String`, `Array<String>` or"
         + " `Task`, or a mapping under one of `procedure`, `array`"
-        + " and `dictionary`. A record is declared under its name in `types`"
-        + " as `{ record: { … } }`, and named everywhere else"
+        + " and `dictionary`. A struct is declared under its name in `types`"
+        + " as `{ struct: { … } }`, and named everywhere else"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and

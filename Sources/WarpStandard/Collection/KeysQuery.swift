@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// The keys a map holds, in its key order. A declared record's fields are read
+// The keys a map holds, in its key order. A declared struct's fields are read
 // by name; a map's keys are data, and this is how a program walks them
 // without knowing what they are.
 struct KeysQuery: Query {

@@ -42,12 +42,12 @@ struct TypeWriter {
         return written
     }
 
-    // A declared type: a record under `record`, its fields beside their
+    // A declared type: a struct under `struct`, its fields beside their
     // types, and an alias as the type it stands for.
     func value(of declared: TypeDeclaration) throws -> Value {
         switch declared {
-        case let .record(fields):
-            return .dictionary([TypeDeclarationReader.recordKey: .dictionary(try fields.mapValues(value(of:)))])
+        case let .struct(fields):
+            return .dictionary([TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))])
 
         case let .alias(type):
             return try value(of: type)
@@ -128,7 +128,7 @@ struct TypeWriter {
         // declared half has to have a name of its own.
         case let .nullable(inner):
             return .string(
-                "\(try named(inner, at: "before `?`. A record is declared and written by its name, like `Task?`"))?"
+                "\(try named(inner, at: "before `?`. A struct is declared and written by its name, like `Task?`"))?"
             )
 
         // Both marks are written the same way, so the writing is said once

@@ -309,7 +309,7 @@ struct SeparateCompilationTests {
         // claim first, and a document compiled against what stands before it
         // would then be asked for an answer that has not arrived.
         let holding = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
@@ -336,7 +336,7 @@ struct SeparateCompilationTests {
                     signature: Signature(returns: .named("Bank.Account")),
                     body: [],
                     result: .cast(
-                        .record(["balance": .literal(.int(7))]),
+                        .struct(["balance": .literal(.int(7))]),
                         as: .named("Bank.Account"),
                         optional: false
                     )
@@ -453,7 +453,7 @@ struct SeparateCompilationTests {
         // whose type takes a row in front of its own.
         let sut = try casting()
         let ahead = try Module(
-            types: ["Aaa.Ahead": .record(["first": .int])],
+            types: ["Aaa.Ahead": .struct(["first": .int])],
             procedures: [
                 "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
             ]
@@ -486,7 +486,7 @@ struct SeparateCompilationTests {
         let beside = try await compiled(
             [
                 try Module(
-                    types: ["Aaa.Ahead": .record(["first": .int])],
+                    types: ["Aaa.Ahead": .struct(["first": .int])],
                     procedures: [
                         "Aaa.first": Procedure(
                             signature: Signature(returns: .int),
@@ -515,7 +515,7 @@ struct SeparateCompilationTests {
         // that procedure's body standing on a type its own document declared, so
         // running it reads a type as well as a row.
         let answering = try Module(
-            types: ["A.Held": .record(["count": .int])],
+            types: ["A.Held": .struct(["count": .int])],
             procedures: [
                 "A.answer": Procedure(
                     signature: Signature(returns: .int),
@@ -523,7 +523,7 @@ struct SeparateCompilationTests {
                         Statement(
                             binding: .constant("held"),
                             expression: .cast(
-                                .record(["count": .literal(.int(7))]),
+                                .struct(["count": .literal(.int(7))]),
                                 as: .named("A.Held"),
                                 optional: false
                             )
@@ -622,7 +622,7 @@ struct SeparateCompilationTests {
         )
         let leaning = try Module(
             imports: ["App.Describable", "App.Describable.describe"],
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
@@ -806,7 +806,7 @@ struct SeparateCompilationTests {
         // which names the type, compiled against it.
         let card = try Module(
             imports: ["App.P"],
-            types: ["Bank.Card": .record(["last": .string])],
+            types: ["Bank.Card": .struct(["last": .string])],
             claims: ["Bank.Card": ["App.P"]],
             procedures: [
                 "Bank.Card.show": Procedure(
@@ -828,7 +828,7 @@ struct SeparateCompilationTests {
                     result: .call(
                         Call(
                             selector: "App.P.show",
-                            arguments: [.cast(.record(["last": .literal(.string("1"))]), as: .named("Bank.Card"), optional: false)]
+                            arguments: [.cast(.struct(["last": .literal(.string("1"))]), as: .named("Bank.Card"), optional: false)]
                         )
                     )
                 )
@@ -876,7 +876,7 @@ struct SeparateCompilationTests {
         // Given. A document declaring a procedure that writes no `returns`, and
         // another calling it and then reading into what it answers.
         let answering = try Module(
-            types: ["A.Held": .record(["count": .int])],
+            types: ["A.Held": .struct(["count": .int])],
             procedures: [
                 "A.first": Procedure(
                     signature: Signature(
@@ -884,7 +884,7 @@ struct SeparateCompilationTests {
                     ),
                     body: [],
                     result: .cast(
-                        .record(["count": .literal(.int(3))]),
+                        .struct(["count": .literal(.int(3))]),
                         as: .named("A.Held"),
                         optional: false
                     )
@@ -941,7 +941,7 @@ struct SeparateCompilationTests {
     private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
         (
             typed: try Module(
-                types: ["Bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .struct(["balance": .int])],
                 procedures: [
                     "Bank.Account.describe": Procedure(
                         signature: Signature(
@@ -984,7 +984,7 @@ struct SeparateCompilationTests {
                             Statement(
                                 binding: .constant("account"),
                                 expression: .cast(
-                                    .record(["balance": .literal(.int(7))]),
+                                    .struct(["balance": .literal(.int(7))]),
                                     as: .named("Bank.Account"),
                                     optional: false
                                 )
@@ -1069,13 +1069,13 @@ struct SeparateCompilationTests {
     private func casting() throws -> [Module] {
         [
             try Module(
-                types: ["Bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .struct(["balance": .int])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         body: [],
                         result: .cast(
-                            .record(["balance": .literal(.int(7))]),
+                            .struct(["balance": .literal(.int(7))]),
                             as: .named("Bank.Account"),
                             optional: false
                         )
@@ -1119,8 +1119,8 @@ struct SeparateCompilationTests {
             ),
             try Module(
                 types: [
-                    "Bank.Account": .record(["balance": .int]),
-                    "Bank.Card": .record(["last": .string])
+                    "Bank.Account": .struct(["balance": .int]),
+                    "Bank.Card": .struct(["last": .string])
                 ],
                 claims: [
                     "Bank.Account": ["App.Describable"],
@@ -1133,7 +1133,7 @@ struct SeparateCompilationTests {
                             Statement(
                                 binding: .constant("account"),
                                 expression: .cast(
-                                    .record(["balance": .literal(.int(7))]),
+                                    .struct(["balance": .literal(.int(7))]),
                                     as: .named("Bank.Account"),
                                     optional: false
                                 )
@@ -1141,7 +1141,7 @@ struct SeparateCompilationTests {
                             Statement(
                                 binding: .constant("card"),
                                 expression: .cast(
-                                    .record(["last": .literal(.string("42"))]),
+                                    .struct(["last": .literal(.string("42"))]),
                                     as: .named("Bank.Card"),
                                     optional: false
                                 )

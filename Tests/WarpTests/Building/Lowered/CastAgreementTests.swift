@@ -25,24 +25,24 @@ struct CastAgreementTests {
     // MARK: - Property
     private let types = TypeTable(
         types: [
-            "Person": .record(["name": .string]),
-            // A name standing for another declared record, so an alias meets
-            // the record it names in every pair.
+            "Person": .struct(["name": .string]),
+            // A name standing for another declared struct, so an alias meets
+            // the struct it names in every pair.
             "Someone": .alias(.named("Person")),
             "Maybe": .alias(.nullable(.int)),
             "Whole": .alias(.int),
-            // A record that names itself in a field.
-            "Tree": .record(["children": .array(.named("Tree"))]),
+            // A struct that names itself in a field.
+            "Tree": .struct(["children": .array(.named("Tree"))]),
             // The layout of `Person` under another name, and two chains of
             // one layout under two names, so a name is all that tells them
             // apart.
-            "Human": .record(["name": .string]),
-            "Chain": .record(["next": .nullable(.named("Chain"))]),
-            "Link": .record(["next": .nullable(.named("Link"))]),
-            // Records holding a declared record, so a name decides the answer
+            "Human": .struct(["name": .string]),
+            "Chain": .struct(["next": .nullable(.named("Chain"))]),
+            "Link": .struct(["next": .nullable(.named("Link"))]),
+            // Structs holding a declared struct, so a name decides the answer
             // a field deep.
-            "Of": .record(["of": .named("Human")]),
-            "Next": .record(["next": .named("Link")])
+            "Of": .struct(["of": .named("Human")]),
+            "Next": .struct(["next": .named("Link")])
         ],
         contracts: ["Comparable": [:]],
         satisfying: ["Comparable": ["Int", "Double", "String"]],
@@ -71,7 +71,7 @@ struct CastAgreementTests {
         .procedure(nil)
     ]
 
-    // Where a name decides the answer: a value read under a declared record
+    // Where a name decides the answer: a value read under a declared struct
     // wears its name, at any depth.
     private let namedTypeExpressions: [TypeExpression] = [
         .named("Human"), .named("Chain"), .named("Link"),
@@ -141,9 +141,9 @@ struct CastAgreementTests {
         }
     }
 
-    @Test("a declared record and a map of its fields share no value")
-    func aRecordAndAMapShareNoValue() {
-        // Given. A declared record and a map of its fields
+    @Test("a declared struct and a map of its fields share no value")
+    func aStructAndAMapShareNoValue() {
+        // Given. A declared struct and a map of its fields
         let named = TypeExpression.named("Person")
         let map = TypeExpression.dictionary(key: .string, value: .string)
 
@@ -153,10 +153,10 @@ struct CastAgreementTests {
     }
 
     @Test("a name or a chain that rules every value out is called impossible")
-    func recordsThatCannotMeetAreRefused() {
+    func structsThatCannotMeetAreRefused() {
         // Given. The other direction again, for names: a cast and the reading
         // it is written on, where every value the reading may be is refused
-        // by the cast. Two records of one layout under two names are two
+        // by the cast. Two structs of one layout under two names are two
         // types, a chain of them included.
         let pairs: [(claim: TypeExpression, reading: TypeExpression)] = [
             (.named("Human"), .named("Person")),

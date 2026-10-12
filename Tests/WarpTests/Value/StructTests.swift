@@ -1,5 +1,5 @@
 //
-//  RecordTests.swift
+//  StructTests.swift
 //  WarpTests
 //
 //  Created by JSilver on 9/4/26.
@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Warp
 
-@Suite("A record stands on the layout it was made with")
-struct RecordTests {
+@Suite("A struct stands on the layout it was made with")
+struct StructTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
@@ -32,10 +32,10 @@ struct RecordTests {
         #expect(throws: ValueRefused.self) { try Layout(name: "App.T", judging: ["a", "a"]) }
     }
 
-    @Test("a record built from fields holds them at their layout's places")
+    @Test("a struct built from fields holds them at their layout's places")
     func fieldsStandWhereTheLayoutPutsThem() {
         // Given
-        let sut = Record(name: "App.T", ["b": .int(2), "a": .int(1), "c": .int(3)])
+        let sut = Struct(name: "App.T", ["b": .int(2), "a": .int(1), "c": .int(3)])
 
         // When / Then
         #expect(sut.names == ["a", "b", "c"])
@@ -50,15 +50,15 @@ struct RecordTests {
         let layout = Layout(name: "App.T", ordered: ["a", "b"])
 
         // When / Then
-        #expect(try Record(layout: layout, checking: [.int(1), .int(2)]).values == [.int(1), .int(2)])
-        #expect(throws: ValueRefused.self) { try Record(layout: layout, checking: [.int(1)]) }
-        #expect(throws: ValueRefused.self) { try Record(layout: layout, checking: [.int(1), .int(2), .int(3)]) }
+        #expect(try Struct(layout: layout, checking: [.int(1), .int(2)]).values == [.int(1), .int(2)])
+        #expect(throws: ValueRefused.self) { try Struct(layout: layout, checking: [.int(1)]) }
+        #expect(throws: ValueRefused.self) { try Struct(layout: layout, checking: [.int(1), .int(2), .int(3)]) }
     }
 
     @Test("a field the layout does not name is refused rather than made")
     func aFieldOutsideTheLayoutIsRefused() throws {
         // Given
-        let sut = Record(name: "App.Point", ["a": .int(1), "c": .int(3)])
+        let sut = Struct(name: "App.Point", ["a": .int(1), "c": .int(3)])
 
         // When / Then
         #expect(try sut.writing("c", with: .int(30)).values == [.int(1), .int(30)])
@@ -66,35 +66,35 @@ struct RecordTests {
     }
 
     @Test("a value under a name keeps it, and is refused a field that name does not declare")
-    func writingHoldsARecordNameToItsDeclaration() throws {
+    func writingHoldsAStructNameToItsDeclaration() throws {
         // Given
-        let sut = Value.record(Record(name: "App.Point", ["a": .int(1)]))
+        let sut = Value.struct(Struct(name: "App.Point", ["a": .int(1)]))
 
         // When / Then. A declared field is written where it stands
-        #expect(try sut.writing("a", with: .int(9)) == .record(Record(name: "App.Point", ["a": .int(9)])))
+        #expect(try sut.writing("a", with: .int(9)) == .struct(Struct(name: "App.Point", ["a": .int(9)])))
 
         // A name the declaration never had would make this something other
-        // than the type it names, and what is no record, a map included,
+        // than the type it names, and what is no struct, a map included,
         // holds no fields
         #expect(throws: ValueRefused.self) { try sut.writing("b", with: .int(2)) }
         #expect(throws: ValueRefused.self) { try Value.int(1).writing("a", with: .int(2)) }
         #expect(throws: ValueRefused.self) { try Value.dictionary(["a": .int(1)]).writing("a", with: .int(2)) }
     }
 
-    @Test("a record's name is part of its layout")
+    @Test("a struct's name is part of its layout")
     func aNameIsPartOfTheLayout() {
         // Given
-        let sut = Record(name: "App.Point", ["a": .int(1)])
+        let sut = Struct(name: "App.Point", ["a": .int(1)])
 
         // When / Then
         #expect(sut.name == "App.Point")
-        #expect(sut != Record(name: "App.Vault", ["a": .int(1)]))
+        #expect(sut != Struct(name: "App.Vault", ["a": .int(1)]))
     }
 
     @Test("mapping values changes every value and nothing else")
     func mappingValuesKeepsTheLayout() throws {
         // Given
-        let sut = Record(name: "App.Point", ["y": .int(2), "x": .int(1)])
+        let sut = Struct(name: "App.Point", ["y": .int(2), "x": .int(1)])
 
         // When
         let doubled = try sut.mapValues { _, value in
@@ -108,29 +108,29 @@ struct RecordTests {
         #expect(doubled.values == [.int(2), .int(4)])
     }
 
-    @Test("a record and a map of the same fields are two values")
-    func aRecordIsNoMap() {
+    @Test("a struct and a map of the same fields are two values")
+    func aStructIsNoMap() {
         // Given
-        let record = Value.record(Record(name: "App.T", ["a": .int(1), "b": .string("x")]))
+        let instance = Value.struct(Struct(name: "App.T", ["a": .int(1), "b": .string("x")]))
         let dictionary = Value.dictionary(["a": .int(1), "b": .string("x")])
 
         // When / Then
-        #expect(record != dictionary)
-        #expect(!record.matches(dictionary))
-        #expect(record["a"] == .int(1))
+        #expect(instance != dictionary)
+        #expect(!instance.matches(dictionary))
+        #expect(instance["a"] == .int(1))
         #expect(dictionary["a"] == nil)
     }
 
     @Test("a write lands on the place the link put the field at, whatever spelling stands beside it")
     func aWriteLandsOnItsPlace() throws {
         // Given
-        let point = Value.record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))
+        let point = Value.struct(Struct(name: "App.Point", ["x": .int(1), "y": .int(2)]))
 
         // When
         let written = try point.writing(.int(9), at: [.field(1, "z")], under: "point.z")
 
         // Then
-        #expect(written == .record(Record(name: "App.Point", ["x": .int(1), "y": .int(9)])))
+        #expect(written == .struct(Struct(name: "App.Point", ["x": .int(1), "y": .int(9)])))
     }
 
     // MARK: - Public

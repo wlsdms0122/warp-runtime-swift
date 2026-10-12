@@ -126,7 +126,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["body": [["value": ["return": ["record": [1]]]]]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["struct": [1]]]]]]]
         ]
 
         // When
@@ -266,17 +266,17 @@ struct ReadingErrorTests {
         )
     }
 
-    @Test("a reading inside a record says which field it was in")
-    func aReadingInsideARecordSaysWhichField() throws {
+    @Test("a reading inside a struct says which field it was in")
+    func aReadingInsideAStructSaysWhichField() throws {
         // Given. The walk descends by key here and by position in a list, the
-        // same two ways every other walk descends, so a record ten fields deep
-        // is not answered with the address of the record
+        // same two ways every other walk descends, so a struct ten fields deep
+        // is not answered with the address of the struct
         let fixture: Value = [
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
-                "value": ["record": ["first": "a", "second": ["ref": [1]]]]
+                "value": ["struct": ["first": "a", "second": ["ref": [1]]]]
             ]]]]
         ]
 
@@ -286,7 +286,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.second.ref")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.struct.second.ref")
     }
 
     @Test("a reading refusal under a set wears the name of the variable it writes")
@@ -297,7 +297,7 @@ struct ReadingErrorTests {
             "warp": 1,
             "imports": [],
             "procedures": ["entry": ["body": [
-                ["var": "r", "value": ["record": ["a": 5]]],
+                ["var": "r", "value": ["struct": ["a": 5]]],
                 ["set": "r.a", "value": ["ref": 5]]
             ]]]
         ]
@@ -311,9 +311,9 @@ struct ReadingErrorTests {
         #expect(error?.place?.rendered == "procedures.entry.body.r[1].value.ref")
     }
 
-    @Test("a record with two things wrong refuses the same one every time")
-    func aRecordRefusesInNameOrder() throws {
-        // Given. One line, and the same line twice. A record read in the order
+    @Test("a struct with two things wrong refuses the same one every time")
+    func aStructRefusesInNameOrder() throws {
+        // Given. One line, and the same line twice. A struct read in the order
         // a dictionary hands its keys back is read in an order seeded afresh
         // per process, so which of two bad fields an author is sent to would
         // change between runs of the same reader on the same document.
@@ -322,7 +322,7 @@ struct ReadingErrorTests {
             "imports": [],
             "procedures": ["entry": ["body": [[
                 "let": "held",
-                "value": ["record": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]]
+                "value": ["struct": ["zebra": ["ref": [1]], "alpha": ["ref": [2]]]]
             ]]]]
         ]
 
@@ -332,7 +332,7 @@ struct ReadingErrorTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.record.alpha.ref")
+        #expect(error?.place?.rendered == "procedures.entry.body.held[0].value.struct.alpha.ref")
     }
 
     @Test("a document that writes its imports as nothing has not written them")

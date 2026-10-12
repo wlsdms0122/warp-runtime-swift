@@ -8,8 +8,8 @@
 import Foundation
 
 // What a list or map literal holds where it is written into a slot, part by
-// part. A part that is no literal holds what it reads as, a record literal
-// the declared record it was read as. An attempt writes what one of its two
+// part. A part that is no literal holds what it reads as, a struct literal
+// the declared struct it was read as. An attempt writes what one of its two
 // ways answers, each written on its own.
 enum LiteralShape: Sendable {
     case list([LiteralShape])

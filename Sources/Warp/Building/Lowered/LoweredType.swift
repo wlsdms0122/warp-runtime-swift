@@ -30,8 +30,8 @@ indirect enum LoweredType: Sendable, Equatable {
     case array(LoweredType)
     case dictionary(key: LoweredType, value: LoweredType)
 
-    // A declared record's row: what a mention of it, `named`, stands for.
-    case record(LoweredRecord)
+    // A declared struct's row: what a mention of it, `named`, stands for.
+    case `struct`(LoweredStruct)
 
     // What a slot asks of a procedure value: the types it is applied with, in
     // position order, and what it must answer. Nil where no signature was
@@ -76,7 +76,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .array, .dictionary, .record, .procedure, .inout, .nullable,
+            .array, .dictionary, .struct, .procedure, .inout, .nullable,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -113,8 +113,8 @@ indirect enum LoweredType: Sendable, Equatable {
             return (signature?.parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (signature?.returns?.namesParameter ?? false)
 
-        // A declared record writes no type parameter.
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .record, .named, .composition, .projection:
+        // A declared struct writes no type parameter.
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .named, .composition, .projection:
             return false
         }
     }
@@ -137,7 +137,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 found.merge(part.typeParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .record, .named, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .named, .composition, .projection:
             return [:]
         }
     }
@@ -150,7 +150,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner.slotUnwrapped
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .array, .dictionary, .record, .procedure, .nullable,
+            .array, .dictionary, .struct, .procedure, .nullable,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -168,7 +168,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // The declared record this stands on, through `?`, `var` and `inout`,
+    // The declared struct this stands on, through `?`, `var` and `inout`,
     // which hold no value of their own. Nil for a type that names no row.
     var row: Int? {
         switch self {
@@ -238,7 +238,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner):
             return .nullable(inner.asHeld)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .record, .procedure, .variable, .inout,
+        case .any, .never, .null, .bool, .int, .double, .string, .struct, .procedure, .variable, .inout,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -266,7 +266,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .procedure(signature, _, _):
             return .procedure(signature?.with(failing: .unstated), constness: .unstated, isolation: .unstated)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .record, .variable, .inout,
+        case .any, .never, .null, .bool, .int, .double, .string, .struct, .variable, .inout,
             .named, .parameter, .composition, .projection:
             return self
         }
@@ -428,11 +428,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .array(elements):
             self = .array(LoweredType(joining: elements.map { element in LoweredType(of: element, in: table) }))
 
-        // A record reads as the record its name declares, an alias's name
-        // its record's, and as `Any` under a name this table declares none
+        // A struct reads as the struct its name declares, an alias's name
+        // its struct's, and as `Any` under a name this table declares none
         // under, which a door refuses before anything reads it.
-        case let .record(record):
-            self = table.record(named: record.name).map(LoweredType.named) ?? .any
+        case let .struct(instance):
+            self = table.structRow(named: instance.name).map(LoweredType.named) ?? .any
 
         // A map reads as what its keys and its values hold, joined, and is a
         // map where its keys join to `Any`: a door holds a value to the type
@@ -516,7 +516,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Whether a value this holds may carry a procedure that takes a parameter
     // in place: one written here, or one inside a `?`, an array, a dictionary,
-    // a record's field or the type a name declares. A procedure's own
+    // a struct's field or the type a name declares. A procedure's own
     // parameters and answer are that procedure's business and are not walked.
     func carriesProcedureTakingInPlace(in table: LoweredTypeTable, walked: Set<Int> = []) -> Bool {
         switch self {
@@ -526,8 +526,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner), let .array(inner), let .dictionary(_, inner), let .variable(inner), let .inout(inner):
             return inner.carriesProcedureTakingInPlace(in: table, walked: walked)
 
-        case let .record(record):
-            return record.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
+        case let .struct(structType):
+            return structType.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
 
         case let .named(row):
             guard !walked.contains(row) else { return false }
@@ -561,13 +561,13 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // What a dot reading this name reaches: the field a record type
+    // What a dot reading this name reaches: the field a struct type
     // declares under the name, as what the field holds. Nil where a dot
     // reaches nothing the type declares. A box is read through, since a
     // path reads what the box holds.
     func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
         switch self {
-        case let .record(held):
+        case let .struct(held):
             return held[name]?.fieldUnwrapped
 
         case let .named(row):
@@ -604,7 +604,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // A constant's type: its settled value's, with each procedure it holds
     // read by the type the value's expression was judged at in that position
     // (an element, an entry), the constness, isolation and failing the build
-    // derived for that one value included. A record's fields are its
+    // derived for that one value included. A struct's fields are its
     // declaration's. A procedure value says nothing about its signature, and
     // the expression that made it wrote one; everything else is the value's. Null, `Any`, and a list or a map
     // showing no element, say nothing the judged type does not, so what
@@ -718,7 +718,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The type a value read as this is an instance of, under the name a claim
     // writes and `Value.nominal` answers once the value arrives: a declared
-    // record by its name, and bytes as the list they are. Nil where the
+    // struct by its name, and bytes as the list they are. Nil where the
     // reading names no one type: a type only a value decides, and `Never`.
     func nominal(in table: LoweredTypeTable) -> Name? {
         switch self {
@@ -743,8 +743,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case .dictionary:
             return TypeSpelling.dictionary
 
-        case let .record(record):
-            return record.name
+        case let .struct(structType):
+            return structType.name
 
         case .procedure:
             return TypeSpelling.procedure
@@ -766,7 +766,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // asks the first of a closure value a cast reads as a procedure type.
     //
     // Whether a value of `other` may stand where this is declared. Exact on
-    // records, by their names, and one-directional: `Any` on the left accepts anything
+    // structs, by their names, and one-directional: `Any` on the left accepts anything
     // because nothing was declared, and a value read as `Any` on the right
     // stands only where `Any` is declared, until a cast says what it is.
     func accepts(_ other: LoweredType, in table: LoweredTypeTable) -> Bool {
@@ -842,7 +842,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.never, _):
             return false
 
-        // A declared record is nominal: a value of it fits only its own
+        // A declared struct is nominal: a value of it fits only its own
         // name, whatever the structure, and nothing else is a value of it.
         case (.named, _), (_, .named):
             return self == other
@@ -987,7 +987,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (mine, .nullable(inner)):
             return mine.couldBothHold(reading: inner, in: table)
 
-        // A declared record is its name: one record shares its values with
+        // A declared struct is its name: one struct shares its values with
         // itself and with no other, and a value of a decided kind is none
         // of them.
         case let (.named(mine), .named(theirs)):
@@ -1191,7 +1191,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.couldBeProcedure
 
-        case .null, .bool, .int, .wholeLiteral, .double, .string, .array, .dictionary, .record, .named:
+        case .null, .bool, .int, .wholeLiteral, .double, .string, .array, .dictionary, .struct, .named:
             return false
         }
     }
@@ -1218,8 +1218,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return .dictionary(key: try key.replacingRows(by: type), value: try value.replacingRows(by: type))
 
-        case let .record(held):
-            return .record(try held.mapFields { field in try field.replacingRows(by: type) })
+        case let .struct(held):
+            return .struct(try held.mapFields { field in try field.replacingRows(by: type) })
 
         case let .procedure(signature, constness, isolation):
             return .procedure(
@@ -1324,18 +1324,18 @@ indirect enum LoweredType: Sendable, Equatable {
                 )
             )
 
-        // A declared record is nominal. A record under its name is held to
-        // the declared fields and built on the record's layout; one under
+        // A declared struct is nominal. A struct under its name is held to
+        // the declared fields and built on the struct's layout; one under
         // another name is refused, whatever its fields, since a door holds
-        // an alias's name to its record before anything judges it.
-        case let .record(held):
-            guard case let .record(record) = value else { throw mismatch(value, at: path(), in: table) }
+        // an alias's name to its struct before anything judges it.
+        case let .struct(held):
+            guard case let .struct(instance) = value else { throw mismatch(value, at: path(), in: table) }
 
-            guard record.name == held.name else {
-                throw ArgumentError("\(path()): is a \(record.name), and the slot declares \(held.name)")
+            guard instance.name == held.name else {
+                throw ArgumentError("\(path()): is a \(instance.name), and the slot declares \(held.name)")
             }
 
-            return .record(try settlingFields(record, of: held, at: path(), in: table))
+            return .struct(try settlingFields(instance, of: held, at: path(), in: table))
 
         // A slot writes `var` or `inout` about itself; what stands in it is a
         // value of the inner type.
@@ -1367,7 +1367,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // A value from outside at a door that fills no type parameter: every
-    // record it holds held to the record its name declares, then the value
+    // struct it holds held to the struct its name declares, then the value
     // judged against this type.
     func settling(
         outside value: Value,
@@ -1445,7 +1445,7 @@ indirect enum LoweredType: Sendable, Equatable {
         // rest. Named rather than left to a default, so that a kind added to
         // the type language has to be answered for here too.
         case .never, .null, .bool, .double, .string,
-             .array, .dictionary, .record, .procedure, .named:
+             .array, .dictionary, .struct, .procedure, .named:
             return false
         }
     }
@@ -1516,7 +1516,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return "Dictionary<\(key.rendered(in: table)), \(value.rendered(in: table))>"
 
-        case let .record(held):
+        case let .struct(held):
             return held.name.spelling
 
         case let .named(row):
@@ -1551,7 +1551,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // A value written as a literal, as a place of this type holds it: each
     // whole number standing where this declares a Double is the fraction it
-    // names, at whatever depth of a list or a map it stands. A record is its
+    // names, at whatever depth of a list or a map it stands. A struct is its
     // declaration's, its fields held to it where it was made.
     // Everything else is the value as written, and whether it fits is the
     // judge's to say.
@@ -1584,7 +1584,7 @@ indirect enum LoweredType: Sendable, Equatable {
     }
 
     // The same for an expression written into a place of this type: the
-    // literals in it, at the depths a list, a map, a record and the answer of
+    // literals in it, at the depths a list, a map, a struct and the answer of
     // a block or an attempt hand on.
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
         reaching(expression, in: table) { place, standing in
@@ -1688,10 +1688,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return .dictionary(key: key.spelled(in: table), value: value.spelled(in: table))
 
-        // A record is written once, where it is declared, and spelled by its
+        // A struct is written once, where it is declared, and spelled by its
         // name.
-        case let .record(record):
-            return .named(record.name)
+        case let .struct(structType):
+            return .named(structType.name)
 
         case let .procedure(signature, constness, isolation):
             guard let signature else { return .procedure(nil, constness, isolation) }
@@ -1729,7 +1729,7 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // How a record reads in a message, each field beside how it reads, in
+    // How a struct reads in a message, each field beside how it reads, in
     // the order given.
     static func rendered(fields: [(name: Name, spelled: String)]) -> String {
         "{ " + fields.map { name, spelled in "\(name): \(spelled)" }.joined(separator: ", ") + " }"
@@ -1749,7 +1749,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
             return myKey == theirKey && mine == theirs
 
-        case let (.record(mine), .record(theirs)):
+        case let (.struct(mine), .struct(theirs)):
             return mine == theirs
 
         case let (.procedure(mine, myConstness, myIsolation),
@@ -1845,38 +1845,38 @@ indirect enum LoweredType: Sendable, Equatable {
         return value
     }
 
-    // A record holding exactly the fields of `held`, each settled against its
-    // type, built on the record's layout. Whose name it carries is asked
+    // A struct holding exactly the fields of `held`, each settled against its
+    // type, built on the struct's layout. Whose name it carries is asked
     // before this.
     private func settlingFields(
-        _ record: Record,
-        of held: LoweredRecord,
+        _ instance: Struct,
+        of held: LoweredStruct,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
-    ) throws -> Record {
+    ) throws -> Struct {
         let layout = held.layout
 
-        // A record laid out as this one is holds exactly its fields, which is
-        // what a value of a record type the build judged is.
-        if record.names == held.names {
-            return Record(
+        // A struct laid out as this one is holds exactly its fields, which is
+        // what a value of a struct type the build judged is.
+        if instance.names == held.names {
+            return Struct(
                 layout: layout,
-                values: try zip(held.named, record.values).map { pair, given in
+                values: try zip(held.named, instance.values).map { pair, given in
                     try pair.1.settling(given, at: "\(path()).\(pair.0)", in: table)
                 }
             )
         }
 
-        if let field = Set(record.names).subtracting(held.names).min() {
+        if let field = Set(instance.names).subtracting(held.names).min() {
             throw ArgumentError(
-                "\(path()).\(field): is not a field of \(rendered(in: table)), and a record holds exactly its fields"
+                "\(path()).\(field): is not a field of \(rendered(in: table)), and a struct holds exactly its fields"
             )
         }
 
-        return Record(
+        return Struct(
             layout: layout,
             values: try held.named.map { name, field in
-                guard let given = record[name] else {
+                guard let given = instance[name] else {
                     throw ArgumentError(
                         "\(path()).\(name): required by \(rendered(in: table)), and nothing was given"
                     )
@@ -1972,7 +1972,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // The walk `written` and `completing` share: an expression standing where
     // this is read, through what may be null and the names around it, at the
-    // depths a list, a map, a record and the answer of a block, an attempt or
+    // depths a list, a map, a struct and the answer of a block, an attempt or
     // a loop hand on. `replacing` is asked first at each depth, with the type
     // read there, and answers what stands in place of the expression, or nil
     // to walk on.
@@ -2026,8 +2026,8 @@ indirect enum LoweredType: Sendable, Equatable {
 
             return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
 
-        case let .record(fields):
-            return .record(
+        case let .struct(fields):
+            return .struct(
                 Dictionary(uniqueKeysWithValues: fields.map { name, field in
                     (name, dotted(name, in: table).map { dotted in
                         dotted.reaching(field, in: table, replacing: replacing)

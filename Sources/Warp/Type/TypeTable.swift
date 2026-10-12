@@ -9,7 +9,7 @@ import Foundation
 
 // The type table: every type the modules in a link declared, and what each
 // name stands for. `types` keeps each declaration as written; `loweredTypes`
-// expands every alias and keeps a declared record a row, so a record that
+// expands every alias and keeps a declared struct a row, so a struct that
 // names itself is a row and not a regress.
 public struct TypeTable: Sendable {
     // MARK: - Property
@@ -42,7 +42,7 @@ public struct TypeTable: Sendable {
     // A table a caller assembled: declarations and not a link, so no row
     // made by one is at home in it. They are held to what a document
     // declaring them is held to, by the same judges, so a name nothing
-    // declares and a name that is no record and comes back to itself are
+    // declares and a name that is no struct and comes back to itself are
     // refused here, in the words a document is refused in.
     init(
         types: [Name: TypeDeclaration] = [:],

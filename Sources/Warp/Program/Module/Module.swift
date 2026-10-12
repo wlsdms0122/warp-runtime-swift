@@ -49,7 +49,7 @@ public struct Module: Sendable {
     // read by everything that asks which module supplies a reference.
     let supplies: Set<Reference>
 
-    // Types this module declares: each name bound to a record's fields or to
+    // Types this module declares: each name bound to a struct's fields or to
     // the type an alias stands for.
     public var types: [Name: TypeDeclaration] { source.types }
 

@@ -194,8 +194,8 @@ struct Derivation {
         case let .array(array):
             return array.reduce(here) { carried, element in carried.joined(read(element)) }
 
-        case let .record(record):
-            return record.values.reduce(here) { carried, field in carried.joined(read(field)) }
+        case let .struct(literal):
+            return literal.values.reduce(here) { carried, field in carried.joined(read(field)) }
 
         case let .dictionary(entries):
             return entries.reduce(here) { carried, entry in carried.joined(read(entry.key)).joined(read(entry.value)) }
@@ -253,7 +253,7 @@ struct Derivation {
         case let .call(call):
             return failing(call.selector) ?? .unstated
 
-        case .literal, .reference, .closure, .array, .record, .dictionary, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .array, .struct, .dictionary, .block, .conditional, .loop, .attempt, .leave:
             return .these([])
         }
     }
@@ -463,8 +463,8 @@ struct Derivation {
         case let .array(array):
             return array.allSatisfy(holds)
 
-        case let .record(record):
-            return record.values.allSatisfy(holds)
+        case let .struct(literal):
+            return literal.values.allSatisfy(holds)
 
         case let .dictionary(entries):
             return entries.allSatisfy { entry in holds(entry.key) && holds(entry.value) }
@@ -545,7 +545,7 @@ struct Derivation {
     // The type this reads, as the slot it came out of says it, and nil where
     // it came out of none. The head is a name a slot declared, and the walk
     // follows that type past it: brackets read an element of a list or an
-    // entry of a map, and a dot reads a field a record type declares. A list
+    // entry of a map, and a dot reads a field a struct type declares. A list
     // or a map of them says it about every element or entry, and the value
     // was judged against that type when it was handed over, so what the type
     // says of the part is what the slot said. A name no

@@ -153,9 +153,9 @@ struct ObjectDependencyTests {
         #expect(asLowered.behind != asAnswered.behind)
         #expect(asLowered.calling != asAnswered.calling)
 
-        // And what carries that into the host is the record and nothing else.
+        // And what carries that into the host is the struct and nothing else.
         // The call is the same call either way: a body reaches a row by number
-        // and the number does not move. So a host that kept no record of what
+        // and the number does not move. So a host that kept no struct of what
         // it leaned on would read one kind's object for the other's.
         let callingLowered = try #require(besideDependencies(asLowered.calling))
 
