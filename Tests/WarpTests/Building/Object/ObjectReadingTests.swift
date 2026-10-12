@@ -94,7 +94,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2]
         else {
             Issue.record("an object writes a row's frame beside its body")
@@ -104,7 +104,7 @@ struct ObjectReadingTests {
 
         frame[0] = .int(-1)
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -223,7 +223,7 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .int(size) = frame[0], size > 0,
             case let .array(parameters) = frame[1], parameters.isEmpty
@@ -236,7 +236,7 @@ struct ObjectReadingTests {
         frame[0] = .int(0)
         frame[4] = .array([])
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -264,13 +264,14 @@ struct ObjectReadingTests {
 
     @Test("is refused where a layout's names are not in order")
     func aLayoutOutOfOrder() async throws {
-        // Given. A declaration that writes no `returns`, so what the build read
-        // off its body stands in the object as a lowered record, layout and
-        // types apart.
+        // Given. A body answering a record literal, which the object writes as
+        // the record's layout beside the code filling each field.
         let sut = try Module(
+            types: ["App.Pair": .record(["a": .int, "b": .string])],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .named("App.Pair")),
                     body: [],
                     result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
                 )
@@ -279,27 +280,33 @@ struct ObjectReadingTests {
 
         var parts = try await parts(of: sut)
 
-        guard case var .array(answers) = parts["answers"],
-            case var .array(entry) = answers[0],
-            case var .array(answer) = entry[1],
-            case var .array(record) = answer[1],
+        guard case var .array(table) = parts["rows"],
+            case var .array(row) = table[0],
+            case var .array(implementation) = row[6],
+            case var .array(body) = implementation[1],
+            case var .array(result) = body[1],
+            case var .array(operation) = result[0],
+            case var .array(record) = operation[1],
             case var .array(layout) = record[0],
             case let .array(names) = layout[1],
             names.count > 1
         else {
-            Issue.record("a declaration that wrote no answer stands one as a lowered record")
+            Issue.record("an object writes a record literal as its layout and its fields")
 
             return
         }
 
-        // The names swapped and the types left where they were. A reading that
-        // put the names back in order would pair each with the other's type.
+        // The names swapped and the fields left where they were. A reading that
+        // put the names back in order would pair each with the other's code.
         layout[1] = .array(names.reversed())
         record[0] = .array(layout)
-        answer[1] = .array(record)
-        entry[1] = .array(answer)
-        answers[0] = .array(entry)
-        parts = parts.writing("answers", with: .array(answers))
+        operation[1] = .array(record)
+        result[0] = .array(operation)
+        body[1] = .array(result)
+        implementation[1] = .array(body)
+        row[6] = .array(implementation)
+        table[0] = .array(row)
+        parts = parts.writing("rows", with: .array(table))
 
         // When / Then
         #expect {
@@ -317,7 +324,7 @@ struct ObjectReadingTests {
         // When / Then
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(frame) = implementation[2],
             case let .array(names) = frame[4],
             !names.isEmpty
@@ -329,7 +336,7 @@ struct ObjectReadingTests {
 
         frame[4] = .array(names.dropLast())
         implementation[2] = .array(frame)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -337,61 +344,6 @@ struct ObjectReadingTests {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
             error is ObjectRefused && "\(error)".contains("a frame of 1 names 0 slot(s)")
-        }
-    }
-
-    @Test("is refused where a call stands more arguments than its callee takes")
-    func aCallStandingTooMany() async throws {
-        // Given. A document whose body calls one of its own declarations, with
-        // one argument added to what the call stands.
-        let sut = try Module(
-            procedures: [
-                "App.entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
-                ),
-                "App.twice": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
-                    body: [],
-                    result: reference("n")
-                )
-            ]
-        )
-
-        var parts = try await parts(of: sut)
-
-        guard case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
-            case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
-            case var .array(call) = operation[1],
-            case let .array(arguments) = call[1]
-        else {
-            Issue.record("an object writes a body whose result is a call")
-
-            return
-        }
-
-        call[1] = .array(arguments + [.array([])])
-        operation[1] = .array(call)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[7] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
-
-        // When / Then. The row the call reaches is this document's own, so the
-        // reading answers it and no link is needed.
-        #expect {
-            try Compiled(written: .dictionary(parts), of: nil)
-        } throws: { error in
-            error is ObjectRefused
-                && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
         }
     }
 
@@ -454,18 +406,23 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a dictionary value's entries stand out of order")
-    func aDictionaryOutOfOrder() async throws {
-        // Given. A real object whose body answers a dictionary literal, its
-        // entries turned around. A reading that sorted them would read two
-        // writings as one object.
+    @Test("is refused where a record value's fields stand out of order")
+    func aRecordOutOfOrder() async throws {
+        // Given. A real object whose body answers a constant holding a record,
+        // which the build folds to the record value it is, its fields turned
+        // around. A reading that sorted them would read two writings as one
+        // object.
         let sut = try Module(
+            types: ["App.Pair": .record(["a": .int, "b": .int])],
+            constants: [
+                "pair": .cast(.record(["a": .literal(.int(1)), "b": .literal(.int(2))]), as: .named("App.Pair"), optional: false)
+            ],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .any),
+                    signature: Signature(returns: .named("App.Pair")),
                     body: [],
-                    result: .literal(.dictionary(["a": .int(1), "b": .int(2)]))
+                    result: reference("pair")
                 )
             ]
         )
@@ -474,25 +431,27 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(literal) = result[0],
             case var .array(value) = literal[1],
-            case let .array(entries) = value[1],
-            entries.count == 2
+            case let .array(names) = value[2],
+            case let .array(values) = value[3],
+            names.count == 2
         else {
-            Issue.record("an object writes a literal dictionary as its entries")
+            Issue.record("an object writes a record literal as its names and values")
 
             return
         }
 
-        value[1] = .array(entries.reversed())
+        value[2] = .array(names.reversed())
+        value[3] = .array(values.reversed())
         literal[1] = .array(value)
         result[0] = .array(literal)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -500,7 +459,7 @@ struct ObjectReadingTests {
         #expect {
             try Compiled(written: .dictionary(parts), of: nil)
         } throws: { error in
-            error is ObjectRefused && "\(error)".contains("'value' writes its names out of order, or one of them twice")
+            error is ObjectRefused && "\(error)".contains("not in name order")
         }
     }
 
@@ -515,23 +474,26 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
-                    body: [Statement(binding: .variable("n"), expression: .literal(.int(0)))],
-                    result: .loop(
-                        while: .call(Call(
-                            selector: "Standard.Comparable.lessThan",
-                            arguments: [reference("n"), .literal(.int(2))]
-                        )),
-                        body: Block(
-                            body: [
-                                Statement(
-                                    binding: .assignment([.key("n")]),
-                                    expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
-                                ),
-                                Statement(binding: .constant("k"), expression: reference("n"))
-                            ],
-                            result: reference("k")
-                        )
-                    )
+                    body: [
+                        Statement(binding: .variable("n"), expression: .literal(.int(0))),
+                        Statement(expression: .loop(
+                            while: .call(Call(
+                                selector: "Standard.Comparable.lessThan",
+                                arguments: [reference("n"), .literal(.int(2))]
+                            )),
+                            body: Block(
+                                body: [
+                                    Statement(
+                                        binding: .assignment([.name("n")]),
+                                        expression: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("n"), .literal(.int(1))]))
+                                    ),
+                                    Statement(binding: .constant("k"), expression: reference("n"))
+                                ],
+                                result: reference("k")
+                            )
+                        ))
+                    ],
+                    result: reference("n")
                 )
             ]
         )
@@ -540,10 +502,11 @@ struct ObjectReadingTests {
 
         guard case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
+            case var .array(instructions) = body[0],
+            case var .array(instruction) = instructions[1],
+            case var .array(operation) = instruction[1],
             case .int(9) = operation[0],
             case let .array(keeps) = operation[4],
             keeps.count == 1
@@ -554,10 +517,11 @@ struct ObjectReadingTests {
         }
 
         operation[4] = .array([.array([.int(9999), .int(9999)])])
-        result[0] = .array(operation)
-        body[1] = .array(result)
+        instruction[1] = .array(operation)
+        instructions[1] = .array(instruction)
+        body[0] = .array(instructions)
         implementation[1] = .array(body)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -991,7 +955,7 @@ struct ObjectReadingTests {
             case var .dictionary(parts) = try mine.object(),
             case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[7],
+            case var .array(implementation) = row[6],
             case var .array(sending) = implementation[1],
             case var .array(send) = sending[0]
         else {
@@ -1003,7 +967,7 @@ struct ObjectReadingTests {
         change(&send)
         sending[0] = .array(send)
         implementation[1] = .array(sending)
-        row[7] = .array(implementation)
+        row[6] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 

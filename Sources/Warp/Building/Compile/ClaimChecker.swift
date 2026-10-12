@@ -11,8 +11,8 @@ import Foundation
 // what they said. A contract is the procedures a value must have, and a document
 // says which types have them: the claim names a type and a contract, and the
 // declaration behind each procedure is the one named for the type and the procedure,
-// whose signature is the contract's with the first parameter taking the type
-// itself.
+// whose signature is the contract's with `Self` read as the type wherever it
+// stands.
 //
 // Read off the claims and not off the whole type table. A spelling that
 // happens to join a type's name to a contract's procedure is that document's procedure
@@ -81,7 +81,7 @@ struct ClaimChecker {
         in namespace: TypeNamespace,
         among signatures: [Name: Placed<Declared>],
         concealed: Set<Name> = [],
-        unsettled: Fulfillment? = nil
+        fulfillment: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
         contractProcedures: [Name: LoweredContractProcedure],
@@ -108,7 +108,7 @@ struct ClaimChecker {
         // The table the last pass was judged against holds exactly what the
         // witnesses hold up, so it is the table the link reads.
         repeat {
-            table = declaring.satisfying(held, unsettled: unsettled)
+            table = declaring.satisfying(held, fulfillment: fulfillment)
             witnessed = try witnesses(
                 of: claims,
                 asking: contracts,
@@ -127,7 +127,7 @@ struct ClaimChecker {
 
         // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
-        // into, so what a call reaches and what a judgment reads are one
+        // into, so what a call reaches and what a judgement reads are one
         // reading rather than two.
         let contractProcedures = LoweredContractProcedure.table(in: table)
 
@@ -170,7 +170,7 @@ struct ClaimChecker {
     private func witnesses(
         of claims: [Placed<Claim>],
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable
@@ -200,12 +200,12 @@ struct ClaimChecker {
 
     // One claim held to what stands behind it: the two names declared, every
     // procedure the contract asks answered by a declaration named for the type and
-    // the procedure, and every one of those signatures the contract's with the
-    // first parameter taking the type itself.
+    // the procedure, and every one of those signatures the contract's with
+    // `Self` read as the type wherever it stands.
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
-        over types: [Name: Placed<TypeExpression>],
+        over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         concealed: Set<Name>,
         in table: TypeTable
@@ -244,7 +244,7 @@ struct ClaimChecker {
         // no other name, so a claim about a declared name that is not itself
         // a record, an alias included, is about no type a value is.
         if languageType == nil {
-            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.recordRows[row] == row else {
+            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresRecord(row) else {
                 throw BuildError(
                     "'\(type)' is not itself a record, and no value is an instance of it under that name."
                         + " A claim about a declared type is about a record, under the name it was declared",
@@ -314,10 +314,10 @@ struct ClaimChecker {
                     )
                 }
 
-                if case let .these(allowed) = wanted.failing, !facts.failing.fails(within: allowed) {
+                if !facts.failing.fails(within: wanted.failing) {
                     return .waits(
                         "\(witness.spelled) declares '\(spelling)', which may fail with \(facts.failing.rendered),"
-                            + " and '\(contract)' lets '\(procedure)' fail with \(wanted.failing.rendered)"
+                            + " and '\(contract)' lets '\(procedure)' fail with \(Failing.these(wanted.failing).rendered)"
                     )
                 }
             }
@@ -339,11 +339,10 @@ struct ClaimChecker {
     // back what that declaration answers. So each of the declaration's
     // positions stands where the contract's hands, the type first, and the
     // contract's answer takes what the declaration answers. The contract's
-    // type parameters are its own and no call fills them here, so each is
-    // judged rigidly, and a contract its signature names is held to what the
-    // documents say answers it; the declaration's own are filled by what the
-    // contract writes at the same positions. The names are each
-    // declaration's own.
+    // type parameters are its own and no call fills them here, so each
+    // stands as one type the declaration does not know; the declaration's
+    // own are filled by what the contract writes at the same positions. The
+    // names are each declaration's own.
     //
     // A declaration that wrote no `returns` answers what the build read off
     // its body, which is `read`. A declaration being compiled now has no
@@ -367,26 +366,26 @@ struct ClaimChecker {
         }
 
         // The contract's procedure as the claim reads it: `Self` is the type
-        // the claim is about, wherever it stands.
-        let substituted = asked.replacingSelf(with: claimed)
-        let takes = given.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        let asks = substituted.parameters.map { parameter in parameter.declared.lowered(in: loweredTypes) }
-        var substitution = Substitution()
-
-        for (taken, written) in zip(takes, asks) {
-            taken.binding(against: written, into: &substitution, in: loweredTypes)
-        }
+        // the claim is about, wherever it stands, its own parameters held to
+        // what the language holds them to.
+        let replaced = asked.replacingSelf(with: claimed)
+        let substituted = Signature(
+            parameters: replaced.parameters,
+            returns: replaced.returns,
+            bounds: replaced.bounds.merging(TypeExpression.nominalBounds) { mine, _ in mine }
+        )
+        let takes = given.lowered(in: loweredTypes).map(\.type)
+        let asks = substituted.lowered(in: loweredTypes).map(\.type)
+        let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
         // What fills the declaration's own parameters is held to their bounds
-        // the way a call's readings are, rigidly, since what the contract
-        // writes there is filled by no call: what each was read as, and each
-        // reading of it that its join is not. A bound nothing declares was
-        // refused where the declaration was judged.
-        for (parameter, names) in given.parameterBounding.table.sorted(by: { $0.key < $1.key }) {
-            let bounds = names.filter { name in loweredTypes.declaresContract(name) }.sorted()
+        // the way a call's readings are: what each was read as, and each
+        // reading of it that its join is not.
+        for (parameter, names) in given.bounds.sorted(by: { $0.key < $1.key }) {
+            let bounds = names.sorted()
 
             for reading in substitution.everyReading(of: parameter)
-                where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes, rigid: true) {
+                where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes) {
                 // An element of a list or a map the claim is about is whatever
                 // it holds, which no spelling of a document names.
                 let read = reading == .parameter(label: TypeSpelling.selfElement, bounds: [])
@@ -395,31 +394,39 @@ struct ClaimChecker {
 
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
-                        + " where its bounds \(names.sorted().map(\.spelling).joined(separator: " & ")) do not take it"
+                        + " where its bounds \(bounds.map(\.spelling).joined(separator: " & ")) do not take it"
             }
         }
 
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
-            where !taken.filling(substitution.readings).takes(handed, in: loweredTypes, rigid: true) {
+            where !taken.filling(substitution.readings).takes(handed, in: loweredTypes) {
             guard position > 0 else {
                 return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                        + " asks, and takes \(given.parameters[0].declared.rendered) first, where a call"
+                        + " asks, and takes \(taken.rendered(in: loweredTypes)) first, where a call"
                         + " through the contract hands it any value of '\(type)'"
             }
 
             return "is named for '\(type)' and the procedure '\(procedure)' that"
-                    + " '\(contract)' asks, and takes \(given.parameters[position].declared.rendered)"
-                    + " at \(position) where the contract writes \(asked.parameters[position].declared.rendered)"
+                    + " '\(contract)' asks, and takes \(taken.rendered(in: loweredTypes))"
+                    + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
 
-        guard let answer = asked.returns, let promised = substituted.returns?.lowered(in: loweredTypes) else { return nil }
+        guard
+            let answer = asked.returns,
+            let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds)
+        else {
+            return nil
+        }
 
-        let answered = (given.returns?.lowered(in: loweredTypes) ?? read ?? TypeExpression.any.lowered(in: loweredTypes))
+        // What the declaration wrote is rendered as lowered, so a type
+        // parameter names the bound its signature holds it to.
+        let declared = given.returns?.lowered(in: loweredTypes, bounds: given.bounds)
+        let answered = (declared ?? read ?? .any)
             .filling(substitution.readings)
 
-        guard promised.accepts(answered, in: loweredTypes, rigid: true) else {
+        guard promised.accepts(answered, in: loweredTypes) else {
             return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
-                    + " asks, and answers \(given.returns?.rendered ?? answered.rendered(in: loweredTypes))"
+                    + " asks, and answers \((declared ?? answered).rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
         }
 

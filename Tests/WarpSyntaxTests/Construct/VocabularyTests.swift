@@ -33,7 +33,7 @@ struct VocabularyTests {
         // MARK: - Public
         func evaluate(_ question: Question<Self>) async throws -> Value {
             guard case let .array(elements) = question[.of] else {
-                throw ExecutionError("extra.head asks an array")
+                throw ExecutionError("Extra.head asks an array")
             }
 
             return elements.first ?? .null
@@ -71,7 +71,7 @@ struct VocabularyTests {
                 case let .string(text) = question[.of],
                 case let .int(limit) = question[.value]
             else {
-                throw ExecutionError("extra.longerThan asks a String and an Int")
+                throw ExecutionError("Extra.longerThan asks a String and an Int")
             }
 
             return .bool(text.count > limit)
@@ -91,11 +91,11 @@ struct VocabularyTests {
         // structure; anyone adds their own the same way
         let extra = try Module(
             procedures: [
-                "extra.head": Procedure(
+                "Extra.head": Procedure(
                     signature: Signature(of: FirstQuery.self, returns: .any),
                     implementation: .query(FirstQuery())
                 ),
-                "extra.longerThan": Procedure(
+                "Extra.longerThan": Procedure(
                     signature: Signature(
                         of: LongerThanQuery.self,
                         returns: .bool
@@ -116,8 +116,8 @@ struct VocabularyTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"], "head": ["ref": "head"]]]
-        ], importing: ["extra.longerThan", "Standard.Collection.first"])
+            "result": ["dictionary": [["result", ["ref": "verdict"]], ["head", ["ref": "head"]]]]
+        ], importing: ["Extra.longerThan", "Standard.Collection.first"])
 
         // When
         let outputs = try await run(
@@ -127,8 +127,8 @@ struct VocabularyTests {
         )
 
         // Then
-        #expect(outputs["result"] == .string("long"))
-        #expect(outputs["head"] == .string("spectacle"))
+        #expect(outputs.map?["result"] == .string("long"))
+        #expect(outputs.map?["head"] == .string("spectacle"))
     }
 
     @Test("a procedure left out of the link is a procedure that does not exist")
@@ -151,7 +151,7 @@ struct VocabularyTests {
     @Test("a claimed construct key is never silently replaced")
     func claimedConstructKeyRejected() {
         // Given / When / Then. Nobody may silently replace `loop`
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try ConstructRegistry.standard.registering(LoopForm.self)
         }
     }

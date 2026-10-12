@@ -183,7 +183,7 @@ struct FailingTests {
 
     @Test("calling a value leaves the question open, so an attempt over one stands")
     func applyingAValueSaysNothing() async throws {
-        // Given. Which value is called is settled at run time
+        // Given. Which value is called is decided at run time
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

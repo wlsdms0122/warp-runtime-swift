@@ -13,12 +13,12 @@ import Warp
 // It carries no place: an expression is spelled everywhere and this grammar is
 // walked with the value alone, so where in the document it was is the reading's
 // to say. The reader that asked puts its own address on before it leaves.
-public struct ExpressionFormError: WarpError {
+struct ExpressionFormError: WarpError {
     // MARK: - Property
-    public let message: String
+    let message: String
 
     // MARK: - Initializer
-    public init(_ message: String) {
+    init(_ message: String) {
         self.message = message
     }
 

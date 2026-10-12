@@ -62,14 +62,14 @@ struct ConcurrencyTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("all answers a record's closures under the record's keys")
-    func allAnswersARecord() async throws {
+    @Test("allKeyed answers a map's closures under the map's keys")
+    func allKeyedAnswersAMap() async throws {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(
                     selector: "Standard.Concurrent.allKeyed",
                     arguments: [
-                        .record([
+                        map([
                             "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
                             "right": .closure(Procedure(body: [], result: .literal(.int(2))))
                         ])
@@ -352,7 +352,7 @@ struct ConcurrencyTests {
             Procedure(body: [Statement(expression: aborting(literal("doomed")))])
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
-                Call(selector: "Standard.Concurrent.allKeyed", arguments: [.record(["first": doomed, "second": doomed])])
+                Call(selector: "Standard.Concurrent.allKeyed", arguments: [map(["first": doomed, "second": doomed])])
             )
         )
 
@@ -362,7 +362,7 @@ struct ConcurrencyTests {
         } throws: { error in
             guard let failed = error as? ConcurrentFailed else { return false }
 
-            return failed.failures.keys.sorted() == ["first", "second"]
+            return failed.failures.keys == [.string("first"), .string("second")]
         }
     }
 

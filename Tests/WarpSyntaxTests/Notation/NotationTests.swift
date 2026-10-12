@@ -29,7 +29,7 @@ struct NotationTests {
     @Test("a notation with no spellings owes nothing")
     func spellingNothingLeavesNothingOwed() throws {
         // When / Then. A canonical notation offers no spellings and registers
-        // no construct that lowers to a procedure, so every type it can still
+        // no construct spent into a procedure, so every type it can still
         // write is one the language already has, and it owes no vocabulary at
         // all.
         #expect(sut.vocabulary(of: .canonical).isEmpty)
@@ -56,7 +56,7 @@ struct NotationTests {
     @Test("a canonical notation still writes every condition the language has")
     func canonicalConditionsAreWholeConditions() async throws {
         // Given. This is what makes the spellings a layer rather than a part of
-        // the language. Nothing is lost by giving them up; the message a
+        // the language. Nothing is lost by giving them up; the call a
         // spelling would have stood for is written out instead.
         let module = try sut.loadDocument([
             "imports": ["Standard.Logic.equal"],
@@ -78,7 +78,7 @@ struct NotationTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ], from: .canonical)
@@ -87,13 +87,13 @@ struct NotationTests {
         let outputs = try await run(module, arguments: ["word": .string("hey")])
 
         // Then
-        #expect(outputs["result"] == .string("matched"))
+        #expect(outputs.map?["result"] == .string("matched"))
     }
 
-    @Test("a record a notation does not claim is the expression it is")
-    func anUnclaimedRecordIsAnExpression() throws {
+    @Test("a mapping a notation does not claim is the expression it is")
+    func anUnclaimedMappingIsAnExpression() throws {
         // Given / When. A condition slot asks for an expression, and a spelling
-        // is one way of arriving at one. A record carrying none of the
+        // is one way of arriving at one. A mapping carrying none of the
         // notation's keys never was a condition type, which is what keeps the
         // spellings optional wherever a condition is asked for.
         let sut = try Loader.testing.loadProcedure([
@@ -126,7 +126,7 @@ struct NotationTests {
         // Given. Writing and reading are inverses, and a reading side with
         // spellings is a different far side from one without. Written bare
         // for a notation that recognises a condition by its subject key, these
-        // fields would come back a message. Under `record` they are a record's
+        // fields would come back a call. Under `record` they are a record's
         // fields whatever they are called.
         let module = try Self.conditional(on: .record([
             "of": .reference(path("word")),
@@ -139,8 +139,8 @@ struct NotationTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let condition = body.first?["value"]?["conditional"]?["when"],
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
+            let condition = body.first?.map?["value"]?.map?["conditional"]?.map?["when"],
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(.record(fields), _, _) = block.body.statements.first?.expression
         else {
@@ -149,7 +149,7 @@ struct NotationTests {
             return
         }
 
-        #expect(condition["record"]?["of"] == Value.dictionary(["ref": .string("word")]))
+        #expect(condition.map?["record"]?.map?["of"] == Value.dictionary(["ref": .string("word")]))
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 
@@ -181,7 +181,7 @@ struct NotationTests {
         let written = try Writer().value(of: module)
         let read = try sut.load(written)
 
-        // Then. The same record arrived, rather than a message
+        // Then. The same record arrived, rather than a call
         guard
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(condition, _, _) = block.body.statements.first?.expression,
@@ -195,10 +195,10 @@ struct NotationTests {
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 
-    @Test("a template nobody offers is refused, not read as a record")
+    @Test("a template nobody offers is refused, not read as another form")
     func anUnofferedTemplateIsRefused() {
         // When / Then. The two template keys stay reserved whether or not a
-        // notation offers one. Reading them as an ordinary record would make
+        // notation offers one. Reading them as another form would make
         // the same document mean one thing here and another in the notation
         // next door, and nothing would say so.
         #expect {
@@ -223,7 +223,7 @@ struct NotationTests {
 
     @Test("a template is spelled with the procedures the notation names")
     func aTemplateSpendsTheNotationsProcedures() throws {
-        // Given / When. Which procedures a template lowers to is the notation's
+        // Given / When. Which procedures a template is spent into is the notation's
         // answer, and the reader carries none of its own
         let sut = try Loader.testing.loadProcedure([
             "parameters": [["name": "word", "type": "String"]],
@@ -253,7 +253,7 @@ struct NotationTests {
         // written inside the cast, so the same document is a cast in every
         // notation rather than a send in some.
         let written: Value = [
-            "parameters": [["name": "flag", "type": "Any"]],
+            "parameters": [["name": "flag"]],
             "body": [
                 [
                     "value": ["conditional": [
@@ -281,9 +281,9 @@ struct NotationTests {
 
     @Test("reading a document is not a place a notation can reach")
     func readingCarriesNoNotation() throws {
-        // Given. The spelling these tests read with, left unlowered in a
+        // Given. The spelling these tests read with, left unspent in a
         // document. `load` takes a document, and a document has no spellings,
-        // so the mapping is not the message some table would have made of it:
+        // so the mapping is not the call some table would have made of it:
         // standing bare it is refused, and under `record` it is a record.
         func document(asking asked: Value) -> Value {
             [

@@ -7,11 +7,8 @@
 
 import Foundation
 
-// What one document declares, and nothing about running.
-//
-// A module is not a procedure and cannot be run. A build takes it with the
-// others, and a run names the declaration it starts from, so there is no
-// marking to put on a declaration and no reserved name.
+// What one document declares. A build takes it with the others, and a run
+// names the declaration it starts from.
 public struct Module: Sendable {
     // MARK: - Property
     // The document this was made from. What a module declares is what its
@@ -44,7 +41,7 @@ public struct Module: Sendable {
     let references: Set<Reference>
 
     // How many closure literals each declaration wrote. A closure's number is
-    // the document's fact, so it is settled with the document.
+    // the document's fact, so it is counted with the document.
     let closures: [Closure.Declaration: Int]
 
     // What this supplies to a link under a spelling another document may
@@ -52,17 +49,13 @@ public struct Module: Sendable {
     // read by everything that asks which module supplies a reference.
     let supplies: Set<Reference>
 
-    // Types this module declares. A type is a name bound to a
-    // `TypeExpression`, which is the same thing a procedure is with a body in
-    // place of a type. A module declares, and what it declares differs only in
-    // what kind of thing the name stands for.
-    public var types: [Name: TypeExpression] { source.types }
+    // Types this module declares: each name bound to a record's fields or to
+    // the type an alias stands for.
+    public var types: [Name: TypeDeclaration] { source.types }
 
     // Contracts this module declares: a name bound to the procedures a value's
-    // type must answer to stand under it.
-    //
-    // Kept apart from the types: a contract is an open set of types, and what
-    // puts a type in it is a claim that it answers the procedures.
+    // type must answer to stand under it. A contract is an open set of types,
+    // and a claim puts a type in it.
     public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
     // Which contracts each type this document names answers. A type answers a
@@ -71,11 +64,9 @@ public struct Module: Sendable {
     // claim to.
     public var claims: [Name: Set<Name>] { source.claims }
 
-    // Names bound to values, settled at the build and gone by run time. Private to
-    // the module: a constant is read by writing its name, and a name is a scope
-    // question, so exporting one would need a second name table in path
-    // position. Where a declared spelling cannot be told from drilling into a
-    // record.
+    // Names bound to values, settled at the build and gone by run time,
+    // private to the module: a constant is read by writing its name, and a
+    // name is the module's scope.
     public var constants: [Name: Expression] { source.constants }
 
     // Names bound to boxes this module's procedures share for one run. Private
@@ -108,8 +99,7 @@ public struct Module: Sendable {
 
     // What this declares, on its own and without the checking. It is what a
     // writing takes, so a module and a document that was never a module are
-    // written by one call, and `imports` here is the resolved list rather than
-    // the claim, since by now the two are the same.
+    // written by one call, and `imports` here is the resolved list.
     public var draft: Draft {
         source.resolving(imports)
     }
@@ -131,12 +121,12 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {
@@ -158,12 +148,12 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {

@@ -18,8 +18,8 @@ import WarpStandard
 // costs.
 struct Vocabulary: Sendable {
     // MARK: - Property
-    // Settled once and awaited by everyone who reads it. A compile suspends
-    // and a stored property cannot, so what is held here is the settling
+    // Loaded once and awaited by everyone who reads it. A compile suspends
+    // and a stored property cannot, so what is held here is the loading
     // rather than the answer.
     static let standard = Task { try await Vocabulary(Module.standard) }
 

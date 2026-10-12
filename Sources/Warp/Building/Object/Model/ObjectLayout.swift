@@ -8,11 +8,11 @@
 import Foundation
 
 // How an object is laid out as a value: the format under *objects* in the
-// specification, the keys its record carries, and the tag each kind of every
+// specification, the keys its map carries, and the tag each kind of every
 // part is written with. The writer and the reader both spell the layout
 // through these, so it is said once.
 enum ObjectLayout {
-    // The keys of the record. The format is said under `object`, which is also
+    // The keys of the map. The format is said under `object`, which is also
     // what tells an object from a document at the door: a document says `warp`.
     enum Key: String, CaseIterable {
         case object
@@ -48,8 +48,8 @@ enum ObjectLayout {
         case bytes
         case array
         case record
-        case dictionary
         case closure
+        case dictionary
     }
 
     // The declaration that wrote a closure.
@@ -82,7 +82,7 @@ enum ObjectLayout {
     }
 
     enum SegmentTag: Int {
-        case key
+        case name
         case index
         case indexRef
     }
@@ -140,6 +140,8 @@ enum ObjectLayout {
         case otherwise
         case rescue
         case fields
+        case bounds
+        case entries
     }
 
     enum ConditionHolderTag: Int {
@@ -160,6 +162,7 @@ enum ObjectLayout {
         case attempt
         case call
         case leave
+        case dictionary
     }
 
     enum ReachTag: Int {
@@ -168,33 +171,27 @@ enum ObjectLayout {
         case round
     }
 
-    // A type as a body stands on it.
+    // A type as a body stands on it. Each tag is the number the page gives
+    // it, written out, so a kind leaving takes its number with it and moves
+    // no other.
     enum LoweredTypeTag: Int {
-        case any
-        case never
-        case null
-        case bool
-        case int
-        case double
-        case string
-        case array
-        case dictionary
-        case record
-        case procedure
-        case variable
-        case `inout`
-        case nullable
-        case named
-        case parameter
-        case composition
-        case projection
-        case undeclared
-    }
-
-    enum UndeclaredTag: Int {
-        case noTypeNamed
-        case noBoundNamed
-        case namesItself
+        case any = 0
+        case never = 1
+        case null = 2
+        case bool = 3
+        case int = 4
+        case double = 5
+        case string = 6
+        case array = 7
+        case dictionary = 8
+        case procedure = 10
+        case variable = 11
+        case `inout` = 12
+        case nullable = 13
+        case named = 14
+        case parameter = 15
+        case composition = 16
+        case projection = 17
     }
 
     enum ImplementationTag: Int {
@@ -211,7 +208,7 @@ enum ObjectLayout {
     // A step of an address.
     enum StepTag: Int {
         case field
-        case key
+        case name
         case index
         case at
     }
@@ -231,7 +228,7 @@ enum ObjectLayout {
         case call
         case dispatch
         case leave
-        case checked
+        case dictionary
     }
 
     enum ArgumentTag: Int {
@@ -244,7 +241,7 @@ enum ObjectLayout {
     // one is not written.
     static let format = 1
 
-    // Every key an object carries, which a reading holds a record to before it
+    // Every key an object carries, which a reading holds a map to before it
     // reads any.
     static let keys = Set(Key.allCases.map(\.name))
 }

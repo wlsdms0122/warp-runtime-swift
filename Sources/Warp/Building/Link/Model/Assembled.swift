@@ -118,10 +118,10 @@ struct Assembled: Sendable {
                 if let taken = rows[name] {
                     let first = table[taken].origin
 
-                    throw BuildError(
-                        "'\(name)' is declared by \(named[first].spelled(at: first))"
-                            + " and by \(document.spelled(at: origin))."
-                            + " Two declarations of a name have no way to be told apart",
+                    throw BuildError.declaredTwice(
+                        name,
+                        by: named[first].spelled(at: first),
+                        and: document.spelled(at: origin),
                         at: .procedure(name.spelling, in: document)
                     )
                 }

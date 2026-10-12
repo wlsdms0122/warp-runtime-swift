@@ -7,10 +7,10 @@
 
 import Foundation
 
-// Where a native procedure's declared sends stand in its document's numbering,
-// and how many arguments each one hands over. A procedure names the spellings it
-// sends and how many it hands at each, and this answers with numbers, so the run
-// reads numbers where the procedure wrote spellings.
+// Where a native procedure's declared sends stand in its document's numbering.
+// A procedure names the spellings it sends and how many it hands at each, and
+// this answers with numbers, so the run reads numbers where the procedure
+// wrote spellings, and holds each count to the parameters the send reaches.
 //
 // Which row a number is stays the link's answer, the same as for a call a body
 // wrote. A spelling nothing standing declares is refused here, the way a call
@@ -18,16 +18,13 @@ import Foundation
 // it reaches, and which declaration answers a contract's procedure is a
 // call's first argument to say.
 //
-// Refused here are the two claims a procedure makes that sending can contradict. A
-// query is the claim that it answers without running, and running is not
-// something a caller can catch; an isolated procedure is the claim that it touches no name
-// another body could touch at the same time, and neither is that. A procedure
-// making either claim while sending something that breaks it is refused. So is
-// a send reaching a parameter handed in place, since a send hands values.
-//
-// What it may fail with is not one of them. A Swift body can catch, so a procedure
-// declaring it fails nothing while sending something that fails is describing
-// itself and not contradicting itself.
+// Refused here are the two claims a procedure makes that sending can
+// contradict. A query is the claim that it answers without running, and running
+// is not something a caller can catch; an isolated procedure is the claim that
+// it touches no name another body could touch at the same time, and neither is
+// that. A procedure making either claim while sending something that breaks it
+// is refused. So is a send reaching a parameter handed in place, since a send
+// hands values.
 struct Sending {
     // MARK: - Property
     private let numbering: Numbering
@@ -114,14 +111,8 @@ struct Sending {
                     )
                 }
 
-                return try handing(of: send, reaching: signature, called: label, at: place)
+                try handing(of: send, reaching: signature, called: label, at: place)
             }
-        } catch let .misplaced(positions) as SendNumberingError {
-            throw BuildError(
-                "'\(label)' sends procedures standing at \(positions), which is"
-                    + " not one procedure to a place from the first",
-                at: place
-            )
         } catch let .unnumbered(selector) as SendNumberingError {
             throw BuildError("'\(label)' sends '\(selector)', and its document never asked for it", at: place)
         }
@@ -129,13 +120,13 @@ struct Sending {
 
     // MARK: - Private
     // How many arguments a send hands over, held against the parameters it
-    // reaches by the same rule a call written in a body is held to.
+    // reaches: one value to each.
     private func handing(
         of send: Native.Send,
         reaching signature: Signature,
         called label: Name,
         at place: Place
-    ) throws -> Int {
+    ) throws {
         guard send.handing == signature.parameters.count else {
             throw BuildError(
                 "'\(label)' sends '\(send.selector)' \(send.handing) arguments, and it takes"
@@ -153,7 +144,5 @@ struct Sending {
                 at: place
             )
         }
-
-        return send.handing
     }
 }

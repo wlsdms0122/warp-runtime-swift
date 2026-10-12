@@ -8,20 +8,20 @@
 import Foundation
 
 // The type table: every type the modules in a link declared, and what each
-// name stands for. A named type is kept rather than expanded, so a type that
+// name stands for. `types` keeps each declaration as written; `loweredTypes`
+// expands every alias and keeps a declared record a row, so a record that
 // names itself is a row and not a regress.
 public struct TypeTable: Sendable {
     // MARK: - Property
-    public let types: [Name: TypeExpression]
+    public let types: [Name: TypeDeclaration]
 
     // Contracts declared in this link: a name bound to the procedures a value's
-    // type must answer. Beside the types rather than among them: a contract is
-    // the open set of types that answer some procedures, and what puts a type
-    // in it is a claim, not the type language.
+    // type must answer. A contract is an open set of types, and a claim puts a
+    // type in it.
     public let contracts: [Name: [Name: ContractProcedure]]
 
     // The same declarations as the run reads them, lowered once here. Every
-    // judgment this table answers is asked of the lowered one.
+    // judgement this table answers is asked of the lowered one.
     let loweredTypes: LoweredTypeTable
 
     // The link these rows are numbered against, kept so the table can be
@@ -34,28 +34,40 @@ public struct TypeTable: Sendable {
     // body already holds.
     private let standing: [Name]?
 
-    // A table declaring nothing, for a judgment asked with no declarations
+    // A table declaring nothing, for a judgement asked with no declarations
     // behind it.
-    public static let empty = TypeTable()
+    static let empty = TypeTable(types: [:], of: Linkage())
 
     // MARK: - Initializer
     // A table a caller assembled: declarations and not a link, so no row
-    // made by one is at home in it.
-    public init(
-        types: [Name: TypeExpression] = [:],
+    // made by one is at home in it. They are held to what a document
+    // declaring them is held to, by the same judges, so a name nothing
+    // declares and a name that is no record and comes back to itself are
+    // refused here, in the words a document is refused in.
+    init(
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:]
-    ) {
-        self.init(types: types, contracts: contracts, of: Linkage())
+    ) throws {
+        let declaring = try Module(types: types, contracts: contracts)
+        let table = try DeclarationChecker().types(
+            of: try TypeNamespace([declaring]),
+            standing: [declaring],
+            numbered: Linkage()
+        )
+
+        try DeclarationChecker().judge([declaring], in: table)
+
+        self = table
     }
 
     // The same declarations as one link's, which owns the identity its rows
     // are numbered against.
     init(
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: Set<Name>] = [:],
-        settled: Bool = false,
-        unsettled: Fulfillment? = nil,
+        holdsEveryClaim: Bool = false,
+        fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
@@ -71,8 +83,8 @@ public struct TypeTable: Sendable {
             satisfying: satisfying.merging(
                 contracts.keys.map { contract in (contract, Set<Name>()) }
             ) { held, _ in held },
-            settled: settled,
-            unsettled: unsettled,
+            holdsEveryClaim: holdsEveryClaim,
+            fulfillment: fulfillment,
             standing: standing,
             of: linkage
         )
@@ -84,18 +96,18 @@ public struct TypeTable: Sendable {
     // after this table is first built, so the table is remade rather than
     // holding an answer it did not have. The rows are numbered from the
     // declarations alone, so they are the rows the first table had. The
-    // answer is settled where every document is in, which is where nothing
-    // is left unsettled to write down.
+    // table holds every claim where every document is in, which is where
+    // nothing is left to write down.
     func satisfying(
         _ satisfying: [Name: Set<Name>],
-        unsettled: Fulfillment? = nil
+        fulfillment: Fulfillment? = nil
     ) -> TypeTable {
         TypeTable(
             types: types,
             contracts: contracts,
             satisfying: satisfying,
-            settled: unsettled == nil,
-            unsettled: unsettled,
+            holdsEveryClaim: fulfillment == nil,
+            fulfillment: fulfillment,
             standing: standing,
             of: linkage
         )

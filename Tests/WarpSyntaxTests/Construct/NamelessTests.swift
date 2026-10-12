@@ -135,12 +135,12 @@ struct NamelessTests {
         // Given. A caller assembling statements directly, with a `set` naming a
         // leave: that the statement takes no name at all comes before any
         // question about which name it is
-        let statement = Statement(binding: .assignment([.key("past")]), expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
+        let statement = Statement(binding: .assignment([.name("past")]), expression: .leave(Leave(reach: .procedure, value: .literal(.int(1))))
         )
 
         // When / Then
         #expect {
-            try Validator().validate(Procedure(body: [statement]))
+            try Module(procedures: [entryName: Procedure(body: [statement])])
         } throws: { error in
             "\(error)".contains("takes no name")
         }

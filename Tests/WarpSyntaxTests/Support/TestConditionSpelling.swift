@@ -34,18 +34,18 @@ struct TestConditionSpelling: ExpressionSpelling {
         "startsWith": "Standard.Text.startsWith",
         "lessThan": "Standard.Comparable.lessThan",
         "greaterThan": "Standard.Math.greaterThan",
-        "longerThan": "extra.longerThan"
+        "longerThan": "Extra.longerThan"
     ]
 
     // MARK: - Initializer
     // MARK: - Public
-    // A record carrying a subject is a message written this way, and a record
+    // A record carrying a subject is a call written this way, and a record
     // that is not is the expression it is.
     func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
         names.contains(Self.subjectKey)
     }
 
-    func expression(from decoder: Decoder) throws -> Warp.Expression {
+    func expression(from decoder: Decoder, in notation: Notation) throws -> Warp.Expression {
         let container = try decoder.container(keyedBy: AnyCodingKey.self)
         let found = container.allKeys
             .map(\.stringValue)

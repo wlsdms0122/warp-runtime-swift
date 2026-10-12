@@ -25,7 +25,7 @@ public struct Rendering {
 
     // MARK: - Public
     // The value as text. One implementation, because `text` the procedure and an
-    // effect settling an argument are asking the same question.
+    // effect turning an argument into text are asking the same question.
     public func text() -> String {
         switch value {
         case .null:
@@ -54,8 +54,7 @@ public struct Rendering {
             return "<procedure>"
 
         case .array, .record, .dictionary:
-            // `Unwritable` is the only thing `written` throws, so the fallback
-            // is the whole failure story.
+            // `written` throws only `Unwritable`.
             return (try? Self.written(value)) ?? "<unencodable>"
         }
     }
@@ -99,11 +98,11 @@ public struct Rendering {
                 "\(quoted(name.spelling)):\(try written(value))"
             }
 
-            return (record.name.map { name in "\(name) " } ?? "") + "{" + fields.joined(separator: ",") + "}"
+            return "\(record.name) {" + fields.joined(separator: ",") + "}"
 
         case let .dictionary(dictionary):
-            let entries = try dictionary.entries.map { name, value in
-                "\(quoted(name.spelling)):\(try written(value))"
+            let entries = try dictionary.entries.map { key, value in
+                "\(try written(key)):\(try written(value))"
             }
 
             return "{" + entries.joined(separator: ",") + "}"

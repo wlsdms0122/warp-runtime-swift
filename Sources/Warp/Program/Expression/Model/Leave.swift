@@ -7,17 +7,10 @@
 
 import Foundation
 
-// Stopping where you are and carrying on somewhere further out.
-//
-// It is grammar rather than a procedure, and the reason is what checking one costs.
-// Whether `return 5` is allowed depends on what the procedure it is written in
-// declared it answers; whether `break` is allowed depends on there being a loop
-// around it. Neither is a fact a signature has a slot for. A procedure receiving the
-// value could only be trusted with it, and a procedure cannot be told what it is
-// written inside.
-//
-// One case rather than three, because the three differ in how far they go and
-// in nothing else.
+// Stopping where you are and carrying on somewhere further out. Whether one
+// is allowed depends on what it is written inside: what the procedure around
+// `return` declared it answers, and a loop around `break` and `continue`.
+// The three differ in how far they go and in nothing else.
 public struct Leave: Sendable {
     // How far out. `procedure` answers, and the other two are about a loop:
     // `construct` ends it, `round` ends the round it is in.

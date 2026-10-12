@@ -334,7 +334,7 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
-    // Hands an int to a procedure whose first parameter is declared string.
+    // Hands an int to a procedure whose first parameter is declared `String`.
     private struct MistypingEffect: Effect {
         typealias Parameters = NoParameters
 
@@ -361,7 +361,7 @@ struct ProcedureSendsTests {
         // MARK: - Private
     }
 
-    // Hands null to a procedure whose first parameter is declared string.
+    // Hands null to a procedure whose first parameter is declared `String`.
     private struct NullingEffect: Effect {
         typealias Parameters = NoParameters
 
@@ -406,40 +406,6 @@ struct ProcedureSendsTests {
         // MARK: - Public
         func run(_ invocation: Invocation<Self>) throws -> Value {
             .string("reported")
-        }
-
-        // MARK: - Private
-    }
-
-    // Sending two procedures, the second standing at a place nothing before it does.
-    private struct ScatteredQuery: Query {
-        typealias Parameters = NoParameters
-
-        enum Imports: Int, ImportSet {
-            case first = 0
-            case apart = 5
-
-            // MARK: - Property
-            var selector: Name {
-                switch self {
-                case .first:
-                    return "Int.plus"
-
-                case .apart:
-                    return "Int.minus"
-                }
-            }
-
-            // MARK: - Initializer
-            // MARK: - Public
-            // MARK: - Private
-        }
-
-        // MARK: - Property
-        // MARK: - Initializer
-        // MARK: - Public
-        func evaluate(_ question: Question<Self>) async throws -> Value {
-            try await question.send(.first)
         }
 
         // MARK: - Private
@@ -549,7 +515,7 @@ struct ProcedureSendsTests {
                     returns: .int
                 ),
                 body: [],
-                result: .reference([.key("z")])
+                result: .reference([.name("z")])
             )
         ]
     )
@@ -559,7 +525,7 @@ struct ProcedureSendsTests {
             "App.pick": Procedure(
                 signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
                 body: [],
-                result: .reference([.key("a")])
+                result: .reference([.name("a")])
             )
         ]
     )
@@ -608,7 +574,7 @@ struct ProcedureSendsTests {
                     returns: .string
                 ),
                 body: [],
-                result: .reference([.key("said")])
+                result: .reference([.name("said")])
             )
         ]
     )
@@ -851,24 +817,6 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("a procedure whose sends stand apart is refused where the module is made")
-    func aProcedureSendingFromScatteredPlacesIsRefused() {
-        // Given / When / Then. A run reaches a sent procedure by the place the procedure
-        // names it at, so a place nothing stands at reaches nothing.
-        #expect {
-            try Module(
-                procedures: [
-                    "App.scattered": Procedure(
-                        signature: Signature(returns: .int),
-                        implementation: .query(ScatteredQuery())
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("this procedure sends procedures standing at [0, 5]")
-        }
-    }
-
     @Test("what a procedure hands over stands at the callee's first positions")
     func handedArgumentsStandAtTheCalleesPositions() async throws {
         // Given. `App.picking` hands two values, and the callee answers the one
@@ -944,15 +892,14 @@ struct ProcedureSendsTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ExecutionError
-                && "\(error)".contains("'App.pick' is handed 3 here, and the procedure sending it declares it hands 2")
+            error is ArgumentError && "\(error)".contains("'App.pick' was given 3 arguments, and it takes 2")
         }
     }
 
-    @Test("a procedure handing what the callee cannot take is refused at the boundary")
+    @Test("a procedure handing what the callee cannot take is refused at the door")
     func aMistypedArgumentIsRefused() async throws {
         // Given. `App.mistyping` hands an int to a procedure whose first
-        // parameter is declared string
+        // parameter is declared `String`
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,

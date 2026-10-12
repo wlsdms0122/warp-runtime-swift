@@ -9,7 +9,7 @@ import Foundation
 
 // How a piece of text reads as a whole number's one spelling. The two failures
 // are different facts (text that is not the one spelling of any whole number,
-// and the one spelling of a whole number no int holds) and every reader of a
+// and the one spelling of a whole number no `Int` holds) and every reader of a
 // spelled whole names the one that happened, so the grammar lives here alone.
 public enum IntSpelling {
     case int(Int)
@@ -21,7 +21,7 @@ public enum IntSpelling {
     public init(_ text: String) {
         guard let number = Int(text) else {
             // The parse missed: either the grammar did too, or the grammar
-            // held and only the int could not.
+            // held and only the `Int` could not.
             self = Self.wholeGrammar(text) ? .overflow : .notOneSpelling
             return
         }

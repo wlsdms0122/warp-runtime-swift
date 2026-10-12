@@ -9,16 +9,17 @@ import Foundation
 import Warp
 
 // A document's path: what `{ ref: }` reads and `set` writes. A name, then
-// `.name` for a field, `[3]` for a literal index and `[i]` for an index read
-// from a name. `?.` and `?[` read an absence as null.
-public struct PathParser: Sendable {
+// `.name` for a field, and `[3]`, `["a"]` or `[i]` for what a list or a map
+// holds at a whole number, a text or a value read from a name. `?.` and `?[`
+// read an absence as null.
+struct PathParser: Sendable {
     // MARK: - Property
     // MARK: - Initializer
-    public init() {
+    init() {
     }
 
     // MARK: - Public
-    public func parse(_ text: String) throws -> Path {
+    func parse(_ text: String) throws -> Path {
         var segments: [PathSegment] = []
         var buffer = ""
         var depth = 0
@@ -38,7 +39,7 @@ public struct PathParser: Sendable {
         func flushKey() throws -> Bool {
             // What the author wrote, kept whole. A refusal quotes their
             // spelling, not a peeled copy of it.
-            let written = buffer.trimmingCharacters(in: .whitespaces)
+            let written = buffer.trimmingCharacters(in: Path.whiteSpace)
             var key = written
 
             buffer = ""
@@ -50,7 +51,7 @@ public struct PathParser: Sendable {
             if key.hasSuffix("?") {
                 // Trimmed again, because the `?` may have held a space off the
                 // name's end. `b ?` names `b`, not `b `.
-                key = String(key.dropLast()).trimmingCharacters(in: .whitespaces)
+                key = String(key.dropLast()).trimmingCharacters(in: Path.whiteSpace)
                 next = true
             }
 
@@ -73,7 +74,7 @@ public struct PathParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.key(try name(key), optional: optional))
+                segments.append(.name(try name(key), optional: optional))
                 optional = false
                 expectsKey = false
                 appended = true
@@ -92,8 +93,32 @@ public struct PathParser: Sendable {
             return appended
         }
 
+        // Whether a text between the brackets is open, and whether the
+        // character before was its backslash. Inside one, every character is
+        // the text's: a bracket or a dot spells nothing.
+        var quoted = false
+        var escaped = false
+
         for character in text {
+            if quoted {
+                buffer.append(character)
+
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    quoted = false
+                }
+
+                continue
+            }
+
             switch character {
+            case "\"" where depth > 0:
+                quoted = true
+                buffer.append(character)
+
             case "[":
                 if depth == 0 {
                     try flushKey()
@@ -120,7 +145,7 @@ public struct PathParser: Sendable {
                     // A `?` carried to a bracket is the author's `?[`. The same
                     // mark `?.` puts on a name, on an index instead.
                     segments.append(try indexSegment(
-                        buffer.trimmingCharacters(in: .whitespaces),
+                        buffer.trimmingCharacters(in: Path.whiteSpace),
                         optional: optional
                     ))
                     optional = false
@@ -156,6 +181,10 @@ public struct PathParser: Sendable {
             }
         }
 
+        guard !quoted else {
+            throw PathSyntaxError("the path ends inside a text, and a text is closed by `\"`")
+        }
+
         guard depth == 0 else {
             throw PathSyntaxError("the path ends inside `[`, and a `[` is closed by `]`")
         }
@@ -179,16 +208,7 @@ public struct PathParser: Sendable {
             throw PathSyntaxError("empty reference path")
         }
 
-        // What a mark on the head would claim is the path's own fact, said by
-        // the path, whichever spelling wrote it, and wherever a layer judges
-        // the same path later.
-        let path = Path(segments)
-
-        if let refusal = path.markedHead {
-            throw PathSyntaxError(refusal)
-        }
-
-        return path
+        return Path(segments)
     }
 
     // MARK: - Private
@@ -202,23 +222,73 @@ public struct PathParser: Sendable {
         }
     }
 
-    // `[3]` is a literal index; `[i]` and `[${i}]` are index references; an empty
-    // `[]` is an author mistake refused at the load, not carried into the model.
+    // `[3]` and `["a"]` are written values; `[i]` and `[${i}]` are index
+    // references; an empty `[]` refuses.
     private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
         var inner = String(bracketed.dropFirst().dropLast())
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: Path.whiteSpace)
+
+        if inner.hasPrefix("\"") {
+            return .index(.string(try text(inner)), optional: optional)
+        }
 
         if inner.hasPrefix("${"), inner.hasSuffix("}") {
             inner = String(inner.dropFirst(2).dropLast())
-                .trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: Path.whiteSpace)
         }
 
-        if let literal = Int(inner) { return .index(literal, optional: optional) }
+        if let literal = Int(inner) {
+            return .index(.int(literal), optional: optional)
+        }
 
         guard !inner.isEmpty else {
             throw PathSyntaxError("empty index segment '[]' in reference path")
         }
 
+        // Digits are a whole number however many there are, and never a name.
+        let digits = inner.first.map { sign in "+-".contains(sign) } == true ? inner.dropFirst() : Substring(inner)
+
+        guard digits.isEmpty || !digits.allSatisfy({ digit in ("0"..."9").contains(digit) }) else {
+            throw PathSyntaxError("index segment '[\(inner)]' is a whole number past what an Int holds, and so no position")
+        }
+
         return .indexRef(try parse(inner), optional: optional)
+    }
+
+    // A text between double quotes: `\"` is a quote and `\\` a backslash,
+    // every other character stands for itself, and the closing quote ends
+    // what stands between the brackets. The walk over the path closed it.
+    private func text(_ quoted: String) throws -> String {
+        var text = ""
+        var escaped = false
+        var closed = false
+
+        for character in quoted.dropFirst() {
+            guard !closed else {
+                throw PathSyntaxError(
+                    "\(quoted) holds more than a text. A text between the brackets ends at its closing quote"
+                )
+            }
+
+            if escaped {
+                guard character == "\"" || character == "\\" else {
+                    throw PathSyntaxError(
+                        "`\\\(character)` in \(quoted) is no escape. Inside the quotes `\\\"`"
+                            + " is a quote and `\\\\` a backslash"
+                    )
+                }
+
+                text.append(character)
+                escaped = false
+            } else if character == "\\" {
+                escaped = true
+            } else if character == "\"" {
+                closed = true
+            } else {
+                text.append(character)
+            }
+        }
+
+        return text
     }
 }

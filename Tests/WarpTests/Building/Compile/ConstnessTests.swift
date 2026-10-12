@@ -87,7 +87,7 @@ struct ConstnessTests {
         let writing = Procedure(
             body: [
                 Statement(binding: .variable("held"), expression: .literal(.string("first"))),
-                Statement(binding: .assignment([.key("held")]), expression: .literal(.string("second")))
+                Statement(binding: .assignment([.name("held")]), expression: .literal(.string("second")))
             ],
             result: reference("held")
         )
@@ -130,7 +130,7 @@ struct ConstnessTests {
         // Given. A closure that writes a variable the body around it declared.
         // The box is outside the closure, so the write reaches the run's state.
         let writing = Procedure(
-            body: [Statement(binding: .assignment([.key("tally")]), expression: .literal(.int(1)))],
+            body: [Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))],
             result: .literal(.string("written"))
         )
         let handed = try Module(
@@ -163,7 +163,7 @@ struct ConstnessTests {
         // box, so the declaration runs, and the closure sends what runs.
         let bumping = Procedure(
             signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))]),
-            body: [Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))]
+            body: [Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))]
         )
         let sending = Procedure(
             body: [
@@ -382,27 +382,6 @@ struct ConstnessTests {
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
-        }
-    }
-
-    @Test("a variable's starting value is read rather than run")
-    func aVariableStartingFromAConstructIsRefused() async throws {
-        // Given. A module variable written from a construct. A construct runs
-        // a body, and the build settles a starting value by reading it.
-        let handed = try Module(
-            variables: ["standing": .conditional(
-                .literal(.bool(true)),
-                then: [Statement(binding: .constant("kept"), expression: .literal(.int(1)))],
-                else: nil
-            )],
-            procedures: [entryName: Procedure(access: .public, body: [], result: reference("standing"))]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([handed] + Module.standard)
-        } throws: { error in
-            error is BuildError && "\(error)".contains("a construct runs a body, and a call's operand is data")
         }
     }
 

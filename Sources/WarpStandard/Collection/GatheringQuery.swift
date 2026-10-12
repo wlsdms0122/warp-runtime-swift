@@ -45,12 +45,12 @@ struct GatheringQuery: Query {
         let collection = question[.array]
 
         guard let held = collection.elements, let given = question[.positions].elements else {
-            throw ExecutionError("Standard.Collection.gathering asks two arrays")
+            throw ExecutionError("Standard.Collection.gathering asks an Array and an Array<Int>")
         }
 
         let positions = try given.map { position -> Int in
             guard case let .int(number) = position else {
-                throw ExecutionError("Standard.Collection.gathering asks whole positions")
+                throw ExecutionError("Standard.Collection.gathering asks positions that are Int")
             }
 
             // The collection is there and says how long it is, so a position it
@@ -66,7 +66,7 @@ struct GatheringQuery: Query {
         }
 
         guard let gathered = collection.elements(at: positions) else {
-            throw ExecutionError("Standard.Collection.gathering asks two arrays")
+            throw ExecutionError("Standard.Collection.gathering asks an Array and an Array<Int>")
         }
 
         return gathered

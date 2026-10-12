@@ -19,12 +19,15 @@ import Foundation
 //
 // Two modules that need each other have no such order, so this refuses them.
 // The names each side needs of the other are what makes the cycle, and neither
-// can be the one that goes first.
+// can be the one that goes first. The objects a link is handed are held to the
+// same order by the same walk, over what each sends and every type its
+// declared types, signatures and bodies name: each was compiled against those,
+// so two that need each other were each compiled against something not beside
+// them, and a type one names is read through what the other declares.
 //
 // What a module needs is read the way a link reads it: the procedures it calls and
-// the types its signatures name. A name nothing here declares is left alone:
-// the build refuses it, and refusing here would be a second copy of a rule that
-// has to be right once.
+// every type it names. A name nothing here declares is left alone: the build
+// refuses it.
 //
 // A name two modules declare is answered by whichever declared it first, which
 // is arbitrary and can put a module in its own reach. Standing a graph is
@@ -50,25 +53,56 @@ public struct ModuleGraph: Sendable {
     // `held` is how many documents stand in the link before these, so a
     // refusal counts the list the host handed over rather than this array.
     public init(_ modules: [Module], after held: Int = 0) throws {
-        // Which module declares each reference. One table, since every one of
-        // them answers the same question; the kind rides on the reference, so
-        // a procedure and a type spelled alike stay two rows.
+        self.given = modules
+        self.standing = try Self.standing(
+            modules.map(Place.Document.of),
+            supplying: modules.map(\.supplies),
+            needing: modules.map(\.references),
+            after: held
+        )
+    }
+
+    // MARK: - Public
+    // The objects a link is handed, held to the order they were compiled in:
+    // what each one needs of another stands before it, read off what the
+    // object holds.
+    static func stand(_ objects: [Compiled]) throws {
+        _ = try standing(
+            objects.map(\.document),
+            supplying: objects.map(\.supplies),
+            needing: objects.map(\.needs),
+            after: 0
+        )
+    }
+
+    // MARK: - Private
+    // The order the documents stand in, each one's needs before it, or the
+    // refusal of the documents that need each other.
+    private static func standing(
+        _ documents: [Place.Document],
+        supplying supplies: [Set<Reference>],
+        needing references: [Set<Reference>],
+        after held: Int
+    ) throws -> [Int] {
+        // Which document declares each reference. One table, since every one
+        // of them answers the same question; the kind rides on the reference,
+        // so a procedure and a type spelled alike stay two rows.
         var declares: [Reference: Int] = [:]
 
-        for (position, module) in modules.enumerated() {
-            // In no order. Which module answers a reference is the order the
-            // host handed the modules over, and inside one module no two of
-            // these are the same reference, so nothing here reads an order.
-            for reference in module.supplies {
+        for (position, supplied) in supplies.enumerated() {
+            // In no order. Which document answers a reference is the order the
+            // host handed the documents over, and inside one document no two
+            // of these are the same reference, so nothing here reads an order.
+            for reference in supplied {
                 guard declares[reference] == nil else { continue }
 
                 declares[reference] = position
             }
         }
 
-        // What each module needs of another, and under which name, so a
+        // What each document needs of another, and under which name, so a
         // refusal can name the step rather than the cycle.
-        let needs = modules.enumerated().map { position, module in
+        let needs = references.enumerated().map { position, used in
             var reached: [(position: Int, name: Name)] = []
 
             func need(_ name: Name, of declaring: Int?) {
@@ -77,37 +111,36 @@ public struct ModuleGraph: Sendable {
                 reached.append((declaring, name))
             }
 
-            for used in module.references.sorted() {
-                need(used.name, of: declares[used])
+            for reference in used.sorted() {
+                need(reference.name, of: declares[reference])
             }
 
             return reached
         }
 
         // Depth first, so the cycle a refusal names is the one path that closed
-        // it rather than every module the walk had open. Roots in the order the
-        // host handed the modules over, and needs in name order, so which
-        // cycle is found first is a fact of the modules and not of a hash seed.
+        // it rather than every document the walk had open. Roots in the order
+        // the host handed the documents over, and needs in name order, so
+        // which cycle is found first is a fact of the documents and not of a
+        // hash seed.
         var standing: [Int] = []
-        var settled = [Bool](repeating: false, count: modules.count)
-        var walking = [Bool](repeating: false, count: modules.count)
+        var stood = [Bool](repeating: false, count: documents.count)
+        var walking = [Bool](repeating: false, count: documents.count)
         var route: [(position: Int, name: Name)] = []
 
         func stand(_ position: Int) throws {
-            if settled[position] { return }
+            if stood[position] { return }
 
             guard !walking[position] else {
                 let cycle = route.drop { step in step.position != position }.map { step in
-                    let document = Place.Document.of(modules[step.position]).spelled(at: held + step.position)
-
-                    return "\(document) needs '\(step.name)'"
+                    "\(documents[step.position].spelled(at: held + step.position)) needs '\(step.name)'"
                 }
 
                 throw ModuleGraphError(
                     "these modules need each other, so there is no order to compile them in:"
                         + " \(cycle.joined(separator: ", then "))."
                         + " A module is compiled against what it needs, so what it needs stands first",
-                    at: Place(in: .of(modules[position]))
+                    at: Place(in: documents[position])
                 )
             }
 
@@ -122,19 +155,15 @@ public struct ModuleGraph: Sendable {
             }
 
             walking[position] = false
-            settled[position] = true
+            stood[position] = true
 
             standing.append(position)
         }
 
-        for position in modules.indices {
+        for position in documents.indices {
             try stand(position)
         }
 
-        self.given = modules
-        self.standing = standing
+        return standing
     }
-
-    // MARK: - Public
-    // MARK: - Private
 }

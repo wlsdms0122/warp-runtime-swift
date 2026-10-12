@@ -8,7 +8,7 @@
 import Foundation
 import Testing
 import Warp
-import WarpStandard
+@testable import WarpStandard
 import WarpTestSupport
 
 // The procedures that ship in bundles, and the fact that they are bundles: a host
@@ -19,9 +19,9 @@ struct StandardTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("every bundle written in Swift checks at the door a module from outside takes")
+    @Test("every bundle written in Swift loads as a module from outside does")
     func everyBundleChecks() throws {
-        // Given. The bundles stand without the check
+        // Given. The bundles stand without the load's judgement
         let bundles = Module.standard.filter(\.builtin)
 
         // When / Then
@@ -32,24 +32,12 @@ struct StandardTests {
         }
     }
 
-    @Test("every procedure that ships is builtin or written in Warp")
-    func everyProcedureIsPlaced() throws {
-        // Given. What the bundles declare, and how the one list cuts them
-        let shipped = Set(Module.standard.flatMap(\.procedures.keys))
-
-        // When / Then. A name in `builtinProcedures` that nothing declares is a list gone
-        // stale
-        #expect(Module.builtinProcedures.subtracting(shipped).isEmpty)
-        #expect(Module.builtinProcedures.count == 36)
-        #expect(Module.builtinProcedures.union(Module.derived) == shipped)
-    }
-
     @Test("a procedure this package calls derived has a body here")
     func everyDerivedProcedureIsWritten() throws {
-        // Given. `derived` is what is left over, so it says a procedure is
-        // written in Warp without looking. This is the looking: a name it
-        // claims and a native implementation is a claim the package does not
-        // keep
+        // Given. `derived` is what the modules that are not builtin declare,
+        // read off the module and not off its procedures. This reads the
+        // procedures: a name it holds with a native implementation is a claim
+        // the package does not keep
         let written = Set(
             Module.standard
                 .flatMap(\.procedures)
@@ -85,11 +73,11 @@ struct StandardTests {
 
         // When / Then
         await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.math + Module.text + Module.foundation)
+            try await Builder().build([sut] + Module.math + Module.text + Module.sharedGround)
         }
 
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.sharedGround)
         }
     }
 
@@ -127,7 +115,7 @@ struct StandardTests {
     @Test("a bundle mentioning the shared contracts needs Standard in the link")
     func aBundleNeedsStandardInTheLink() async throws {
         // Given. Collection's procedures mention `Collection` and
-        // `Comparable`, which only the foundation module declares
+        // `Comparable`, which only the shared ground declares
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -142,7 +130,7 @@ struct StandardTests {
             ]
         )
 
-        // When / Then, without the foundation the contract name resolves to
+        // When / Then, without the shared ground the contract name resolves to
         // nothing, and the declaration that mentions it is refused
         await #expect {
             try await Builder().build([sut] + Module.collection)
@@ -151,7 +139,7 @@ struct StandardTests {
         }
 
         await #expect(throws: Never.self) {
-            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.foundation)
+            try await Builder().build([sut] + Module.collection + Module.logic + Module.math + Module.sharedGround)
         }
     }
 

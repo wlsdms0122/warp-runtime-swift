@@ -8,9 +8,9 @@
 import Foundation
 import Warp
 
-// A fraction read back as an int, after it was rounded. An int is 64 bits, so
-// a fraction whose whole part is past its edge has no int to answer. That stops
-// the run the way arithmetic off that edge does.
+// A fraction read back as an `Int`, after it was rounded. An `Int` is 64
+// bits, so a fraction whose whole part is past its edge has no `Int` to
+// answer. That stops the run the way arithmetic off that edge does.
 struct IntegerConversion: Sendable {
     // MARK: - Property
     private let procedure: String
@@ -24,8 +24,9 @@ struct IntegerConversion: Sendable {
     // The whole a fraction rounds to. The reasons there is none are
     // different facts, and the refusal names the one that happened: a
     // fraction that is not a number has no whole at all, and a rounded
-    // whole past the int's own edge is one no int holds. Rounding is done
-    // here, so what is narrowed has no digits after the point to refuse.
+    // whole past the `Int`'s own edge is one no `Int` holds. Rounding is done
+    // here, so the fraction read back has no digits after the point to
+    // refuse.
     func of(_ asked: Double, rounded rule: FloatingPointRoundingRule) throws -> Int {
         guard !asked.isNaN else {
             throw ExecutionError("\(procedure) of \(asked) has no whole answer")

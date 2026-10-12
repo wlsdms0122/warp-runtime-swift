@@ -68,10 +68,11 @@ struct ContractCallKeepsTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "it", type: through == "App.Show.show"
-                                ? .parameter(name: "T", bounds: ["App.Show"])
+                                ? .parameter(name: "T")
                                 : .named("Bank.Box"))
                         ],
-                        returns: .nullable(.int)
+                        returns: .nullable(.int),
+                        bounds: through == "App.Show.show" ? ["T": ["App.Show"]] : [:]
                     ),
                     body: [Statement(binding: .constant("round"), expression: loop)],
                     result: reference("round")

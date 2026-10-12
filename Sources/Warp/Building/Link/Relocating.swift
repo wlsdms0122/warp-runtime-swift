@@ -53,7 +53,7 @@ final class Relocating {
 
     // What each document's type numbers turned out to be in this link.
     //
-    // ResolvedTable once per number rather than at every type met: a name is read
+    // Resolved once per number rather than at every type met: a name is read
     // as many times as a document numbered one, and not as many times as its
     // bodies stand on it. A document that lowered no body numbered no type
     // and has no entry here.
@@ -115,8 +115,14 @@ final class Relocating {
     // What compiling left, read as this link's rows. Filling a call through a
     // contract reads the row the link found answering it, over the parameters
     // that row takes, so every row is made to stand here rather than as the
-    // walk reaches it.
-    convenience init(_ assembled: Assembled, types: TypeTable, supplied: Supplying) throws {
+    // walk reaches it. `contractProcedures` are the procedures the contracts
+    // of `types` ask, read off it where the satisfaction was written into it.
+    convenience init(
+        _ assembled: Assembled,
+        types: TypeTable,
+        contractProcedures: [Name: LoweredContractProcedure],
+        supplied: Supplying
+    ) throws {
         let loweredTypes = types.loweredTypes
 
         self.init(
@@ -138,7 +144,7 @@ final class Relocating {
             owned: assembled.owned,
             concealed: assembled.concealed,
             typeNumbering: assembled.typeNumbering,
-            contractProcedures: LoweredContractProcedure.table(in: types),
+            contractProcedures: contractProcedures,
             closures: assembled.closures,
             loweredTypes: loweredTypes
         )
@@ -198,6 +204,7 @@ final class Relocating {
             place: .procedure(row.label.spelling, in: documents[row.origin]),
             typeRows: typeRows[row.origin]
         )
+
         switch row.implementation {
         case let .body(body, frame):
             return Linked(row, implementation: .body(try filled(body, in: context), frame))
@@ -242,10 +249,7 @@ final class Relocating {
             )
 
         case .unnumbered:
-            throw BuildError.unjudged(
-                "a call standing at \(number), which its document never numbered",
-                at: context.place
-            )
+            throw BuildError("a call stands at \(number), which its document never numbered", at: context.place)
         }
     }
 
@@ -275,22 +279,7 @@ final class Relocating {
         case let .dispatch(dispatch):
             return .dispatch(try relocated(dispatch, in: context))
 
-        // What a call answers and hands back needs no judgement where it
-        // stands once the rows that may answer are known to answer what the
-        // call reads: a row its own document proved hands back as declared, or,
-        // through a contract, rows that each settle exactly that type where
-        // they answer and hand nothing back to judge.
-        case let .checked(.call(call), _) where table[call.procedure].handsBackAsDeclared:
-            return .call(call)
-
-        case let .checked(.dispatch(dispatch), judging) where judging.handedBack.isEmpty && dispatch.calls.values.allSatisfy({ call in
-            guard let against = judging.against, let returns = table[call.procedure].returns else { return false }
-
-            return returns.identical(to: against, in: table[call.procedure].table)
-        }):
-            return .dispatch(dispatch)
-
-        case .literal, .local, .array, .record, .apply, .cast, .checked, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .local, .array, .record, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             return operation
         }
     }
@@ -302,21 +291,7 @@ final class Relocating {
     ) throws -> CallOperation {
         let procedure = try row(call.procedure, in: context)
 
-        // What a call hands over fills the slots the row it reaches declares.
-        // The row is this link's answer and is known here, so the question is
-        // asked once rather than at every call the run makes of it.
-        //
-        // What is left after a document has judged its own calls: a call
-        // reaching a row some other document holds. Which row that is, is this
-        // link's answer, so this is the one that can ask, and it says which
-        // call it is about the way the refusals beside it do.
-        guard call.arguments.count == table[procedure].slots.count else {
-            throw BuildError(
-                "a call stands \(call.arguments.count) argument(s) where the"
-                    + " \(table[procedure].slots.count) its callee declares stand",
-                at: context.place
-            )
-        }
+        try table[procedure].refuseCall(standing: call.arguments.count, at: context.place)
 
         return CallOperation(
             procedure: procedure,
@@ -334,7 +309,10 @@ final class Relocating {
         )
 
         guard let asked = contractProcedures[spelling] else {
-            throw BuildError.unjudged("a call to '\(spelling)', which no contract declares", at: context.place)
+            throw BuildError(
+                "'\(spelling)' is called through a contract here, and no contract in this link declares it",
+                at: context.place
+            )
         }
 
         return DispatchOperation(
@@ -350,14 +328,7 @@ final class Relocating {
                     )
                 }
 
-                calls[entry.key] = try CallOperation(
-                    handing: [nil] + dispatch.arguments.map { argument in Optional(argument) },
-                    to: table[row],
-                    row: row,
-                    picked: true,
-                    in: loweredTypes,
-                    at: context.place
-                )
+                calls[entry.key] = try dispatch.call(of: table[row], at: row, in: loweredTypes, at: context.place)
             }
         )
     }

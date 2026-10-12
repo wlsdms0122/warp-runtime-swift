@@ -156,10 +156,10 @@ struct LoadGateTests {
         // Given. There is one way a name gets into a body. A value a run
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
-            "parameters": [["name": "run", "type": "Dictionary<Any>"]],
-            "body": [["let": "whoami", "value": ["ref": "run.id"]]]
+            "parameters": [["name": "run", "type": "Dictionary<String, Any>"]],
+            "body": [["let": "whoami", "value": ["ref": "run[\"id\"]"]]]
         ]
-        let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]
+        let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run[\"id\"]"]]]]
 
         // When / Then
         #expect(throws: Never.self) {
@@ -170,11 +170,11 @@ struct LoadGateTests {
         }
     }
 
-    @Test("runtime data becomes IR through the loader's Value door")
-    func valueLowersThroughFrontendDoor() throws {
+    @Test("runtime data becomes IR through the loader's reading of a Value")
+    func valueIsReadByTheLoader() throws {
         // Given. A step array that arrived as data (through a signature)
-        // becomes IR via the loader's Value door; the string stays a literal
-        // even there
+        // becomes IR through the loader's reading of a Value; the string stays
+        // a literal even there
         let carried = Value.array([
             .dictionary(["let": .string("greet"), "value": .string("hello there")])
         ])

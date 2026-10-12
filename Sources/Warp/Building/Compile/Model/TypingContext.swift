@@ -38,7 +38,7 @@ struct TypingContext: Sendable {
     let answers: [Int: LoweredType]
 
     // The same declarations as the run reads them, lowered once. Every
-    // judgment the walk asks goes here, so the walk and the run judge by one
+    // judgement the walk asks goes here, so the walk and the run judge by one
     // table and by one language.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
@@ -54,12 +54,12 @@ struct TypingContext: Sendable {
     // What the procedure being read holds its type parameters to. A closure
     // written in its body reads the same names, so a `some T` inside is the
     // `T` the caller filled, bound the way the declaration bound it.
-    var bounds: [Name: [Name]] = [:]
+    var bounds: [Name: Set<Name>] = [:]
 
     // MARK: - Initializer
     // MARK: - Public
     // The same context, reading the body of a procedure bound this way.
-    func bounding(_ bounds: [Name: [Name]]) -> TypingContext {
+    func bounding(_ bounds: [Name: Set<Name>]) -> TypingContext {
         var held = self
         held.bounds = bounds
 
@@ -106,7 +106,7 @@ struct TypingContext: Sendable {
     }
 
     func failing(of selector: Name) -> Failing? {
-        declared(selector)?.failing ?? contractProcedures[selector]?.failing
+        declared(selector)?.failing ?? contractProcedures[selector].map { asked in .these(asked.failing) }
     }
 
     // A named type stands for what it was declared as. Inference walks into

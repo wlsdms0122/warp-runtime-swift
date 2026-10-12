@@ -8,11 +8,11 @@
 import Foundation
 import Warp
 
-// The record with one name bound to another value. It answers a new record, so
-// an author writes a changed mapping without the language growing a way to
+// The map with one key bound to another value. It answers a new map, so
+// an author writes a changed map without the language growing a way to
 // write into one.
 struct SettingQuery: Query {
-    // What this takes: the mapping, the name written, and what it holds.
+    // What this takes: the map, the key written, and what it holds.
     enum Parameters: Int, ParameterSet {
         case dictionary
         case key
@@ -22,10 +22,13 @@ struct SettingQuery: Query {
         var declared: Parameter {
             switch self {
             case .dictionary:
-                return Parameter(name: "dictionary", type: .dictionary(.parameter(name: "Value")))
+                return Parameter(
+                    name: "dictionary",
+                    type: .dictionary(key: .parameter(name: "Key"), value: .parameter(name: "Value"))
+                )
 
             case .key:
-                return Parameter(name: "key", type: .string)
+                return Parameter(name: "key", type: .parameter(name: "Key"))
 
             case .value:
                 return Parameter(name: "value", type: .parameter(name: "Value"))
@@ -41,26 +44,11 @@ struct SettingQuery: Query {
     // MARK: - Initializer
     // MARK: - Public
     func evaluate(_ question: Question<Self>) async throws -> Value {
-        guard
-            let held = question[.dictionary].asDictionary,
-            case let .string(key) = question[.key]
-        else {
-            throw ExecutionError("Standard.Collection.setting asks a Dictionary and a String")
+        guard case let .dictionary(held) = question[.dictionary] else {
+            throw ExecutionError("Standard.Collection.setting asks a Dictionary")
         }
 
-        let field: Name
-
-        do {
-            field = try Name(key)
-        } catch let refusal as NameRefused {
-            throw ExecutionError(
-                "Standard.Collection.setting asks a key that is a name, and \(refusal.message)"
-            )
-        }
-
-        // The names are data from here on: what was written was held to no
-        // declaration, so the answer is a dictionary whatever the collection was.
-        return .dictionary(held.writing(field, with: question[.value]))
+        return .dictionary(held.writing(key: question[.key], with: question[.value]))
     }
 
     // MARK: - Private

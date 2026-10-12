@@ -8,24 +8,29 @@
 import Foundation
 import Warp
 
-// Decodes Codable types directly from a Value tree, so the scalar kinds the
-// value already holds (`3.0` a double, `3` an int) are the ones read.
+// Decodes Codable types directly from a Value tree. A `Value` asked of it is
+// the one the tree holds, so its kinds (`3.0` a double, `3` an int) are the
+// ones read; a `Double` asked of an int is that int's worth.
 struct ValueDecoder: Decoder {
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let record: Value.Dictionary
+        let mapping: Value.Dictionary
+
+        // The names the mapping's keys are, in the key order.
+        let names: [Name]
+
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            record.names.compactMap { key in Key(stringValue: key.spelling) }
+            names.compactMap { name in Key(stringValue: name.spelling) }
         }
 
         // MARK: - Initializer
         // MARK: - Public
         func contains(_ key: Key) -> Bool {
-            (try? Name(key.stringValue)).flatMap { name in record[name] } != nil
+            (try? Name(key.stringValue)).flatMap { name in mapping[name] } != nil
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
@@ -61,7 +66,7 @@ struct ValueDecoder: Decoder {
 
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
-            guard let name = try? Name(key.stringValue), let value = record[name] else {
+            guard let name = try? Name(key.stringValue), let value = mapping[name] else {
                 throw ReadingError(
                     "no value for key '\(key.stringValue)'",
                     at: steps + [.key(key.stringValue)]
@@ -262,7 +267,7 @@ struct ValueDecoder: Decoder {
         }
 
         private func mismatch(_ type: Any.Type) -> ReadingError {
-            ReadingError("expected \(type), found \(value.type)", at: steps)
+            ReadingError("expected \(type), found \(value.nominal)", at: steps)
         }
     }
 
@@ -316,12 +321,9 @@ struct ValueDecoder: Decoder {
 
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard let record = value.asDictionary else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
-        }
-
-        return KeyedDecodingContainer(KeyedContainer(
-            record: record,
+        KeyedDecodingContainer(KeyedContainer(
+            mapping: try mapping(),
+            names: try named().map(\.name),
             codingPath: codingPath,
             steps: steps,
             userInfo: userInfo
@@ -335,7 +337,7 @@ struct ValueDecoder: Decoder {
         // still answered by `decode` below, which holds bytes to their own
         // spelling so an int array cannot quietly become them.
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.type)", at: steps)
+            throw ReadingError("expected \(TypeSpelling.array), found \(value.nominal)", at: steps)
         }
 
         return UnkeyedContainer(
@@ -372,7 +374,7 @@ struct ValueDecoder: Decoder {
     // Every element, read where it stands.
     func read<T: Decodable>(_ type: [T].Type) throws -> [T] {
         guard let elements = value.elements else {
-            throw ReadingError("expected array, found \(value.type)", at: steps)
+            throw ReadingError("expected \(TypeSpelling.array), found \(value.nominal)", at: steps)
         }
 
         return try elements.enumerated().map { index, element in
@@ -386,24 +388,23 @@ struct ValueDecoder: Decoder {
         }
     }
 
-    // A record of readers, read in the order the names sort in.
-    //
-    // `Dictionary` reads its keys in hash order, and the seed for that changes
-    // from one process to the next. Two entries that are both wrong would then
-    // be refused in either order, and the one line an author is given would not
-    // be the same line twice, which is the whole of what an address is for.
-    // Sorted rather than as-written because a document is a value by then and a
-    // value's record has no order to have kept.
+    // A mapping of readers, each read in the key order, so that of two
+    // entries that are both wrong the same one is refused every run.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
-        guard let record = value.asDictionary else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        try named().reduce(into: [Name: T]()) { read, entry in
+            read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
         }
+    }
 
-        return try record.entries
-            .sorted { left, right in left.name.spelling < right.name.spelling }
-            .reduce(into: [Name: T]()) { read, entry in
-                read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
-            }
+    // The entries of the mapping this stands on, under the names their keys
+    // are, in the key order. A document's mappings are keyed by names, and a
+    // key that is no name refuses here, at the mapping that writes it.
+    func named() throws -> [(name: Name, value: Value)] {
+        do {
+            return try mapping().named()
+        } catch let refusal as ValueRefused {
+            throw ReadingError(refusal.message, at: steps)
+        }
     }
 
     // The one place a Codable type is made from a value, shared by all three
@@ -417,7 +418,10 @@ struct ValueDecoder: Decoder {
     func decode<T: Decodable>(_ type: T.Type) throws -> T {
         if type == Data.self {
             guard case let .bytes(bytes) = value, let data = Data(bytes) as? T else {
-                throw ReadingError("expected \(type), found \(value.type)", at: steps)
+                throw ReadingError(
+                    "expected \(TypeSpelling.array)<\(TypeSpelling.int)> written as bytes, found \(value.nominal)",
+                    at: steps
+                )
             }
 
             return data
@@ -436,15 +440,18 @@ struct ValueDecoder: Decoder {
     }
 
     // MARK: - Private
-    // Looked up where the value keeps it, so that a reader asking for its
-    // keys one after another does not rebuild a record as a dictionary once
-    // per key.
+    // Looked up where the map keeps it, under the key's text.
     private func held(_ key: String) throws -> Value? {
-        guard value.holdsFields else {
-            throw ReadingError("expected a record, found \(value.type)", at: steps)
+        try mapping()[key: .string(key)]
+    }
+
+    // The mapping this stands on.
+    private func mapping() throws -> Value.Dictionary {
+        guard case let .dictionary(mapping) = value else {
+            throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
-        return (try? Name(key)).flatMap { name in value[name] }
+        return mapping
     }
 
     private func descending(to key: String, holding held: Value) -> ValueDecoder {

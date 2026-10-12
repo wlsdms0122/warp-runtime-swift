@@ -14,6 +14,18 @@ import Foundation
 // chain, and a chain is as long as the graph is. Nesting depth is a document's
 // own fact and the walks over expressions may lean on it; call depth is not.
 struct StronglyConnected {
+    // One name being walked, and how far along its sends the walk is.
+    private struct Step {
+        // MARK: - Property
+        let name: Name
+        let sends: [Name]
+        var position = 0
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
     // MARK: - Property
     private let edges: [Name: [Name]]
 
@@ -32,18 +44,6 @@ struct StronglyConnected {
         var path: [Name] = []
         var next = 0
         var found: [[Name]] = []
-
-        // One name being walked, and how far along its sends the walk is.
-        struct Step {
-            // MARK: - Property
-            let name: Name
-            let sends: [Name]
-            var position = 0
-
-            // MARK: - Initializer
-            // MARK: - Public
-            // MARK: - Private
-        }
 
         func meet(_ name: Name) {
             met[name] = next

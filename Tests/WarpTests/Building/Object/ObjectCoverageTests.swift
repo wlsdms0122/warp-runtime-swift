@@ -39,16 +39,16 @@ struct ObjectCoverageTests {
 
     @Test("is written under exactly the keys the layout names")
     func everyKeyIsTheLayouts() throws {
-        // Given / When. The writer and the reading both key the record by the
+        // Given / When. The writer and the reading both key the map by the
         // layout's keys.
         guard case let .dictionary(written) = try ObjectCoverageFixture.everything.object() else {
-            Issue.record("an object is written as a record")
+            Issue.record("an object is written as a map")
 
             return
         }
 
         // Then
-        #expect(Set(written.names) == ObjectLayout.keys)
+        #expect(Set(try written.named().map(\.name)) == ObjectLayout.keys)
     }
 
     // MARK: - Public

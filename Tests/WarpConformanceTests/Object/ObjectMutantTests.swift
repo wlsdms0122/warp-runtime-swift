@@ -13,11 +13,11 @@ import WarpSyntax
 
 // An object with one place of it replaced, taken as far as it goes.
 //
-// The suite beside this one asks the reading the same question and stops there,
-// which leaves half the standard unasked: a reading that traps ends the host,
-// and so does a link or a run standing on what that reading admitted. What is
-// asked here is the whole way. A mutant is read, and if it reads it is linked,
-// and if it links it is run.
+// `ObjectMutationTests`, in the core tests, asks the reading the same question
+// and stops there, which leaves half the standard unasked: a reading that traps
+// ends the host, and so does a link or a run standing on what that reading
+// admitted. What is asked here is the whole way. A mutant is read, and if it
+// reads it is linked, and if it links it is run.
 //
 // A refusal is an answer at every stage. So is an answer. A trap is neither,
 // and the assertion this suite makes is the one nothing can be written down
@@ -132,8 +132,7 @@ struct ObjectMutantTests {
             return first
         }
 
-        // The clock came first. A mutant that does not finish is not a defect,
-        // because stopping work that runs away is the host's.
+        // The clock came first.
         guard let raced, let answer = raced else { return false }
 
         guard case let .failure(error) = answer else { return true }

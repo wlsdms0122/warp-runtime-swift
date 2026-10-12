@@ -83,7 +83,7 @@ struct ReadingErrorTests {
     func aNumericNameIsAKey() throws {
         // Given. A coding key made for a dictionary carries the number its
         // spelling parses to, and `procedures[12]` is an address no document
-        // has: what the document holds where the walk is settles which it is
+        // has: what the document holds where the walk is decides which it is
         let fixture: Value = [
             "warp": 1,
             "imports": [],
@@ -140,7 +140,7 @@ struct ReadingErrorTests {
     }
 
     @Test("a document refused for the list it does not write is refused about itself")
-    func aMissingManifestIsAboutTheDocument() throws {
+    func aMissingImportsListIsAboutTheDocument() throws {
         // Given. Nothing inside the document is wrong, so there is no step to
         // walk and the document alone is the whole address
         let fixture: Value = [
@@ -166,7 +166,7 @@ struct ReadingErrorTests {
         let fixture: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": [:]
+            "procedures": "entry"
         ]
 
         // When
@@ -372,8 +372,7 @@ struct ReadingErrorTests {
 
     @Test("a refusal about one key stands on that key", arguments: [
         (["access": "open"], "procedures.entry.access"),
-        (["bounds": ["T": "Array<Int>"], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
-        (["bounds": ["U": "Standard.Numeric"]], "procedures.entry.bounds"),
+        (["bounds": ["T": ""], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T"),
         (["result": ["ref": 5]], "procedures.entry.result.ref"),
         (["result": ["ref": "a[0"]], "procedures.entry.result.ref")
     ] as [(Value, String)])

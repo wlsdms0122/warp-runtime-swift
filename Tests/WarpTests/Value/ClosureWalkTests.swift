@@ -58,7 +58,7 @@ struct ClosureWalkTests {
         let row = try await row
         let inner = Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("w")), nth: 9, linked: row, captured: [])
         let sut: Value = .record(
-            Record(name: nil, ["a": .int(1), "b": .array([.procedure(inner)])])
+            Record(name: "App.R", ["a": .int(1), "b": .array([.procedure(inner)])])
         )
 
         // When

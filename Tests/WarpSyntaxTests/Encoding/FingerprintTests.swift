@@ -56,7 +56,7 @@ struct FingerprintTests {
             "App.main": Procedure(
                 signature: Signature(returns: .int),
                 body: [],
-                result: .call(Call(selector: "a.foo", arguments: [.literal(.null)]))
+                result: .call(Call(selector: "A.foo", arguments: [.literal(.null)]))
             )
         ]
     )
@@ -136,7 +136,7 @@ struct FingerprintTests {
     private func native(returning type: TypeExpression, answering value: Value = .int(1)) -> Module {
         try! Module(
             procedures: [
-                "a.foo": Procedure(
+                "A.foo": Procedure(
                     signature: Signature(of: AnsweringQuery.self, returns: type),
                     implementation: .query(AnsweringQuery(value: value))
                 )
@@ -147,7 +147,7 @@ struct FingerprintTests {
     private func answering(_ value: Value) -> Module {
         try! Module(
             procedures: [
-                "a.foo": Procedure(
+                "A.foo": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .any)], returns: .int),
                     body: [],
                     result: .literal(value)

@@ -10,19 +10,10 @@ import Warp
 
 // The other direction: a program written back out as data. `Loader` reads a
 // document and answers with a module; this takes a module and answers with the
-// document that would load into it.
-//
-// It exists because a program has to be able to leave the machine that built
-// it. Building the language's types directly is what a front end with a syntax
-// of its own does, and a host assembling procedures in native code does the
-// same, but neither can hand what it built to anything running elsewhere unless
-// the result can be written down. Reading was half a door.
-//
-// Only the types that stand one to one with the language are written. Nothing
-// here reaches for a spelling (no `is`, no template, no `abort`) because a
-// spelling is a claim about what the reading side implements, and the point of
-// writing plainly is to make that claim as small as it can be. A program that
-// arrived spelled is written back unspelled, and it means the same thing.
+// document that would load into it, so a program built in Swift can leave the
+// machine that built it. Only the types that stand one to one with the
+// language are written, so a program that arrived spelled is written back
+// unspelled, and it means the same thing.
 public struct Writer: Sendable {
     // MARK: - Property
     public let registry: ConstructRegistry
@@ -51,25 +42,19 @@ public struct Writer: Sendable {
     // writing it back out, and that answer is owed for a text whose program does
     // not hold together. Nothing here judges.
     public func value(of draft: Draft) throws -> Value {
-        // Written every time, because a document that travels is the only kind
-        // worth writing and neither question can be asked of it later. What it
-        // costs is two keys; what it buys is that a reader too old for it, or
-        // without the procedures it calls, says so instead of finding out part of the
-        // way through.
-        //
-        // The version is this writer's and the imports are the program's: which
-        // types were used is a fact about the writing, and what a program takes
-        // from its link is a fact about the program. A draft that claimed
-        // nothing is written with what it sends, since a document that says
-        // nothing is not one and there is nobody left to ask.
+        // The version and the imports are written every time: the version is
+        // this writer's, and the imports are what the program takes from its
+        // link. A draft that claimed none is written with what it uses.
         var written: [Name: Value] = [
             Module.versionKey: .int(ModuleReader.version),
             ModuleReader.CodingKeys.imports.name: .array(
                 (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
-            ),
-            ModuleReader.CodingKeys.procedures.name:
-                .dictionary(try draft.procedures.mapValues(value(of:)))
+            )
         ]
+
+        if !draft.procedures.isEmpty {
+            written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try draft.procedures.mapValues(value(of:)))
+        }
 
         if let description = draft.description {
             written[ModuleReader.CodingKeys.description.name] = .string(description)
@@ -94,21 +79,9 @@ public struct Writer: Sendable {
                                 written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
                             }
 
-                            // A contract's procedure that writes no `failing`
-                            // fails with nothing, so one that may fail with
-                            // anything has no document to say it.
-                            switch asked.failing {
-                            case let .these(failures):
-                                if !failures.isEmpty {
-                                    written[ContractProcedureReader.CodingKeys.failing.name] = .array(
-                                        failures.sorted().map(Value.string)
-                                    )
-                                }
-
-                            case .unstated:
-                                throw WritingError(
-                                    "a contract's procedure says nothing of what it may fail with,"
-                                        + " and a document writing none says it fails with nothing"
+                            if !asked.failing.isEmpty {
+                                written[ContractProcedureReader.CodingKeys.failing.name] = .array(
+                                    asked.failing.sorted().map(Value.string)
                                 )
                             }
 
@@ -171,17 +144,8 @@ public struct Writer: Sendable {
             written[ProcedureReader.CodingKeys.access.name] = .string(procedure.access.rawValue)
         }
 
-        // Stripped here, at the declaration, because this is the one place a
-        // bound has a `bounds` to move to. Everything below the declaration
-        // (slots, nested procedure types) writes types as they arrive and
-        // refuses a bound it meets, so a bound can neither be written twice nor
-        // quietly dropped.
-        written.merge(try fields(of: TypeWriter(readBy: readBy).stripped(procedure.signature))) { one, _ in one }
+        written.merge(try fields(of: procedure.signature)) { one, _ in one }
         written.merge(try fields(of: block, in: nil)) { one, _ in one }
-
-        if let bounds = try TypeWriter(readBy: readBy).bounds(of: procedure.signature) {
-            written[ProcedureReader.CodingKeys.bounds.name] = bounds
-        }
 
         return .dictionary(written)
     }
@@ -190,15 +154,19 @@ public struct Writer: Sendable {
         try TypeWriter(readBy: readBy).value(of: type)
     }
 
+    public func value(of declared: TypeDeclaration) throws -> Value {
+        try TypeWriter(readBy: readBy).value(of: declared)
+    }
+
     public func value(of parameter: Parameter) throws -> Value {
         var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
 
-        if let type = parameter.type {
-            written[ParameterReader.CodingKeys.type.name] = try value(of: type)
+        if parameter.type != .any {
+            written[ParameterFieldsReader.CodingKeys.type.name] = try value(of: parameter.type)
         }
 
         if let description = parameter.description {
-            written[ParameterReader.CodingKeys.description.name] = .string(description)
+            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
         }
 
         // A record holding nothing but the name is one pair, which a notation
@@ -257,7 +225,16 @@ public struct Writer: Sendable {
             return .array(try elements.map { element in try value(of: element) })
 
         case let .record(fields):
-            return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
+            let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
+
+            return .dictionary([ExpressionTag.record.key: .dictionary(written)])
+
+        case let .dictionary(entries):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(
+                    try entries.map { entry in .array([try value(of: entry.key), try value(of: entry.value)]) }
+                )
+            ])
 
         case let .closure(procedure):
             return .dictionary([ExpressionTag.closure.key: try value(of: procedure)])
@@ -294,16 +271,9 @@ public struct Writer: Sendable {
 
     // MARK: - Private
     // The keys a block writes, with whoever reads it asked whether an empty
-    // `body` is written or dropped. Asked rather than remembered: a writer
-    // carrying its own list of which forms demand the key is a list that goes
-    // stale the moment a form is added, and what it writes then is a document
-    // its own reader refuses.
-    //
-    // Every caller names its reader, and `nil` is a reader rather than a
-    // default. A rescue and a procedure are read by their own readers, which
-    // take `body` as a key that may be absent. Said out loud because a way of
-    // writing a block without saying who reads it is a way of skipping the
-    // question, and skipping it is the failure this asks about.
+    // `body` is written or dropped. A rescue and a procedure are read by their
+    // own readers, which take `body` as a key that may be absent, and say
+    // `nil`.
     private func fields(
         of block: Block,
         in form: (any ConstructForm.Type)?
@@ -328,11 +298,15 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [:]
 
         if !signature.parameters.isEmpty {
-            written[ProcedureReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
+            written[SignatureFieldsReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
         }
 
         if let returns = signature.returns {
-            written[ProcedureReader.CodingKeys.returns.name] = try value(of: returns)
+            written[SignatureFieldsReader.CodingKeys.returns.name] = try value(of: returns)
+        }
+
+        if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
+            written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
         }
 
         return written
@@ -378,6 +352,8 @@ public struct Writer: Sendable {
             return (try spelling(LoopForm.self), .dictionary(written))
 
         case let .leave(leave):
+            let target = leave.target.map { name in Value.string(name.spelling) } ?? .null
+
             switch leave.reach {
             case .procedure:
                 var carried = Value.null
@@ -389,10 +365,10 @@ public struct Writer: Sendable {
                 return (try spelling(ReturnForm.self), carried)
 
             case .construct:
-                return (try spelling(BreakForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
+                return (try spelling(BreakForm.self), target)
 
             case .round:
-                return (try spelling(ContinueForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
+                return (try spelling(ContinueForm.self), target)
             }
 
         case let .attempt(attempted, rescue):
@@ -486,36 +462,28 @@ public struct Writer: Sendable {
         return spelled
     }
 
-    // Data as a document writes it: a record under `record` like every
-    // record, whatever its fields are called.
+    // Data as a document writes it: a map as the map literal that makes it.
     private func literal(_ value: Value) throws -> Value {
         switch value {
         case .null, .bool, .int, .double, .string, .bytes:
             return value
 
-        // A named record is data wherever it stands, and is read as such.
-        case let .record(record) where record.name != nil:
+        // A draft is written as it is, held to no rule, so a record is
+        // written with its name and reads back as the literal it was.
+        case .record:
             return value
 
         case let .array(elements):
             return .array(try elements.map(literal))
 
-        // A dictionary and a record read back apart only by the type they
-        // stand in, and `record` reads back as a record. A dictionary is
-        // written as a record cast to the dictionary it is, which names what
-        // it holds, and only its author can say that.
-        case .dictionary:
-            throw WritingError(
-                "a dictionary has no document of its own. Write a record and cast it"
-                    + " to the `Dictionary<T>` it is"
-            )
-
-        case .record:
-            let fields = try (value.asDictionary?.entries ?? []).map { entry in
-                (name: entry.name, value: try literal(entry.value))
-            }
-
-            return .dictionary([ExpressionTag.record.key: .dictionary(try Value.Dictionary(fields))])
+        // A map is written as the map literal that makes it, its entries in
+        // key order.
+        case let .dictionary(held):
+            return .dictionary([
+                ExpressionTag.dictionary.key: .array(
+                    try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) }
+                )
+            ])
 
         case .procedure:
             throw WritingError(
@@ -531,6 +499,7 @@ public struct Writer: Sendable {
         case .reference: "a reference"
         case .array: "an array"
         case .record: "a record"
+        case .dictionary: "a map"
         case .closure: "a closure"
         case .apply: "a call of a value"
         case .block: "a block"

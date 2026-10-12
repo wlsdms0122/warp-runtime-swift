@@ -22,7 +22,7 @@ struct NeverTests {
     // MARK: - Test
     @Test("a statement after a call that never finishes is refused at the build")
     func nothingRunsAfterANeverCall() async throws {
-        // Given. `Standard.Control.abort` declares never, so the statement after it
+        // Given. `Standard.Control.abort` declares `Never`, so the statement after it
         // would never run, and a name written there would never bind
         let sut = try Module(
             procedures: [
@@ -32,7 +32,7 @@ struct NeverTests {
                         Statement(expression: aborting(literal("done"))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("after")])
+                    result: .reference([.name("after")])
                 )
             ]
         )
@@ -73,15 +73,15 @@ struct NeverTests {
     func aLoopResultReadsAtTheExits() async throws {
         // Given. The run may take any exit: a condition that declines at the
         // start answers before a single round wrote anything. So the result
-        // reads in the settled join of the exits (`x` holds int or string, not
-        // the one a finished round would prove), so a cast to the int the
-        // 0-round value is stands, where a reading of the round's string would
+        // reads in the join of the exits (`x` holds Int or String, not
+        // the one a finished round would prove), so a cast to the Int the
+        // 0-round value is stands, where a reading of the round's String would
         // make it a cast no value could satisfy
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
             body: Block(
                 body: [
-                    Statement(binding: .assignment([.key("x")]), expression: .literal(.string("s")))
+                    Statement(binding: .assignment([.name("x")]), expression: .literal(.string("s")))
                 ],
                 result: reference("x")
             )
@@ -96,7 +96,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.cast(.reference([.key("kept")]), as: .int, optional: false)]
+                            arguments: [.cast(.reference([.name("kept")]), as: .int, optional: false)]
                         )))
                     ],
                     result: reference("kept")
@@ -112,80 +112,6 @@ struct NeverTests {
         #expect(try await run([sut]) == .int(1))
     }
 
-    @Test("a loop result's writes reach the names after the loop")
-    func aLoopResultsWritesReachTheNamesAfter() async throws {
-        // Given. The result runs on every exit, a 0-round run included, so a
-        // write it makes lands whatever the rounds did: `y` after the loop may
-        // hold what the result wrote, and a slot that fits that value is not
-        // refused on the entry type's account
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [Statement(expression: aborting(literal("stops")))],
-                result: .block(
-                    Block(
-                        body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
-                        ],
-                        result: reference("y")
-                    )
-                )
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("y")])]
-                        )))
-                    ],
-                    result: reference("y")
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Builds, and the run answers what the result wrote
-        #expect(try await run([sut]) == .string("s"))
-
-        // And the write is definite (every exit made it) so `y` reads as
-        // exactly what the result wrote, and an int slot refuses it
-        let refusing = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("y")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        await #expect {
-            try await Builder().build([refusing] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("holds String")
-        }
-    }
-
     @Test("a body that ends by leaving still carries its folded constant")
     func aLeavingBodyKeepsItsFolding() async throws {
         // Given. The image holds only judged spellings, and a body whose last
@@ -199,7 +125,7 @@ struct NeverTests {
                     body: [
                         Statement(
                             expression: .leave(
-                                Leave(reach: .procedure, value: .reference([.key("C")]))
+                                Leave(reach: .procedure, value: .reference([.name("C")]))
                             )
                         )
                     ]
@@ -239,7 +165,7 @@ struct NeverTests {
         // declines at the start runs no round and answers, whatever the rounds
         // would have done. So the result is not "after" the body the way a
         // plain block's is, and a body no run comes back from (here a procedure only
-        // the build knows declares never) leaves the loop answerable still. The
+        // the build knows declares `Never`) leaves the loop answerable still. The
         // reader refuses the leaves it can see; this is the type only the build
         // sees, and the run keeps it
         let loop = Warp.Expression.loop(
@@ -262,7 +188,7 @@ struct NeverTests {
     @Test("such a loop's name holds what the result reads")
     func aNeverBodiedLoopStillReadsAsItsResult() async throws {
         // Given. The result reads in what the entry left, and the reading says
-        // so: `kept` holds the result's string, and a slot that declared int
+        // so: `kept` holds the result's string, and a slot that declared `Int`
         // refuses it by that reading rather than by `Never`
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
@@ -280,7 +206,7 @@ struct NeverTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.reference([.name("kept")])]
                         )))
                     ]
                 ),
@@ -320,7 +246,7 @@ struct NeverTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("never finishes before it")
+            "\(error)".contains("follows a body that never finishes")
         }
     }
 

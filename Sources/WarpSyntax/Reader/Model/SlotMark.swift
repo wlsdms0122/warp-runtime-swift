@@ -8,32 +8,37 @@
 import Foundation
 import Warp
 
-// What a slot may write in front of a whole type, and how this notation
-// spells it. The two do not stand in the same place (`var` is a field's and
-// `inout` a parameter's), but a document writes them the same way, so the
-// spelling is said once here and the reading, the writing and the document's
-// own vocabulary come off it.
+// What a slot may write in front of a whole type. The two do not stand in
+// the same place (`var` is a field's and `inout` a parameter's), but a
+// document writes them the same way, so the shape of a marked spelling is
+// said once here and the reading and the writing come off it. The words are
+// `TypeSpelling`'s.
 //
-// The language's own record of which types are marked is the cases of
-// `TypeExpression`. What is here is their spelling, which is this notation's
-// and not something a caller assembling a `TypeExpression` in Swift ever needs.
-enum SlotMark: String, CaseIterable, Sendable {
-    case variable = "var"
+// The language's own list of which types are marked is the cases of
+// `TypeExpression`. What is here is how a spelling carries them, which is this
+// notation's and not something a caller assembling a `TypeExpression` in Swift
+// ever needs.
+enum SlotMark: CaseIterable, Sendable {
+    case variable
     case `inout`
 
     // MARK: - Property
+    // The word the mark is written as.
+    var word: Name {
+        switch self {
+        case .variable: TypeSpelling.variable
+        case .inout: TypeSpelling.inout
+        }
+    }
+
     // The mark as it stands in front of a spelling. The reading takes this off
-    // the front and the writing puts it there, so the shape of a marked
-    // spelling is said once.
-    var front: String { "\(rawValue) " }
+    // the front and the writing puts it there.
+    var front: String { "\(word) " }
 
     // MARK: - Initializer
     // MARK: - Public
     // The mark a type was written under, where it was written under one.
-    //
-    // No `default`: a type nobody thought about has to be a compile error here
-    // rather than an answer of "unmarked", which is the answer every reading of
-    // a marked slot would then get.
+    // Every case is named, so a new one is a compile error here.
     static func marked(_ type: TypeExpression) -> SlotMark? {
         switch type {
         case .variable:
@@ -43,20 +48,10 @@ enum SlotMark: String, CaseIterable, Sendable {
             return .inout
 
         case .any, .never, .null, .bool, .int, .double, .string,
-            .array, .dictionary, .record, .procedure, .nullable, .named, .parameter,
+            .array, .dictionary, .procedure, .nullable, .named, .parameter,
             .projection, .composition, .selfType:
             return nil
         }
-    }
-
-    // Why a mark may not stand in front of this type, and nothing where it
-    // may. One statement, so the reading and the writing refuse the same thing
-    // in the same words and a place that asks later asks the same question.
-    static func refusal(marking inner: TypeExpression, under mark: SlotMark) -> String? {
-        guard let inside = marked(inner) else { return nil }
-
-        return "`\(inside.rawValue)` is written inside `\(mark.rawValue)`."
-            + " A slot says one thing about what it takes"
     }
 
     // The mark a spelling begins with, and the spelling under it. The other

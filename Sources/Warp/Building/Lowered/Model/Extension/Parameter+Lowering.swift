@@ -8,17 +8,9 @@
 import Foundation
 
 extension Parameter {
-    // This parameter as the run reads it. An undeclared type lowers to
-    // `Any`: the boundary tells "nothing written" from "`Any` written" in no
-    // way, so the slot does not either.
-    func lowered(in table: LoweredTypeTable) -> Slot {
-        Slot(name: name, type: declared.lowered(in: table))
-    }
-
-    // The same, with what a call put in the type parameters written in. A
-    // parameter nothing filled reads `Any`, which is what the call said about
-    // it by saying nothing.
-    func lowered(in table: LoweredTypeTable, filling bound: [Name: LoweredType]) -> Slot {
-        Slot(name: name, type: declared.lowered(in: table).filling(bound))
+    // This parameter as the run reads it. `bounds` are what the signature
+    // holds its type parameters to.
+    func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>]) -> Slot {
+        Slot(name: name, type: type.lowered(in: table, bounds: bounds))
     }
 }

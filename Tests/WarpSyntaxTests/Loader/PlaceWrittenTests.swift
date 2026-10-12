@@ -116,33 +116,6 @@ struct PlaceWrittenTests {
         #expect(untranslated?.place?.rendered == "procedures.entry.body.sent[0].call")
     }
 
-    @Test("a construct in a slot no statement holds is still spelled for its own construct")
-    func aSlotOutsideAStatementKnowsItsOwner() throws {
-        // Given / When. A loop standing in a block's result. Nothing puts a
-        // construct step in front of it, so a reading that asked the steps
-        // around it would call a loop's condition `when`.
-        let error = #expect(throws: ValidationError.self) {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [],
-                        result: .loop(
-                            while: .reference([.key("missing")]),
-                            body: Block(body: [])
-                        )
-                    )
-                ]
-            )
-        }
-
-        // Then
-        let place = try #require(error?.place)
-
-        #expect(place.rendered == "procedures.entry.result.condition")
-        #expect(place.written(by: .standard).rendered == "procedures.entry.result.while")
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

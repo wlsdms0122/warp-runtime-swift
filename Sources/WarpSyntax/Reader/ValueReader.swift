@@ -10,12 +10,12 @@ import Warp
 
 // Data as a document spells it. `Value` is the language's data type and knows
 // nothing about being written down; this is the one place that mapping lives.
-public struct ValueReader: Decodable {
+struct ValueReader: Decodable {
     // MARK: - Property
-    public let value: Value
+    let value: Value
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         // A value that came over the bridge is already the answer. Working it
         // out instead asks the value whether it is each kind in turn, and
         // every kind it is not is a refusal built to be thrown away.
@@ -48,11 +48,7 @@ public struct ValueReader: Decodable {
         // A foreign carrier's number is a binary64 by the carrier's own nature:
         // past the int's range its digits cannot be told from a fraction
         // spelled without a point (`1e19` and its digits arrive identically) so
-        // what an int cannot hold reads as the double the carrier holds. This
-        // is the one reader that does not keep a whole numeral's kind past that
-        // range, on purpose: the warp encodings and the YAML front end own their
-        // grammars and refuse there, and this path reads what a Codable carrier
-        // holds, which lost the distinction before this reader saw it.
+        // what an int cannot hold reads as the double the carrier holds.
         if let double = try? container.decode(Double.self) {
             self.value = .double(double)
 

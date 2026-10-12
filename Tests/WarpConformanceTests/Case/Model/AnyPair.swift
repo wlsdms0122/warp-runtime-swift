@@ -7,8 +7,6 @@
 
 import Foundation
 import Warp
-import WarpSyntax
-import WarpStandard
 
 enum AnyPair: Int, ParameterSet {
     case first

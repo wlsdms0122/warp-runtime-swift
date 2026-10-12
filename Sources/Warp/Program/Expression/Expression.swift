@@ -11,27 +11,24 @@ import Foundation
 // construct stands where a statement's value does, and the statement's name
 // is how what it answers gets a name.
 //
-// The data types:
+// The data constructs:
 //
 //   literal   . A `Value`, verbatim. The type system already says what data
 //                is, so an expression does not restate it
-//   reference . A name to resolve in the consuming scope
+//   reference . A name to resolve in the scope that reads it
 //   array     . Elements are expressions
 //   record    . Fields are expressions
+//   dictionary. Entries are a key and a value, each an expression
 //   call      . The procedure it names and its arguments by position
 //
 // The control constructs carry a `Block` and, where a name has to exist inside that
 // block, the name itself, so an expression means the same thing wherever it
-// appears, instead of borrowing the name of whatever bound it.
+// appears, rather than taking the name of whatever bound it.
 //
 // `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
-// finding it is the build's job, not the grammar's.
-//
-// There is no operator here. Equality, negation and the connectives are procedures
-// like any other, so the grammar says what a program *is* and never what one
-// computes. A connective declines to ask its later sides by taking procedures
-// rather than values, which is a thing a declaration can say.
+// finding it is the build's job, not the grammar's. Equality, negation and the
+// connectives are procedures like any other.
 //
 // How a document writes any of this is `WarpSyntax`.
 public indirect enum Expression: Sendable {
@@ -39,6 +36,11 @@ public indirect enum Expression: Sendable {
     case reference(Path)
     case array([Expression])
     case record([Name: Expression])
+
+    // A map: its entries in the order they are written, each a key and a
+    // value. The entries are made in order, so a key written twice keeps the
+    // later value.
+    case dictionary([(key: Expression, value: Expression)])
 
     // A procedure written where a value is wanted. Evaluating it captures the
     // scope it was written in, which is the whole of what makes it a closure.
@@ -50,14 +52,15 @@ public indirect enum Expression: Sendable {
     case apply(Expression, arguments: [Expression])
 
     // Reading a value as a type the text names. `Any` declares nothing, so a
-    // dot on one is refused at the build. This is the door: the author says what
-    // they expect, the build judges every dot after it against that, and the run
-    // asks the arriving value the one question the build could not.
+    // dot on one is refused at the build. A cast is where a value the build
+    // could not type is held to one: the author says what they expect, the
+    // build judges every dot after it against that, and the run asks the
+    // arriving value the one question the build could not.
     //
-    // The `?` axis is `?.`'s, on a cast: a plain one refuses at the run what
-    // did not arrive as the named type, and an optional one reads that
-    // mismatch as null the way `?.` reads an absence, so the reading is `T?`
-    // and the author says which of the two they meant.
+    // The `?` axis is `?.`'s, on a cast: a plain one fails with
+    // `cast_refused` where the value did not arrive as the named type, and an
+    // optional one reads that mismatch as null the way `?.` reads an absence,
+    // so the reading is `T?` and the author says which of the two they meant.
     case cast(Expression, as: TypeExpression, optional: Bool)
 
     case block(Block)
@@ -89,6 +92,10 @@ public indirect enum Expression: Sendable {
         // A record's field.
         case field(Name)
 
+        // A map literal's entry at a position, its key or its value.
+        case entryKey(Int)
+        case entryValue(Int)
+
         // The block a closure literal carries.
         case closure
 
@@ -118,6 +125,8 @@ public indirect enum Expression: Sendable {
             switch self {
             case let .element(position): [.index(position)]
             case let .field(name): [.part(.fields), .key(name.spelling)]
+            case let .entryKey(position): [.part(.entries), .index(position), .index(0)]
+            case let .entryValue(position): [.part(.entries), .index(position), .index(1)]
             case .closure: [.part(.closure)]
             case let .subject(optional): [.part(.subject(optional: optional))]
             case .callee: [.part(.callee)]
@@ -144,16 +153,17 @@ public indirect enum Expression: Sendable {
     // two walks calling one statement's construct two things is two documents
     // as far as an author following the names is concerned.
     //
-    // It is what this implementation calls the type and **not** a key read
-    // off any document: a host registers the forms it likes under the
+    // It is what this implementation calls the construct and **not** a key
+    // read off any document: a host registers the forms it likes under the
     // spellings it likes, and `{ value: { call: … } }` and `{ call: … }` are
-    // two texts that arrive here as one type.
+    // two texts that arrive here as one construct.
     public var construct: Construct {
         switch self {
         case .literal: .literal
         case .reference: .reference
         case .array: .array
         case .record: .record
+        case .dictionary: .dictionary
         case .closure: .closure
         case .cast: .cast
         case .apply: .call
@@ -166,8 +176,7 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // The path of a plain reference. An effect that requires one names it
-    // through this.
+    // The path of a plain reference, and nil for any other expression.
     public var referencePath: Path? {
         guard case let .reference(path) = self else { return nil }
 
@@ -175,10 +184,8 @@ public indirect enum Expression: Sendable {
     }
 
     // The value of an expression that needs no scope. Nil the moment any part
-    // must resolve at run time. Load-time gates (an atom validating its literal
-    // operand, the builder judging a constant argument) use this to judge what
-    // can be judged before any run.
-    public var constantValue: Value? {
+    // must resolve at run time.
+    var constantValue: Value? {
         switch self {
         case let .literal(value):
             return value
@@ -187,11 +194,6 @@ public indirect enum Expression: Sendable {
             let values = array.compactMap(\.constantValue)
 
             return values.count == array.count ? .array(values) : nil
-
-        case let .record(record):
-            let values = record.compactMapValues(\.constantValue)
-
-            return values.count == record.count ? .record(Record(name: nil, values)) : nil
 
         default:
             return nil
@@ -202,7 +204,7 @@ public indirect enum Expression: Sendable {
     // chooses a way through a body, not a value, so it has nothing to give a
     // slot that holds an answer and nothing for a name to bind. What never
     // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
-    public var answersNothing: Bool {
+    var answersNothing: Bool {
         if case .conditional = self { return true }
 
         return false
@@ -211,7 +213,7 @@ public indirect enum Expression: Sendable {
     // Whether the construct decides what the statement's name holds: a loop's
     // round, an attempt's failure. The name is the construct's to bind, so what
     // it holds is not the author's to declare.
-    public var namesItsOwn: Bool {
+    var namesItsOwn: Bool {
         switch self {
         case .loop, .attempt:
             return true
@@ -221,23 +223,29 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // The sentences the construct rule refuses with, stated once beside the
-    // predicate that decides them. The load and the build both refuse a
-    // construct in an operand, with `constructInOperand`.
-    public static let constructInOperand =
-        "a construct runs a body, and a call's operand is data."
-            + " A body a procedure is to run travels as a closure"
-    public static let declarationOnABoundName =
-        "this construct binds the name. A loop's round or"
+    // Sentences the load refuses with, stated beside the predicates that
+    // decide them.
+    static let constructWhereAValueIsWanted =
+        "a construct runs a body, and is written only as a statement's value."
+            + " A statement before this one runs the body and its name is read here,"
+            + " or a closure carries the body"
+    static let valueCallInOperand =
+        "calls a value, and which procedure that is, is the run's"
+            + " answer, so an operand cannot be read without running"
+            + " it. A statement calls it and the operand reads its name"
+    // What never finishes, said once for the load, which sees a leave, and
+    // the build, which sees a call answering `Never`.
+    static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
+    static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
+    static let resultAfterWhatNeverFinishes = "follows a body that never finishes, and would never be reached"
+    static let declarationOnABoundName =
+        "this construct binds the name, a loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
-    public static let constructInCondition =
-        "a construct runs a body, and a condition is data."
-            + " What a body decides reaches a condition through a procedure"
 
-    // Whether a construct (a type that runs a body, or leaves) sits anywhere
+    // Whether a construct (a form that runs a body, or leaves) sits anywhere
     // in this expression read as data. A closure is data (the body it carries
     // is its own), so the walk does not enter it.
-    public var holdsConstruct: Bool {
+    var holdsConstruct: Bool {
         switch self {
         case .literal, .reference, .closure:
             return false
@@ -247,6 +255,9 @@ public indirect enum Expression: Sendable {
 
         case let .record(record):
             return record.values.contains { field in field.holdsConstruct }
+
+        case let .dictionary(entries):
+            return entries.contains { entry in entry.key.holdsConstruct || entry.value.holdsConstruct }
 
         case let .apply(callee, arguments):
             return callee.holdsConstruct
@@ -265,14 +276,53 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // Whether every way through this expression leaves. Structural and
-    // conservative: a loop may run no round and an attempt's rescue may finish
-    // normally, so neither counts; a call is judged at the build, where its
-    // signature is known. The build's type walk reads the same fact over the
-    // full program, symbols included. This is the symbol-free half of that
-    // judgment, and what it buys is the stage: a document is refused at the
-    // load.
-    public var alwaysLeaves: Bool {
+    // Whether a value call sits anywhere in this expression read as data. A
+    // closure is data, so the walk does not enter it, and a construct is
+    // `holdsConstruct`'s to say.
+    var callsValue: Bool {
+        switch self {
+        case .literal, .reference, .closure, .block, .conditional, .loop, .attempt, .leave:
+            return false
+
+        case let .array(array):
+            return array.contains { element in element.callsValue }
+
+        case let .record(record):
+            return record.values.contains { field in field.callsValue }
+
+        case let .dictionary(entries):
+            return entries.contains { entry in entry.key.callsValue || entry.value.callsValue }
+
+        case .apply:
+            return true
+
+        case let .call(call):
+            return call.arguments.contains { argument in argument.callsValue }
+
+        case let .cast(value, _, _):
+            return value.callsValue
+        }
+    }
+
+    // Every name a path in here is headed by, at whatever depth, a closure's
+    // body and an index's own path included.
+    //
+    // Flat, because a body may not introduce a name the module bound, so a
+    // head spelled as a module's constant is that constant wherever it
+    // stands.
+    var pathHeads: Set<Name> {
+        subexpressions.reduce(into: Set<Name>()) { names, held in
+            guard case let .reference(path) = held else { return }
+
+            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
+        }
+    }
+
+    // Whether every way through this expression leaves, read off the text
+    // alone: a loop may run no round and an attempt's rescue may finish
+    // normally, so neither counts, and a call is judged at the build, where
+    // its signature is known.
+    var alwaysLeaves: Bool {
         switch self {
         case .leave:
             return true

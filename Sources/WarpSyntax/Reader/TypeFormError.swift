@@ -10,12 +10,12 @@ import Warp
 
 // A type spelled in a way this notation cannot read. About the writing, not
 // about the language. Whether the type it names exists is a link question.
-public struct TypeFormError: WarpError {
+struct TypeFormError: WarpError {
     // MARK: - Property
-    public let message: String
+    let message: String
 
     // MARK: - Initializer
-    public init(_ message: String) {
+    init(_ message: String) {
         self.message = message
     }
 

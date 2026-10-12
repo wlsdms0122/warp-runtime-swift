@@ -60,7 +60,7 @@ struct LinkBoundaryTests {
     // MARK: - Public
     // MARK: - Private
     // A document that hands out a procedure taking one of its declared types.
-    private func link(declaring types: [Name: TypeExpression]) throws -> [Module] {
+    private func link(declaring types: [Name: TypeDeclaration]) throws -> [Module] {
         [
             try Module(Draft(
                 types: types,
@@ -74,7 +74,7 @@ struct LinkBoundaryTests {
                                 returns: .any
                             ),
                             body: [],
-                            result: .reference([.key("it")])
+                            result: .reference([.name("it")])
                         ))
                     ),
                     "entry": Procedure(

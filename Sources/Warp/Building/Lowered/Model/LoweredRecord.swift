@@ -7,50 +7,52 @@
 
 import Foundation
 
-// A record's fields as the build laid them out: the layout a value settling
-// here is built on, and the type of the field at each of its places. One
-// type per field, checked where the pair is made, so every reading may take
-// the two together.
+// A declared record's fields as the build laid them out: the record's name,
+// the field names in the order a value's fields stand, and the type of the
+// field at each of those places. One type per field, checked where the pair is
+// made, so every reading may take the two together.
 struct LoweredRecord: Sendable, Equatable {
     // MARK: - Property
-    let layout: Layout
+    let name: Name
+
+    // In ascending byte order, as `Name`'s `<` orders them.
+    let names: [Name]
+
     let fields: [LoweredType]
 
     // The names beside the types, in the layout's order.
     var named: Zip2Sequence<[Name], [LoweredType]> {
-        zip(layout.fields, fields)
+        zip(names, fields)
     }
 
-    // What a loop binds each round. The build judges a round against it and
-    // the run builds each round on its layout, so the place the build lowers
-    // is the place the value puts the field at.
-    static let round = LoweredRecord(layout: Layout(name: nil, ordered: ["index"]), fields: [.int])
+    // The layout a value of the record is built on.
+    var layout: Layout {
+        Layout(name: name, ordered: names)
+    }
 
     // MARK: - Initializer
-    // The same, where the two were read apart and the pairing is what has to be
-    // true. The inner door is reached with a pairing this proved, which is what
-    // makes its promise a fact rather than an assumption.
-    init(layout: Layout, judging fields: [LoweredType]) throws {
-        guard layout.fields.count == fields.count else {
-            throw ObjectRefused(
-                "a record names \(layout.fields.count) field(s) and holds \(fields.count)"
-            )
-        }
+    // The maker already put the names in order, one type each.
+    init(name: Name, names: [Name], fields: [LoweredType]) {
+        assert(names.ordered && names.count == fields.count, "a record has one type per field it names, in name order")
 
-        self.init(layout: layout, fields: fields)
-    }
-
-    // The inner door: the maker already stands on the layout.
-    init(layout: Layout, fields: [LoweredType]) {
-        assert(layout.fields.count == fields.count, "a record has one type per field its layout names")
-
-        self.layout = layout
+        self.name = name
+        self.names = names
         self.fields = fields
     }
 
     // MARK: - Public
     subscript(field: Name) -> LoweredType? {
-        layout.position(of: field).map { place in fields[place] }
+        position(of: field).map { place in fields[place] }
+    }
+
+    // Where a field stands, or nil where the record does not name it.
+    func position(of field: Name) -> Int? {
+        names.firstIndex(of: field)
+    }
+
+    // The same fields, each type put through `transform`.
+    func mapFields(_ transform: (LoweredType) throws -> LoweredType) rethrows -> LoweredRecord {
+        LoweredRecord(name: name, names: names, fields: try fields.map(transform))
     }
 
     // MARK: - Private

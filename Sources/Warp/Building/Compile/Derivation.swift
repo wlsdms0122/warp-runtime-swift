@@ -8,8 +8,8 @@
 import Foundation
 
 // The facts nobody declared, worked out over a document's declarations at
-// once: constness, isolation, what may fail, and whose answers stand as
-// declared. Each is a fixed point over what the bodies reach.
+// once: constness, isolation and what may fail. Each is a fixed point over
+// what the bodies reach.
 struct Derivation {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a
@@ -18,17 +18,12 @@ struct Derivation {
     private struct Fact {
         // MARK: - Property
         let callee: (Name) -> Bool
-        let claim: (LoweredType) -> (LoweredTypeTable) -> Bool
+        let claim: (LoweredType) -> Bool
         let unread: Set<Name>
         let table: LoweredTypeTable
 
         // MARK: - Initializer
         // MARK: - Public
-        // Whether a slot of this type says the fact of the procedure it holds.
-        func isClaimed(by type: LoweredType) -> Bool {
-            claim(type)(table)
-        }
-
         // MARK: - Private
     }
 
@@ -36,8 +31,8 @@ struct Derivation {
     // MARK: - Initializer
     // MARK: - Public
     // Which of these answer without running. A native says so about itself; a
-    // body cannot, so it is read off what it calls. What is settled grows in
-    // place: a document is settled against everything standing in front of
+    // body cannot, so it is read off what it calls. What is derived grows in
+    // place: a document is derived against everything standing in front of
     // it, and this call only ever adds its own.
     //
     // `beyond` answers for a selector this document does not declare: the
@@ -45,7 +40,7 @@ struct Derivation {
     // module's variables by the type each declared, which every body reads.
     func const(
         among symbols: [Symbol],
-        settling const: inout Set<Name>,
+        deriving const: inout Set<Name>,
         reading variables: Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
@@ -56,11 +51,11 @@ struct Derivation {
         // place is the caller's box, not the body's own.
         strike(
             among: symbols,
-            settling: &const,
+            deriving: &const,
             natively: { implementation in implementation.isNativelyConst != false },
             declaring: \.ownedParameters,
             fact: { given in
-                Fact(callee: given, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table)
+                Fact(callee: given, claim: \.isConstProcedure, unread: variables, table: table)
             },
             beside: declared,
             taking: asked,
@@ -74,7 +69,7 @@ struct Derivation {
     // and calls.
     func isolated(
         among symbols: [Symbol],
-        settling isolated: inout Set<Name>,
+        deriving isolated: inout Set<Name>,
         beside declared: [Name: LoweredType],
         taking asked: @escaping (Name) -> Signature?,
         beyond: @escaping (Name) -> Bool,
@@ -82,11 +77,11 @@ struct Derivation {
     ) {
         strike(
             among: symbols,
-            settling: &isolated,
+            deriving: &isolated,
             natively: { implementation in implementation.isNativelyIsolated != false },
             declaring: { signature in Set(signature.names) },
             fact: { given in
-                Fact(callee: given, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table)
+                Fact(callee: given, claim: \.isIsolatedProcedure, unread: [], table: table)
             },
             beside: declared,
             taking: asked,
@@ -102,11 +97,11 @@ struct Derivation {
     // Grown rather than struck out, the opposite of constness and isolation: a
     // body starts failing nothing and gains what it reaches, and a declaration
     // that says nothing about itself makes everything reaching it say nothing
-    // too. Two procedures calling each other settle where nothing more is
+    // too. Two procedures calling each other stop where nothing more is
     // added, which the finite set of declared names guarantees.
     func failing(
         among symbols: [Symbol],
-        settling failing: inout [Name: Failing],
+        deriving failing: inout [Name: Failing],
         beyond: @escaping (Name) -> Failing?
     ) {
         let own = Set(symbols.map(\.declared))
@@ -123,8 +118,10 @@ struct Derivation {
             var grown = false
 
             for (name, block) in bodies {
-                let settled = failing
-                let read = self.failing(block, given: { selector in own.contains(selector) ? settled[selector] : beyond(selector) })
+                let before = failing
+                let read = self.failing(block) { selector in
+                    own.contains(selector) ? before[selector] : beyond(selector)
+                }
 
                 guard read != failing[name] else { continue }
 
@@ -139,10 +136,7 @@ struct Derivation {
     // What may come out of a block: everything its statements and its result
     // may fail with.
     func failing(_ block: Block, given failing: (Name) -> Failing?) -> Failing {
-        block.body.statements
-            .reduce(Failing.these([])) { carried, statement in
-                carried.joined(self.failing(statement.expression, given: failing))
-            }
+        self.failing(block.body, given: failing)
             .joined(block.result.map { result in self.failing(result, given: failing) } ?? .these([]))
     }
 
@@ -171,6 +165,9 @@ struct Derivation {
 
         case let .record(record):
             return record.values.reduce(here) { carried, field in carried.joined(read(field)) }
+
+        case let .dictionary(entries):
+            return entries.reduce(here) { carried, entry in carried.joined(read(entry.key)).joined(read(entry.value)) }
 
         case let .call(call):
             return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
@@ -208,7 +205,7 @@ struct Derivation {
         case let .cast(_, _, optional):
             return optional ? .these([]) : .these([CastRefused.type])
 
-        // Which value is called is settled at run time, so what may come out
+        // Which value is called is decided at run time, so what may come out
         // of it is not knowable here.
         case .apply:
             return .unstated
@@ -216,7 +213,7 @@ struct Derivation {
         case let .call(call):
             return failing(call.selector) ?? .unstated
 
-        case .literal, .reference, .closure, .array, .record, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .array, .record, .dictionary, .block, .conditional, .loop, .attempt, .leave:
             return .these([])
         }
     }
@@ -239,7 +236,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: const, claim: LoweredType.isConstProcedure(in:), unread: variables, table: table),
+            Fact(callee: const, claim: \.isConstProcedure, unread: variables, table: table),
             declaring: names,
             bound: declared,
             taking: asked
@@ -259,7 +256,7 @@ struct Derivation {
     ) -> Bool {
         holds(
             block,
-            Fact(callee: isolated, claim: LoweredType.isIsolatedProcedure(in:), unread: [], table: table),
+            Fact(callee: isolated, claim: \.isIsolatedProcedure, unread: [], table: table),
             declaring: parameters,
             bound: declared,
             taking: asked
@@ -291,36 +288,14 @@ struct Derivation {
         }
     }
 
-    // Which of a document's declarations hand back as they declare. Each whose
-    // own body holds starts held and is let go where it leans on one of
-    // the document's that does not, until nothing more is let go: the
-    // greatest such set, so a declaration leaning on itself, or two on each
-    // other, keep what nothing else took away. A name nothing proved is let
-    // go by whatever leans on it.
-    func handsBackAsDeclared(_ proofs: [Name: HandBackProof]) -> Set<Name> {
-        var leanings: [Name: Set<Name>] = [:]
-
-        for case let (name, .holds(leaning)) in proofs {
-            leanings[name] = leaning
-        }
-
-        var proven = Set(leanings.keys)
-
-        while let fallen = leanings.first(where: { name, leaning in proven.contains(name) && !leaning.isSubset(of: proven) })?.key {
-            proven.remove(fallen)
-        }
-
-        return proven
-    }
-
     // MARK: - Private
     // Every body starts holding the fact and is struck when something it
     // reaches does not, until nothing more is struck. Only what this call was
-    // handed can be struck: what was settled before it stands in front of it
+    // handed can be struck: what was derived before it stands in front of it
     // and reaches nothing here.
     private func strike(
         among symbols: [Symbol],
-        settling holding: inout Set<Name>,
+        deriving holding: inout Set<Name>,
         natively: (Implementation) -> Bool,
         declaring: (Signature) -> Set<Name>,
         fact: (@escaping (Name) -> Bool) -> Fact,
@@ -356,8 +331,8 @@ struct Derivation {
         )
 
         while true {
-            let settled = holding
-            let walked = fact { name in own.contains(name) ? settled.contains(name) : beyond(name) }
+            let before = holding
+            let walked = fact { name in own.contains(name) ? before.contains(name) : beyond(name) }
             let struck = bodies.compactMap { name, written in
                 holding.contains(name)
                     && !holds(
@@ -465,6 +440,9 @@ struct Derivation {
         case let .record(record):
             return record.values.allSatisfy(holds)
 
+        case let .dictionary(entries):
+            return entries.allSatisfy { entry in holds(entry.key) && holds(entry.value) }
+
         case let .call(call):
             guard fact.callee(call.selector) else { return false }
 
@@ -484,10 +462,10 @@ struct Derivation {
             guard
                 holds(callee),
                 let reached = reached(callee, given: { name in declared[name] }, in: fact.table),
-                fact.isClaimed(by: reached)
+                fact.claim(reached)
             else { return false }
 
-            return handsOwned(arguments, at: reached.inPlacePositions(in: fact.table), declaring: names)
+            return handsOwned(arguments, at: reached.inPlacePositions, declaring: names)
                 && arguments.allSatisfy(holds)
 
         // Which part of a construct runs is decided inside the body, so a
@@ -508,11 +486,11 @@ struct Derivation {
 
     // The type this reads, as the slot it came out of says it, and nil where
     // it came out of none. The head is a name a slot declared, and the walk
-    // follows that type past it: an index reads an element of an array or a
-    // dictionary, and a dot reads an entry of a dictionary or a field a record
-    // type declares. An array or a dictionary of them says it about every
-    // element, and the value was settled against that type when it was handed
-    // over, so what the type says of the part is what the slot said. A name no
+    // follows that type past it: brackets read an element of a list or an
+    // entry of a map, and a dot reads a field a record type declares. A list
+    // or a map of them says it about every element or entry, and the value
+    // was judged against that type when it was handed over, so what the type
+    // says of the part is what the slot said. A name no
     // slot declared says nothing, and anything that is not a name has no slot
     // to say anything.
     private func reached(
@@ -525,9 +503,9 @@ struct Derivation {
         return path.segments.dropFirst().reduce(declared(head)) { reached, segment in
             switch segment {
             case .index, .indexRef:
-                return reached?.element(in: table)
+                return reached?.element
 
-            case let .key(name, _):
+            case let .name(name, _):
                 return reached?.dotted(name, in: table)
             }
         }

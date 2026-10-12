@@ -18,8 +18,8 @@ struct FoldedContractTests {
     // MARK: - Test
     @Test("a null leans on a claim about Null the way any value leans on its type's")
     func aNullLeansOnAClaimAboutNull() async throws {
-        // Given. A procedure answering `Any` hands null where a contract is
-        // asked, and a document claims the contract for `Null`.
+        // Given. A procedure answering `Any` hands null, cast to a contract,
+        // where the contract is asked, and a document claims it for `Null`.
         let answering = try Module(
             claims: ["Null": ["App.Describable"]],
             procedures: [
@@ -43,7 +43,7 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build(asking)
         } throws: { error in
-            "\(error)".contains("constants.App.counted:")
+            "\(error)".contains("constants.counted:")
                 && "\(error)".contains("no document in this link says 'Null' answers it")
         }
     }
@@ -81,8 +81,9 @@ struct FoldedContractTests {
             procedures: [
                 "App.count": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
-                        returns: .int
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
+                        returns: .int,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .literal(.int(1))
@@ -103,19 +104,19 @@ struct FoldedContractTests {
             types: ["Bank.Plain": .record(["note": .string]), "Zed.Plain": .record(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        // `App.aaa` settles first and `App.zzz` last, and the pair the list
-        // reports first is `Bank.Plain`, which `App.zzz` handed.
+        // `aaa` settles first and `zzz` last, and the pair the list
+        // reports first is `Bank.Plain`, which `zzz` handed.
         let program = try Module(
             constants: [
-                "App.aaa": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveEarly"))])),
-                "App.zzz": .call(Call(selector: "App.count", arguments: [.call(Call(selector: "App.giveLate"))]))
+                "aaa": .call(Call(selector: "App.count", arguments: [.cast(.call(Call(selector: "App.giveEarly")), as: .named("App.Describable"), optional: false)])),
+                "zzz": .call(Call(selector: "App.count", arguments: [.cast(.call(Call(selector: "App.giveLate")), as: .named("App.Describable"), optional: false)]))
             ],
             procedures: [
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("App.zzz")])
+                    result: .reference([.name("zzz")])
                 )
             ]
         )
@@ -124,16 +125,17 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("constants.App.zzz:")
+            "\(error)".contains("constants.zzz:")
                 && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
         }
     }
 
-    @Test("a value wearing a name is written down where the table cannot settle")
+    @Test("a value wearing a name is written down where the table cannot decide")
     func aNamedValueIsWrittenDown() async throws {
-        // Given. A procedure answering `Any` hands a named record where a
-        // contract is asked, and the reading says nothing about what arrives,
-        // so nothing is written down where the call is read.
+        // Given. A procedure answering `Any` hands a named record, cast to a
+        // contract, where the contract is asked, and the reading says nothing
+        // about what arrives, so nothing is written down where the call is
+        // read.
         let typed = try Module(
             types: ["Bank.Plain": .record(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
@@ -153,12 +155,12 @@ struct FoldedContractTests {
 
         // Then. The pair the fold handed over is answered by the list, which
         // is the same answer the whole graph gives, and both say which
-        // declaration was being settled when the fold turned it up.
+        // declaration was being worked out when the fold turned it up.
         for link in [compiled, try await Builder().compile(modules)] {
             #expect {
                 try Builder().link(link, supplying: Supplying(Module.standard))
             } throws: { error in
-                "\(error)".contains("constants.App.counted:")
+                "\(error)".contains("constants.counted:")
                     && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
             }
         }
@@ -172,8 +174,9 @@ struct FoldedContractTests {
             procedures: [
                 "App.count": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))],
-                        returns: .int
+                        parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
+                        returns: .int,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .literal(.int(1))
@@ -187,8 +190,11 @@ struct FoldedContractTests {
         )
         let program = try Module(
             constants: [
-                "App.counted": .call(
-                    Call(selector: "App.count", arguments: [.call(Call(selector: "App.give"))])
+                "counted": .call(
+                    Call(
+                        selector: "App.count",
+                        arguments: [.cast(.call(Call(selector: "App.give")), as: .named("App.Describable"), optional: false)]
+                    )
                 )
             ],
             procedures: [
@@ -196,7 +202,7 @@ struct FoldedContractTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .reference([.key("App.counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )

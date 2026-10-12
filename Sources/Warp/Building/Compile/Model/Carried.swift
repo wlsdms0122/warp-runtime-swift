@@ -10,10 +10,9 @@ import Foundation
 // What documents already compiled leave the one compiled after them.
 //
 // None of it is read against a table. A row's slots were lowered against one,
-// but where a row stands, what number reaches it and what a document proved
-// about its own body are the documents' own and move for nothing laid after
-// them. What a compile brings of its own is the table, and that is why it is
-// not here: everything here is taken as it is.
+// but where a row stands, what number reaches it and what the build read off
+// a body are the documents' own and move for nothing laid after them. The
+// table is what a compile brings of its own.
 struct Carried: Sendable {
     // MARK: - Property
     // The rows the documents stand as, and which row each declared spelling

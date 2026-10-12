@@ -23,34 +23,34 @@ struct ModuleDeclarationTests {
     // MARK: - Test
     @Test("a spelling names the declaration written under it, in its own document too")
     func ownDeclarationIsSpelledQualified() async throws {
-        // Given. `first` calls its own `helper` as `first.helper`, and `second`
-        // declares a `helper` of its own, which is `second.helper`
+        // Given. `first` calls its own `helper` as `First.helper`, and `second`
+        // declares a `helper` of its own, which is `Second.helper`
         let first = try loader.loadDocument([
             "procedures": [
-                "first.entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "first.helper"]]]],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                "First.entry": [
+                    "body": [["let": "said", "value": ["call": ["procedure": "First.helper"]]]],
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
-                "first.helper": [
+                "First.helper": [
                     "body": [["let": "done", "value": "from first"]],
-                    "result": ["record": ["said": ["ref": "done"]]]
+                    "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
             ]
         ])
         let second = try loader.loadDocument([
             "procedures": [
-                "second.helper": [
+                "Second.helper": [
                     "body": [["let": "done", "value": "from second"]],
-                    "result": ["record": ["said": ["ref": "done"]]]
+                    "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
             ]
         ])
 
         // When
-        let outputs = try await run([first, second], entry: "first.entry")
+        let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
-        #expect(outputs["result"] == .dictionary(["said": .string("from first")]))
+        #expect(outputs.map?["result"] == .dictionary(["said": .string("from first")]))
     }
 
     @Test("a bare name for another module's procedure is refused at the build")
@@ -59,17 +59,17 @@ struct ModuleDeclarationTests {
         let caller = try loader.loadDocument([
             "imports": ["greet"],
             "procedures": [
-                "caller.entry": [
+                "Caller.entry": [
                     "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ]
             ]
         ])
         let library = try loader.loadDocument([
             "procedures": [
-                "greeting.greet": [
+                "Greeting.greet": [
                     "body": [["let": "done", "value": "hello"]],
-                    "result": ["record": ["said": ["ref": "done"]]]
+                    "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
             ]
         ])
@@ -86,32 +86,32 @@ struct ModuleDeclarationTests {
     func qualifiedNameReachesAcross() async throws {
         // Given. `first` has a `helper` of its own and asks for the other one
         let first = try loader.loadDocument([
-            "imports": ["second.helper"],
+            "imports": ["Second.helper"],
             "procedures": [
-                "first.entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "second.helper"]]]],
-                    "result": ["record": ["result": ["ref": "said"]]]
+                "First.entry": [
+                    "body": [["let": "said", "value": ["call": ["procedure": "Second.helper"]]]],
+                    "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
-                "first.helper": [
+                "First.helper": [
                     "body": [["let": "done", "value": "from first"]],
-                    "result": ["record": ["said": ["ref": "done"]]]
+                    "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
             ]
         ])
         let second = try loader.loadDocument([
             "procedures": [
-                "second.helper": [
+                "Second.helper": [
                     "body": [["let": "done", "value": "from second"]],
-                    "result": ["record": ["said": ["ref": "done"]]]
+                    "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
             ]
         ])
 
         // When
-        let outputs = try await run([first, second], entry: "first.entry")
+        let outputs = try await run([first, second], entry: "First.entry")
 
         // Then
-        #expect(outputs["result"] == .dictionary(["said": .string("from second")]))
+        #expect(outputs.map?["result"] == .dictionary(["said": .string("from second")]))
     }
 
     @Test("a constant is a name bound to a value, settled before any run")
@@ -122,7 +122,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "body": [["let": "said", "value": ["ref": "greeting"]]],
-                    "result": ["record": ["result": ["ref": "said"], "cap": ["ref": "limit"]]]
+                    "result": ["dictionary": [["result", ["ref": "said"]], ["cap", ["ref": "limit"]]]]
                 ]
             ]
         ])
@@ -131,8 +131,8 @@ struct ModuleDeclarationTests {
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .string("hello"))
-        #expect(outputs["cap"] == .int(3))
+        #expect(outputs.map?["result"] == .string("hello"))
+        #expect(outputs.map?["cap"] == .int(3))
     }
 
     @Test("a constant may name another declared beside it, but not one that names it back")
@@ -147,22 +147,21 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "body": [["let": "seen", "value": ["ref": "url"]]],
-                    "result": ["record": ["result": ["ref": "seen"]]]
+                    "result": ["dictionary": [["result", ["ref": "seen"]]]]
                 ]
             ]
-        ])
-        let cyclic = try loader.loadDocument([
-            "const": ["a": ["ref": "b"], "b": ["ref": "a"]],
-            "procedures": ["entry": ["body": [["let": "seen", "value": ["ref": "a"]]]]]
         ])
 
         // When / Then
         let outputs = try await run(composed)
 
-        #expect(outputs["result"] == .string("https://example.com/api"))
+        #expect(outputs.map?["result"] == .string("https://example.com/api"))
 
-        await #expect(throws: BuildError.self) {
-            try await Builder().build([cyclic])
+        #expect(throws: ValidationError.self) {
+            try loader.loadDocument([
+                "const": ["a": ["ref": "b"], "b": ["ref": "a"]],
+                "procedures": ["entry": ["body": [["let": "seen", "value": ["ref": "a"]]]]]
+            ])
         }
     }
 
@@ -207,7 +206,7 @@ struct ModuleDeclarationTests {
                             "value": ["as": ["of": ["record": ["last": "42"]], "type": "Bank.Card"]]
                         ]
                     ],
-                    "result": ["record": ["result": ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]
+                    "result": ["dictionary": [["result", ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]]
                 ],
                 "App.tell": [
                     "parameters": [["name": "it", "type": "some T"]],
@@ -231,7 +230,7 @@ struct ModuleDeclarationTests {
         // When / Then
         let outputs = try await run(sut, entry: "entry")
 
-        #expect(outputs["result"] == .string("a card"))
+        #expect(outputs.map?["result"] == .string("a card"))
     }
 
     // MARK: - Public

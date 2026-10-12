@@ -10,12 +10,12 @@ import Foundation
 // Takes every module this link was given and answers with an image, or
 // refuses.
 //
-// A build is handed its whole module graph at once. The procedures a program can
-// call are the procedures the host put in front of it, so what to build is the
-// host's statement and joining the names up is this. A module's `imports` says what it
-// asks for and never where to find it. Which declaration a run starts from is
-// the run's argument: an image is every declaration the link judged, and a
-// host starts a run from any public one.
+// A build is handed its whole module graph at once. The procedures a program
+// can call are the procedures the host put in front of it, so what to build is
+// the host's statement and joining the names up is this. A module's `imports`
+// says what it asks for and never where to find it. Which declaration a run
+// starts from is the run's argument: an image is every declaration the link
+// judged, and a host starts a run from any public one.
 //
 // Every declaration is judged. A misspelled procedure in an arm today's
 // arguments never take is a defect whether or not a run walks that way, and so
@@ -27,12 +27,13 @@ import Foundation
 // another module in the same link.
 //
 // A name is its declared spelling and nothing else. A call site says
-// `Standard.Math.floored`, and that is the one declaration it can mean, wherever it was
-// written; the image the executor runs is spelled the way the documents were,
-// so a run never has to ask again. Constants settle here: compiling folds a
-// read of one into its value wherever the run has nothing left to settle.
+// `Standard.Math.floored`, and that is the one declaration it can mean,
+// wherever it was written; the image the executor runs is spelled the way the
+// documents were, so a run never has to ask again. Constants settle here:
+// compiling folds a read of one into its value wherever the run has nothing
+// left to decide.
 //
-// Two stages. Compiling (`Compiler`, one document at a time) settles
+// Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
 // declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
 // facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
@@ -77,8 +78,8 @@ public struct Builder: Sendable {
     // every run.
     //
     // The order is worked out here. What a document reaches is read off the
-    // procedures it sends and the types its signatures name, neither of which a
-    // host wrote down, so a host has nothing to sort by.
+    // procedures it sends and the types and contracts it names, none of which
+    // a host wrote down, so a host has nothing to sort by.
     public func compile(_ modules: [Module]) async throws -> [Compiled] {
         try await compile(modules, against: [], supplying: .none)
     }
@@ -105,9 +106,9 @@ public struct Builder: Sendable {
     // host compiling against them more than once pays for that once.
     //
     // What it costs is every declaration behind the one being compiled: its
-    // signature lowered into slots, and for a native the host's procedure joined to
-    // it under its spelling. A host brings the same vocabulary every run, and
-    // this is where it stops turning it into rows every time.
+    // signature lowered into slots, and for a native the host's procedure
+    // joined to it under its spelling. A host brings the same vocabulary every
+    // run, and this is where it stops turning it into rows every time.
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 
@@ -119,7 +120,12 @@ public struct Builder: Sendable {
         let assembled = try Assembled(compiled)
         let linkage = Linkage()
         let namespace = try TypeNamespace(compiled)
+
+        try ModuleGraph.stand(compiled)
+
         let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: linkage)
+
+        try DeclarationChecker().judge(compiled, in: declaring)
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
@@ -190,7 +196,7 @@ public struct Builder: Sendable {
 
         try refuseRepeated(modules.map(Place.Document.of), held: laid.identities)
 
-        try refuseDoubled(modules, after: compiled.count)
+        try refuseDoubled(modules, against: laid)
 
         let namespace = try TypeNamespace(compiled + modules)
         let standing = try ModuleGraph(modules, after: compiled.count).standing
@@ -230,16 +236,23 @@ public struct Builder: Sendable {
 
         let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
 
-        try DeclarationChecker().judge(laying, in: declaring)
+        // The compile's ledger, woven into the table its rows are built from.
+        // A body folded here runs against a table that cannot decide a
+        // contract, and what it hands over is written here rather than passed
+        // over. A map's key the declarations lean on is the first thing
+        // written.
+        let fulfillment = Fulfillment()
+
+        try DeclarationChecker().judge(
+            laying,
+            from: compiled.count,
+            in: declaring.satisfying([:], fulfillment: fulfillment)
+        )
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
-        // their rows, and what they wrote themselves. A name two of them
-        // declare is refused here.
-        //
-        // Refused rather than taken as the host's statement, which the order
-        // is: a doubled spelling is not a question of which document to read
-        // first, it is a table with no answer for that name.
+        // their rows, and what they wrote themselves. No spelling is in it
+        // twice, which was refused before the order was worked out.
         var signatures = laid.signatures
 
         // The declarations of each document laid down, under the row it will
@@ -264,15 +277,6 @@ public struct Builder: Sendable {
             // neither held to a spelling another document took nor in the
             // space another document resolves in.
             for symbol in symbols where symbol.supplies {
-                if let first = signatures[symbol.declared] {
-                    throw BuildError(
-                        "'\(symbol.declared)' is declared by \(first.spelled) and by"
-                            + " \(symbol.spelled). Two declarations of a name have no way"
-                            + " to be told apart",
-                        at: symbol.place
-                    )
-                }
-
                 signatures[symbol.declared] = Placed(
                     Declared(signature: symbol.procedure.signature, access: symbol.procedure.access),
                     at: symbol.place,
@@ -289,17 +293,12 @@ public struct Builder: Sendable {
             symbols.filter { symbol in !symbol.supplies }.map(\.declared)
         })
 
-        // The compile's ledger, woven into the table its rows are built from.
-        // A body folded here runs against a table that cannot settle a
-        // contract, and what it hands over is written here rather than passed
-        // over.
-        let fulfillment = Fulfillment()
         let lowered = try ClaimChecker().lowered(
             declaring,
             in: namespace,
             among: signatures,
             concealed: concealed,
-            unsettled: fulfillment
+            fulfillment: fulfillment
         )
 
         // A document never written down is told from another by this compile
@@ -326,8 +325,8 @@ public struct Builder: Sendable {
         // stands on, by the place it stands at: the ones declaring what it
         // names, read off its object where it is compiled already, so how the
         // host split the documents between compiles changes nothing.
-        let supplied = compiled.map(\.declares) + laying.map(\.supplies)
-        let named = compiled.map(\.reaches) + laying.map(\.references)
+        let supplied = compiled.map(\.supplies) + laying.map(\.supplies)
+        let named = compiled.map(\.references) + laying.map(\.references)
         let standingOn = named.map { reaches in
             Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
         }
@@ -380,7 +379,17 @@ public struct Builder: Sendable {
         // contracts is read across the documents, so the rows a body stands on
         // are answered here rather than carried out of a compile.
         let namespace = try TypeNamespace(compiled)
+
+        // Each object stands after what it names, the order the documents it
+        // was compiled from stood in, and every type it names is declared
+        // here, since it may have been compiled beside other documents than
+        // these.
+        try ModuleGraph.stand(compiled)
+
         let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: Linkage())
+
+        try DeclarationChecker().judge(compiled, in: declaring)
+
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
         let lowered = try ClaimChecker().lowered(
@@ -402,7 +411,12 @@ public struct Builder: Sendable {
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
-        let relocating = try Relocating(assembled, types: types, supplied: natives)
+        let relocating = try Relocating(
+            assembled,
+            types: types,
+            contractProcedures: lowered.contractProcedures,
+            supplied: natives
+        )
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
 
@@ -440,7 +454,7 @@ public struct Builder: Sendable {
     }
 
     // Every object standing beside what it was compiled against. An object
-    // says what it leaned on by fingerprint, and what it settled, a closure
+    // says what it leaned on by fingerprint, and what it worked out, a closure
     // spelled by a document's name and count among them, is true against
     // exactly those compiles of them. A document that leaned on nothing a
     // fingerprint was worked out for says nothing here. One that did is
@@ -470,9 +484,9 @@ public struct Builder: Sendable {
     private func fingerprinted(_ object: Compiled) throws -> Compiled {
         guard let fingerprinting else { return object }
 
-        // Nothing to work a fingerprint out from, for one of the reasons an
-        // object has none, and none of them is something that went wrong. The
-        // document stands without one.
+        // An object `ObjectWriter` cannot write has nothing to work a
+        // fingerprint out from, and the document stands without one. Why is
+        // `object()`'s to say, to a host that asks for the object.
         guard let written = try? object.object() else { return object }
 
         return object.fingerprinted(try fingerprinting(written))
@@ -544,12 +558,15 @@ public struct Builder: Sendable {
         }
     }
 
-    // No spelling another document may name declared by two of these. Refused
-    // before the order is worked out: the order reads a name as whichever
-    // document declared it, and where two declare one name that reading can
-    // put a document in its own reach and call the pair a cycle.
-    private func refuseDoubled(_ modules: [Module], after held: Int) throws {
-        var claimed: [Name: Placed<Procedure>] = [:]
+    // No spelling another document may name declared twice: by two of these,
+    // or by one of these and one laid before them. Refused before the order
+    // is worked out: the order reads a name as whichever document declared
+    // it, and where two declare one name that reading can put a document in
+    // its own reach and call the pair a cycle. A doubled spelling is not a
+    // question of which document to read first, it is a table with no answer
+    // for that name.
+    private func refuseDoubled(_ modules: [Module], against laid: Laid) throws {
+        var claimed = laid.signatures.mapValues(\.spelled)
 
         for (position, module) in modules.enumerated() {
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key })
@@ -557,19 +574,14 @@ public struct Builder: Sendable {
                 let declaration = Placed(
                     procedure,
                     at: .procedure(name.spelling, in: .of(module)),
-                    of: held + position
+                    of: laid.compiled.count + position
                 )
 
                 if let first = claimed[name] {
-                    throw BuildError(
-                        "'\(name)' is declared more than once in this link, by"
-                            + " \(first.spelled) and \(declaration.spelled). Two declarations"
-                            + " of a name have no way to be told apart",
-                        at: declaration.place
-                    )
+                    throw BuildError.declaredTwice(name, by: first, and: declaration.spelled, at: declaration.place)
                 }
 
-                claimed[name] = declaration
+                claimed[name] = declaration.spelled
             }
         }
     }

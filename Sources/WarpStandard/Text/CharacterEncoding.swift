@@ -17,16 +17,24 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
     static var names: [String] { allCases.map(\.rawValue) }
 
     // MARK: - Initializer
-    // MARK: - Public
-    // Why a written name is no encoding this has, and nothing where it is one
-    // or where nothing is written yet. Said once, so the build judging a
-    // constant and the run judging what arrived refuse in the same words.
-    static func refusal(naming written: Value, for procedure: String) -> String? {
-        guard case let .string(name) = written, CharacterEncoding(rawValue: name) == nil else { return nil }
+    // The encoding a procedure was handed by name, or why the name is none
+    // this has, in the words both procedures that read one refuse in.
+    init(_ written: Value, for procedure: String) throws {
+        guard case let .string(name) = written else {
+            throw ExecutionError("\(procedure) asks the name of an encoding")
+        }
 
-        return "\(procedure) asks the name of an encoding it has (\(names.joined(separator: ", "))), and '\(name)' is not one"
+        guard let encoding = CharacterEncoding(rawValue: name) else {
+            throw ExecutionError(
+                "\(procedure) asks the name of an encoding it has (\(Self.names.joined(separator: ", "))),"
+                    + " and '\(name)' is not one"
+            )
+        }
+
+        self = encoding
     }
 
+    // MARK: - Public
     func bytes(of text: String) -> [UInt8] {
         switch self {
         case .utf8:
@@ -44,7 +52,7 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
 
     // MARK: - Private
     // Validated by the standard library's own UTF-8, not a platform string
-    // bridge: which bytes are text is this language's judgment, and it must
+    // bridge: which bytes are text is this language's judgement, and it must
     // land the same on every host.
     private func utf8Text(of bytes: [UInt8]) -> String? {
         var text = ""

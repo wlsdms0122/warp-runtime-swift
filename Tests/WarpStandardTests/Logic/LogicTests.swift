@@ -16,10 +16,10 @@ struct LogicTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a connective leaves the rest unasked once the answer is settled")
+    @Test("a connective leaves the rest unasked once the answer is decided")
     func connectivesShortCircuit() async throws {
         // Given. The later side divides by zero, which refuses when it is
-        // asked. `all` is settled by the first false, so it never is
+        // asked. `all` is decided by the first false, so it never is
         let sut = try Module(
             procedures: [
                 entryName: Procedure(

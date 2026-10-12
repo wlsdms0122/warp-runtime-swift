@@ -39,7 +39,7 @@ public struct BreakForm: ConstructForm {
         case let other:
             throw ReadingError(
                 "\(key) takes the name of a loop, or nothing for the"
-                    + " nearest one. Got \(other.type)",
+                    + " nearest one. Got \(other.nominal)",
                 at: decoder.steps
             )
         }

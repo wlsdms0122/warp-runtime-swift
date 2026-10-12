@@ -19,9 +19,9 @@ struct SpellingTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("the language's own table registers at the door a composed one takes")
+    @Test("the language's own table registers as a composed one does")
     func standardTableRegisters() throws {
-        // Given. `standard` stands without the check
+        // Given. `standard` stands without the registration's judgement
         let forms = ConstructRegistry.standard.keys.compactMap(ConstructRegistry.standard.form(for:))
 
         // When
@@ -53,14 +53,14 @@ struct SpellingTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "pick"]]]
+            "result": ["dictionary": [["result", ["ref": "pick"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
 
         // Then
-        #expect(outputs["result"] == .string("took-then"))
+        #expect(outputs.map?["result"] == .string("took-then"))
     }
 
     @Test("registering a form twice is an alias, so both keys work")
@@ -93,7 +93,7 @@ struct SpellingTests {
         let sut = try ConstructRegistry.standard.registering(ConditionalForm.self, as: "unless")
 
         // When / Then. The guard is on the key, not on the form
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try sut.registering(LoopForm.self, as: "unless")
         }
     }
@@ -103,7 +103,7 @@ struct SpellingTests {
         // Given / When / Then. A tag is read as its expression under a
         // statement's `value` too, so a construct under one would take a
         // record or a reference for itself
-        #expect(throws: ValidationError.self) {
+        #expect(throws: ConstructRegistryError.self) {
             try ConstructRegistry.standard.removing("conditional").registering(ConditionalForm.self, as: Name(tag))
         }
     }
@@ -114,7 +114,7 @@ struct SpellingTests {
         let loader = Loader(registry: ConstructRegistry.standard.removing("conditional"))
 
         // When / Then
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [["name": "kind", "type": "String"]],
                 "body": [

@@ -10,9 +10,10 @@ import Testing
 import Warp
 import WarpSyntax
 
-// What a runner refuses as a case. No case can ask this, since a file the
-// runner refuses stops the suite, so it is asked here of a case written for it.
-@Suite("A case the runner refuses")
+// What a runner refuses as a case, and a case it fails. No case can ask this,
+// since a file the runner refuses stops the suite, so it is asked here of a
+// case written for it.
+@Suite("A case the runner refuses or fails")
 struct CaseTests {
     // MARK: - Property
     // MARK: - Initializer
@@ -28,7 +29,6 @@ struct CaseTests {
                 {
                   bogus 1
                   imports []
-                  procedures {}
                   warp 1
                 }
               ]
@@ -92,6 +92,7 @@ struct CaseTests {
               }
               test 1
               vocabulary {
+                imports []
                 procedures {
                   "App.one" {
                     access "public"
@@ -123,12 +124,49 @@ struct CaseTests {
         }
     }
 
+    @Test("is refused where its vocabulary writes what a vocabulary does not declare", arguments: [
+        "warp 1", "const {\n      k 1\n    }", "var {\n      v 2\n    }", "description \"d\""
+    ])
+    func aVocabularyKeyItDoesNotDeclare(key: String) throws {
+        // When / Then. The runner builds the host's module from what a
+        // vocabulary declares, so a key it would not read is refused rather
+        // than dropped
+        #expect {
+            try Case(from: try TextEncoding().value(from: """
+                warpt 1
+                {
+                  expect {
+                    answers 1
+                  }
+                  name "broken"
+                  note "a vocabulary writing a key it does not declare"
+                  program {
+                    imports []
+                    procedures {
+                      entry {
+                        access "public"
+                        result 1
+                      }
+                    }
+                    warp 1
+                  }
+                  test 1
+                  vocabulary {
+                    \(key)
+                  }
+                }
+                """), in: "broken")
+        } throws: { error in
+            error is ConformanceError && "\(error)".contains("A vocabulary writes `imports` and declares `types`")
+        }
+    }
+
     @Test("is refused where it writes a key its subject cannot use", arguments: [
         ("object {}", "documents [\n    {}\n  ]", "a case about an object writes `documents`"),
         ("bytes x\"57415250010700\"", "documents [\n    {}\n  ]", "a case about an encoding writes `documents`"),
         ("text \"warpt 1\\n{}\\n\"", "document x\"00\"", "a case about an encoding writes `document`"),
-        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`"),
-        ("program {\n    imports []\n    procedures {}\n    warp 1\n  }", "argument {}", "a case about a program writes `argument`")
+        ("program {\n    imports []\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`"),
+        ("program {\n    imports []\n    warp 1\n  }", "argument {}", "a case about a program writes `argument`")
     ])
     func aKeyItsSubjectCannotUse(subject: String, key: String, refusal: String) throws {
         // Given. A case whose subject is read and nothing more, beside a key

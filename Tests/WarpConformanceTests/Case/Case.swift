@@ -60,7 +60,11 @@ struct Case: Sendable, CustomStringConvertible {
         var identity: Identity? {
             if let document { return document }
 
-            guard case let .array(held)? = written["document"], case let .bytes(bytes)? = held.first else { return nil }
+            guard
+                case let .dictionary(object) = written,
+                case let .array(held)? = object["document"],
+                case let .bytes(bytes)? = held.first
+            else { return nil }
 
             return Identity(bytes)
         }
@@ -191,8 +195,7 @@ struct Case: Sendable, CustomStringConvertible {
         }
 
         // Which of the fixed place sets this declaration reads its arguments
-        // through. A case declares `first` and `second`, in that order, and
-        // nothing else, so the names pick one.
+        // through, which its names pick.
         private func places(_ declared: [Name]) throws -> any ParameterSet.Type {
             switch declared {
             case []:
@@ -251,10 +254,12 @@ struct Case: Sendable, CustomStringConvertible {
     // of it because each carries keys a declaration does not.
     struct Vocabulary: Sendable {
         // MARK: - Property
-        // What a runner says for itself: the version this module is read at,
-        // and that its declarations send nothing. A case writing either is
-        // refused rather than quietly overruled.
-        static let runnersKeys: Set<Name> = ["warp", "imports"]
+        // What a vocabulary writes: what the host's procedures are, the types,
+        // contracts and claims their signatures stand on, and what it uses
+        // from other modules, as any module lists it. Which version it is read
+        // at is the runner's to say, and what a program declares beside them
+        // (constants, variables) is a document's.
+        static let declaringKeys: Set<Name> = ["imports", "types", "contracts", "satisfies", "procedures"]
 
         // The module as the reader takes it.
         let module: Value
@@ -304,6 +309,21 @@ struct Case: Sendable, CustomStringConvertible {
     // for the same reason `warp` does and on its own schedule.
     static let version = 1
 
+    // The specification's folder. The cases live in its `conformance`,
+    // beside the pages they belong to, since they are the language's and not
+    // this implementation's.
+    static let specification = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // Case
+        .deletingLastPathComponent()   // WarpConformanceTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // warp-runtime-swift
+        .deletingLastPathComponent()   // runtime
+        .deletingLastPathComponent()   // the repository
+        .appendingPathComponent("spec")
+
+    // What a case's file is named with after the case's name.
+    static let suffix = ".test.warpt"
+
     static let versionKey: Name = "test"
 
     let name: String
@@ -318,23 +338,21 @@ struct Case: Sendable, CustomStringConvertible {
     var description: String { name }
 
     // MARK: - Initializer
-    init(from written: Value, in file: String) throws {
+    init(from read: Value, in file: String) throws {
         self.file = file
 
         // The version first, and before the type, for the reason a document
         // reads its own first: a later case may say something this runner has
         // no name for, and "I am too old for this" is a different answer from
         // "this is not a case".
-        guard let declared = written[Self.versionKey] else {
+        guard case let .dictionary(written) = read, let declared = written[Self.versionKey] else {
             throw ConformanceError(
                 "this is not a case. It does not say which test it is written for"
                     + " (`\(Self.versionKey)`)"
             )
         }
 
-        // Said, but not as a number. A different answer from the one above: that
-        // one is "this is not a case", and this one is "this is a case and it is
-        // wrong", which is the distinction the check exists to keep.
+        // Said, but not as a number: a case, and a wrong one.
         guard case let .int(version) = declared else {
             throw ConformanceError(
                 "a case says which test it is written for as a whole number,"
@@ -359,15 +377,11 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
 
         // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
-        // exactly one. The slot groups them so that this is a question about
-        // one record instead of a rule about sibling keys, but a record is not
-        // a choice, so the count is still counted here. A case edited from one to the other
-        // and left holding both would otherwise start asking a different
-        // question than it reads as, and nobody would be told.
+        // exactly one: a mapping is not a choice, so the count is counted here.
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
-            let (held, expected) = expect.entries.first
+            let (held, expected) = try expect.named().first
         else {
             throw ConformanceError("a case expects exactly one of `answers`, `reads`, `spells`, `builds` and `refuses`")
         }
@@ -470,46 +484,26 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Public
-    // The cases live beside the specification they belong to rather than inside
-    // this package, because they are not this implementation's. The day there
-    // is a second implementation they move with `spec/` and this file stays.
     static func all() throws -> [Case] {
-        let directory = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // Case
-            .deletingLastPathComponent()   // WarpConformanceTests
-            .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
-            .deletingLastPathComponent()   // the repository
-            .appendingPathComponent("spec")
-            .appendingPathComponent("conformance")
-
-        // The cases are the ones named like cases, and everything else in the
-        // folder is somebody else's business. A `.DS_Store`, a `.orig` left by
-        // a merge, a copy someone kept while editing. A runner that refused to
-        // start over any of those would be putting "is this folder tidy" and
-        // "is this implementation the language" behind one red light, and the
-        // second question is the only one it was built to ask.
-        //
-        // The cost is real and is accepted: a case saved under a name this
-        // misses is not asked, and nothing here says so. What catches that is
-        // the same thing that catches a case deleted outright. It is a file in
-        // a diff, and the dumper that writes these names them.
-        let files = try FileManager.default
-            .contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-            .filter { file in file.lastPathComponent.hasSuffix(".test.warpt") }
-            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
-
-        return try files.map { file in
+        try files().map { file in
             try Case(
                 from: try TextEncoding().value(from: try Data(contentsOf: file)),
-                in: String(file.lastPathComponent.dropLast(".test.warpt".count))
+                in: String(file.lastPathComponent.dropLast(suffix.count))
             )
         }
     }
 
+    // The cases are the files named like cases, and nothing else in the
+    // folder is read, so a case saved under another name is not asked.
+    static func files() throws -> [URL] {
+        try FileManager.default
+            .contentsOfDirectory(at: specification.appendingPathComponent("conformance"), includingPropertiesForKeys: nil)
+            .filter { file in file.lastPathComponent.hasSuffix(suffix) }
+            .sorted { one, other in one.lastPathComponent < other.lastPathComponent }
+    }
+
     // MARK: - Private
-    // The documents a case lays beside its program. A list of records, each a
+    // The documents a case lays beside its program. A list of mappings, each a
     // document that reads; anything else is a case no two runners would read
     // alike. One that does not read is the case's own fault, since the
     // question was about the program.
@@ -541,24 +535,22 @@ struct Case: Sendable, CustomStringConvertible {
         return stage
     }
 
-    // An encoding is read and nothing is run, so nothing is given, brought,
-    // laid beside it or read under an identity. A case writing any of those
-    // asked something the runner would not ask, and it is refused rather than
-    // left unasked.
     // A case holds what every case writes and the keys its subject reads, and
     // nothing else: a key outside them, a misspelled one included, is a
     // question the runner would not ask.
-    private static func reads(_ written: Value, _ subject: Set<Name>, about named: String) throws {
-        guard case let .dictionary(fields) = written else { return }
-
+    private static func reads(_ fields: Value.Dictionary, _ subject: Set<Name>, about named: String) throws {
         let every: Set<Name> = [versionKey, "name", "note", "expect"]
 
-        if let (key, _) = fields.entries.first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
+        if let (key, _) = try fields.named().first(where: { key, _ in !every.contains(key) && !subject.contains(key) }) {
             throw ConformanceError("a case about \(named) writes `\(key)`, which it does not read")
         }
     }
 
-    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value) throws -> Asked {
+    // An encoding is read and nothing is run, so nothing is given, brought,
+    // laid beside it or read under an identity. A case writing any of those
+    // asked something the runner would not ask, and it is refused rather than
+    // left unasked.
+    private static func encoded(_ encoded: Encoded, expecting held: Name, _ expected: Value, in written: Value.Dictionary) throws -> Asked {
         try reads(written, ["bytes", "text"], about: "an encoding")
 
         // The binary encoding is canonical, so bytes that read as a value
@@ -607,28 +599,39 @@ struct Case: Sendable, CustomStringConvertible {
     private static func supplied(in written: Value?) throws -> Vocabulary? {
         guard let written else { return nil }
 
-        guard case let .dictionary(module) = written, case let .dictionary(entries)? = module["procedures"] else {
+        guard case let .dictionary(module) = written else {
+            throw ConformanceError("the vocabulary a case asks for is a module")
+        }
+
+        let entries: Value.Dictionary
+
+        switch module["procedures"] {
+        case nil:
+            entries = Value.Dictionary([:])
+
+        case let .dictionary(declared)?:
+            entries = declared
+
+        case let other?:
+            throw ConformanceError("the vocabulary a case asks for declares its procedures as a mapping, and not as \(other)")
+        }
+
+        if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
-                "the vocabulary a case asks for is a module, and a module declares procedures"
+                "the vocabulary a case asks for writes '\(taken)'. A vocabulary writes `imports`"
+                    + " and declares `types`, `contracts`, `satisfies` and `procedures`, and how it is"
+                    + " read is the runner's"
             )
         }
 
-        if let taken = module.names.first(where: Vocabulary.runnersKeys.contains) {
-            throw ConformanceError(
-                "the vocabulary a case asks for writes '\(taken)', which is the"
-                    + " runner's to say. A case says what the module declares and"
-                    + " nothing about how it is read"
-            )
-        }
-
-        let procedures: [Supplied] = try entries.entries.map { entry in
-            guard case let .dictionary(record) = entry.value else {
+        let procedures: [Supplied] = try entries.named().map { entry in
+            guard case let .dictionary(mapping) = entry.value else {
                 throw ConformanceError("'\(entry.name)' is written the way a procedure is")
             }
 
             let declaration = Value.dictionary(
                 Dictionary(
-                    uniqueKeysWithValues: record.entries
+                    uniqueKeysWithValues: try mapping.named()
                         .filter { field in !Supplied.ownKeys.contains(field.name) }
                         .map { field in (field.name, field.value) }
                 )
@@ -637,33 +640,27 @@ struct Case: Sendable, CustomStringConvertible {
             return Supplied(
                 name: entry.name,
                 declaration: declaration,
-                answers: record["answers"] ?? .null,
-                runs: try Self.flag(record, "runs", of: entry.name, or: false),
-                isolated: try Self.flag(record, "isolated", of: entry.name, or: true),
-                failing: try Self.failing(record["failing"], of: entry.name)
+                answers: mapping["answers"] ?? .null,
+                runs: try Self.flag(mapping, "runs", of: entry.name, or: false),
+                isolated: try Self.flag(mapping, "isolated", of: entry.name, or: true),
+                failing: try Self.failing(mapping["failing"], of: entry.name)
             )
         }
 
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
-        // document's, and the three the runner says for itself.
-        let stripped = Value.dictionary(
-            Dictionary(uniqueKeysWithValues: module.entries.map { field in (field.name, field.value) })
-                .merging([
-                    "warp": .int(1),
-                    "imports": .array([]),
-                    "procedures": .dictionary(
-                        Dictionary(
-                            uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }
-                        )
-                    )
-                ]) { _, made in made }
-        )
+        // document's, and the version the runner says for itself.
+        var stripped = Dictionary(uniqueKeysWithValues: try module.named().map { field in (field.name, field.value) })
 
-        return Vocabulary(module: stripped, procedures: procedures)
+        stripped["warp"] = .int(1)
+        stripped["procedures"] = procedures.isEmpty
+            ? nil
+            : .dictionary(Dictionary(uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }))
+
+        return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
     }
 
-    // What the entry is given is a record or is not written. Anything else
+    // What the entry is given is a mapping or is not written. Anything else
     // is refused rather than read as nothing given: a case that wrote
     // `arguments 1` asked a question no runner can answer the same way.
     private static func given(_ written: Value?, of name: String) throws -> [Name: Value] {
@@ -672,18 +669,18 @@ struct Case: Sendable, CustomStringConvertible {
             return [:]
 
         case let .dictionary(given)?:
-            return Dictionary(uniqueKeysWithValues: given.entries.map { entry in (entry.name, entry.value) })
+            return Dictionary(uniqueKeysWithValues: try given.named().map { entry in (entry.name, entry.value) })
 
         case let other?:
-            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")
+            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a mapping or is not written")
         }
     }
 
     // A key the runner reads beside a declaration is a bool or is not written.
     // Anything else is refused rather than read as one of the two: a case that
     // wrote `runs 1` asked a question no runner can answer the same way.
-    private static func flag(_ record: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
-        switch record[key] {
+    private static func flag(_ mapping: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
+        switch mapping[key] {
         case nil: return absent
         case let .bool(flag)?: return flag
         case let other?:

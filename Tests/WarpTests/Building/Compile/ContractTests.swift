@@ -107,7 +107,7 @@ struct ContractTests {
     }
 
     @Test("a procedure sent through a contract is judged against what the contract said")
-    func theContractOwnsTheJudgment() async throws {
+    func theContractOwnsTheJudgement() async throws {
         // Given. The contract says `describe` answers a string and takes
         // nothing but the value it is sent through, so a call handing it
         // something more refuses
@@ -182,7 +182,7 @@ struct ContractTests {
         }
 
         // Then. Each refused where the argument is written, for what the author wrote
-        #expect(mistyped?.message == "sending 'App.Sized.size': input 'n': expected Int, got String")
+        #expect(mistyped?.message == "sending 'App.Sized.size' with n, which holds String where Int is declared")
         #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
         #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
@@ -212,7 +212,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".hasPrefix("procedures.entry.result: the module at 0 in this link")
+            "\(error)".hasPrefix("procedures.entry.result: the module at 0")
                 && "\(error)".contains("declares 'Bank.Account.describe', which is named for")
                 && "\(error)".contains("answers Int where the contract writes String")
         }
@@ -281,9 +281,10 @@ struct ContractTests {
                 "Chart.draw": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["Chart.Plottable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .int
+                        returns: .int,
+                        bounds: ["T": ["Chart.Plottable"]]
                     ),
                     body: [],
                     result: .call(Call(selector: "Chart.Plottable.height", arguments: [reference("it")]))
@@ -303,7 +304,7 @@ struct ContractTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("of"), .key("balance")])
+                    result: .reference([.name("of"), .name("balance")])
                 )
             ]
         )
@@ -368,7 +369,7 @@ struct ContractTests {
     func aClaimNamesWhatItIsAbout() async throws {
         // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .int],
+            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .alias(.int)],
             claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -391,8 +392,9 @@ struct ContractTests {
             procedures: [
                 "Array.sort": Procedure(
                     signature: Signature(
-                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T", bounds: ["Standard.Comparable"])))],
-                        returns: .int
+                        parameters: [Parameter(name: "of", type: .array(.parameter(name: "T")))],
+                        returns: .int,
+                        bounds: ["T": ["Standard.Comparable"]]
                     ),
                     body: [],
                     result: .literal(.int(0))
@@ -454,7 +456,7 @@ struct ContractTests {
     func oneNameStandsForOneThing() async throws {
         // Given
         let sut = try Module(
-            types: ["App.Thing": .int],
+            types: ["App.Thing": .alias(.int)],
             contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -515,9 +517,10 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(
@@ -559,9 +562,10 @@ struct ContractTests {
             "App.tell": Procedure(
                 signature: Signature(
                     parameters: [
-                        Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                        Parameter(name: "it", type: .parameter(name: "T"))
                     ],
-                    returns: .string
+                    returns: .string,
+                    bounds: ["T": ["App.Describable"]]
                 ),
                 body: [],
                 result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
@@ -583,7 +587,7 @@ struct ContractTests {
     // Two types that describe themselves, a contract asking for it, and a
     // generic procedure standing between the caller and both.
     private func describing(
-        types extra: [Name: TypeExpression] = [:],
+        types extra: [Name: TypeDeclaration] = [:],
         procedures added: [Name: Procedure] = [:],
         body: Body,
         result: Warp.Expression
@@ -603,9 +607,10 @@ struct ContractTests {
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "it", type: .parameter(name: "T", bounds: ["App.Describable"]))
+                            Parameter(name: "it", type: .parameter(name: "T"))
                         ],
-                        returns: .string
+                        returns: .string,
+                        bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .call(
@@ -620,7 +625,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("balance "),
-                        spelling(.reference([.key("of"), .key("balance")]))
+                        spelling(.reference([.name("of"), .name("balance")]))
                     )
                 ),
                 "Bank.Card.describe": Procedure(
@@ -631,7 +636,7 @@ struct ContractTests {
                     body: [],
                     result: interpolated(
                         literal("card "),
-                        spelling(.reference([.key("of"), .key("last")]))
+                        spelling(.reference([.name("of"), .name("last")]))
                     )
                 )
             ].merging(added) { _, given in given }

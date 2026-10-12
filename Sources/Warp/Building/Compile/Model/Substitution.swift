@@ -11,8 +11,7 @@ import Foundation
 // things in one.
 //
 // A parameter read two ways has no answer, so the disagreement is kept beside
-// the first reading rather than read as `Any`: `Any` is what a declaration
-// says when it said nothing.
+// the first reading.
 struct Substitution: Sendable {
     // A value that arrived where a composition stands, beside what the
     // composition holds it to, and whether the slot takes null as well.
@@ -32,9 +31,10 @@ struct Substitution: Sendable {
         // Only where one holds the other, and a disagreement otherwise.
         case holdingBoth
 
-        // Part by part, as a list literal's elements do, and never a
-        // disagreement.
-        case partByPart
+        // What procedures handed take, where one takes the other: the one
+        // both take, which is the one the other accepts, and a disagreement
+        // otherwise.
+        case takenByBoth
     }
 
     // MARK: - Property
@@ -48,11 +48,28 @@ struct Substitution: Sendable {
     private(set) var disagreeing: [Name: LoweredType] = [:]
 
     // The readings of each parameter that what it is read as does not say,
-    // as they were read: a join with `Any` is `Any`, and a record's fields
-    // joined say nothing of each field.
+    // as they were read: a join with `Any` is `Any`, and a whole literal
+    // beside a fraction is held as the fraction the call hands on.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
     // MARK: - Initializer
+    init() {}
+
+    // What a call puts in the type parameters `declared` names, read by
+    // holding each declared type beside what arrived at its position. What
+    // a procedure arriving takes fills a parameter only where nothing that
+    // arrived does.
+    init(filling declared: [LoweredType], against given: [LoweredType], in table: LoweredTypeTable) {
+        var taking = Substitution()
+        var holding: [Held] = []
+
+        for (slot, reading) in zip(declared, given) {
+            slot.binding(against: reading, into: &self, taking: &taking, holding: &holding, in: table)
+        }
+
+        read(takenBy: taking)
+    }
+
     // MARK: - Public
     // What a parameter is held to its bounds as: what it is read as, and each
     // reading that does not say.
@@ -60,16 +77,101 @@ struct Substitution: Sendable {
         (readings[parameter].map { reading in [reading] } ?? []) + apart[parameter, default: []]
     }
 
-    // A parameter read once more. Two readings agree when one takes the other.
-    // A list of numbers and a whole number are not a disagreement, they are a
-    // parameter read once loosely and once tightly, and the loose reading is
-    // the one that holds both. With the table, because a reading may stand on
-    // a row and the type that row holds. Asking without it would call those
-    // two a disagreement, which is the same question the build asks elsewhere
-    // and answers correctly. Rigidly, because a parameter read here is the
-    // calling body's own and nothing fills it: a whole number and a parameter
-    // bounded to numbers are held by the parameter. What holds both is
-    // `holdingBoth`, and a parameter read as `Any` anywhere is `Any` there.
+    // Why a parameter read two ways has no answer, both readings named, or
+    // nil where it was read one way. The build refuses a call in these words
+    // and a door the values it fills a declaration's parameters from.
+    func disagreement(of parameter: Name, in table: LoweredTypeTable) -> String? {
+        guard let first = readings[parameter], let second = disagreeing[parameter] else { return nil }
+
+        return "'\(parameter)' is read as \(first.rendered(in: table)) and as \(second.rendered(in: table))"
+    }
+
+    // Why a call has no answer, each parameter read two ways named in name
+    // order, or nil where every one was read one way.
+    func disagreements(in table: LoweredTypeTable) -> String? {
+        guard !disagreeing.isEmpty else { return nil }
+
+        return disagreeing.keys.sorted().compactMap { parameter in disagreement(of: parameter, in: table) }
+            .joined(separator: ", ")
+    }
+
+    // Why a reading of a parameter does not answer a contract its bounds
+    // name, or nil where every reading answers each or leans on a claim,
+    // which goes to `leaning` for the asker to write down.
+    func unanswered(
+        _ parameter: Name,
+        bounds: Set<Name>,
+        in table: LoweredTypeTable,
+        leaning: (Claim) -> Void
+    ) -> String? {
+        for reading in everyReading(of: parameter) {
+            for name in bounds.sorted() {
+                if let refusal = table.refusal(
+                    of: reading,
+                    answering: name,
+                    orNull: false,
+                    as: "'\(parameter)' is read as",
+                    leaning: leaning
+                ) {
+                    return refusal
+                }
+            }
+        }
+
+        return nil
+    }
+
+    // Why a value of more than one type fills a bounded parameter it cannot,
+    // or nil where none does. A bounded parameter is one type wherever it
+    // stands, and a value of a contract is of whichever type answers it, and
+    // one of what may be null of the type or `Null`, so two of them, or one
+    // inside a list or a map, are not known to be one type. Standing
+    // alone at one position of `slots`, the value is the one thing the
+    // parameter stands for, and the call reads the parameter the way it read
+    // the value.
+    func severalTypes(
+        of parameter: Name,
+        bounds: Set<Name>,
+        over slots: [LoweredType],
+        in table: LoweredTypeTable
+    ) -> String? {
+        guard !bounds.isEmpty else { return nil }
+
+        let valueOfSeveral = everyReading(of: parameter).first { reading in
+            switch reading {
+            case let .composition(read):
+                return !read.isEmpty
+
+            case .nullable:
+                return true
+
+            default:
+                return false
+            }
+        }
+
+        guard let valueOfSeveral else { return nil }
+
+        let standing = slots.filter { slot in slot.typeParameters[parameter] != nil }
+
+        if standing.count == 1, case let .parameter(alone, _) = standing[0].slotUnwrapped, alone == parameter {
+            return nil
+        }
+
+        let spelled = parameter == TypeSpelling.selfType ? TypeExpression.selfType : .parameter(name: parameter)
+
+        return "'\(parameter)' is read as \(valueOfSeveral.rendered(in: table)), a value of more than one"
+            + " type, and `\(spelled.rendered)` is one type wherever it stands. A value of a contract"
+            + " or of what may be null fills a bounded parameter only where the parameter stands alone"
+            + " at one position"
+    }
+
+    // A parameter read once more, joined with what it is already read as by
+    // `join`: holding both, only where one takes the other (a whole
+    // literal and a fraction, and the same through lists, maps and `?`),
+    // with the table, because a reading may stand on a row and the type that
+    // row holds; or, for what procedures handed take, the one both take. A
+    // parameter read as `Any` anywhere is `Any` there.
     //
     // Where two do not join, the first reading is kept, so that what is
     // reported names both, and so that everything downstream sees one answer
@@ -102,8 +204,8 @@ struct Substitution: Sendable {
         case .holdingBoth:
             already.holdingBoth(given, in: table)
 
-        case .partByPart:
-            already.joinedPartByPart(given)
+        case .takenByBoth:
+            already.accepts(given, in: table) ? given : given.accepts(already, in: table) ? already : nil
         }
 
         // Two that do not join stay as they were read: the first is what the
@@ -118,8 +220,9 @@ struct Substitution: Sendable {
 
         // What a reading reads as once the join writes it, so a whole literal
         // the join reads as a fraction is held to the bounds as the fraction
-        // the call hands on.
-        for reading in [already, given] where both.written(reading, in: table) != both {
+        // the call hands on. What a procedure takes is no value, so the wider
+        // of two it takes is held to nothing.
+        for reading in [already, given] where join != .takenByBoth && both.written(reading, in: table) != both {
             apart[parameter, default: []].append(both.written(reading, in: table))
         }
 
@@ -151,6 +254,16 @@ struct Substitution: Sendable {
 
         for (parameter, readings) in other.apart.sorted(by: { $0.key < $1.key }) {
             apart[parameter, default: []].append(contentsOf: readings)
+        }
+    }
+
+    // What procedures arriving take, read where nothing else reads a
+    // parameter, or only what holds no value does.
+    mutating func read(takenBy taking: Substitution) {
+        for (parameter, reading) in taking.readings where readings[parameter, default: .never] == .never {
+            readings[parameter] = reading
+            disagreeing[parameter] = taking.disagreeing[parameter]
+            apart[parameter] = taking.apart[parameter]
         }
     }
 

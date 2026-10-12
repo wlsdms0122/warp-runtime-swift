@@ -47,7 +47,7 @@ struct DeclaredSpellingTests {
                     body: [],
                     result: .call(Call(
                         selector: "Store.keep",
-                        arguments: [.literal(.record(Record(name: nil, ["id": .string("a")])))]
+                        arguments: [.record(["id": .literal(.string("a"))])]
                     ))
                 )
             ]
@@ -67,7 +67,7 @@ struct DeclaredSpellingTests {
         // `Mine.Limit` from inside: an int, where the other module's is a
         // string
         let mine = try Module(
-            types: ["Mine.Limit": .int],
+            types: ["Mine.Limit": .alias(.int)],
             procedures: [
                 try Name("mine.\(entryName)"): Procedure(
                     signature: Signature(returns: .named("Mine.Limit")),
@@ -77,7 +77,7 @@ struct DeclaredSpellingTests {
             ]
         )
         let theirs = try Module(
-            types: ["Theirs.Limit": .string],
+            types: ["Theirs.Limit": .alias(.string)],
             procedures: [
                 "Theirs.unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -94,13 +94,13 @@ struct DeclaredSpellingTests {
         // Given. Two modules declare `One.Limit` and `Two.Limit`, and a third
         // mentions `Limit`, which neither of those spellings is
         let one = try Module(
-            types: ["One.Limit": .int],
+            types: ["One.Limit": .alias(.int)],
             procedures: [
                 "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            types: ["Two.Limit": .string],
+            types: ["Two.Limit": .alias(.string)],
             procedures: [
                 "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -129,13 +129,13 @@ struct DeclaredSpellingTests {
     func theDottedSpellingResolvesTheTie() async throws {
         // Given. The same link, with the mention spelled out
         let one = try Module(
-            types: ["One.Limit": .int],
+            types: ["One.Limit": .alias(.int)],
             procedures: [
                 "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            types: ["Two.Limit": .string],
+            types: ["Two.Limit": .alias(.string)],
             procedures: [
                 "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -161,13 +161,13 @@ struct DeclaredSpellingTests {
     func oneNameDeclaredTwiceRefuses() async throws {
         // Given. Two modules declare one spelling
         let one = try Module(
-            types: ["Limit": .int],
+            types: ["Limit": .alias(.int)],
             procedures: [
                 entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let two = try Module(
-            types: ["Limit": .string],
+            types: ["Limit": .alias(.string)],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -177,7 +177,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([one, two])
         } throws: { error in
-            error is BuildError && "\(error)".contains("declared more than once")
+            error is BuildError && "\(error)".contains("Two declarations of a name have no way to be told apart")
         }
     }
 
@@ -190,9 +190,10 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Standard.Comparable"]))
+                            Parameter(name: "value", type: .parameter(name: "T"))
                         ],
-                        returns: .parameter(name: "T", bounds: ["Standard.Comparable"])
+                        returns: .parameter(name: "T"),
+                        bounds: ["T": ["Standard.Comparable"]]
                     ),
                     body: [],
                     result: reference("value")
@@ -218,13 +219,13 @@ struct DeclaredSpellingTests {
         // a third mentions `Limit`: the first declaration's spelling, and
         // nothing else's
         let shared = try Module(
-            types: ["Limit": .int],
+            types: ["Limit": .alias(.int)],
             procedures: [
                 "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
         )
         let dotted = try Module(
-            types: ["One.Limit": .string],
+            types: ["One.Limit": .alias(.string)],
             procedures: [
                 "One.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -256,7 +257,7 @@ struct DeclaredSpellingTests {
             ]
         )
         let type = try Module(
-            types: ["Limit": .int],
+            types: ["Limit": .alias(.int)],
             procedures: [
                 "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
             ]
@@ -282,9 +283,10 @@ struct DeclaredSpellingTests {
                 "keep": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "value", type: .parameter(name: "T", bounds: ["Numeric"]))
+                            Parameter(name: "value", type: .parameter(name: "T"))
                         ],
-                        returns: .parameter(name: "T", bounds: ["Numeric"])
+                        returns: .parameter(name: "T"),
+                        bounds: ["T": ["Numeric"]]
                     ),
                     body: [],
                     result: reference("value")

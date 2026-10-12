@@ -15,7 +15,7 @@ public struct Body: Sendable {
 
     // Whether every way through this body leaves. A body leaves when one of
     // its statements always leaves, because nothing after that one runs.
-    public var alwaysLeaves: Bool {
+    var alwaysLeaves: Bool {
         statements.contains { statement in statement.expression.alwaysLeaves }
     }
 

@@ -49,9 +49,11 @@ let package = Package(
                 "Warp"
             ]
         ),
-        // What every test target says the same way: the entry a test runs from
-        // and how it runs against the standard vocabulary, the expressions a
-        // test writes by hand, and the native procedures a test declares.
+        // What the core, the vocabulary's and the syntax tests say the same
+        // way: the entry a test runs from and how it runs against the standard
+        // vocabulary, the expressions a test writes by hand, and the native
+        // procedures a test declares. Built the way a host builds against the
+        // products, so it reaches only what they make public.
         .target(
             name: "WarpTestSupport",
             dependencies: [
@@ -71,20 +73,19 @@ let package = Package(
                 "WarpTestSupport"
             ]
         ),
-        // The vocabulary's tests make records under a nominal name the way a
-        // link does, which no public door spells, so they reach inside the
-        // language.
         .testTarget(
             name: "WarpStandardTests",
             dependencies: [
                 "Warp",
                 "WarpStandard",
+                "WarpSyntax",
                 "WarpTestSupport"
             ]
         ),
         .testTarget(
             name: "WarpSyntaxTests",
             dependencies: [
+                "Warp",
                 "WarpSyntax",
                 "WarpStandard",
                 "WarpTestSupport"

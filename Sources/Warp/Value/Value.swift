@@ -16,9 +16,9 @@ import Foundation
 // handed data from outside a run is handed data alone, which is why the
 // writings say so where a caller can reach them with a procedure directly.
 //
-// Equality is written by hand because a procedure has no honest one: two
-// procedures are never equal, and identity is not a question this language lets
-// you ask.
+// Equality is strict, kind and spelling included, and written by hand: two
+// procedures are never equal, since identity is not a question this language
+// lets you ask.
 public indirect enum Value: Sendable, Equatable {
     case null
     case bool(Bool)
@@ -28,31 +28,30 @@ public indirect enum Value: Sendable, Equatable {
     case bytes([UInt8])
     case array([Value])
 
-    // Fields under names, and the name of the declared record type it is a
-    // value of, where it has one. A record made by a literal, answered by a
-    // native procedure or read out of a document has no name; it takes one
-    // where it is written into a declared record, by a literal, at the door
-    // a host hands it through or by a cast, and from then on it fits only
-    // that name. Two records of one structure under two names are two
-    // values.
+    // Fields under names, and the name of the declared record it is a value
+    // of. Two records of one structure under two names are two values.
     case record(Record)
 
-    // Names and values where the names are data: what a document hands in,
-    // what a host builds out of raw data, and what a procedure that reads names
-    // answers. A declaration is what turns one of these into a record.
+    // Entries under keys that are values: what a document's mappings are,
+    // what a host builds out of raw data, and what a map literal makes. A map
+    // is never a record.
     case dictionary(Dictionary)
 
     case procedure(Closure)
 
-    // The entries stand in ascending byte order of their names, the order the
-    // canonical writing uses, and a name is found by comparing bytes.
+    // Entries under keys that are values. They stand in the key order, the
+    // order the canonical writing and `keys` walk a map in, and a key is found
+    // by that order and then by sameness, so two keys that are the same value
+    // are one key: `1` and `1.0`, two spellings of one text, bytes and the
+    // array of their numbers. A key that is the same as no value, a fraction
+    // that is not a number or one holding a procedure, is never found again.
     public struct Dictionary: Sendable, Equatable {
         // MARK: - Property
-        // In ascending byte order of `name`, as `Name`'s `<` orders them.
-        public let entries: [(name: Name, value: Value)]
+        // In ascending key order, no key the same as another.
+        public let entries: [(key: Value, value: Value)]
 
-        public var names: [Name] {
-            entries.map(\.name)
+        public var keys: [Value] {
+            entries.map(\.key)
         }
 
         public var values: [Value] {
@@ -68,110 +67,273 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         // MARK: - Initializer
-        // Entries in any order under names none of which repeats.
-        public init(_ entries: [(name: Name, value: Value)]) throws {
-            let sorted = entries.sorted { one, other in one.name < other.name }
+        // Entries in any order under keys none of which is the same as
+        // another.
+        public init(_ entries: [(key: Value, value: Value)]) throws {
+            let sorted = entries.sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
 
-            if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one.name == other.name }) {
-                throw ValueRefused("'\(repeated.0.name)' is written twice")
+            if let repeated = zip(sorted, sorted.dropFirst()).first(where: { one, other in one.key.matches(other.key) }) {
+                throw ValueRefused("'\(Rendering(repeated.0.key).text())' is written twice")
             }
 
             self.entries = sorted
         }
 
+        // A map keyed by text, the way a document's mappings are keyed by
+        // the names it writes.
         public init(_ fields: [Name: Value]) {
-            self.entries = fields.map { field in (name: field.key, value: field.value) }
-                .sorted { one, other in one.name < other.name }
+            self.entries = fields
+                .map { field in (key: Value.string(field.key.spelling), value: field.value) }
+                .sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
         }
 
-        // The inner door: entries in the order a name puts them, under names
-        // none of which repeats. A layout carries both facts, and so does an
-        // object's list of entries once its reading judged the order, so what
-        // stands on either comes through here rather than being sorted again.
-        // A value born outside a link has neither behind it and comes through
-        // the door above.
-        init(ordered entries: [(name: Name, value: Value)]) {
-            self.entries = entries
-        }
-
-        private init(keeping entries: [(name: Name, value: Value)]) {
+        // Entries already in the key order, under keys none of which is the
+        // same as another, where the maker holds both facts itself. An
+        // object's list of entries carries both once its reading judged the
+        // order, so what stands on it comes through here rather than being
+        // sorted again. Entries with neither behind them come through the
+        // initializer above.
+        init(ordered entries: [(key: Value, value: Value)]) {
             self.entries = entries
         }
 
         // MARK: - Public
-        public subscript(name: Name) -> Value? {
-            let (position, found) = place(of: name)
+        public subscript(key key: Value) -> Value? {
+            let (position, found) = place(of: key)
 
             return found ? entries[position].value : nil
         }
 
-        // This dictionary with one entry written: the value replaced where the
-        // name is held, and the entry put where it sorts where it is not.
-        public func writing(_ name: Name, with value: Value) -> Dictionary {
+        // The entry under a text key, the way a document's mapping is read
+        // by a name.
+        public subscript(name: Name) -> Value? {
+            self[key: .string(name.spelling)]
+        }
+
+        // The entries under the names their keys are, in the same order: how
+        // a document's mapping, keyed by the names it writes, is read. A key
+        // that is no name is refused.
+        public func named() throws -> [(name: Name, value: Value)] {
+            try entries.map { entry in
+                guard case let .string(text) = entry.key, let name = try? Name(text) else {
+                    throw ValueRefused("'\(Rendering(entry.key).text())' is no name, and a mapping a document writes is keyed by names")
+                }
+
+                return (name: name, value: entry.value)
+            }
+        }
+
+        // This map with one entry written: the value replaced where the key is
+        // held, and the entry put where it orders where it is not.
+        public func writing(key: Value, with value: Value) -> Dictionary {
             var written = entries
-            let (position, found) = place(of: name)
+            let (position, found) = place(of: key)
 
             if found {
                 written[position].value = value
             } else {
-                written.insert((name: name, value: value), at: position)
+                written.insert((key: key, value: value), at: position)
             }
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
-        // This dictionary without the entry of this name, or as it is where none
+        // The same under a text key.
+        public func writing(_ name: Name, with value: Value) -> Dictionary {
+            writing(key: .string(name.spelling), with: value)
+        }
+
+        // This map without the entry under this key, or as it is where none
         // is held.
-        public func removing(_ name: Name) -> Dictionary {
-            let (position, found) = place(of: name)
+        public func removing(key: Value) -> Dictionary {
+            let (position, found) = place(of: key)
 
             guard found else { return self }
 
             var written = entries
             written.remove(at: position)
 
-            return Dictionary(keeping: written)
+            return Dictionary(ordered: written)
         }
 
-        // This dictionary with every value put through `transform`, under the
-        // same names in the same order.
-        public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Dictionary {
+        // The same under a text key.
+        public func removing(_ name: Name) -> Dictionary {
+            removing(key: .string(name.spelling))
+        }
+
+        // This map with every value put through `transform`, under the same
+        // keys in the same order.
+        public func mapValues(_ transform: (Value, Value) throws -> Value) rethrows -> Dictionary {
             Dictionary(
-                keeping: try entries.map { entry in (name: entry.name, value: try transform(entry.name, entry.value)) }
+                ordered: try entries.map { entry in (key: entry.key, value: try transform(entry.key, entry.value)) }
             )
         }
 
         public static func == (lhs: Dictionary, rhs: Dictionary) -> Bool {
             lhs.entries.count == rhs.entries.count
                 && zip(lhs.entries, rhs.entries).allSatisfy { mine, theirs in
-                    mine.name == theirs.name && mine.value == theirs.value
+                    mine.key == theirs.key && mine.value == theirs.value
                 }
         }
 
+        // How two keys stand in the key order: by kind first (null, bool,
+        // number, text, list, map, record, and a procedure last), then false
+        // before true, numbers by worth, text as `String` orders it, which is
+        // its scalars in normal form C, lists element by element with a
+        // shorter one first on a common start, maps entry by entry, and
+        // records by name and then field by field. Bytes are the list of
+        // their numbers. Two keys the same value stand at one place; a
+        // fraction that is not a number stands after every number, and a
+        // procedure after everything, each at one place it shares with its
+        // own kind and is the same as nothing there.
+        public static func order(_ left: Value, _ right: Value) -> ComparisonResult {
+            let ranks = (rank(of: left), rank(of: right))
+
+            guard ranks.0 == ranks.1 else { return ranks.0 < ranks.1 ? .orderedAscending : .orderedDescending }
+
+            switch (left, right) {
+            case let (.bool(mine), .bool(theirs)):
+                return mine == theirs ? .orderedSame : (theirs ? .orderedAscending : .orderedDescending)
+
+            case (.int, _), (.double, _):
+                return worth(left, right)
+
+            case let (.string(mine), .string(theirs)):
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.dictionary(mine), .dictionary(theirs)):
+                return sequenced(
+                    mine.entries.lazy.flatMap { entry in [entry.key, entry.value] },
+                    theirs.entries.lazy.flatMap { entry in [entry.key, entry.value] }
+                )
+
+            case let (.record(mine), .record(theirs)):
+                guard mine.name == theirs.name else {
+                    return mine.name < theirs.name ? .orderedAscending : .orderedDescending
+                }
+
+                return sequenced(
+                    zip(mine.names, mine.values).lazy.flatMap { name, value in [Value.string(name.spelling), value] },
+                    zip(theirs.names, theirs.values).lazy.flatMap { name, value in [Value.string(name.spelling), value] }
+                )
+
+            default:
+                guard let mine = left.elements, let theirs = right.elements else { return .orderedSame }
+
+                return sequenced(mine, theirs)
+            }
+        }
+
         // MARK: - Private
-        // Where a name is, or where it would go: the first position whose name
-        // does not precede it, and whether the name there is it.
-        private func place(of name: Name) -> (Int, Bool) {
+        // Where a key is, or where it would go: the first position whose key
+        // does not precede it, and whether the key there is it.
+        private func place(of key: Value) -> (Int, Bool) {
             var low = 0
             var high = entries.count
 
             while low < high {
                 let middle = (low + high) / 2
 
-                if entries[middle].name < name {
+                if Self.order(entries[middle].key, key) == .orderedAscending {
                     low = middle + 1
                 } else {
                     high = middle
                 }
             }
 
-            return (low, low < entries.count && entries[low].name == name)
+            return (low, low < entries.count && entries[low].key.matches(key))
+        }
+
+        // Where a kind stands in the key order.
+        private static func rank(of value: Value) -> Int {
+            switch value {
+            case .null: 0
+            case .bool: 1
+            case .int, .double: 2
+            case .string: 3
+            case .array, .bytes: 4
+            case .dictionary: 5
+            case .record: 6
+            case .procedure: 7
+            }
+        }
+
+        // Two numbers by what they are worth, exactly: a whole number and a
+        // fraction are compared without converting the whole number, which
+        // would round past 2^53. A fraction that is not a number stands after
+        // every number.
+        private static func worth(_ left: Value, _ right: Value) -> ComparisonResult {
+            switch (left, right) {
+            case let (.int(mine), .int(theirs)):
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.double(mine), .double(theirs)):
+                if mine.isNaN || theirs.isNaN {
+                    return mine.isNaN == theirs.isNaN ? .orderedSame : (theirs.isNaN ? .orderedAscending : .orderedDescending)
+                }
+
+                return mine == theirs ? .orderedSame : (mine < theirs ? .orderedAscending : .orderedDescending)
+
+            case let (.int(whole), .double(fraction)):
+                return worth(whole: whole, fraction: fraction)
+
+            case let (.double(fraction), .int(whole)):
+                switch worth(whole: whole, fraction: fraction) {
+                case .orderedAscending: return .orderedDescending
+                case .orderedDescending: return .orderedAscending
+                case .orderedSame: return .orderedSame
+                }
+
+            default:
+                return .orderedSame
+            }
+        }
+
+        // A whole number against a fraction: ascending where the whole number
+        // is worth less.
+        private static func worth(whole: Int, fraction: Double) -> ComparisonResult {
+            guard !fraction.isNaN else { return .orderedAscending }
+            guard fraction >= -0x1p63 else { return .orderedDescending }
+            guard fraction < 0x1p63 else { return .orderedAscending }
+
+            let floor = fraction.rounded(.down)
+            let truncated = Int(floor)
+
+            if whole < truncated { return .orderedAscending }
+            if whole > truncated { return .orderedDescending }
+
+            return floor == fraction ? .orderedSame : .orderedAscending
+        }
+
+        // Two sequences of keys element by element, a shorter one first on a
+        // common start.
+        private static func sequenced(_ left: some Sequence<Value>, _ right: some Sequence<Value>) -> ComparisonResult {
+            var mine = left.makeIterator()
+            var theirs = right.makeIterator()
+
+            while true {
+                switch (mine.next(), theirs.next()) {
+                case (nil, nil):
+                    return .orderedSame
+
+                case (nil, _):
+                    return .orderedAscending
+
+                case (_, nil):
+                    return .orderedDescending
+
+                case let (one?, other?):
+                    let ordered = order(one, other)
+
+                    guard ordered == .orderedSame else { return ordered }
+                }
+            }
         }
     }
 
     // MARK: - Property
     // What is said wherever a value stands where a document can reach it.
-    public static let procedureIsNotData = "a procedure is not data, so it cannot stand"
+    static let procedureIsNotData = "a procedure is not data, so it cannot stand"
         + " where a document reaches; a body a program carries is written as a closure"
 
     // Whether a procedure is anywhere in here, however deep.
@@ -184,34 +346,22 @@ public indirect enum Value: Sendable, Equatable {
         holdsClosure { _ in true }
     }
 
-    public var type: ValueType {
+    // Whether a record is anywhere in here, however deep. A record is the
+    // value of a declared record, made where a literal is written into one or
+    // handed through a door under the record's name.
+    var holdsRecord: Bool {
         switch self {
-        case .null:
-            return .null
+        case .null, .bool, .int, .double, .string, .bytes, .procedure:
+            return false
 
-        case .bool:
-            return .bool
+        case let .array(elements):
+            return elements.contains { element in element.holdsRecord }
 
-        case .int:
-            return .int
+        case let .dictionary(held):
+            return held.entries.contains { key, value in key.holdsRecord || value.holdsRecord }
 
-        case .double:
-            return .double
-
-        case .string:
-            return .string
-
-        case .bytes:
-            return .bytes
-
-        case .array:
-            return .array
-
-        case .record, .dictionary:
-            return .record
-
-        case .procedure:
-            return .procedure
+        case .record:
+            return true
         }
     }
 
@@ -261,10 +411,9 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The type this value is an instance of, under the name a claim writes:
-    // a record under the declared name it settled to, and every other kind
+    // a record under the declared name it carries, and every other kind
     // under the name the language gives it. Bytes are a list in a compact
-    // spelling and a record with no name holds its names as data, so they
-    // are `Array` and `Dictionary`.
+    // spelling, so they are `Array`.
     public var nominal: Name {
         switch self {
         case .null:
@@ -289,34 +438,10 @@ public indirect enum Value: Sendable, Equatable {
             return TypeSpelling.dictionary
 
         case let .record(record):
-            return record.name ?? TypeSpelling.dictionary
+            return record.name
 
         case .procedure:
             return TypeSpelling.procedure
-        }
-    }
-
-    // Whether this holds fields under names: a record's layout's, or a
-    // dictionary's own.
-    public var holdsFields: Bool {
-        switch self {
-        case .record, .dictionary: true
-        default: false
-        }
-    }
-
-    // This value's fields as names beside values, and nil for what holds
-    // none. A record's names come from its layout.
-    public var asDictionary: Value.Dictionary? {
-        switch self {
-        case let .dictionary(dictionary):
-            return dictionary
-
-        case let .record(record):
-            return record.asDictionary
-
-        default:
-            return nil
         }
     }
 
@@ -326,46 +451,37 @@ public indirect enum Value: Sendable, Equatable {
         .dictionary(Dictionary(entries))
     }
 
-    // What a reading of fields under names makes. A name is a layout's, so a
-    // reading that carries one makes a record; without one the names stay the
-    // value's own data. Either way one name holds one field, and a name
-    // written twice is refused.
+    // What a reading of fields under names makes: a record of the declared
+    // record the name says. One name holds one field, and a name written
+    // twice is refused. The name is a declared record's, so it is one a
+    // mention writes: a type's name, or a name the language declares.
     public static func holding(
         _ fields: some Sequence<(name: Name, value: Value)>,
-        named name: Name?
+        named name: Name
     ) throws -> Value {
-        // The dictionary proved the order and that no name repeats, so the
-        // layout is built rather than checked again.
-        let held = try Value.Dictionary(Array(fields))
+        let ordered = Array(fields).sorted { one, other in one.name < other.name }
 
-        guard let name else { return .dictionary(held) }
+        if let repeated = zip(ordered, ordered.dropFirst()).first(where: { one, other in one.name == other.name }) {
+            throw ValueRefused("'\(repeated.0.name)' is written twice")
+        }
 
-        return .record(Record(layout: Layout(name: name, ordered: held.names), values: held.values))
+        guard NameGrammar.mention.holds(name) else {
+            throw ValueRefused(NameGrammar.mention.refusal(of: name))
+        }
+
+        return .record(Record(layout: Layout(name: name, ordered: ordered.map(\.name)), values: ordered.map(\.value)))
     }
 
-    // This value with one field written. A field a record's layout names is
-    // written where it stands. Any other name is not the declaration's, so a
-    // value that settled to one is refused rather than quietly made something
-    // else, and a value that settled to none holds the new name as data, the
-    // way the dictionary it equals does.
+    // This value with one field written: a field a record's layout names,
+    // where it stands. Any other name is not the declaration's, so a record
+    // refuses it rather than being quietly made something else, and what is
+    // no record holds no fields.
     public func writing(_ name: Name, with value: Value) throws -> Value {
-        switch self {
-        case let .record(record) where record.layout.position(of: name) != nil:
-            return .record(try record.writing(name, with: value))
-
-        case let .record(record):
-            if let settled = record.name {
-                throw ValueRefused("\(settled) declares no field '\(name)'")
-            }
-
-            return .dictionary(record.asDictionary.writing(name, with: value))
-
-        case let .dictionary(held):
-            return .dictionary(held.writing(name, with: value))
-
-        default:
-            throw ValueRefused("\(type) holds no fields, so '\(name)' cannot be written into it")
+        guard case let .record(record) = self else {
+            throw ValueRefused("\(nominal) holds no fields, so '\(name)' cannot be written into it")
         }
+
+        return .record(try record.writing(name, with: value))
     }
 
     // Whether a closure this value holds answers the predicate. Stops at the
@@ -416,7 +532,7 @@ public indirect enum Value: Sendable, Equatable {
             return .dictionary(
                 Value.Dictionary(
                     ordered: try dictionary.entries.map { entry in
-                        (entry.name, try entry.value.rewritten(closures: body))
+                        (entry.key, try entry.value.rewritten(closures: body))
                     }
                 )
             )
@@ -430,21 +546,18 @@ public indirect enum Value: Sendable, Equatable {
     // one record because a procedure answers one value, so reading a field back
     // out is the ordinary thing a host does with what a run gave it.
     public subscript(field: Name) -> Value? {
-        switch self {
-        case let .record(record): record[field]
-        case let .dictionary(dictionary): dictionary[field]
-        default: nil
-        }
+        guard case let .record(record) = self else { return nil }
+
+        return record[field]
     }
 
     // The elements at these positions, in the spelling this value is. Nil for
     // what has no elements to take, the way `elements` answers nil.
     //
     // This is for the procedures that only put a collection's own elements in
-    // another order or take fewer of them, and so never have to look at one.
-    // Saying which by position lets bytes be rearranged as the bytes they are:
-    // reading them out as values and writing them back would cost the boxing
-    // twice over, which is the cost being compact exists to avoid.
+    // another order or take fewer of them, and so never have to look at one:
+    // bytes are rearranged as the bytes they are, never read out as values
+    // and written back.
     //
     // A position this value does not have is answered the way a value with no
     // elements at all is: with nil. A caller's own arithmetic decides the
@@ -556,70 +669,23 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(left), .dictionary(right)):
             return left == right
 
-        case let (.record(record), .dictionary(dictionary)),
-            let (.dictionary(dictionary), .record(record)):
-            return same(record, dictionary) { mine, theirs in mine == theirs }
-
         default:
             return false
         }
     }
 
-    // How two values stand to each other, for the kinds that order: numbers
-    // among themselves and strings among themselves. Nil is a pair with no
-    // order: mixed kinds, the kinds that do not order, and a fraction that is
-    // not a number, which orders with nothing. Every consumer of order
-    // (equality across numeric width, `lessThan`/`greaterThan`, `sorted`,
-    // `min`/`max`) reads this one answer, so a whole beside a fraction is
-    // judged in exactly one place.
-    public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
-        switch (left, right) {
-        case let (.int(first), .int(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.double(first), .double(second)):
-            guard !first.isNaN, !second.isNaN else { return nil }
-
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.int(first), .double(second)):
-            return order(whole: first, fraction: second)
-
-        case let (.double(first), .int(second)):
-            return order(whole: second, fraction: first).map { order in
-                switch order {
-                case .orderedAscending: .orderedDescending
-                case .orderedDescending: .orderedAscending
-                case .orderedSame: .orderedSame
-                }
-            }
-
-        case let (.string(first), .string(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        default:
-            return nil
-        }
-    }
-
-    // The equality conditions test with. Strict except that worth unifies
-    // across spellings: int and double across numeric width, and bytes beside
-    // an array of what its elements are worth, applied recursively through
-    // arrays and records.
+    // Sameness as `equal` answers it. Strict except that worth unifies a
+    // whole number with the fraction of the same worth, and bytes, being an
+    // array, equal the array of the same elements, applied recursively
+    // through arrays, records and maps.
     public func matches(_ other: Value) -> Bool {
         switch (self, other) {
-        case (.int, .double), (.double, .int):
-            return Value.order(self, other) == .orderedSame
+        case let (.int(whole), .double(fraction)), let (.double(fraction), .int(whole)):
+            return Value.sameWorth(whole: whole, fraction: fraction)
 
-        // Bytes are an array of bytes in a compact spelling. `1` and `1.0`
-        // again, one collection up: the worth is the elements', read through
-        // the one projection that owns the equation.
+        // Bytes are an array of whole numbers in a compact spelling, so the
+        // elements are compared, read through the one projection that owns
+        // the equation.
         case (.bytes, .array), (.array, .bytes):
             guard let mine = elements, let theirs = other.elements else { return false }
 
@@ -630,8 +696,8 @@ public indirect enum Value: Sendable, Equatable {
             return left.count == right.count
                 && zip(left, right).allSatisfy { pair in pair.0.matches(pair.1) }
 
-        // Both hold their entries in name order, so two records match
-        // entry by entry.
+        // Both hold their fields in name order, so two records match field by
+        // field.
         case let (.record(left), .record(right)):
             return left.layout == right.layout
                 && zip(left.values, right.values).allSatisfy { mine, theirs in mine.matches(theirs) }
@@ -639,12 +705,8 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(left), .dictionary(right)):
             return left.count == right.count
                 && zip(left.entries, right.entries).allSatisfy { mine, theirs in
-                    mine.name == theirs.name && mine.value.matches(theirs.value)
+                    mine.key.matches(theirs.key) && mine.value.matches(theirs.value)
                 }
-
-        case let (.record(record), .dictionary(dictionary)),
-            let (.dictionary(dictionary), .record(record)):
-            return Value.same(record, dictionary) { mine, theirs in mine.matches(theirs) }
 
         default:
             return self == other
@@ -652,14 +714,25 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The part a path names, in a record by the place the build put the field
-    // at, in a dictionary by key and in an array by position. Every index was
-    // read to a position before this, and the build judged the path against
-    // the value's declared type, so a part not held is refused as what it
-    // is: an entry not written yet, or a type with no such part.
+    // at, in a map by key and in a list by position, bytes read through the
+    // one projection that owns their equation. Every index was read
+    // to a value before this, and the build judged the path against the
+    // value's declared type, so a part not held is refused as what it is: an
+    // entry not written yet, or a type with no such part.
     func reading(at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return self }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' reads element \(index) of an array holding \(elements.count)")
+            }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.reading(at: rest, under: rendered)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -669,25 +742,25 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].reading(at: rest, under: rendered)
 
-        case let (_, .key(name)) where holdsFields:
-            guard let field = self[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)', which is not written yet")
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
             }
 
             return try field.reading(at: rest, under: rendered)
 
-        case let (.array(elements), .index(index)):
-            guard elements.indices.contains(index) else {
+        case let (.dictionary(map), .index(key)):
+            guard let entry = map[key: key] else {
                 throw ExecutionError(
-                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
+                    "'\(rendered)' reads \(Path([step.spelled]).rendered), which is not written yet"
                 )
             }
 
-            return try elements[index].reading(at: rest, under: rendered)
+            return try entry.reading(at: rest, under: rendered)
 
         default:
             throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
             )
         }
     }
@@ -700,6 +773,14 @@ public indirect enum Value: Sendable, Equatable {
 
         let rest = Array(path.dropFirst())
 
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else { return nil }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.written(at: rest, under: rendered)
+        }
+
         switch (self, step) {
         case let (.record(record), .field(position, name)):
             guard record.values.indices.contains(position) else {
@@ -708,31 +789,46 @@ public indirect enum Value: Sendable, Equatable {
 
             return try record.values[position].written(at: rest, under: rendered)
 
-        case let (_, .key(name)) where holdsFields:
-            return try self[name]?.written(at: rest, under: rendered)
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this record holds")
+            }
 
-        case let (.array(elements), .index(index)):
-            guard elements.indices.contains(index) else { return nil }
+            return try field.written(at: rest, under: rendered)
 
-            return try elements[index].written(at: rest, under: rendered)
+        case let (.dictionary(map), .index(key)):
+            return try map[key: key]?.written(at: rest, under: rendered)
 
         default:
             throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(type), which has no such part"
+                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
             )
         }
     }
 
     // This value with one part replaced: the part the path names, in a record
-    // by the place the build put the field at, in a dictionary by name and in
-    // an array by position. The rest is kept as it was. The build judged the
+    // by the place the build put the field at, in a map by key and in a list
+    // by position, a list answering in the spelling it was in where that
+    // still holds. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
-    // position before this. A dictionary's names are its own, so one not
-    // held yet is made.
+    // value before this. A map's keys are its own, so an entry under one not
+    // held yet is made where the write lands on it, and holds nothing for a
+    // write to pass through.
     func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return value }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' writes element \(index) of an array holding \(elements.count)")
+            }
+
+            var written = Array(elements)
+            written[index] = try written[index].writing(value, at: rest, under: rendered)
+
+            return respelled(written)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -744,35 +840,31 @@ public indirect enum Value: Sendable, Equatable {
 
             return .record(record.writing(at: position, with: written))
 
-        // A name written into what holds its names as data. The build judged
-        // the path, so a name that reaches here is one it allowed.
-        case let (_, .key(name)) where holdsFields:
-            do {
-                return try writing(name, with: try (self[name] ?? .null).writing(value, at: rest, under: rendered))
-            } catch let refused as ValueRefused {
-                throw ExecutionError("'\(rendered)' writes '\(name)', and \(refused.message)")
+        // A field by its name, of a record a call decides.
+        case let (.record(record), .name(name)):
+            guard let field = record[name] else {
+                throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this record holds")
             }
 
-        case let (.array(elements), .index(index)):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' writes element \(index) of an array holding \(elements.count)"
-                )
+            return .record(try record.writing(name, with: try field.writing(value, at: rest, under: rendered)))
+
+        case let (.dictionary(map), .index(key)):
+            guard let held = map[key: key] else {
+                guard rest.isEmpty else {
+                    throw ExecutionError(
+                        "'\(rendered)' writes through \(Path([step.spelled]).rendered),"
+                            + " an entry the map does not hold. Write the whole entry first"
+                    )
+                }
+
+                return .dictionary(map.writing(key: key, with: value))
             }
 
-            var written = elements
-            written[index] = try elements[index].writing(value, at: rest, under: rendered)
-            return .array(written)
-
-        case (.null, _):
-            throw ExecutionError(
-                "'\(rendered)' writes through \(Path([step.spelled]).rendered), which holds nothing yet."
-                    + " Write the whole entry first"
-            )
+            return .dictionary(map.writing(key: key, with: try held.writing(value, at: rest, under: rendered)))
 
         default:
             throw ExecutionError(
-                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(type), which has no such part"
+                "'\(rendered)' writes \(Path([step.spelled]).rendered) into \(nominal), which has no such part"
             )
         }
     }
@@ -800,37 +892,22 @@ public indirect enum Value: Sendable, Equatable {
             return record.values.allSatisfy { value in value.walk(body) }
 
         case let .dictionary(dictionary):
-            return dictionary.entries.allSatisfy { entry in entry.value.walk(body) }
+            return dictionary.entries.allSatisfy { entry in entry.key.walk(body) && entry.value.walk(body) }
 
         case .null, .bool, .int, .double, .string, .bytes:
             return true
         }
     }
 
-    // How a whole number stands against a fraction, exactly at every size.
-    // Converting the whole to binary64 rounds above 2^53, and worth must not
-    // depend on the rounding, so the fraction is taken apart instead: its whole
-    // part meets the int exactly, and only a tie reads what is left.
-    private static func order(whole integer: Int, fraction: Double) -> ComparisonResult? {
-        guard !fraction.isNaN else { return nil }
+    // Whether a fraction is exactly a whole number's worth, judged without
+    // converting the whole number, which would round past 2^53. 0x1p63 is
+    // the edge of what a whole number can be, written exactly where
+    // `Double(Int.max)` would round past it; a fraction that is not a number
+    // or is infinite is the worth of none.
+    private static func sameWorth(whole integer: Int, fraction: Double) -> Bool {
+        guard fraction >= -0x1p63, fraction < 0x1p63, fraction.rounded(.down) == fraction else { return false }
 
-        // Past either end of what an int can be (0x1p63 is the int's own edge,
-        // written exactly where `Double(Int.max)` would round past it) the
-        // answer needs no digits, and infinity, which only a host can hand in,
-        // is answered by the same two lines.
-        guard fraction < 0x1p63 else { return .orderedAscending }
-        guard fraction >= -0x1p63 else { return .orderedDescending }
-
-        let floored = fraction.rounded(.down)
-        let settled = Int(floored)
-
-        guard integer == settled else {
-            return integer < settled ? .orderedAscending : .orderedDescending
-        }
-
-        // Equal whole parts: whatever the flooring dropped is what the
-        // fraction has over the int.
-        return fraction == floored ? .orderedSame : .orderedAscending
+        return Int(fraction) == integer
     }
 
     // These positions taken in order, and nil where one of them is not a
@@ -846,20 +923,5 @@ public indirect enum Value: Sendable, Equatable {
         }
 
         return taken
-    }
-
-    // Whether a record and a dictionary hold the same fields. A record that
-    // settled to a name is that name's, and no dictionary is.
-    private static func same(
-        _ record: Record,
-        _ dictionary: Value.Dictionary,
-        by held: (Value, Value) -> Bool
-    ) -> Bool {
-        guard record.name == nil, record.count == dictionary.count else { return false }
-
-        return dictionary.entries.indices.allSatisfy { place in
-            record.names[place] == dictionary.entries[place].name
-                && held(record.values[place], dictionary.entries[place].value)
-        }
     }
 }

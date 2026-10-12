@@ -7,18 +7,19 @@
 
 import Foundation
 
-// Which type an expression is, without any of it.
+// Which construct an expression is, without any of it.
 //
-// A place says which construct a statement writes, and the type is the whole
-// of what it has to say. Carrying the expression would put a program inside an
-// address. The cases are the language's own and no document's: what a text
-// spells a type with is the notation's, and two texts spelling one type two
-// ways arrive here as one case.
+// A place says which construct a statement writes, and the construct is the
+// whole of what it has to say. Carrying the expression would put a program
+// inside an address. The cases are the language's own and no document's: what
+// a text spells a construct with is the notation's, and two texts spelling one
+// construct two ways arrive here as one case.
 public enum Construct: Sendable, Hashable {
     case literal
     case reference
     case array
     case record
+    case dictionary
     case closure
     case cast
 
@@ -43,6 +44,7 @@ public enum Construct: Sendable, Hashable {
         case .reference: "reference"
         case .array: "array"
         case .record: "record"
+        case .dictionary: "dictionary"
         case .closure: "closure"
         case .cast: "cast"
         case .block: "block"

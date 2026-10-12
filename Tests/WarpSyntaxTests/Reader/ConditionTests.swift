@@ -57,7 +57,7 @@ struct ConditionTests {
         private func declared(_ value: Value) -> TypeExpression {
             let table = TypeTable.empty.loweredTypes
 
-            return LoweredType(of: value, in: table).spelled(in: table) ?? .any
+            return LoweredType(of: value, in: table).spelled(in: table)
         }
     }
 
@@ -160,7 +160,7 @@ struct ConditionTests {
         // And. Absence is not an empty collection. `contains` walks what it was
         // handed, the way every other collection procedure does, so asking it
         // of nothing is refused rather than answered false.
-        await #expect(throws: (any Error).self) {
+        await #expect(throws: BuildError.self) {
             try await sut.evaluate(
                 .call(Call(selector: "Standard.Collection.contains", arguments: [.reference(path("gone")), .literal(.string("x"))]))
             )
@@ -210,7 +210,7 @@ struct ConditionTests {
         }
     }
 
-    @Test("validation covers both sides of a predicate")
+    @Test("the load holds both sides of a predicate")
     func validationCoversBothSides() {
         // Given
         let condition = equals(

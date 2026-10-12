@@ -8,36 +8,20 @@
 import Foundation
 
 // What the type check judged at each place that lowering reads back, by the
-// place it stands at. The type check writes it beside the calls it gathers,
-// reads it over a body for the hand-back proof, and lowering reads it where it
-// lowers what stands there. A place stands for
-// one expression, so it holds one judgement.
+// place it stands at. The type check writes it beside the calls it gathers, and
+// lowering reads it where it lowers what stands there. A place stands for one
+// expression, so it holds one judgement.
 struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
 
-    // Whether a reading of a type parameter of the body may hold what is
-    // not a value of it somewhere here, which the hand-back proof reads as
-    // proving nothing.
-    private(set) var loosened = false
-
-    // What a write settles to, by the statement that writes it: the type the
-    // check held the write to, which is what the path reaches in a box held
-    // to a type (one that declared it, one a closure captured or a call
-    // handed in place, a module variable) and what a path reaches in a box
-    // that declared nothing. A whole write into such a box retypes it and
-    // settles to nothing.
-    private(set) var writes: [Place: LoweredType] = [:]
-
-    // Whether what the statement at a place binds or writes is, by what the
-    // build read, a value of the type it lands in as it stands, so the run
-    // has nothing to judge there. A statement walked again holds what its
-    // last walk read.
-    private(set) var asItIs: [Place: Bool] = [:]
-
-    // The name a record built at a place takes: one written where a declared
-    // record is read is built as that record.
+    // The name a record literal at a place is built under: the declared
+    // record the place it is written into reads.
     private(set) var names: [Place: Name] = [:]
+
+    // The path a statement at a place writes, as the walk that judged where
+    // the write lands placed it.
+    private(set) var writes: [Place: LoweredPath] = [:]
 
     // MARK: - Initializer
     init() {
@@ -50,12 +34,6 @@ struct JudgementTable: Sendable {
         judgements[place]
     }
 
-    // What the write at this statement settles to, or nil where the check
-    // held it to nothing lowering reads.
-    func settling(writeAt place: Place) -> LoweredType? {
-        writes[place]
-    }
-
     // What the type check judged at this place.
     mutating func record(_ judgement: Judgement, at place: Place) {
         assert(judgements[place] == nil, "one place stands for one expression")
@@ -63,53 +41,46 @@ struct JudgementTable: Sendable {
         judgements[place] = judgement
     }
 
-    // What the write at this statement settles to. A statement walked again
-    // holds the type it was last held to.
-    mutating func record(write settling: LoweredType, at place: Place) {
-        writes[place] = settling
-    }
-
-    // Whether the run has nothing to judge where the statement at this
-    // place binds or writes.
-    func landsAsItIs(at place: Place) -> Bool {
-        asItIs[place] == true
-    }
-
-    // The name the record built at this place takes, or nil where it is
-    // built under none.
+    // The name the record literal at this place is built under, or nil
+    // where the type check judged none there.
     func name(ofRecordAt place: Place) -> Name? {
         names[place]
     }
 
-    // Whether what the statement at this place binds or writes needs no
-    // judging there. A statement walked again holds what its last walk read.
-    mutating func record(asItIs: Bool, at place: Place) {
-        self.asItIs[place] = asItIs
+    // The name the record literal at this place is built under.
+    mutating func record(_ name: Name, ofRecordAt place: Place) {
+        assert(names[place] == nil, "one place stands for one expression")
+
+        names[place] = name
     }
 
-    // The names records built at these places take.
-    mutating func record(names: [Place: Name]) {
-        guard !names.isEmpty else { return }
-
-        self.names.merge(names) { _, theirs in theirs }
+    // The path the statement at this place writes, or nil where the type
+    // check placed none there.
+    func path(writtenAt place: Place) -> LoweredPath? {
+        writes[place]
     }
 
-    // A reading of a type parameter here may hold what is not a value of
-    // it.
-    mutating func loosen() {
-        loosened = true
+    // The path the statement at this place writes.
+    mutating func record(_ path: LoweredPath, writtenAt place: Place) {
+        assert(writes[place] == nil, "one place stands for one statement")
+
+        writes[place] = path
     }
 
+    // The other's entries beside this table's own, the other's standing
+    // where both hold a place.
     mutating func absorb(_ other: JudgementTable) {
-        for (place, judgement) in other.judgements {
-            record(judgement, at: place)
+        Self.absorb(other.judgements, into: &judgements) { _, theirs in
+            assertionFailure("one place stands for one expression")
+
+            return theirs
         }
+        Self.absorb(other.names, into: &names) { _, theirs in theirs }
+        Self.absorb(other.writes, into: &writes) { _, theirs in
+            assertionFailure("one place stands for one statement")
 
-        writes.merge(other.writes) { _, theirs in theirs }
-        asItIs.merge(other.asItIs) { _, theirs in theirs }
-        names.merge(other.names) { _, theirs in theirs }
-
-        loosened = loosened || other.loosened
+            return theirs
+        }
     }
 
     // This table with the others' entries beside its own, for a construct
@@ -125,4 +96,32 @@ struct JudgementTable: Sendable {
     }
 
     // MARK: - Private
+    // A table carried up through every construct holding it is inserted
+    // into the larger of the two, so an entry is hashed again only where it
+    // joins a larger table and not at every level it passes. `resolve` is
+    // asked with this table's entry first and the other's second.
+    private static func absorb<Value>(
+        _ other: [Place: Value],
+        into own: inout [Place: Value],
+        resolve: (Value, Value) -> Value
+    ) {
+        guard !other.isEmpty else { return }
+
+        guard !own.isEmpty else {
+            own = other
+
+            return
+        }
+
+        guard own.count < other.count else {
+            own.merge(other, uniquingKeysWith: resolve)
+
+            return
+        }
+
+        let smaller = own
+
+        own = other
+        own.merge(smaller) { theirs, mine in resolve(mine, theirs) }
+    }
 }

@@ -7,13 +7,13 @@
 
 import Foundation
 
-// The names the language gives the types it names, each written once. A
-// document spells one of these types by its name, a claim about one is keyed
-// by it, and a value is an instance of the one its kind is, so every table
-// answering one of those questions reads the name from here and no two of
-// them can come to spell one type two ways.
+// The names the language gives the types it names, and the words a type's
+// spelling writes in front of one, each written once. A document spells one
+// of these types by its name, a claim about one is keyed by it, and a value
+// is an instance of the one its kind is, so every table answering one of
+// those questions reads the name from here and no two of them can come to
+// spell one type two ways.
 public enum TypeSpelling {
-    // MARK: - Property
     public static let any: Name = "Any"
     public static let never: Name = "Never"
     public static let null: Name = "Null"
@@ -28,12 +28,24 @@ public enum TypeSpelling {
     // The type answering a contract, written in that contract's procedures.
     public static let selfType: Name = "Self"
 
-    // What a claim about `Array` or `Dictionary` reads an element as: a type
-    // parameter nothing fills, spelled with a dot, which no document's `some`
-    // writes, so it is no parameter a declaration names.
-    public static let selfElement: Name = "Self.Element"
+    // The words a type's spelling writes in front of a type: a type
+    // parameter, a procedure's constness and isolation, and a slot's marks.
+    public static let some: Name = "some"
+    public static let const: Name = "const"
+    public static let isolated: Name = "isolated"
+    public static let `inout`: Name = "inout"
+    public static let variable: Name = "var"
 
-    // MARK: - Initializer
-    // MARK: - Public
-    // MARK: - Private
+    // What the language declares itself: the contract a map's key answers,
+    // the failure a rescue binds and the round a loop binds.
+    public static let hashable: Name = "Hashable"
+    public static let failure: Name = "Failure"
+    public static let round: Name = "Round"
+
+    // What a claim about `Array` or `Dictionary` reads an element, and a
+    // map's key, as: a type parameter nothing fills, spelled with a dot,
+    // which no document's `some` writes, so it is no parameter a declaration
+    // names.
+    static let selfElement: Name = "Self.Element"
+    static let selfKey: Name = "Self.Key"
 }

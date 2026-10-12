@@ -35,14 +35,14 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("a")])
 
         // Then
-        #expect(outputs["result"] == .string("touched"))
+        #expect(outputs.map?["result"] == .string("touched"))
     }
 
     @Test("a conditional that did not run changes nothing")
@@ -59,14 +59,14 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.equal"])
 
         // When
         let outputs = try await run(sut, arguments: ["kind": .string("b")])
 
         // Then
-        #expect(outputs["result"] == .string("untouched"))
+        #expect(outputs.map?["result"] == .string("untouched"))
     }
 
     @Test("a variable declared inside a block does not escape it")
@@ -83,7 +83,7 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "inner"]]]
+            "result": ["dictionary": [["result", ["ref": "inner"]]]]
         ]
 
         // When / Then
@@ -106,14 +106,14 @@ struct VariableNotationTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .string("outer"))
+        #expect(outputs.map?["result"] == .string("outer"))
     }
 
     @Test("writing a fixed name is rejected at load")
@@ -122,7 +122,7 @@ struct VariableNotationTests {
         // the two mistakes this is
         let fixture: Value = [
             "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ]
 
         // When / Then
@@ -136,7 +136,7 @@ struct VariableNotationTests {
         // Given
         let fixture: Value = [
             "body": [["set": "verdict", "value": "second"]],
-            "result": ["record": ["result": ["ref": "verdict"]]]
+            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
         ]
 
         // When / Then
@@ -162,7 +162,7 @@ struct VariableNotationTests {
                     ]
                 ]
             ],
-            "result": ["record": ["result": ["ref": "tally"]]]
+            "result": ["dictionary": [["result", ["ref": "tally"]]]]
         ]
 
         // When / Then
@@ -181,8 +181,7 @@ struct VariableNotationTests {
                     "value": ["call": [
                         "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
-                            ["record": [
-                                "left": [
+                            ["dictionary": [["left", [
                                     "closure": [
                                         "body": [
                                             ["var": "tally", "value": 0],
@@ -190,25 +189,19 @@ struct VariableNotationTests {
                                         ],
                                         "result": ["ref": "tally"]
                                     ]
-                                ],
-                                "right": ["closure": ["result": 2]]
-                            ]]
+                                ]], ["right", ["closure": ["result": 2]]]]]
                         ]
                     ]
-                ]],
-                [
-                    "let": "read",
-                    "value": ["as": ["of": ["ref": "both"], "type": ["record": ["left": "Int", "right": "Int"]]]]
-                ]
+                ]]
             ],
-            "result": ["record": ["result": ["ref": "read.left"]]]
+            "result": ["dictionary": [["result", ["ref": "both[\"left\"]"]]]]
         ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When
         let outputs = try await run(sut)
 
         // Then
-        #expect(outputs["result"] == .int(1))
+        #expect(outputs.map?["result"] == .int(1))
     }
 
     @Test("a step naming itself twice is rejected at load")

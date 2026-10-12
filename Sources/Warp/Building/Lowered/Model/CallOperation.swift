@@ -10,7 +10,8 @@ import Foundation
 // A call as the run makes it. Arguments stand at the callee's slots, nil
 // where a hold stands instead or where a dispatch hands what it read. A parameter
 // handed in place takes the caller's hold: the slot holding it and the path
-// below it.
+// below it. The build held every argument to the slot it lands in, so the run
+// judges none.
 struct CallOperation: Sendable {
     struct Handed: Sendable {
         // MARK: - Property
@@ -28,18 +29,16 @@ struct CallOperation: Sendable {
     let handed: [Handed]
 
     // MARK: - Initializer
-    // The same, where the parts were read apart. What is handed in place
-    // stands at one of the positions this call fills, and a run writes it
-    // there without asking how many there are.
-    init(
-        procedure: Int,
-        arguments: [Operation?],
-        judging handed: [Handed]
-    ) throws {
-        guard handed.allSatisfy({ one in one.position < arguments.count }) else {
+    // A call whose parts were read apart, from an object. What is handed in
+    // place stands at a position this call writes no argument at, and a run
+    // writes it there without asking how many there are. The lowering writes
+    // an argument at every other position and the positions handed
+    // ascending, so one call is one writing.
+    init(procedure: Int, arguments: [Operation?], handing handed: [Handed]) throws {
+        guard handed.map(\.position) == arguments.indices.filter({ position in arguments[position] == nil }) else {
             throw ObjectRefused(
-                "a call hands something in place at a position past the"
-                    + " \(arguments.count) it fills"
+                "a call hands in place at other positions than the ones it writes no argument at,"
+                    + " ascending"
             )
         }
 
@@ -61,9 +60,10 @@ struct CallOperation: Sendable {
     // One rule, whether the callee is the one the call named or one of the
     // types the link found answering a contract's procedure. A call through a
     // contract is placed against every type answering it and the run picks
-    // one by the value, so a literal one of those types refuses is left as
-    // written, `picked`, for the run to refuse where that type is the one it
-    // picks.
+    // one by the value, so these are `picked`. A literal one of them refuses
+    // stands at a `Self` the contract writes, which the first argument and
+    // the literal fill as one type at the build, so that row is one the run
+    // never picks for this call, and the literal is left there as written.
     init(
         handing written: [Argument?],
         to callee: Linked,
@@ -109,10 +109,10 @@ struct CallOperation: Sendable {
                 guard case let .literal(value) = code else { return code }
 
                 guard picked else {
-                    return .literal(try slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes))
+                    return .literal(try slot.type.settling(value, at: "input '\(slot.name)'", in: loweredTypes))
                 }
 
-                return .literal((try? slot.checking(value, at: "input '\(slot.name)'", in: loweredTypes)) ?? value)
+                return .literal((try? slot.type.settling(value, at: "input '\(slot.name)'", in: loweredTypes)) ?? value)
             })
         }
 
@@ -120,5 +120,19 @@ struct CallOperation: Sendable {
     }
 
     // MARK: - Public
+    // The same call with every argument it writes rewritten.
+    func rewritten(
+        operation: (Operation) throws -> Operation,
+        type: (LoweredType) throws -> LoweredType
+    ) rethrows -> CallOperation {
+        CallOperation(
+            procedure: procedure,
+            arguments: try arguments.map { argument in
+                try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
+            },
+            handed: handed
+        )
+    }
+
     // MARK: - Private
 }

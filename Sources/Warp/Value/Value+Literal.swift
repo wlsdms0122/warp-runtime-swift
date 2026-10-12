@@ -13,10 +13,9 @@ import Foundation
 // so this is a spelling and not a conversion. `"a"` is
 // `.string("a")` for the same reason `"a"` is a `String`. Nothing here reads
 // structure out of a string: a path is still a `Path` and a reference is
-// still an `Expression`, because the language does not re-parse text into
-// anything live and a convenience is not a reason to start.
+// still an `Expression`.
 //
-// Bytes, a named record and a procedure have no literal. A procedure is made
+// Bytes, a record and a procedure have no literal. A procedure is made
 // by capturing a scope, which happens during a run, so nothing written down
 // can name one.
 //

@@ -8,11 +8,9 @@
 import Foundation
 import Warp
 
-// The elements with one more at the end. Nothing is written in place: this
-// answers a new array, which is what a language whose names are fixed by
-// default can offer.
+// The elements with one more at the end, as a new array.
 struct AppendingQuery: Query {
-    // What this takes: the array, and one more element of its own kind.
+    // What this takes: the array, and one more element of its element type.
     enum Parameters: Int, ParameterSet {
         case array
         case element
@@ -41,7 +39,7 @@ struct AppendingQuery: Query {
         // stays compact until an element that is not a byte is put among them,
         // which `adding` reads for itself.
         guard let appended = question[.array].adding(question[.element], atFront: false) else {
-            throw ExecutionError("Standard.Collection.appending asks an array")
+            throw ExecutionError("Standard.Collection.appending asks an Array")
         }
 
         return appended

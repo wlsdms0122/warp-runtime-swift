@@ -18,11 +18,13 @@ import Warp
 // One place at a time, because a mutant that differs in two places cannot say
 // which of them the answer was about.
 public struct Mutator: Sendable {
-    // One step down into a value: a position in a list, or a key in a record
-    // or a dictionary.
+    // One step down into a value: a position in a list, the entry under a
+    // key of a map, the key itself, or a field of a record.
     private enum Step {
         case position(Int)
-        case key(Name)
+        case entry(Value)
+        case key(Value)
+        case field(Name)
     }
 
     // MARK: - Property
@@ -34,7 +36,7 @@ public struct Mutator: Sendable {
     // Every place in the value, each replaced the ways its kind can be.
     //
     // A number is the one that indexes, counts and names rows, so it is
-    // replaced by the three shapes an index goes wrong in. A list is replaced
+    // replaced by the shapes an index goes wrong in, and by text. A list is replaced
     // in length, because a reading that takes fields by position reads a
     // shorter list somewhere. The rest take a neighbouring kind, which is what
     // a reading that switches on the kind has to refuse.
@@ -46,7 +48,9 @@ public struct Mutator: Sendable {
         // what it already answered rather than anything new.
         walk(value, at: []) { steps, held in
             for mutated in self.mutations(ofPlace: held) where mutated != held {
-                mutations.append((Self.spelled(steps), replacing(steps[...], in: value, with: mutated)))
+                guard let replaced = replacing(steps[...], in: value, with: mutated) else { continue }
+
+                mutations.append((Self.spelled(steps), replaced))
             }
         }
 
@@ -65,13 +69,18 @@ public struct Mutator: Sendable {
     }
 
     // MARK: - Private
+    // Written as a path is, a list's position and a map's key between
+    // brackets and a field after a dot, and a key itself marked as the key
+    // rather than the entry under it.
     private static func spelled(_ steps: [Step]) -> String {
         steps.map { step in
             switch step {
-            case let .position(position): String(position)
-            case let .key(key): key.spelling
+            case let .position(position): Path([.index(.int(position))]).rendered
+            case let .entry(key): Path([.index(key)]).rendered
+            case let .key(key): "[key \(Rendering(key).text())]"
+            case let .field(name): ".\(name.spelling)"
             }
-        }.joined(separator: "/")
+        }.joined()
     }
 
     private func mutations(ofPlace value: Value) -> [Value] {
@@ -86,10 +95,20 @@ public struct Mutator: Sendable {
 
             return mutations
 
+        // Bytes are a list in a compact spelling, so they are replaced in
+        // length the same way, which is how an identity or a fingerprint
+        // reads wrong.
+        case let .bytes(bytes):
+            var mutations: [Value] = [.bytes(Array(bytes.dropLast())), .bytes([]), .int(0), .dictionary(Value.Dictionary([:]))]
+
+            if let first = bytes.first { mutations.append(.bytes(bytes + [first])) }
+
+            return mutations
+
         case let .dictionary(dictionary):
             var mutations: [Value] = [.dictionary(Value.Dictionary([:])), .array([]), .int(0)]
 
-            if let first = dictionary.names.first { mutations.append(.dictionary(dictionary.removing(first))) }
+            if let first = dictionary.keys.first { mutations.append(.dictionary(dictionary.removing(key: first))) }
 
             mutations.append(.dictionary(dictionary.writing("mutated", with: .null)))
 
@@ -120,12 +139,13 @@ public struct Mutator: Sendable {
 
         case let .dictionary(dictionary):
             for entry in dictionary.entries {
-                walk(entry.value, at: steps + [.key(entry.name)], visit)
+                walk(entry.key, at: steps + [.key(entry.key)], visit)
+                walk(entry.value, at: steps + [.entry(entry.key)], visit)
             }
 
         case let .record(record):
             for (name, field) in zip(record.names, record.values) {
-                walk(field, at: steps + [.key(name)], visit)
+                walk(field, at: steps + [.field(name)], visit)
             }
 
         default:
@@ -133,29 +153,54 @@ public struct Mutator: Sendable {
         }
     }
 
-    private func replacing(_ steps: ArraySlice<Step>, in value: Value, with mutated: Value) -> Value {
+    // The value with the place the steps reach replaced, or nil where that
+    // changes more than the one place: a key replaced by one the map holds
+    // already would take that entry's place too.
+    private func replacing(_ steps: ArraySlice<Step>, in value: Value, with mutated: Value) -> Value? {
         guard let step = steps.first else { return mutated }
 
         switch (step, value) {
         case let (.position(position), .array(elements)) where elements.indices.contains(position):
-            var replaced = elements
+            guard let element = replacing(steps.dropFirst(), in: elements[position], with: mutated) else { return nil }
 
-            replaced[position] = replacing(steps.dropFirst(), in: elements[position], with: mutated)
+            var replaced = elements
+            replaced[position] = element
 
             return .array(replaced)
 
+        case let (.entry(key), .dictionary(dictionary)):
+            guard
+                let held = dictionary[key: key],
+                let entry = replacing(steps.dropFirst(), in: held, with: mutated)
+            else {
+                return nil
+            }
+
+            return .dictionary(dictionary.writing(key: key, with: entry))
+
         case let (.key(key), .dictionary(dictionary)):
-            guard let held = dictionary[key] else { return value }
+            guard
+                let held = dictionary[key: key],
+                let replaced = replacing(steps.dropFirst(), in: key, with: mutated),
+                dictionary[key: replaced] == nil
+            else {
+                return nil
+            }
 
-            return .dictionary(dictionary.writing(key, with: replacing(steps.dropFirst(), in: held, with: mutated)))
+            return .dictionary(dictionary.removing(key: key).writing(key: replaced, with: held))
 
-        case let (.key(key), .record(record)):
-            return .record(record.mapValues { name, field in
-                name == key ? replacing(steps.dropFirst(), in: field, with: mutated) : field
-            })
+        case let (.field(field), .record(record)):
+            guard
+                let position = record.layout.position(of: field),
+                let held = replacing(steps.dropFirst(), in: record.values[position], with: mutated)
+            else {
+                return nil
+            }
+
+            return .record(record.mapValues { name, value in name == field ? held : value })
 
         default:
-            return value
+            return nil
         }
     }
 }

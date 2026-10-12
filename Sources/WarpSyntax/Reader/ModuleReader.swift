@@ -8,14 +8,8 @@
 import Foundation
 import Warp
 
-// A document, which is a module and not a procedure: metadata, and the procedures
-// it declares.
-//
-// There is no top level to run. A body written at the root would make every
-// document an entry point and leave no way to write one that only declares.
-// Procedures are named here and which one runs is named when a run starts, so
-// a document that declares three of them is ordinary rather than a special
-// case.
+// A document, which is a module and not a procedure: what it imports and
+// what it declares. Which procedure runs is named when a run starts.
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case imports
@@ -31,20 +25,14 @@ public struct ModuleReader: Decodable {
     // MARK: - Property
     // Which types a reader has to understand. It goes up when a type is added
     // or an existing one changes what it means, and does not move for a new
-    // procedure. A procedure is vocabulary, and vocabulary is what `imports` is for.
-    //
-    // Every document says it. A reader that filled in a default would be
-    // reading a document that never said which language it was written for, and
-    // a file that is not a document at all would get as far as having its keys
-    // judged. Turned away for being a malformed module rather than for not
-    // being one.
+    // procedure, which is vocabulary. Every document says it.
     public static let version = 1
 
     // What the document declares, unjudged. Reading and checking are two
     // questions and only one of them is about the program: a text nobody can
     // run is still a text, and still that one, so the reading answers for it
     // and `Module` is where it is held to anything.
-    public let draft: Draft
+    let draft: Draft
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -60,103 +48,61 @@ public struct ModuleReader: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let notation = decoder.notation
 
-        // Read standing on the procedures rather than on the module holding
-        // them, because what is refused just below is about the procedures. A
-        // reading is addressed where it is, so being where the answer is is
-        // the whole of what puts an author on the right line.
-        let written = try container.superDecoder(forKey: .procedures)
-        let procedures = try written.read([Name: ProcedureReader].self)
-
-        guard !procedures.isEmpty else {
-            throw ReadingError(
-                "a module that declares nothing can never be"
-                    + " linked into anything. Write at least one procedure",
-                at: written.steps
-            )
-        }
-
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
-            types: try Self.record(TypeReader.self, in: container, forKey: .types)
-                .mapValues(\.type),
-            contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
+            types: try Self.mapping(TypeDeclarationReader.self, in: container, forKey: .types)
+                .mapValues(\.declared),
+            contracts: try Self.mapping(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
             // In key order, so that the same refusal comes first every run.
-            claims: try Self.record([String].self, in: container, forKey: .satisfies)
+            claims: try Self.mapping([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
                     // The key is the type claiming, written as the document
-                    // spells it; the contracts it claims are names to read.
-                    let type = entry.key
+                    // spells it; the contracts it claims are a set of names,
+                    // and order and repeats are the one spelling's to hold.
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
-                    // Two contracts that read as one are one contract claimed
-                    // twice, however the text spelled them.
-                    let contracts = try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
-
-                    guard Set(contracts).count == contracts.count else {
-                        throw ReadingError("'\(type)' claims a contract twice under satisfies", at: steps)
-                    }
-
-                    claims[type] = Set(contracts)
+                    claims[entry.key] = Set(
+                        try entry.value.map { spelled in
+                            notation.qualified(try Name.read(spelled, at: steps), as: .type)
+                        }
+                    )
                 },
-            constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
+            constants: try Self.mapping(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
-            variables: try Self.record(VariableReader.self, in: container, forKey: .variables)
+            variables: try Self.mapping(VariableReader.self, in: container, forKey: .variables)
                 .mapValues(\.variable),
-            procedures: procedures.mapValues(\.procedure)
+            procedures: try Self.mapping(ProcedureReader.self, in: container, forKey: .procedures)
+                .mapValues(\.procedure)
         )
     }
 
     // MARK: - Public
-    // Whether a document declares what it imports.
-    //
-    // Written and not null. A key holding nothing is not a claim, and the two
-    // who ask have to agree about that: the door turns away a document that
-    // declares nothing, and the reader takes a key holding nothing as a list
-    // of no names. Answering differently is how `imports: Null` passes the
-    // door as a claim while the module behind it says it takes nothing.
-    //
-    // Asked twice because the two are in different places. The door holds the
-    // document and reads the value; the reader is inside it and has a
-    // container. One rule, said here for both.
-    public static func declaresImports(_ written: Value?) -> Bool {
-        guard let written else { return false }
-
-        return written != .null
-    }
-
-    public static func declaresImports<Key: CodingKey>(
-        in container: KeyedDecodingContainer<Key>,
-        forKey key: Key
-    ) throws -> Bool {
-        try container.contains(key) && !container.decodeNil(forKey: key)
-    }
-
     // MARK: - Private
     // What the document says it takes from its link, read and not judged. What
     // it is held against is what the module sends, which is a fact about the
     // module rather than about the text, so the refusal is the module's.
     //
     // Nothing written is nothing claimed, and a slot written as null says the
-    // same. Whether a document may leave it out at all is the door's, and the
-    // door sees the value rather than a container.
+    // same. Whether a document may leave it out at all is the load's, which
+    // reads the claim off the draft this answers.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
     ) throws -> Set<Name>? {
-        guard try Self.declaresImports(in: container, forKey: .imports) else { return nil }
+        guard container.contains(.imports), try !container.decodeNil(forKey: .imports) else { return nil }
 
         let written = try container.superDecoder(forKey: .imports)
 
         return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
     }
 
-    // One of the slots a module declares a record of things under, read
+    // One of the slots a module declares a mapping of things under, read
     // standing on the slot so that what is refused inside it is addressed
     // there. Nothing written is nothing declared, which is what an absent slot
     // is and what a slot written as null says.
-    private static func record<T: Decodable>(
+    private static func mapping<T: Decodable>(
         _ type: T.Type,
         in container: KeyedDecodingContainer<CodingKeys>,
         forKey key: CodingKeys
@@ -169,18 +115,9 @@ public struct ModuleReader: Decodable {
     }
 
     // A document says which language it is written for, and one that does not
-    // is not a document. Reading silence as some version would mean guessing
-    // at the one question that has to be answerable from the bytes alone, and
-    // it is what lets a file of some other kind entirely walk in and be turned
-    // away for its keys rather than for what it is.
-    //
-    // Any version but this reader's is refused rather than guessed at. Read
-    // through its own container, before anything else and before
-    // the keys are judged, because everything after it is read by rules a newer
-    // document may not be written to. Including which keys exist. A later
-    // version adding a key would otherwise be turned away as malformed, and a
-    // reader has to tell "I am too old for this" (upgrade me) from "this is
-    // wrong" (fix the sender).
+    // is not a document. Any version but this reader's is refused. Read
+    // through its own container, before the keys are judged, so a reader too
+    // old for a document says so rather than refusing its keys.
     private static func checkVersion(in decoder: Decoder) throws {
         let document = try decoder.container(keyedBy: AnyCodingKey.self)
         let key = AnyCodingKey(stringValue: Module.versionKey.spelling)

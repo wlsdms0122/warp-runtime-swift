@@ -67,6 +67,12 @@ public func run(
     )
 }
 
+// A procedure held as a value, made the way a host gets one: a run whose
+// entry answers a closure.
+public func procedureValue() async throws -> Value {
+    try await run(Procedure(body: [], result: .closure(Procedure(body: [], result: .literal(.null)))))
+}
+
 // What a body answers with, for the many tests that care about one value rather
 // than a result map.
 public func answer(
@@ -87,9 +93,9 @@ public func answer(
 
 // MARK: - Judging
 
-// What an expression reads is not a property it carries. The validator walks
-// structure and knows which names a body introduces. Asking it is how a test
-// asks the same question.
+// What an expression reads is not a property it carries. The load walks
+// structure and knows which names a body introduces, and a module is what it
+// holds. Making one around the body is how a test asks the same question.
 public func validates(
     _ expression: Warp.Expression,
     visible: Set<Name> = []
@@ -99,7 +105,10 @@ public func validates(
 
 public func validates(body: Body, visible: Set<Name> = []) -> Bool {
     do {
-        try Validator().validate(Procedure(body: body), constants: visible)
+        _ = try Module(
+            constants: Dictionary(uniqueKeysWithValues: visible.map { name in (name, Warp.Expression.literal(.int(0))) }),
+            procedures: [entryName: Procedure(body: body)]
+        )
 
         return true
     } catch {
@@ -112,7 +121,17 @@ public func validates(body: Body, visible: Set<Name> = []) -> Bool {
 // A reference from segment names, written directly. A path is what the language
 // has, and the spelling belongs to whatever produced it.
 public func reference(_ names: Name...) -> Warp.Expression {
-    .reference(Path(names.map { name in .key(name) }))
+    .reference(Path(names.map { name in .name(name) }))
+}
+
+// A map literal keyed by text: what a test answers several values at once
+// with, each under its own key.
+public func map(_ entries: [Name: Warp.Expression]) -> Warp.Expression {
+    .dictionary(
+        entries.sorted { one, other in one.key < other.key }.map { name, value in
+            (key: .literal(.string(name.spelling)), value: value)
+        }
+    )
 }
 
 // MARK: - Conditions

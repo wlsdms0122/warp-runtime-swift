@@ -9,11 +9,10 @@ import Foundation
 
 // What a link produces and a run reads: every declaration lowered into one
 // table, the types the link declared, and what each document's variables
-// start out holding. A closure literal's row is
-// held by the code that makes the closure. Only
-// `Builder` makes one, so holding a value of this type is the evidence that
-// linking happened. An image is made per link and not kept: its rows mean
-// something within that link alone.
+// start out holding. A closure literal's row is held by the code that makes
+// the closure. Only `Builder` makes one, so holding a value of this type is
+// the evidence that linking happened. An image is made per link and not kept:
+// its rows mean something within that link alone.
 public struct Image: Sendable {
     // MARK: - Property
     public let linked: [Linked]
@@ -26,9 +25,9 @@ public struct Image: Sendable {
     // to say which refusal it is.
     let concealed: Set<Name>
 
-    // Every type the linked modules declared. A named type survives into the
-    // run as a row of the table's lowering rather than being expanded at
-    // link, so the run needs the table that answers it.
+    // Every type the linked modules declared. A declared record survives
+    // into the run as a row of the table's lowering, so the run needs the
+    // table that answers it.
     public let types: TypeTable
 
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
@@ -85,9 +84,7 @@ public struct Image: Sendable {
             throw ValueRefused("no type named '\(declared)' is declared here")
         }
 
-        let type = LoweredType.named(row)
-
-        return try type.settling(type.fitted(value, in: loweredTypes), at: declared.spelling, in: loweredTypes)
+        return try loweredTypes.mention(of: row).settling(outside: value, at: declared.spelling, in: loweredTypes)
     }
 
     // MARK: - Private

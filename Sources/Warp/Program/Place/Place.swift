@@ -60,19 +60,18 @@ public struct Place: Sendable, Hashable {
         // Without an identity there is only where the host put it: the
         // host counts its own modules, in the order it handed them over.
         func spelled(at origin: Int) -> String {
-            rendered ?? "the module at \(origin) in this link"
+            rendered ?? "the module at \(origin)"
         }
 
         // MARK: - Private
     }
 
     // Every part a program has, by the language's own name for it. A part is
-    // where something sits in the structure of a program; the boundary's `Slot` is
-    // what a call fills, and the two are named apart because they are two
-    // things. No spelling rides along: what a document writes a part under is
-    // the reading side's, and a spelling written in two places is one the two
-    // can come to disagree about with nothing going wrong loudly enough to
-    // notice.
+    // where something sits in the structure of a program; a `Slot` is what a
+    // call fills, and the two are named apart because they are two things. No
+    // spelling rides along: what a document writes a part under is the reading
+    // side's, and a spelling written in two places is one the two can come to
+    // disagree about with nothing going wrong loudly enough to notice.
     //
     // One case per part and not per key. A conditional and a loop both hold a
     // condition; that a document writes the two under different keys is a fact
@@ -88,6 +87,7 @@ public struct Place: Sendable, Hashable {
 
         case parameters
         case returns
+        case bounds
         case body
         case result
 
@@ -100,6 +100,10 @@ public struct Place: Sendable, Hashable {
 
         // What a record is written with: its fields, each under its name.
         case fields
+
+        // What a map literal is written with: its entries in order, each a
+        // key and a value.
+        case entries
 
         // A condition, and which construct holds it. The construct is carried
         // because a document does not write the two under one key (a
@@ -128,10 +132,12 @@ public struct Place: Sendable, Hashable {
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"
+            case .bounds: "bounds"
             case .body: "body"
             case .result: "result"
             case .subject: "subject"
             case .fields: "fields"
+            case .entries: "entries"
             case .callee: "callee"
             case .arguments: "arguments"
             case .closure: "closure"
@@ -147,9 +153,8 @@ public struct Place: Sendable, Hashable {
         // MARK: - Private
     }
 
-    // A construct that holds a condition. Two of them, and a third would be a
-    // third here, which is the point: whoever spells a condition for a document
-    // is asked about every one of these by name.
+    // A construct that holds a condition, each by name, so whoever spells a
+    // condition for a document is asked about every one.
     public enum ConditionHolder: Sendable, Hashable {
         case conditional
         case loop
@@ -168,8 +173,8 @@ public struct Place: Sendable, Hashable {
         // knows what its reader is looking at.
         case part(Part)
 
-        // The type a statement writes, carried the same way and for the same
-        // reason: two texts spelling one type two ways arrive as one type.
+        // The construct a statement writes, carried the same way and for the
+        // same reason: two texts spelling one construct two ways arrive as one.
         case construct(Construct)
 
         // A position in an array the document writes.

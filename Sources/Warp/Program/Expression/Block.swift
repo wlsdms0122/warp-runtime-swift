@@ -9,10 +9,9 @@ import Foundation
 
 // Statements run in order, then one expression answers.
 //
-// A block with no result answers nothing. The alternative (the last statement's
-// value) puts the answer somewhere nothing points at, so appending a statement
-// changes what the block is worth and the author who appended it wrote nothing
-// that says so. Naming the answer costs one line and says which line it is.
+// A block with no result answers nothing: the answer is the expression the
+// block names as its result, so appending a statement leaves what the block is
+// worth as it was.
 public struct Block: Sendable {
     // Where a block's body and its result stand, as the steps from the
     // block's own place. Every walk takes them from here, the way it takes an
@@ -42,7 +41,7 @@ public struct Block: Sendable {
     // validated or not: a leaving body never reaches the result, and a leaving
     // result leaves the block the body finished. (`Validator` refuses a result
     // under a leaving body as unreachable.)
-    public var alwaysLeaves: Bool {
+    var alwaysLeaves: Bool {
         body.alwaysLeaves || result?.alwaysLeaves == true
     }
 

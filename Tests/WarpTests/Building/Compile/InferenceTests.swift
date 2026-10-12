@@ -99,7 +99,7 @@ struct InferenceTests {
 
     @Test("a type parameter a procedure answers becomes what the walk answers")
     func aWalkAnswersWhatItsProcedureDoes() async throws {
-        // Given. `map` over strings with a procedure answering int. What the
+        // Given. `map` over strings with a procedure answering `Int`. What the
         // walk answers follows the procedure rather than the array it walks,
         // so asking for the array's type back is the disagreement
         let counting = Procedure(
@@ -150,8 +150,8 @@ struct InferenceTests {
     func aLoopResultCarriesTheBodyNameItReads() async throws {
         // Given. A finished round's exit hands the result the body's own
         // declarations; the 0-round exit never bound them, and a name a scope
-        // does not hold reads as null. So `kept` holds int?, not an `Any` for
-        // a name the entry never saw, and not a plain int the 0-round run would
+        // does not hold reads as null. So `kept` holds `Int?`, not an `Any` for
+        // a name the entry never saw, and not a plain `Int` the 0-round run would
         // break
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
@@ -169,7 +169,7 @@ struct InferenceTests {
                         Statement(binding: .constant("kept"), expression: loop),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("kept")])]
+                            arguments: [.reference([.name("kept")])]
                         )))
                     ]
                 ),
@@ -212,105 +212,6 @@ struct InferenceTests {
         #expect(try await run([running]) == .null)
     }
 
-    @Test("a loop result's writes stay out of the rounds' own reading")
-    func aLoopResultsWritesStayOutOfTheRounds() async throws {
-        // Given. The result runs once, at an exit, never between rounds; a body
-        // that reads `y` as the int it is must not be refused on account of a
-        // write only the exit makes
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [
-                    Statement(binding: .constant("used"), expression: .call(Call(
-                        selector: "wants",
-                        arguments: [.reference([.key("y")])]
-                    )))
-                ],
-                result: .block(
-                    Block(
-                        body: [
-                            Statement(binding: .assignment([.key("y")]), expression: .literal(.string("s")))
-                        ],
-                        result: reference("y")
-                    )
-                )
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("y"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop)
-                    ],
-                    result: reference("y")
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Builds, and the run answers what the exit wrote
-        #expect(try await run([sut]) == .string("s"))
-    }
-
-    @Test("a loop's result reads a box its condition took as held")
-    func aLoopsResultReadsWhatItsConditionTook() async throws {
-        // Given. The condition hands `ready` a closure that takes `n`, and the
-        // result runs after the condition on every way out of the loop. The
-        // text notation writes no construct in a result, so this asks it of
-        // a module assembled in Swift
-        let loop = Warp.Expression.loop(
-            while: .call(Call(
-                selector: "ready",
-                arguments: [.closure(Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: reference("n")
-                ))]
-            )),
-            body: Block(
-                body: [],
-                result: .block(Block(
-                    body: [Statement(binding: .assignment([.key("n")]), expression: .literal(.string("s")))],
-                    result: .literal(.int(1))
-                ))
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("n"), expression: .literal(.int(0))),
-                        Statement(expression: loop)
-                    ],
-                    result: .literal(.int(1))
-                ),
-                "ready": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "peek", type: .procedure(ProcedureType(returns: .int)))],
-                        returns: .bool
-                    ),
-                    body: [],
-                    result: .literal(.bool(true))
-                )
-            ]
-        )
-
-        // When / Then
-        let refusal = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        #expect(refusal?.message == "writes 'n' as String, and it holds Int")
-    }
-
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() async throws {
         // Given
@@ -323,7 +224,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("done")])
+                    result: .reference([.name("done")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -331,7 +232,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -378,7 +279,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("task"), .key("done")])]
+                            arguments: [.reference([.name("task"), .name("done")])]
                         )))
                     ]
                 ),
@@ -419,7 +320,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("walk"), expression: walking(
-                                [.key("counts")],
+                                [.name("counts")],
                                 element: "element",
                                 body: [
                                     Statement(binding: .constant("said"), expression: .call(Call(
@@ -471,15 +372,15 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.int(1))),
                         Statement(
                             expression: .conditional(equals(
-                                        .reference([.key("flag")]),
+                                        .reference([.name("flag")]),
                                         .literal(.bool(true))
                                         ), then: [
-                                        Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text")))
+                                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("text")))
                                     ], else: nil)
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -506,7 +407,7 @@ struct InferenceTests {
 
     @Test("a declared answer the body's answer fits builds")
     func agreeingTypesBuild() async throws {
-        // Given. `counts` declares an int and answers one
+        // Given. `counts` declares an `Int` and answers one
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
@@ -516,7 +417,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("done"), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("done")])
+                    result: .reference([.name("done")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -529,7 +430,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "counts"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -554,7 +455,7 @@ struct InferenceTests {
     func aMapAnswerCarriesItsElementType() async throws {
         // Given. `map` declares its answer through type parameters: the
         // closure's declared answer fills `Answer`, so handing the fan-out's
-        // answer to a procedure that wants another kind is refused before anything
+        // answer to a procedure that wants another type is refused before anything
         // runs
         let sut = try Module(
             procedures: [
@@ -626,16 +527,16 @@ struct InferenceTests {
                         Statement(binding: .variable("many"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                .reference([.key("ready")]),
+                                .reference([.name("ready")]),
                                 then: [
-                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.string("no")))
+                                    Statement(binding: .assignment([.name("many")]), expression: .literal(.string("no")))
                                 ],
                                 else: nil
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -674,7 +575,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("count"), .key("nope")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("count"), .name("nope")]))
                     ]
                 )
             ]
@@ -701,7 +602,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("name"), .index(0)]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("name"), .index(0)]))
                     ]
                 )
             ]
@@ -712,7 +613,7 @@ struct InferenceTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("name[0] indexes into String, and only an array or a dictionary is indexed")
+                && "\(error)".contains("name[0] indexes into String, and brackets read a list by a position")
         }
     }
 
@@ -755,7 +656,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("payload"), .key("whatever")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("payload"), .name("whatever")]))
                     ]
                 )
             ]
@@ -786,7 +687,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .named("Preson"),
                         optional: true
                     )
@@ -817,7 +718,7 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .any,
                                 optional: false
                             )
@@ -835,28 +736,32 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast to a record of other fields is refused, since a record is exactly its fields")
-    func aCastOntoADisjointRecordIsRefused() async throws {
-        // Given. A record type says all there is, so no value is a record of
-        // these fields and of those at once
+    @Test("a cast to another declared record is refused, since a record is its name")
+    func aCastOntoAnotherRecordIsRefused() async throws {
+        // Given. A declared record is its name, so no value is one record
+        // and another at once
         let sut = try Module(
+            types: [
+                "App.Failed": .record(["type": .string, "message": .string]),
+                "App.Reasons": .record(["failures": .dictionary(key: .string, value: .string)])
+            ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "failed", type: .record(["type": .string, "message": .string]))
+                            Parameter(name: "failed", type: .named("App.Failed"))
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("reason"), expression: .cast(
-                                .reference([.key("failed")]),
-                                as: .record(["failures": .dictionary(.string)]),
+                                .reference([.name("failed")]),
+                                as: .named("App.Reasons"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("reason"), .key("failures")])
+                    result: .reference([.name("reason"), .name("failures")])
                 )
             ]
         )
@@ -886,13 +791,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("tree"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Tree"),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("tree"), .key("value")])
+                    result: .reference([.name("tree"), .name("value")])
                 )
             ]
         )
@@ -906,7 +811,7 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast whose outer kind cannot match is refused even where the inside is unproven")
+    @Test("a cast whose outer type cannot match is refused even where the inside is unproven")
     func aCastOntoAMismatchedKindIsRefusedThroughUnprovenInsides() async throws {
         // Given. `Array<Any>` proves an array is there. Nothing it holds is
         // proven, but that says nothing about whether the whole could be a
@@ -921,7 +826,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("rows")]), as: .string, optional: true)
+                    result: .cast(.reference([.name("rows")]), as: .string, optional: true)
                 )
             ]
         )
@@ -936,7 +841,7 @@ struct InferenceTests {
 
     @Test("repeating a cast is refused whichever way the type was spelled")
     func aRepeatedCastIsRefusedInlineToo() async throws {
-        // Given. `payload as? int` hands on `Int?`, and the sameness question is
+        // Given. `payload as? Int` hands on `Int?`, and the sameness question is
         // asked of what was handed on, so the repeat is refused however the
         // type is spelled
         let sut = try Module(
@@ -950,19 +855,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("once"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .int,
                                 optional: true
                             )
                         ),
                         Statement(binding: .constant("twice"), expression: .cast(
-                                .reference([.key("once")]),
+                                .reference([.name("once")]),
                                 as: .int,
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("twice")])
+                    result: .reference([.name("twice")])
                 )
             ]
         )
@@ -991,7 +896,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .never,
                         optional: true
                     )
@@ -1012,7 +917,7 @@ struct InferenceTests {
         // Given. `Maybe` already holds null, so `as?: Maybe` reads `Maybe`, the
         // same type whether the author wrote the name or what it stands for
         let sut = try Module(
-            types: ["Maybe": .nullable(.int)],
+            types: ["Maybe": .alias(.nullable(.int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1023,19 +928,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("once"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Maybe"),
                                 optional: true
                             )
                         ),
                         Statement(binding: .constant("twice"), expression: .cast(
-                                .reference([.key("once")]),
+                                .reference([.name("once")]),
                                 as: .named("Maybe"),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("twice")])
+                    result: .reference([.name("twice")])
                 )
             ]
         )
@@ -1064,7 +969,7 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("payload")]),
+                        .reference([.name("payload")]),
                         as: .named("Preson"),
                         optional: true
                     )
@@ -1094,7 +999,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("count")]), as: .double, optional: false)
+                    result: .cast(.reference([.name("count")]), as: .double, optional: false)
                 )
             ]
         )
@@ -1121,7 +1026,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("count")]), as: .null, optional: true)
+                    result: .cast(.reference([.name("count")]), as: .null, optional: true)
                 )
             ]
         )
@@ -1144,40 +1049,10 @@ struct InferenceTests {
                     ),
                     body: [],
                     result: .cast(
-                        .reference([.key("count")]),
+                        .reference([.name("count")]),
                         as: .nullable(.string),
                         optional: true
                     )
-                )
-            ]
-        )
-
-        // When / Then
-        _ = try await builder.build([sut] + Module.standard)
-    }
-
-    @Test("a dictionary and a record are one value read two ways, so a cast between them stands")
-    func aCastBetweenADictionaryAndARecordStands() async throws {
-        // Given. A map holding exactly the record's fields is a value of
-        // both, so refusing this would refuse a cast that succeeds
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "payload", type: .dictionary(.string))
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["a": .string]),
-                                optional: false
-                            )
-                        )
-                    ],
-                    result: .reference([.key("read"), .key("a")])
                 )
             ]
         )
@@ -1206,19 +1081,19 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         ),
                         Statement(binding: .constant("again"), expression: .cast(
-                                .reference([.key("read")]),
+                                .reference([.name("read")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("again"), .key("name")])
+                    result: .reference([.name("again"), .name("name")])
                 )
             ]
         )
@@ -1246,7 +1121,7 @@ struct InferenceTests {
                         ]
                     ),
                     body: [],
-                    result: .cast(.reference([.key("text")]), as: .int, optional: true)
+                    result: .cast(.reference([.name("text")]), as: .int, optional: true)
                 )
             ]
         )
@@ -1265,6 +1140,7 @@ struct InferenceTests {
         // must stand too. Folding the parameter walk's reading to `Any` made
         // the second refuse on a type the author never wrote
         let sut = try Module(
+            types: ["App.Outer": .record(["a": .named("App.Inner")]), "App.Inner": .record(["b": .string])],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1272,9 +1148,9 @@ struct InferenceTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("held"), expression: .reference([.key("of"), .key("a")]))
+                        Statement(binding: .constant("held"), expression: .reference([.name("of"), .name("a")]))
                     ],
-                    result: .reference([.key("held"), .key("b")])
+                    result: .reference([.name("held"), .name("b")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -1282,7 +1158,7 @@ struct InferenceTests {
                     body: [],
                     result: .call(Call(
                         selector: "peek",
-                        arguments: [.record(["a": .record(["b": .literal(.string("deep"))])])]
+                        arguments: [.cast(.record(["a": .record(["b": .literal(.string("deep"))])]), as: .named("App.Outer"), optional: false)]
                     ))
                 )
             ]
@@ -1311,7 +1187,7 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
                     body: [],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -1337,13 +1213,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("rows"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .array(.any),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("rows"), .index(0)])
+                    result: .reference([.name("rows"), .index(0)])
                 )
             ]
         )
@@ -1359,23 +1235,24 @@ struct InferenceTests {
         // the cast as saying nothing, and the dot it would have allowed as
         // unjudgeable
         let sut = try Module(
+            types: ["App.Payload": .record(["data": .any]), "App.Named": .record(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "payload", type: .record(["data": .any]))
+                            Parameter(name: "payload", type: .named("App.Payload"))
                         ]
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["data": .record(["name": .string])]),
+                                .reference([.name("payload"), .name("data")]),
+                                as: .named("App.Named"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("read"), .key("data"), .key("name")])
+                    result: .reference([.name("read"), .name("name")])
                 )
             ]
         )
@@ -1401,13 +1278,13 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .named("Person"),
                                 optional: false
                             )
                         )
                     ],
-                    result: .reference([.key("read"), .key("name")])
+                    result: .reference([.name("read"), .name("name")])
                 )
             ]
         )
@@ -1435,6 +1312,7 @@ struct InferenceTests {
         // dot is judged against that type, and the run is left only the
         // question of what arrived
         let sut = try Module(
+            types: ["App.Whatever": .record(["whatever": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1445,12 +1323,12 @@ struct InferenceTests {
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["whatever": .string]),
+                                .reference([.name("payload")]),
+                                as: .named("App.Whatever"),
                                 optional: false
                             )
                         ),
-                        Statement(binding: .constant("said"), expression: .reference([.key("read"), .key("whatever")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("read"), .name("whatever")]))
                     ]
                 )
             ]
@@ -1464,18 +1342,19 @@ struct InferenceTests {
     func anUndeclaredFieldIsRefused() async throws {
         // Given. The type proved the absence, so no spelling reads past it:
         // `?.` speaks about what may be absent at run, not about what the
-        // declaration already settled
+        // declaration already decided
         let sut = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done")]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("task"), .name("done")]))
                     ]
                 )
             ]
@@ -1488,18 +1367,19 @@ struct InferenceTests {
             error is BuildError && "\(error)".contains("does not declare")
         }
 
-        // The optional spelling changes nothing a declaration settled.
+        // The optional spelling changes nothing a declaration decided.
         let optional = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "task", type: .record(["id": .string]))
+                            Parameter(name: "task", type: .named("App.Task"))
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("said"), expression: .reference([.key("task"), .key("done", optional: true)]))
+                        Statement(binding: .constant("said"), expression: .reference([.name("task"), .name("done", optional: true)]))
                     ]
                 )
             ]
@@ -1530,13 +1410,13 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: [
                                     Statement(
                                         expression: .conditional(
-                                            .reference([.key("ready")]),
+                                            .reference([.name("ready")]),
                                             then: [
-                                                Statement(binding: .assignment([.key("held")]), expression: .literal(.null)),
+                                                Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                                 Statement(
                                                     expression: .leave(
                                                         Leave(reach: .construct, target: nil, value: nil)
@@ -1551,7 +1431,7 @@ struct InferenceTests {
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1577,58 +1457,11 @@ struct InferenceTests {
         }
     }
 
-    @Test("a later field reads what an earlier field wrote")
-    func aLaterFieldReadsAnEarlierFieldsWrite() async throws {
-        // Given. Fields evaluate in name order, and that order is the same fact
-        // for the run and for the reading: field `a` writes the variable, so
-        // field `b` reads it as the int `a` left, not as the null the record
-        // was entered with.
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("held"), expression: .literal(.null)),
-                        Statement(binding: .constant("made"), expression: .record([
-                                "a": .block(
-                                    Block(
-                                        body: [
-                                            Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1)))
-                                        ],
-                                        result: .literal(.int(0))
-                                    )
-                                ),
-                                "b": .reference([.key("held")])
-                            ])
-                        ),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.key("made"), .key("b")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "number", type: .int)
-                        ]
-                    ),
-                    body: [
-                        Statement(binding: .constant("done"), expression: .literal(.string("ok")))
-                    ]
-                )
-            ]
-        )
-
-        // When / Then. Builds, because `b` is an int by the time it is read
-        _ = try await builder.build([sut] + Module.standard)
-    }
-
     @Test("a rescue reads what the body may have written before it failed")
     func aRescueReadsTheBodysPartialWrites() async throws {
         // Given. The body writes a null and then risks a failing cast: the
         // rescue runs with that write in the box, so inside the rescue the name
-        // reads `String?` and the plain string slot refuses.
+        // reads `String?` and the plain `String` slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1638,13 +1471,13 @@ struct InferenceTests {
                         Statement(
                             expression: .attempt(
                                 Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null)),
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                     mayFail("risky")
                                 ]),
                                 rescue: Block(body: [
                                     Statement(binding: .constant("saidInside"), expression: .call(Call(
                                         selector: "wants",
-                                        arguments: [.reference([.key("held")])]
+                                        arguments: [.reference([.name("held")])]
                                     )))
                                 ], result: .literal(.string("rescued")))
                             )
@@ -1676,7 +1509,7 @@ struct InferenceTests {
     func aRoundReadsItsEarlierRoundsWrites() async throws {
         // Given. The first round reads the seed, but the body also writes a
         // null, and every later round reads that: inside the loop the name
-        // reads `String?`, so the plain string slot refuses.
+        // reads `String?`, so the plain `String` slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1689,13 +1522,13 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: [
                                     Statement(binding: .constant("said"), expression: .call(Call(
                                         selector: "wants",
-                                        arguments: [.reference([.key("held")])]
+                                        arguments: [.reference([.name("held")])]
                                     ))),
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
                                 ])
                             )
                         )
@@ -1723,14 +1556,14 @@ struct InferenceTests {
         }
     }
 
-    @Test("a chain of writes settles link by link, however long")
-    func aChainOfWritesSettles() async throws {
+    @Test("a chain of writes converges link by link, however long")
+    func aChainOfWritesConverges() async throws {
         // Given. Each round moves the null one link up the chain, so the head
-        // only reads nullable after as many settles as the chain is long.
+        // only reads nullable after as many looks as the chain is long.
         let names: [Name] = ["a", "b", "c", "d", "e", "f"]
         let chain = Body(zip(names, names.dropFirst()).map { name, next in
-            Statement(binding: .assignment([.key(name)]), expression: .reference([.key(next)]))
-        } + [Statement(binding: .assignment([.key("f")]), expression: .literal(.null))])
+            Statement(binding: .assignment([.name(name)]), expression: .reference([.name(next)]))
+        } + [Statement(binding: .assignment([.name("f")]), expression: .literal(.null))])
 
         let sut = try Module(
             procedures: [
@@ -1745,13 +1578,13 @@ struct InferenceTests {
                         Statement(binding: .variable(name), expression: .literal(.string("s")))
                     } + [
                         Statement(binding: .constant("spin"), expression: .loop(
-                                while: .reference([.key("ready")]),
+                                while: .reference([.name("ready")]),
                                 body: Block(body: chain)
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("a")])]
+                            arguments: [.reference([.name("a")])]
                         )))
                     ])
                 ),
@@ -1799,13 +1632,13 @@ struct InferenceTests {
                                     )
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.null))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
                                 ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.literal(.string("hey")), .reference([.key("held")])]
+                            arguments: [.literal(.string("hey")), .reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1823,7 +1656,7 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. `held` reads `String?`, and the plain string slot says
+        // When / Then. `held` reads `String?`, and the plain `String` slot says
         // so
         await #expect {
             try await builder.build([sut] + Module.standard)
@@ -1834,10 +1667,10 @@ struct InferenceTests {
 
     @Test("what the body may have written is not overwritten by the rescue's write")
     func aBodyWriteJoinsTheRescueWrite() async throws {
-        // Given. The body wrote a string or got nowhere, the rescue wrote an
-        // int or never ran: the name holds any of null, the string and the int.
-        // That is `Any` (where readings disagree the slot holds neither), which
-        // the string slot below takes only through a cast. A rescue that
+        // Given. The body wrote a String or got nowhere, the rescue wrote an
+        // Int or never ran: the name holds any of null, the String and the
+        // Int. That is `Any` (where readings disagree the slot holds neither),
+        // which the String slot below takes only through a cast. A rescue that
         // overwrote the body's write would read `Int` instead.
         let sut = try Module(
             procedures: [
@@ -1849,16 +1682,16 @@ struct InferenceTests {
                             expression: .attempt(
                                 Block(body: [
                                     mayFail(),
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.string("text")))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.string("text")))
                                 ]),
                                 rescue: Block(body: [
-                                    Statement(binding: .assignment([.key("held")]), expression: .literal(.int(1)))
+                                    Statement(binding: .assignment([.name("held")]), expression: .literal(.int(1)))
                                 ], result: .literal(.string("rescued")))
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -1901,16 +1734,16 @@ struct InferenceTests {
                         Statement(binding: .variable("many"), expression: .literal(.null)),
                         Statement(
                             expression: .conditional(
-                                .reference([.key("ready")]),
+                                .reference([.name("ready")]),
                                 then: [
-                                    Statement(binding: .assignment([.key("many")]), expression: .literal(.int(1)))
+                                    Statement(binding: .assignment([.name("many")]), expression: .literal(.int(1)))
                                 ],
                                 else: [Statement(expression: aborting(literal("no")))]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -1951,7 +1784,7 @@ struct InferenceTests {
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -1979,7 +1812,7 @@ struct InferenceTests {
 
     @Test("a name on a call that never finishes is refused at the build")
     func refusingBodySaysNothingAboutItsAnswer() async throws {
-        // Given. `gives_up` declares never, so a name on its call promises a
+        // Given. `gives_up` declares `Never`, so a name on its call promises a
         // binding that cannot happen. The build refuses the name where the
         // signature is known, rather than inventing a type for the binding
         let sut = try Module(
@@ -1998,7 +1831,7 @@ struct InferenceTests {
                         Statement(binding: .constant("many"), expression: .call(Call(selector: "gives_up"))),
                         Statement(binding: .constant("said"), expression: .call(Call(
                             selector: "wants",
-                            arguments: [.reference([.key("many")])]
+                            arguments: [.reference([.name("many")])]
                         )))
                     ]
                 ),
@@ -2029,14 +1862,18 @@ struct InferenceTests {
         // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
+            types: ["App.Task": .record(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
                     body: [
-                        Statement(binding: .constant("task"), expression: .record(["id": .literal(.string("a"))]))
+                        Statement(
+                            binding: .constant("task", declared: .named("App.Task")),
+                            expression: .record(["id": .literal(.string("a"))])
+                        )
                     ],
-                    result: .reference([.key("task"), .key("absolute")])
+                    result: .reference([.name("task"), .name("absolute")])
                 )
             ]
         )
@@ -2063,7 +1900,7 @@ struct InferenceTests {
                     body: [
                         Statement(binding: .constant("task"), expression: .literal(.string("a")))
                     ],
-                    result: .reference([.key("task"), .key("count")])
+                    result: .reference([.name("task"), .name("count")])
                 )
             ]
         )

@@ -23,7 +23,7 @@ let greet = Procedure(
                     arguments: [
                         .array([
                             .literal(.string("hello, ")),
-                            .call(Call(selector: "Standard.Text.text", arguments: [.reference([.key("name", optional: false)])]))
+                            .call(Call(selector: "Standard.Text.text", arguments: [.reference([.name("name", optional: false)])]))
                         ]),
                         .literal(.string(""))
                     ]
@@ -31,7 +31,7 @@ let greet = Procedure(
             )
         )
     ],
-    result: .reference([.key("greeting", optional: false)])
+    result: .reference([.name("greeting", optional: false)])
 )
 
 let image = try await Builder().build(
@@ -87,9 +87,9 @@ The specification names three stages a refusal can come from: `load`, `build` an
 
 The line between them is the numbering. **A lowered body carries the numbers its own document gave**, so a document lowers to the same text in every link. The link resolves those numbers to rows of a table. The entry a run starts from is not part of the documents, so one compile serves every entry.
 
-`Builder` has a door for each. `build(_:)` is the two together. `compile(_:)` and `link(_:supplying:)` are the halves. `compile(_:against:supplying:)` compiles documents against documents compiled earlier, and `lay(_:supplying:)` makes a `Laid` that `compile(_:against:)` reuses, for a host that compiles against the same vocabulary many times.
+`Builder` has an entry point for each. `build(_:)` is the two together. `compile(_:)` and `link(_:supplying:)` are the halves. `compile(_:against:supplying:)` compiles documents against documents compiled earlier, and `lay(_:supplying:)` makes a `Laid` that `compile(_:against:)` reuses, for a host that compiles against the same vocabulary many times.
 
-`Loader` reads the canonical document by default. Which construct keys exist is a `ConstructRegistry`; a host may register its own forms. A front end may also hand over a `Notation`: an `ExpressionSpelling` read wherever an expression is, a template's `Interpolation`, whether a parameter is written as a pair (`pairedParameter`), whether a mapping is read as a bare record (`readsBareRecords`), and how a name the text declares is read in full (`qualifying`). A document has no spellings, so this package ships no notation but the canonical one.
+`Loader` reads the canonical document by default. Which construct keys exist is a `ConstructRegistry`; a host may register its own forms. A front end may also hand over a `Notation`: an `ExpressionSpelling` read wherever an expression is, a template's `Interpolation`, whether a parameter is written as a pair (`pairedParameter`), and how a name the text declares is read in full (`qualifying`). A document has no spellings, so this package ships no notation but the canonical one.
 
 `Writer` writes a program back out as a document, so a program built in Swift can be sent to a runtime elsewhere.
 
@@ -131,7 +131,7 @@ struct ShoutQuery: Query {
 
     func evaluate(_ question: Question<Self>) async throws -> Value {
         guard case let .string(text) = question[.text] else {
-            throw ExecutionError("App.shout asks a string")
+            throw ExecutionError("App.shout asks a String")
         }
 
         return .string(text.uppercased())

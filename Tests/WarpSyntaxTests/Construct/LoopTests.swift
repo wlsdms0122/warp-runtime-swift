@@ -34,14 +34,14 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "gate"]]]
+            "result": ["dictionary": [["result", ["ref": "gate"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(spec)
 
         // Then. Rounds 0/1/2 ran; at index 3 the where turned false
-        #expect(outputs["result"] == .int(2))
+        #expect(outputs.map?["result"] == .int(2))
     }
 
     @Test("a loop runs unbounded, like while")
@@ -60,21 +60,20 @@ struct LoopTests {
                     ]
                 ]]
             ],
-            "result": ["record": ["result": ["ref": "gate"]]]
+            "result": ["dictionary": [["result", ["ref": "gate"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
         let outputs = try await run(spec)
 
         // Then
-        #expect(outputs["result"] == .int(6))
+        #expect(outputs.map?["result"] == .int(6))
     }
 
-    @Test("a guard key on loop is refused at the load")
-    func aGuardKeyIsRefusedAtTheLoad() throws {
-        // When / Then. Repetition carries no budget of its own: an author
-        // bounds a loop with a counter and a procedure, and the host stops one
-        // by cancelling the run. The key is gone rather than ignored.
+    @Test("a key the loop does not name is refused at the load")
+    func anUnknownKeyIsRefusedAtTheLoad() throws {
+        // When / Then. A loop's keys are closed, so one it does not name is
+        // refused where it is written.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "body": [
@@ -83,7 +82,7 @@ struct LoopTests {
                         "value": ["loop": [
                             "while": ["of": ["ref": "gate.index"], "notEqual": 3],
                             "body": [["let": "noop", "value": "again"]],
-                            "guard": 2
+                            "mystery": 2
                         ]
                     ]]
                 ]
@@ -113,7 +112,7 @@ struct LoopTests {
         task.cancel()
 
         // Then
-        await #expect(throws: (any Error).self) {
+        await #expect(throws: CancellationError.self) {
             try await task.value
         }
     }

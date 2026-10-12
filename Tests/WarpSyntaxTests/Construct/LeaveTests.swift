@@ -17,11 +17,7 @@ import WarpStandard
 // Whether `return 5` fits depends on what the procedure it is written in
 // declared it answers, and whether `break` is allowed depends on there being a
 // loop around it. A procedure could be handed the value and could not be told either
-// thing.
-//
-// Before these existed the only way out was to fail on purpose and catch it,
-// which meant a successful early exit had to travel down the failure channel.
-// These do not: a rescue is for what the world did.
+// thing. A leave is not a failure: a rescue is for what the world did.
 @Suite("A body can stop before its end")
 struct LeaveTests {
     // MARK: - Property
@@ -193,10 +189,8 @@ struct LeaveTests {
 
     @Test("a rescue does not catch a body that left on purpose")
     func leavingIsNotFailing() async throws {
-        // Given. This is the whole reason the language needed these. The old
-        // way out was to fail deliberately, which a rescue then caught, so a
-        // successful early exit had to travel as a failure and could not be
-        // told apart from one.
+        // Given. Leaving is no failure, so a rescue around it has nothing to
+        // catch, and the early exit answers what it carries.
         let sut = try loader.loadProcedure([
             "returns": "String",
             "body": [
@@ -291,7 +285,7 @@ struct LeaveTests {
         // Given. Three ways to reach a body: a run starting at one, a procedure
         // whose implementation is written, and a closure being invoked. When
         // only the first caught an answer, a `return` inside a called body left
-        // through its own frame and became the *caller's* answer. Settled
+        // through its own frame and became the *caller's* answer, judged
         // against the caller's declaration rather than its own.
         let sut = try loader.loadDocument([
             "procedures": [
@@ -324,13 +318,11 @@ struct LeaveTests {
         #expect(try await answer(sut) == .string("the outer answer"))
     }
 
-    @Test("a body naming no result is worth nothing to the checker too")
-    func theCheckerAgreesAboutWhatABodyAnswers() async throws {
-        // Given. The run answers nothing here, so the checker has to say the
-        // same. While it still read the last statement, this passed the block's
-        // answer as an int and then handed null over at the run. A program that
-        // linked and could never work, which is the one thing linking promises
-        // does not happen.
+    @Test("a body naming no result is worth nothing to the build too")
+    func theBuildAgreesAboutWhatABodyAnswers() async throws {
+        // Given. A block naming no result answers null at the run, so the
+        // build reads it as `Null` too, and handing it where `Int` is declared
+        // does not build.
         let sut: Value = [
             "procedures": [
                 "entry": [
@@ -363,8 +355,8 @@ struct LeaveTests {
     @Test("a body watched by a rescue is still inside the loop around it")
     func anAttemptDoesNotHideTheLoop() async throws {
         // Given. An `attempt` runs in step with the body around it, so a loop
-        // around the attempt is a loop around its body. The run always allowed
-        // this: a leaving is not a failure, so a rescue lets it past.
+        // around the attempt is a loop around its body. A leaving is not a
+        // failure, so a rescue lets it past.
         let sut = try loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
@@ -404,7 +396,7 @@ struct LeaveTests {
 
     @Test("a loop's result reads what its rounds bound")
     func aLoopResultReadsWhatTheBodyBound() async throws {
-        // Given. The checker shows the result what the body declared, so a
+        // Given. The build shows the result what the body declared, so a
         // result naming one has to work. Reading the scope the round started in
         // would show it nothing the round bound.
         let sut = try loader.loadProcedure([
@@ -450,7 +442,7 @@ struct LeaveTests {
             ])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("block.result: nothing runs after leaving")
+                && "\(error)".contains("block.result: follows a body that never finishes")
         }
     }
 

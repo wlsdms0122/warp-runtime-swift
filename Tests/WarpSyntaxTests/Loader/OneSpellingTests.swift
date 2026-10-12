@@ -37,6 +37,23 @@ struct OneSpellingTests {
         }
     }
 
+    @Test("a parameter writing Any is refused, since writing no type says it")
+    func aParameterWritingAnyIsRefused() {
+        // Given
+        let document: Value = [
+            "warp": 1,
+            "imports": [],
+            "procedures": ["entry": ["parameters": [["name": "x", "type": "Any"]], "result": 1]]
+        ]
+
+        // When / Then
+        #expect {
+            try Loader().load(document, identity: nil)
+        } throws: { error in
+            "\(error)".contains("parameters[0].type") && "\(error)".contains("The one way writes nothing")
+        }
+    }
+
     @Test("a list written out of its order is refused, naming what the one spelling writes there")
     func aListOutOfOrderIsRefused() {
         // Given
@@ -63,7 +80,7 @@ struct OneSpellingTests {
         }
     }
 
-    @Test("a named record under the record tag is refused, since it is written as itself")
+    @Test("a named record under the record tag is the literal it writes, refused for the record it holds")
     func aNamedRecordUnderTheTagIsRefused() throws {
         // Given
         let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
@@ -77,7 +94,7 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            "\(error)".contains("no name")
+            error is ValidationError && "\(error)".contains("a literal holds a record")
         }
     }
 
@@ -120,10 +137,10 @@ struct OneSpellingTests {
         #expect(throws: ReadingError.self) { try sut.load(document, identity: nil) }
     }
 
-    @Test("a record type nested in another keeps its own refusal and place")
-    func aNestedRecordTypeKeepsItsRefusal() {
-        // Given. The inner record type written bare, the way a document never
-        // writes one
+    @Test("a field's type written as a mapping of fields keeps its own refusal and place")
+    func aFieldTypeWrittenAsFieldsKeepsItsRefusal() {
+        // Given. A field's type written as a mapping of fields, which is no
+        // type form
         let document: Value = [
             "warp": 1,
             "imports": [],
@@ -136,19 +153,8 @@ struct OneSpellingTests {
             try Loader().load(document, identity: nil)
         } throws: { error in
             (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
-                && "\(error)".contains("A record type is written")
+                && "\(error)".contains("A record is declared under its name in `types` as `{ record: { … } }`")
         }
-    }
-
-    @Test("a dictionary literal has no document, since record is read back as a record")
-    func aDictionaryLiteralIsNotWritten() throws {
-        // Given
-        let module = try Module(
-            procedures: ["entry": Procedure(access: .public, body: [], result: .literal(.dictionary(["a": .int(1)])))]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) { try Writer().value(of: module) }
     }
 
     @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [

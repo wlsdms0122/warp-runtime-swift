@@ -16,13 +16,12 @@ struct LoweredBody: Sendable {
         // MARK: - Initializer
         // MARK: - Public
         // Whether this one node reads a slot of the range, apart from what nests
-        // in it. A further question over the same structure as `stand`, and it stays
-        // apart: this counts only the slots a body's value depends on, and leaves
-        // out the ones it binds.
+        // in it. Unlike `stand`, it counts only the slots a body's value
+        // depends on, and leaves out the ones it binds.
         func reads(_ slots: Range<Int>) -> Bool {
             switch self {
             case let .instruction(instruction):
-                guard case let .assign(address, _)? = instruction.binding else { return false }
+                guard case let .assign(address)? = instruction.binding else { return false }
 
                 return address.reads(slots)
 
@@ -43,7 +42,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     return dispatch.arguments.contains { argument in argument.reads(slots) }
 
-                case .literal, .array, .record, .cast, .checked, .block, .conditional, .loop, .attempt, .leave:
+                case .literal, .array, .record, .dictionary, .cast, .block, .conditional, .loop, .attempt, .leave:
                     return false
                 }
             }
@@ -54,10 +53,10 @@ struct LoweredBody: Sendable {
             switch self {
             case let .instruction(instruction):
                 switch instruction.binding {
-                case let .bind(slot, _)?, let .declare(slot, _)?:
+                case let .bind(slot)?, let .declare(slot)?:
                     standing.stand(on: slot)
 
-                case let .assign(address, _)?:
+                case let .assign(address)?:
                     address.stand(in: &standing)
 
                 case nil:
@@ -92,7 +91,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     dispatch.arguments.forEach { argument in argument.stand(in: &standing) }
 
-                case .literal, .array, .record, .cast, .checked, .block, .conditional, .leave:
+                case .literal, .array, .record, .dictionary, .cast, .block, .conditional, .leave:
                     break
                 }
             }
@@ -105,7 +104,7 @@ struct LoweredBody: Sendable {
     // up beside what each of those takes with it.
     //
     // One walk answers all of them, because they are read off the same places, and
-    // one door asks it: the row the body belongs to, handed what only the list
+    // one caller asks it: the row the body belongs to, handed what only the list
     // beside it knows.
     struct Standing {
         // MARK: - Property

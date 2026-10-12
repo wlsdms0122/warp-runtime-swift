@@ -8,7 +8,7 @@
 import Foundation
 import Warp
 
-// Runs every closure and answers every answer. A record's under its keys, an
+// Runs every closure and answers every answer. A map's under its keys, an
 // array's in its order.
 struct AllEffect: Effect {
     typealias Parameters = FanoutOperand

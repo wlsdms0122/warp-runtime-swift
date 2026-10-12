@@ -7,7 +7,7 @@
 
 import Foundation
 
-// A declaration, or a closure literal, as its own document settles it. What
+// A declaration, or a closure literal, as its own document compiles it. What
 // compiling answers and what a link is handed.
 //
 // What a row's slots and answer lower to is this signature read against a
@@ -19,7 +19,7 @@ import Foundation
 // block landed, so a document reused in another link carries nothing it would
 // have to be corrected about.
 struct Judged: Sendable {
-    // How a declaration answers, as its own document settled it. A written
+    // How a declaration answers, as its own document compiled it. A written
     // body is lowered code with its frame layout; a native is this row's
     // spelling and the claims standing beside it, and the code a run calls
     // comes from the host.
@@ -45,11 +45,6 @@ struct Judged: Sendable {
     let isolation: Isolation
     let failing: Failing
 
-    // Whether what it hands back, its answer and every variable handed to it
-    // in place, is at every type parameter that parameter: what a call need
-    // not judge again.
-    let handsBackAsDeclared: Bool
-
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -63,7 +58,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        handsBackAsDeclared: Bool,
         implementation: Implementation
     ) {
         self.label = label
@@ -72,7 +66,6 @@ struct Judged: Sendable {
         self.constness = constness
         self.isolation = isolation
         self.failing = failing
-        self.handsBackAsDeclared = handsBackAsDeclared
         self.implementation = implementation
     }
 
@@ -85,7 +78,6 @@ struct Judged: Sendable {
         constness: Constness,
         isolation: Isolation,
         failing: Failing,
-        handsBackAsDeclared: Bool,
         judging implementation: Implementation
     ) throws {
         try Self.judge(implementation, against: signature)
@@ -97,12 +89,11 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation
         )
     }
 
-    // What of a row its document settled. What is left behind is a reading of
+    // What of a row its document worked out. What is left behind is a reading of
     // this against a table, which any table gives again. The link stood the
     // frame up beside the body it lowered, so what a reading of an object has
     // to judge, a build already holds, and a debug build says so.
@@ -117,11 +108,10 @@ struct Judged: Sendable {
             implementation = .native(sending: procedure.sending)
         }
 
-        do {
-            try Self.judge(implementation, against: row.signature)
-        } catch {
-            assertionFailure("the link stands a body up beside a frame that fits it: \(error)")
-        }
+        assert(
+            (try? Self.judge(implementation, against: row.signature)) != nil,
+            "the link stands a body up beside a frame that fits it"
+        )
 
         self.label = row.label
         self.signature = row.signature
@@ -129,26 +119,25 @@ struct Judged: Sendable {
         self.constness = row.constness
         self.isolation = row.isolation
         self.failing = row.failing
-        self.handsBackAsDeclared = row.handsBackAsDeclared
         self.implementation = implementation
     }
 
     // MARK: - Public
     // What the body stands on, judged against the frame it stands in and
-    // against the rows beside it. One walk answers all of them, so the walk is
-    // here rather than split between this row and the list that holds it, and
-    // what the list alone knows is handed in.
+    // against the frames of the closures beside it. One walk answers all of
+    // them, so the walk is here rather than split between this row and the
+    // list that holds it, and what the list alone knows is handed in.
     //
     // A frame is reached by position everywhere a run touches it, and so are
     // the boxes a document holds and the frames its closures stand in. A list
     // written short is an array read past its end rather than a row that
-    // answers wrongly.
+    // answers wrongly. What a call hands is counted where its number is
+    // answered with a row, which no reading of one object does.
     //
     // A native's sends are its document's to number, so they are judged here
     // against that numbering and every link reads them as numbered.
     func judge(
         standingIn frames: (Int) -> Frame?,
-        reaching given: (Int) -> Int?,
         holding variables: Int,
         numberedBy numbering: Numbering
     ) throws {
@@ -181,21 +170,6 @@ struct Judged: Sendable {
             )
         }
 
-        // What a call hands over fills the slots the row it reaches declares,
-        // and a run writes them by position. Answered where the row is this
-        // document's own; a row another document holds is the link's answer
-        // and is asked there, as is a number this document never gave.
-        for call in standing.calls {
-            guard let taking = given(call.number) else { continue }
-
-            guard taking == call.arguments else {
-                throw ObjectRefused(
-                    "a call stands \(call.arguments) argument(s) where the"
-                        + " \(taking) its callee declares stand"
-                )
-            }
-        }
-
         // What a closure takes with it fills the slots its own frame is
         // filled at, since a run writes them by position.
         for closure in standing.closures {
@@ -214,7 +188,7 @@ struct Judged: Sendable {
     // its own table, which is what makes the two readings one.
     //
     // A native row is joined to the code the host brought under its spelling,
-    // which is the one thing a document settled that the document does not
+    // which is the one fact of a row a document worked out that it does not
     // hold, and its sends are numbered by the document's numbering.
     func linked(
         in table: LoweredTypeTable,
@@ -263,7 +237,7 @@ struct Judged: Sendable {
     // Where a native's sends stand in its document's numbering.
     private func sent(_ sending: [Native.Send], numberedBy numbering: Numbering) throws -> [Sent] {
         do {
-            return try numbering.sent(sending) { send in send.handing }
+            return try numbering.sent(sending)
         } catch let .misplaced(positions) as SendNumberingError {
             throw ObjectRefused(
                 "'\(label)' sends procedures standing at \(positions), which is"
@@ -333,7 +307,7 @@ struct Judged: Sendable {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
-                // query is what a compile settled as const, and a stand-in on
+                // query is what a compile derived as const, and a stand-in on
                 // the other door would be read the wrong way by a run.
                 let standIn: Native = constness == .const
                     ? .query(UnbroughtQuery(label))
@@ -376,7 +350,6 @@ struct Judged: Sendable {
             constness: constness,
             isolation: isolation,
             failing: failing,
-            handsBackAsDeclared: handsBackAsDeclared,
             implementation: implementation,
             foldable: foldable,
             closure: closure,

@@ -48,52 +48,55 @@ struct TypeTests {
         #expect(error?.message.contains("names[1]") == true)
     }
 
-    @Test("a record holds exactly the fields declared, one short or one over refusing")
+    @Test("a record from outside is fitted to the fields declared, one short refusing")
     func recordDeclaresFields() throws {
-        // Given. A record type is its fields, and a place holds a value as
-        // it is
-        let sut = TypeExpression.record(["id": .string, "done": .bool])
+        // Given. A declared record is its fields, and the door a value from
+        // outside comes through leaves out a field it does not declare
+        let types = try TypeTable(types: ["App.Task": .record(["id": .string, "done": .bool])])
+        let sut = TypeExpression.named("App.Task")
 
         // When
-        let settled = try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true)]), at: "task")
+        let settled = try sut.settling(.record(Record(name: "App.Task", ["id": .string("a"), "done": .bool(true)])), at: "task", in: types)
+        let fitted = try sut.settling(
+            .record(Record(name: "App.Task", ["id": .string("a"), "done": .bool(true), "extra": .int(1)])),
+            at: "task",
+            in: types
+        )
 
         // Then
         #expect(settled["id"] == .string("a"))
+        #expect(fitted["id"] == .string("a"))
+        #expect(fitted["extra"] == nil)
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.dictionary(["id": .string("a"), "done": .bool(true), "extra": .int(1)]), at: "task")
-        }
-        #expect(throws: ArgumentError.self) {
-            try sut.settling(.dictionary(["id": .string("a")]), at: "task")
+            try sut.settling(.record(Record(name: "App.Task", ["id": .string("a")])), at: "task", in: types)
         }
     }
 
     @Test("an alias of a declared record names the record on either side")
     func anAliasNamesTheRecordItStandsFor() throws {
         // Given
-        let types = TypeTable(types: ["Person": .record(["name": .string]), "Someone": .named("Person")])
+        let types = try TypeTable(types: ["Person": .record(["name": .string]), "Someone": .alias(.named("Person"))])
         let sut = TypeExpression.named("Someone")
 
         // When
-        let bare = try sut.settling(.dictionary(["name": .string("a")]), at: "who", in: types)
         let aliased = try sut.settling(.record(Record(name: "Someone", ["name": .string("a")])), at: "who", in: types)
         let named = try sut.settling(.record(Record(name: "Person", ["name": .string("a")])), at: "who", in: types)
 
-        // Then. Every one settles under the record's own name
-        #expect(bare == .record(Record(name: "Person", ["name": .string("a")])))
-        #expect(aliased == bare)
-        #expect(named == bare)
+        // Then. Either settles under the record's own name
+        #expect(aliased == .record(Record(name: "Person", ["name": .string("a")])))
+        #expect(named == aliased)
     }
 
     @Test("a named type resolves through the table it was declared in")
     func namedTypeResolves() throws {
         // Given
-        let types = TypeTable(types: ["Task": .record(["id": .string])])
+        let types = try TypeTable(types: ["Task": .record(["id": .string])])
         let sut = TypeExpression.array(.named("Task"))
 
         // When
         let settled = try sut.settling(
-            .array([.dictionary(["id": .string("a")])]),
+            .array([.record(Record(name: "Task", ["id": .string("a")]))]),
             at: "tasks",
             in: types
         )
@@ -102,7 +105,7 @@ struct TypeTests {
         #expect(settled == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
 
         #expect(throws: ArgumentError.self) {
-            try sut.settling(.array([.dictionary(["id": .int(1)])]), at: "tasks", in: types)
+            try sut.settling(.array([.record(Record(name: "Task", ["id": .int(1)]))]), at: "tasks", in: types)
         }
     }
 
@@ -110,17 +113,17 @@ struct TypeTests {
     func namedTypeMayRecur() throws {
         // Given. Kept rather than expanded at the build, which is what makes a
         // self-naming type a type and not a regress
-        let types = TypeTable(
+        let types = try TypeTable(
             types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])]
         )
         let sut = TypeExpression.named("Tree")
 
         // When
         let settled = try sut.settling(
-            .dictionary([
+            .record(Record(name: "Tree", [
                 "value": .int(1),
-                "children": .array([.dictionary(["value": .int(2), "children": .array([])])])
-            ]),
+                "children": .array([.record(Record(name: "Tree", ["value": .int(2), "children": .array([])]))])
+            ])),
             at: "tree",
             in: types
         )
@@ -156,9 +159,9 @@ struct TypeTests {
     func typesRenderAsWritten() {
         // When / Then
         #expect(TypeExpression.array(.string).rendered == "Array<String>")
-        #expect(TypeExpression.dictionary(.named("Task")).rendered == "Dictionary<Task>")
+        #expect(TypeExpression.dictionary(key: .string, value: .named("Task")).rendered == "Dictionary<String, Task>")
         #expect(TypeExpression.array(.array(.int)).rendered == "Array<Array<Int>>")
-        #expect(TypeExpression.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
+        #expect(TypeDeclaration.record(["b": .int, "a": .string]).rendered == "{ a: String, b: Int }")
     }
 
     @Test("a call handed to a parameter it cannot fit is refused at the build")
@@ -194,8 +197,8 @@ struct TypeTests {
         }
     }
 
-    @Test("an undeclared answer is read off the body, and held to the same rule")
-    func undeclaredAnswerIsReadOffTheBody() async throws {
+    @Test("an answer no declaration writes is read off the body, and held to the same rule")
+    func anUnwrittenAnswerIsReadOffTheBody() async throws {
         // Given. `counts` declares nothing, and its body answers a whole
         // number. The declaration stays as the author left it; what the build
         // reads a call as is what the body hands back, so the same disagreement
@@ -239,24 +242,17 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a record whose fields all fit it")
-    func aDictionaryTakesAKnownRecord() {
-        // Given. A record is a dictionary whose fields happen to be known, and
-        // knowing them is not a reason to refuse it
-        let sut = TypeExpression.dictionary(.any)
+    @Test("a declared record and a map of its fields are two types")
+    func aRecordAndADictionaryAreTwoTypes() throws {
+        // Given. A record names the fields it holds; a map holds keys that are
+        // data, and neither is a value of the other
+        let types = try TypeTable(types: ["App.Axes": .record(["axes": .string])])
+        let record = TypeExpression.named("App.Axes")
+        let map = TypeExpression.dictionary(key: .string, value: .string)
 
         // When / Then
-        #expect(sut.accepts(.record(["axes": .string, "depth": .int])))
-        #expect(TypeExpression.dictionary(.string).accepts(.record(["axes": .string])))
-        #expect(!TypeExpression.dictionary(.int).accepts(.record(["axes": .string])))
-    }
-
-    @Test("a record slot does not take a bare dictionary")
-    func aRecordDoesNotTakeADictionary() {
-        // Given. A record names fields it requires; a dictionary promises none
-
-        // When / Then
-        #expect(!TypeExpression.record(["axes": .string]).accepts(.dictionary(.string)))
+        #expect(!record.accepts(map, in: types))
+        #expect(!map.accepts(record, in: types))
     }
 
     @Test("a nullable slot takes its value, null, and nothing else")
@@ -297,8 +293,8 @@ struct TypeTests {
     func anAssembledClosureClaimsNothing() throws {
         // Given. Assembled against the table it is judged against, so what is
         // being asked is the claim and not which link made the row
-        let types = TypeTable()
-        let closure = Closure.assembled(answering: .int(1), in: types.loweredTypes)
+        let types = try TypeTable()
+        let closure = Self.assembled(answering: .int(1), in: types)
 
         // When / Then
         #expect(throws: ArgumentError.self) {
@@ -315,7 +311,7 @@ struct TypeTests {
     func aRecursiveTypeAcceptsItself() async throws {
         // Given. A type that names itself walks back into the comparison it is
         // inside; meeting the pair again is agreement, not a regress
-        let types = TypeTable(types: ["Node": .record(["next": .named("Node")])])
+        let types = try TypeTable(types: ["Node": .record(["next": .named("Node")])])
 
         // When / Then
         #expect(TypeExpression.named("Node").accepts(.named("Node"), in: types))
@@ -329,7 +325,7 @@ struct TypeTests {
                         returns: .int
                     ),
                     body: [],
-                    result: .reference([.key("node"), .key("value")])
+                    result: .reference([.name("node"), .name("value")])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -348,23 +344,45 @@ struct TypeTests {
         }
     }
 
-    @Test("a dictionary slot takes a nameless record as the map it is, and no declared record")
-    func aRecordSettlesIntoADictionaryAsData() throws {
-        // Given. A nameless record holds its names as data, and a declared
-        // record is a value of its name, which nothing takes off
-        let nameless = Value.record(Record(name: nil, ["balance": .int(1)]))
+    @Test("a map slot takes a map and no record")
+    func aRecordDoesNotSettleIntoAMap() throws {
+        // Given. A record is a value of its declared record, and no map
+        let types = try TypeTable(types: ["Bank.Account": .record(["balance": .int])])
+        let map = Value.dictionary(["balance": .int(1)])
         let named = Value.record(Record(name: "Bank.Account", ["balance": .int(1)]))
+        let sut = TypeExpression.dictionary(key: .string, value: .any)
 
-        // When
-        let settled = try TypeExpression.dictionary(.any).settling(nameless, at: "held")
-
-        // Then
-        #expect(settled == .dictionary(["balance": .int(1)]))
+        // When / Then
+        #expect(try sut.settling(map, at: "held", in: types) == map)
         #expect(throws: ArgumentError.self) {
-            try TypeExpression.dictionary(.any).settling(named, at: "held")
+            try sut.settling(named, at: "held", in: types)
         }
     }
 
     // MARK: - Public
     // MARK: - Private
+    // A closure a test builds by hand, answering a value: no body a document
+    // spelled, no captures, claiming nothing.
+    private static func assembled(answering result: Value? = nil, in types: TypeTable = .empty) -> Closure {
+        Closure(
+            writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("assembled")),
+            nth: 0,
+            linked: Linked(
+                label: "assembled",
+                origin: 0,
+                signature: Signature(),
+                access: .internal,
+                constness: .unstated,
+                isolation: .unstated,
+                failing: .unstated,
+                implementation: .body(
+                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
+                    Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
+                ),
+                foldable: true,
+                in: types.loweredTypes
+            ),
+            captured: []
+        )
+    }
 }

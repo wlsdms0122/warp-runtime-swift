@@ -59,7 +59,7 @@ struct ModuleGraphTests {
     @Test("a module stands after the module that declares a type it names")
     func aMentionedTypeStandsFirst() throws {
         // Given
-        let declaring = try Module(types: ["Age": .int], procedures: [:])
+        let declaring = try Module(types: ["Age": .alias(.int)])
         let users = try Module(
             procedures: [
                 entryName: Procedure(
@@ -83,19 +83,19 @@ struct ModuleGraphTests {
         // Given. Each sends a procedure the other declares.
         let one = try Module(
             procedures: [
-                "one.here": Procedure(
+                "One.here": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "two.there"))
+                    result: .call(Call(selector: "Two.there"))
                 )
             ]
         )
         let two = try Module(
             procedures: [
-                "two.there": Procedure(
+                "Two.there": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "one.here"))
+                    result: .call(Call(selector: "One.here"))
                 )
             ]
         )
@@ -104,7 +104,7 @@ struct ModuleGraphTests {
         #expect {
             try ModuleGraph([one, two])
         } throws: { error in
-            "\(error)".contains("need each other") && "\(error)".contains("one.here")
+            "\(error)".contains("need each other") && "\(error)".contains("One.here")
         }
     }
 
@@ -114,12 +114,12 @@ struct ModuleGraphTests {
         // recursion inside a module rather than a cycle between modules.
         let alone = try Module(
             procedures: [
-                "solo.here": Procedure(
+                "Solo.here": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "solo.there"))
+                    result: .call(Call(selector: "Solo.there"))
                 ),
-                "solo.there": Procedure(
+                "Solo.there": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(1))
@@ -139,7 +139,7 @@ struct ModuleGraphTests {
                 entryName: Procedure(
                     access: .public,
                     body: [],
-                    result: .call(Call(selector: "nobody.declares"))
+                    result: .call(Call(selector: "Nobody.declares"))
                 )
             ]
         )

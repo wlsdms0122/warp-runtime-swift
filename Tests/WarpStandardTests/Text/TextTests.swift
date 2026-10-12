@@ -85,32 +85,37 @@ struct TextTests {
 
     @Test("a codec converts in the encoding its argument names")
     func aCodecReadsItsEncodingArgument() async throws {
-        // Given. The slot checks the name before a run; this asks the codec
-        // directly, so the name reaches it unchecked
-        let decoded = DecodedQuery()
-        let encoded = EncodedQuery()
+        // Given. The encoding arrives as a value, so the codec judges the name
+        // where it runs
+        func codec(_ selector: Name, taking subject: TypeExpression) -> Procedure {
+            Procedure(
+                signature: Signature(parameters: [
+                    Parameter(name: "subject", type: subject),
+                    Parameter(name: "encoding", type: .string)
+                ]),
+                body: [],
+                result: .call(Call(selector: selector, arguments: [reference("subject"), reference("encoding")]))
+            )
+        }
+
+        let decoded = codec("Standard.Text.decoded", taking: .array(.int))
+        let encoded = codec("Standard.Text.encoded", taking: .string)
 
         // When / Then
         #expect(
-            try await decoded.evaluate(Question(
-                arguments: ["bytes": .bytes([104]), "encoding": .string("utf8")]
-            )) == .string("h")
+            try await run(decoded, arguments: ["subject": .bytes([104]), "encoding": .string("utf8")])
+                == .string("h")
         )
         #expect(
-            try await encoded.evaluate(Question(
-                arguments: ["text": .string("h"), "encoding": .string("utf8")]
-            )) == .bytes([104])
+            try await run(encoded, arguments: ["subject": .string("h"), "encoding": .string("utf8")])
+                == .bytes([104])
         )
 
         await #expect(throws: ExecutionError.self) {
-            try await decoded.evaluate(Question(
-                arguments: ["bytes": .bytes([104]), "encoding": .string("utf16")]
-            ))
+            try await run(decoded, arguments: ["subject": .bytes([104]), "encoding": .string("utf16")])
         }
         await #expect(throws: ExecutionError.self) {
-            try await encoded.evaluate(Question(
-                arguments: ["text": .string("h"), "encoding": .string("utf16")]
-            ))
+            try await run(encoded, arguments: ["subject": .string("h"), "encoding": .string("utf16")])
         }
     }
 
@@ -138,14 +143,14 @@ struct TextTests {
         await #expect {
             try await run(procedure("Standard.Text.decoded", on: .bytes([0xff])))
         } throws: { error in
-            "\(error)".contains("Standard.Text.decoded asks bytes that are text")
+            "\(error)".contains("Standard.Text.decoded asks an Array<Int> that is text")
         }
     }
 
-    @Test("an encoding the procedures do not have, written as a constant, refuses at the build")
-    func anUnknownEncodingRefusesAtTheBuild() async throws {
-        // Given. The procedure judges its own constant arguments, and names
-        // the encodings it has where it refuses another
+    @Test("an encoding the procedures do not have, written as a constant, refuses at the run")
+    func anUnknownConstantEncodingRefusesAtTheRun() async throws {
+        // Given. The procedure names the encodings it has where it refuses
+        // another, and says so when it runs
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -159,17 +164,20 @@ struct TextTests {
             ]
         )
 
-        // When / Then
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
         await #expect {
-            try await Builder().build([sut] + Module.standard)
+            try await Executor().run(image)
         } throws: { error in
-            error is BuildError && "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
+            "\(error)".contains("Standard.Text.decoded asks the name of an encoding it has (utf8), and 'utf16' is not one")
         }
     }
 
-    @Test("an encoding the procedures do not have, arriving at the run, is refused in the same words")
+    @Test("an encoding the procedures do not have, arriving at the run, refuses there")
     func anUnknownEncodingRefusesAtTheRun() async throws {
-        // Given. The name is what a variable holds, so only the run meets it
+        // Given. The name is what a variable holds
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -177,7 +185,7 @@ struct TextTests {
                     body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
                     result: .call(Call(
                         selector: "Standard.Text.encoded",
-                        arguments: [.literal(.string("hi")), .reference([.key("named")])]
+                        arguments: [.literal(.string("hi")), .reference([.name("named")])]
                     ))
                 )
             ]
@@ -186,8 +194,7 @@ struct TextTests {
         // When
         let image = try await Builder().build([sut] + Module.standard)
 
-        // Then. The build had nothing to judge, and the run refuses in the
-        // words the build would have used
+        // Then
         await #expect {
             try await Executor().run(image)
         } throws: { error in
@@ -196,8 +203,8 @@ struct TextTests {
         }
     }
 
-    @Test("a list holding what is no byte, written as a constant, refuses at the build by the element")
-    func aListHoldingNoByteRefusesAtTheBuild() async throws {
+    @Test("a list holding what is no byte, written as a constant, refuses at the run by the element")
+    func aListHoldingNoByteRefusesAtTheRun() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -212,11 +219,14 @@ struct TextTests {
             ]
         )
 
-        // When / Then
+        // When
+        let image = try await Builder().build([sut] + Module.standard)
+
+        // Then
         await #expect {
-            try await Builder().build([sut] + Module.standard)
+            try await Executor().run(image)
         } throws: { error in
-            error is BuildError && "\(error)".contains("Standard.Text.decoded asks bytes, and [1] is 300, which is no whole number from 0 to 255")
+            "\(error)".contains("Standard.Text.decoded asks an Array<Int> of bytes, and [1] is 300, which is no whole number from 0 to 255")
         }
     }
 

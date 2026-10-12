@@ -21,9 +21,9 @@ struct TypeNamespaceTests {
     // however they are handed over.
     private let modules: [Module] = [
         try! Module(
-            types: ["A.T": .record(["x": .int]), "A.S": .string],
+            types: ["A.T": .record(["x": .int]), "A.S": .alias(.string)],
             procedures: [
-                "a.make": Procedure(
+                "A.make": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("A.T")),
                     body: [],
@@ -33,13 +33,13 @@ struct TypeNamespaceTests {
             identity: Identity([0x0a])
         ),
         try! Module(
-            types: ["B.U": .array(.named("A.T"))],
+            types: ["B.U": .alias(.array(.named("A.T")))],
             procedures: [
-                "b.use": Procedure(
+                "B.use": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("B.U")),
                     body: [],
-                    result: .array([.call(Call(selector: "a.make"))])
+                    result: .array([.call(Call(selector: "A.make"))])
                 )
             ],
             identity: Identity([0x0b])
@@ -47,11 +47,11 @@ struct TypeNamespaceTests {
         try! Module(
             types: ["C.V": .record(["u": .named("B.U")])],
             procedures: [
-                "c.go": Procedure(
+                "C.go": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("C.V")),
                     body: [],
-                    result: .record(["u": .call(Call(selector: "b.use"))])
+                    result: .record(["u": .call(Call(selector: "B.use"))])
                 )
             ],
             identity: Identity([0x0c])
@@ -79,8 +79,8 @@ struct TypeNamespaceTests {
     @Test("a name declared as a type and as a contract is refused the same way in either order")
     func aTypeAndAContractAreRefusedInEitherOrder() async throws {
         // Given
-        let typing = try Module(types: ["T.T": .int], procedures: [:], identity: Identity([0x01]))
-        let contracting = try Module(contracts: ["T.T": [Name: Signature]()], procedures: [:], identity: Identity([0x02]))
+        let typing = try Module(types: ["T.T": .alias(.int)], identity: Identity([0x01]))
+        let contracting = try Module(contracts: ["T.T": [Name: Signature]()], identity: Identity([0x02]))
 
         for given in [[typing, contracting], [contracting, typing]] {
             // When

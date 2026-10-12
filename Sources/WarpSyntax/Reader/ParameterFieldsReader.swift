@@ -12,15 +12,14 @@ import Warp
 // apart from the name because the pair form a notation offers writes the name
 // as the key and these under it.
 struct ParameterFieldsReader: Decodable {
-    private enum CodingKeys: String, CodingKey, CaseIterable {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case type
         case description
     }
 
     // MARK: - Property
-    // Omitting `type:` declares nothing, which is not the same as declaring
-    // `Any`. Both take whatever arrives; only one of them says so.
-    let type: TypeExpression?
+    // Omitting `type:` says `Any`, the one way a document says it.
+    let type: TypeExpression
     let description: String?
 
     // MARK: - Initializer
@@ -31,9 +30,15 @@ struct ParameterFieldsReader: Decodable {
             context: "parameter"
         )
 
+        try self.init(reading: decoder)
+    }
+
+    // The same fields read beside others the caller has already held the
+    // mapping's keys to.
+    init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type
+        self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type ?? .any
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
     }
 

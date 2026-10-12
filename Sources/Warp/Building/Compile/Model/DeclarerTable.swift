@@ -11,15 +11,14 @@ import Foundation
 // laid down one at a time.
 //
 // A document reaches outside itself through the procedures it calls and the
-// types its signatures name, which is what `Module.references` already holds: every
-// procedure and type it names and does not declare. So what a document was
-// compiled against is read off the document rather than tracked through the
-// compile.
+// types it names and does not declare, which is what `Module.references`
+// holds. So what a document was compiled against is read off the document
+// rather than tracked through the compile.
 //
-// It grows as the compile lays documents down, because a document laid here may
-// be what the next one is compiled against. The order the compile lays them in already
-// stands each one's needs before it, so a name is in here by the time anything
-// asks for it.
+// It grows as the compile lays documents down, because a document laid here
+// may be what the next one is compiled against. The order the compile lays
+// them in already stands each one's needs before it, so a name is in here by
+// the time anything asks for it.
 struct DeclarerTable {
     // MARK: - Property
     // Nothing for a document that has no fingerprint. The name is declared and
@@ -31,7 +30,7 @@ struct DeclarerTable {
     // MARK: - Public
     // One document laid down, under what it turned out to be.
     mutating func lay(_ document: Compiled) {
-        hold(document.declares, as: document.fingerprint)
+        hold(document.supplies, as: document.fingerprint)
     }
 
     // What this document was compiled against, or nothing where one of the

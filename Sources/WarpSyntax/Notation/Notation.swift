@@ -12,14 +12,14 @@ import Warp
 // says which construct keys it offers.
 //
 // A spelling stands in for something the language already has: a condition
-// written as an operator is a message, and so is a template. So a document has
+// written as an operator is a call, and so is a template. So a document has
 // two layers, and this is the switch between them. A notation brings its own
 // spellings, and the canonical one brings none, which leaves a document writing
 // the types themselves.
 //
 // **Nothing built in offers a spelling.** This package reads documents, and a
 // document has no spellings. Which keys are spelled, which procedures they
-// reach, and what the record around them looks like are all answered by whoever
+// reach, and what the mapping around them looks like are all answered by whoever
 // hands one of these over. The one set of keys named here is the template's,
 // `format` and `with`, which stay reserved whether a notation offers a template
 // or not. A notation that offers none owes no procedures for spellings it never
@@ -47,7 +47,7 @@ public struct Notation: Sendable {
     // is.
     public let spelling: (any ExpressionSpelling)?
 
-    // What `{ format:, with: }` lowers to, and nothing where this notation does
+    // What `{ format:, with: }` is spent into, and nothing where this notation does
     // not offer a template.
     //
     // The two keys stay reserved either way. That much is the document's, and
@@ -55,14 +55,9 @@ public struct Notation: Sendable {
     // understood, and which procedures it spends.
     public private(set) var interpolation: Interpolation?
 
-    // Whether a mapping with no tag of its own is a record: where a value is
-    // wanted, a record of expressions, and where a type is, a record type. A
-    // document writes a record under `record`.
-    public let readsBareRecords: Bool
-
     // Whether a parameter may be written as one pair, `count: Int` for
-    // `{ name: count, type: int }` and `count: { type: int, description: … }`
-    // for the record with the name inside. A document writes the record.
+    // `{ name: count, type: Int }` and `count: { type: Int, description: … }`
+    // for the mapping with the name inside. A document writes the mapping.
     public let pairedParameter: Bool
 
     // What a declared name the text writes stands for, where the text writes
@@ -91,13 +86,11 @@ public struct Notation: Sendable {
     public init(
         spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
-        pairedParameter: Bool = false,
-        readsBareRecords: Bool = false
+        pairedParameter: Bool = false
     ) {
         self.spelling = spelling
         self.interpolation = interpolation
         self.pairedParameter = pairedParameter
-        self.readsBareRecords = readsBareRecords
     }
 
     // MARK: - Public

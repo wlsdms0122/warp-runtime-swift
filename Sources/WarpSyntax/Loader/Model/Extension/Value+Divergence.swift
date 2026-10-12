@@ -18,14 +18,18 @@ extension Value {
     func divergence(from other: Value) -> (steps: [Place.Step], held: Value?)? {
         guard nominal == other.nominal else { return ([], other) }
 
-        if let mine = asDictionary, let theirs = other.asDictionary {
-            for name in Set(mine.names).union(theirs.names).sorted() {
-                guard let held = mine[name], let written = theirs[name] else {
-                    return ([.key(name.spelling)], theirs[name])
+        if case let .dictionary(mine) = self, case let .dictionary(theirs) = other {
+            let keys = theirs.keys.reduce(mine) { both, key in both.writing(key: key, with: .null) }.keys
+
+            for key in keys {
+                let step = Place.Step.key(Rendering(key).text())
+
+                guard let held = mine[key: key], let written = theirs[key: key] else {
+                    return ([step], theirs[key: key])
                 }
 
                 if let below = held.divergence(from: written) {
-                    return ([.key(name.spelling)] + below.steps, below.held)
+                    return ([step] + below.steps, below.held)
                 }
             }
 

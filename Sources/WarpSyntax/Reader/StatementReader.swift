@@ -58,7 +58,7 @@ public struct StatementReader: Decodable {
     // What the name says it holds, where it says.
     public static let typeKey: Name = "type"
 
-    public let statement: Statement
+    let statement: Statement
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
@@ -72,16 +72,9 @@ public struct StatementReader: Decodable {
         let naming = try decoder.container(keyedBy: NamingKeys.self)
         let names = NamingKeys.allCases.filter { name in naming.contains(name) }
 
-        // Only a name that is one. Whether naming itself twice, or with
-        // something that is not text, is a refusal is the reading's question
-        // and the reading answers it below. What is asked here is what to call
-        // the statement while refusing it, and neither of those is a name.
-        //
-        // The same read as the reading's, through the same door, and lenient
-        // only in what it does with a failure: an address that refused on its
-        // own would decide which refusal an author sees first, and that is the
-        // reading's to decide. What the name declares it holds does not change
-        // the name.
+        // Only a name that is one: a statement named twice, or with something
+        // that is not text, is refused by the reading below, which reads the
+        // name the same way and refuses what this lets pass.
         let binding = names.count == 1
             ? try? names[0].binding(Self.name(names[0], in: naming), declaring: nil)
             : nil
@@ -199,7 +192,7 @@ public struct StatementReader: Decodable {
         return Statement(binding: binding, expression: expression)
     }
 
-    // What stands under `value`: a construct, where the record's one key is a
+    // What stands under `value`: a construct, where the mapping's one key is a
     // construct's, and an expression otherwise. A construct that binds through
     // the statement's name is handed the name the statement introduces.
     private static func expression(

@@ -28,20 +28,20 @@ struct ObjectReader {
 
     // MARK: - Public
     func compiled(from value: Value) throws -> Compiled {
-        guard case .dictionary = value else {
-            throw ObjectRefused("'object' is not written as a record")
+        guard case let .dictionary(map) = value else {
+            throw ObjectRefused("'object' is not written as a map")
         }
 
         // A document says `warp` where an object says `object`, and one handed
         // here is refused for what it is.
-        if Keyed.peek(value, Module.versionKey) != nil {
+        if map[Module.versionKey] != nil {
             throw ObjectRefused("this is a document, and not an object")
         }
 
         // The layout first, and before anything laid out by it, the keys
-        // included: what this number says is whether the rest of the record
+        // included: what this number says is whether the rest of the map
         // means what this reading takes it to mean.
-        guard let stamped = Keyed.peek(value, ObjectLayout.Key.object.name) else {
+        guard let stamped = map[ObjectLayout.Key.object.name] else {
             throw ObjectRefused("'object' writes no '\(ObjectLayout.Key.object.name)'")
         }
 
@@ -59,7 +59,7 @@ struct ObjectReader {
         // the rows its bodies lifted, so those two are kept as written until
         // every part is in.
         var dependencies: [Fingerprint] = []
-        var types: [Name: TypeExpression] = [:]
+        var types: [Name: TypeDeclaration] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Name: Set<Name>] = [:]
         var leaned: [Claim: Place] = [:]
@@ -71,9 +71,9 @@ struct ObjectReader {
         var variables: [(name: Name, value: Value)] = []
         var constants: [Name] = []
 
-        for (key, part) in try Keyed(value).parts {
+        for (key, part) in try Keyed(map).parts {
             switch key {
-            // Read above, before the record is held to the layout.
+            // Read above, before the map is held to the layout.
             case .object:
                 continue
 
@@ -85,8 +85,14 @@ struct ObjectReader {
                     Fingerprint(try Field(written, of: "dependencies").bytes())
                 }
 
+            // Held where they are read to the rule a document's are held to
+            // at the load, so no lowering meets a name coming back to itself.
             case .types:
-                types = try keyed(part, of: "types", expression)
+                types = try keyed(part, of: "types", declaration)
+
+                if let name = types.keys.sorted().first(where: { name in Validator().comesBack(name, in: types) }) {
+                    throw ObjectRefused("'\(name)' \(Validator.comingBack)")
+                }
 
             case .contracts:
                 contracts = try keyed(part, of: "contracts") { written in
@@ -189,7 +195,7 @@ struct ObjectReader {
         // A value the model refuses is one the writing could not have laid
         // down, and so one this reading refuses as an object.
         case .record:
-            let named = try cursor.field().maybe(name)
+            let named = try name(cursor.next())
             let names = try cursor.field().list(name)
             let values = try cursor.field().list(self.value)
 
@@ -197,17 +203,20 @@ struct ObjectReader {
                 .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
             }
 
+        // The keys in the key order, none the same as another, which is how
+        // the writing lays a map down.
         case .dictionary:
-            let entries = try cursor.field().led { entry -> (name: Name, value: Value) in
-                var cursor = try FieldCursor(entry, of: "entry")
-                let read = (name: try name(cursor.next()), value: try self.value(cursor.next()))
+            let keys = try cursor.field().list(self.value)
+            let values = try cursor.field().list(self.value)
 
-                try cursor.end()
-
-                return read
+            guard
+                keys.count == values.count,
+                zip(keys, keys.dropFirst()).allSatisfy({ one, other in Value.Dictionary.order(one, other) == .orderedAscending })
+            else {
+                throw ObjectRefused("'map' writes its keys out of the key order, one twice, or another count than its values")
             }
 
-            read = .dictionary(Value.Dictionary(ordered: entries))
+            read = .dictionary(Value.Dictionary(ordered: Array(zip(keys, values)).map { key, value in (key: key, value: value) }))
 
         case .closure:
             let writer = Closure.Writer(
@@ -318,6 +327,22 @@ struct ObjectReader {
         return read
     }
 
+    // A declared type: a record, its fields under the record's tag, or the
+    // type an alias stands for.
+    private func declaration(_ value: Value) throws -> TypeDeclaration {
+        var cursor = try FieldCursor(value, of: "type")
+
+        guard ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) == .record else {
+            return .alias(try expression(value))
+        }
+
+        let fields = try keyed(cursor.next(), of: "record", expression)
+
+        try cursor.end()
+
+        return .record(fields)
+    }
+
     private func expression(_ value: Value) throws -> TypeExpression {
         var cursor = try FieldCursor(value, of: "type")
         let read: TypeExpression
@@ -331,8 +356,9 @@ struct ObjectReader {
         case .double: read = .double
         case .string: read = .string
         case .array: read = .array(try expression(cursor.next()))
-        case .dictionary: read = .dictionary(try expression(cursor.next()))
-        case .record: read = .record(try keyed(cursor.next(), of: "record", expression))
+        case .dictionary: read = .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
+        // A record type is written once, as a declared type's own.
+        case .record: throw ObjectRefused("'type' writes a record, which stands only as a type a document declares")
         case .procedure:
             read = .procedure(
                 try cursor.field().maybe(procedureType),
@@ -344,20 +370,18 @@ struct ObjectReader {
         case .`inout`: read = .inout(try expression(cursor.next()))
         case .nullable: read = .nullable(try expression(cursor.next()))
         case .named: read = .named(try name(cursor.next()))
-        case .parameter:
-            read = .parameter(
-                name: try name(cursor.next()),
-                bounds: try Field(cursor.next(), of: "bounds").ordered(name)
-            )
+        case .parameter: read = .parameter(name: try name(cursor.next()))
 
+        // One contract is written by its name, so a composition joins two
+        // or more, the way a document's does.
         case .composition:
             let names = try Field(cursor.next(), of: "composition").ordered(name)
 
-            guard !names.isEmpty else {
-                throw ObjectRefused("'composition' joins nothing")
+            guard names.count > 1 else {
+                throw ObjectRefused("'composition' joins fewer than two names, and one is written as the name")
             }
 
-            read = .composition(names)
+            read = .composition(Set(names))
 
         case .projection:
             read = .projection(
@@ -398,8 +422,8 @@ struct ObjectReader {
         let read: PathSegment
 
         switch ObjectLayout.SegmentTag(rawValue: try cursor.field().integer()) {
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
-        case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
+        case .name: read = .name(try name(cursor.next()), optional: try cursor.field().flag())
+        case .index: read = .index(try self.value(cursor.next()), optional: try cursor.field().flag())
         case .indexRef:
             read = .indexRef(
                 try path(cursor.next()),
@@ -417,12 +441,17 @@ struct ObjectReader {
 
     private func contractProcedure(_ value: Value) throws -> ContractProcedure {
         var cursor = try FieldCursor(value, of: "contract procedure")
-        let read = ContractProcedure(
-            signature: try signature(cursor.next()),
-            constness: try constness(cursor.next()),
-            isolation: try isolation(cursor.next()),
-            failing: try failing(cursor.next())
-        )
+        let signature = try signature(cursor.next())
+        let constness = try constness(cursor.next())
+        let isolation = try isolation(cursor.next())
+
+        // A contract's procedure names what it may fail with, nothing
+        // included.
+        guard case let .these(failing) = try failing(cursor.next()) else {
+            throw ObjectRefused("a contract's procedure's 'failing' says which failures")
+        }
+
+        let read = ContractProcedure(signature: signature, constness: constness, isolation: isolation, failing: failing)
 
         try cursor.end()
 
@@ -445,7 +474,16 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "signature")
         let read = Signature(
             parameters: try Field(cursor.next(), of: "parameters").list(parameter),
-            returns: try cursor.field().maybe(expression)
+            returns: try cursor.field().maybe(expression),
+            bounds: try keyed(cursor.next(), of: "bounds") { written in
+                let contracts = try Field(written, of: "bounds").ordered(name)
+
+                guard !contracts.isEmpty else {
+                    throw ObjectRefused("'bounds' holds a type parameter to nothing")
+                }
+
+                return Set(contracts)
+            }
         )
 
         try cursor.end()
@@ -453,13 +491,18 @@ struct ObjectReader {
         return read
     }
 
+    // A parameter taking anything writes no type, so a written `Any` is a
+    // second writing of one signature.
     private func parameter(_ value: Value) throws -> Parameter {
         var cursor = try FieldCursor(value, of: "parameter")
-        let read = Parameter(
-            name: try name(cursor.next()),
-            type: try cursor.field().maybe(expression),
-            description: try cursor.field().maybe(text)
-        )
+        let name = try name(cursor.next())
+        let type = try cursor.field().maybe(expression)
+
+        guard type != .any else {
+            throw ObjectRefused("a parameter taking anything writes no type")
+        }
+
+        let read = Parameter(name: name, type: type ?? .any, description: try cursor.field().maybe(text))
 
         try cursor.end()
 
@@ -568,6 +611,8 @@ struct ObjectReader {
         case .otherwise: read = .otherwise
         case .rescue: read = .rescue
         case .fields: read = .fields
+        case .bounds: read = .bounds
+        case .entries: read = .entries
         case nil: throw ObjectRefused("'part' names a part this reads none of")
         }
 
@@ -600,6 +645,7 @@ struct ObjectReader {
         case .reference: read = .reference
         case .array: read = .array
         case .record: read = .record
+        case .dictionary: read = .dictionary
         case .closure: read = .closure
         case .cast: read = .cast
         case .block: read = .block
@@ -627,7 +673,7 @@ struct ObjectReader {
 
     private func layout(_ value: Value) throws -> Layout {
         var cursor = try FieldCursor(value, of: "layout")
-        let named = try cursor.field().maybe(name)
+        let named = try name(cursor.next())
         let written = try cursor.field().list(name)
 
         try cursor.end()
@@ -652,14 +698,21 @@ struct ObjectReader {
         case .double: read = .double
         case .string: read = .string
         case .array: read = .array(try lowered(cursor.next()))
-        case .dictionary: read = .dictionary(try lowered(cursor.next()))
-        case .record: read = .record(try loweredRecord(cursor.next()))
+        case .dictionary: read = .dictionary(key: try lowered(cursor.next()), value: try lowered(cursor.next()))
+        // A type that writes no parameters writes no signature, so it says
+        // nothing of an answer either.
         case .procedure:
+            let parameters = try cursor.field().maybe { written in
+                try Field(written, of: "parameters").list(lowered)
+            }
+            let returns = try cursor.field().maybe(lowered)
+
+            guard parameters != nil || returns == nil else {
+                throw ObjectRefused("a procedure type writes what it answers and nothing of what it takes")
+            }
+
             read = .procedure(
-                parameters: try cursor.field().maybe { written in
-                    try Field(written, of: "parameters").list(lowered)
-                },
-                returns: try cursor.field().maybe(lowered),
+                parameters.map { parameters in LoweredProcedureType(parameters: parameters, returns: returns) },
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())
             )
@@ -689,38 +742,8 @@ struct ObjectReader {
                 path: try path(cursor.next())
             )
 
-        case .undeclared: read = .undeclared(label: try cursor.field().text(), because: try undeclared(cursor.next()))
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func undeclared(_ value: Value) throws -> LoweredType.Undeclared {
-        var cursor = try FieldCursor(value, of: "undeclared")
-        let read: LoweredType.Undeclared
-
-        switch ObjectLayout.UndeclaredTag(rawValue: try cursor.field().integer()) {
-        case .noTypeNamed: read = .noTypeNamed(try name(cursor.next()))
-        case .noBoundNamed: read = .noBoundNamed(try name(cursor.next()))
-        case .namesItself: read = .namesItself
-        case nil: throw ObjectRefused("'undeclared' is undeclared for a reason this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func loweredRecord(_ value: Value) throws -> LoweredRecord {
-        var cursor = try FieldCursor(value, of: "record")
-        let held = try layout(cursor.next())
-        let read = try LoweredRecord(
-            layout: held,
-            judging: try cursor.field().list(lowered)
-        )
 
         try cursor.end()
 
@@ -740,7 +763,6 @@ struct ObjectReader {
             constness: try constness(cursor.next()),
             isolation: try isolation(cursor.next()),
             failing: try failing(cursor.next()),
-            handsBackAsDeclared: try cursor.field().flag(),
             judging: try implementation(cursor.next())
         )
 
@@ -831,9 +853,9 @@ struct ObjectReader {
         let read: Instruction.Binding
 
         switch ObjectLayout.BindingTag(rawValue: try cursor.field().integer()) {
-        case .bind: read = .bind(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .declare: read = .declare(try cursor.field().count(), settling: try cursor.field().maybe(lowered))
-        case .assign: read = .assign(try address(cursor.next()), settling: try cursor.field().maybe(lowered))
+        case .bind: read = .bind(try cursor.field().count())
+        case .declare: read = .declare(try cursor.field().count())
+        case .assign: read = .assign(try address(cursor.next()))
         case nil: throw ObjectRefused("'binding' binds in a way this reads none of")
         }
 
@@ -862,8 +884,8 @@ struct ObjectReader {
         case .field:
             read = .field(try cursor.field().count(), try name(cursor.next()), optional: try cursor.field().flag())
 
-        case .key: read = .key(try name(cursor.next()), optional: try cursor.field().flag())
-        case .index: read = .index(try cursor.field().integer(), optional: try cursor.field().flag())
+        case .name: read = .name(try name(cursor.next()), optional: try cursor.field().flag())
+        case .index: read = .index(try self.value(cursor.next()), optional: try cursor.field().flag())
         case .at: read = .at(try address(cursor.next()), optional: try cursor.field().flag())
         case nil: throw ObjectRefused("'walk' steps in a way this reads none of")
         }
@@ -882,6 +904,15 @@ struct ObjectReader {
         case .local: read = .local(try address(cursor.next()))
         case .array: read = .array(try Field(cursor.next(), of: "array").list(operation))
         case .record: read = .record(try recordOperation(cursor.next()))
+        case .dictionary:
+            read = .dictionary(try Field(cursor.next(), of: "dictionary").list { written in
+                var entry = try FieldCursor(written, of: "entry")
+                let read = (key: try operation(entry.next()), value: try operation(entry.next()))
+
+                try entry.end()
+
+                return read
+            })
         case .closure:
             read = .closure(
                 try cursor.field().count(),
@@ -907,37 +938,6 @@ struct ObjectReader {
                 as: try lowered(cursor.next()),
                 optional: try cursor.field().flag()
             )
-
-        case .checked:
-            let judged = try operation(cursor.next())
-
-            // What is judged where it stands is a call, of any of the three
-            // kinds, and what it hands back stands at the positions it hands
-            // a variable in place, each once, in order.
-            guard let inPlace = judged.handingInPlace else {
-                throw ObjectRefused("a judgement where a call stands wraps what is no call")
-            }
-
-            let against = try cursor.field().maybe(lowered)
-            let handedBack = try Field(cursor.next(), of: "handed back").list { written in
-                var back = try FieldCursor(written, of: "handed back")
-                let taken = HandedBack(position: try back.field().count(), against: try lowered(back.next()))
-
-                try back.end()
-
-                return taken
-            }
-            let positions = handedBack.map(\.position)
-
-            guard zip(positions, positions.dropFirst()).allSatisfy({ $0 < $1 }), positions.allSatisfy(inPlace.contains) else {
-                throw ObjectRefused("a call hands back in place at a position it hands nothing in place")
-            }
-
-            guard let judging = CallJudgement(against: against, handedBack: handedBack) else {
-                throw ObjectRefused("a judgement where a call stands judges nothing")
-            }
-
-            read = .checked(judged, judging)
 
         case .block: read = .block(try body(cursor.next()))
         case .conditional:
@@ -1014,7 +1014,7 @@ struct ObjectReader {
             arguments: try Field(cursor.next(), of: "arguments").list { written in
                 try Field(written, of: "argument").maybe(operation)
             },
-            judging: try Field(cursor.next(), of: "handed").list { written in
+            handing: try Field(cursor.next(), of: "handed").list { written in
                 var held = try FieldCursor(written, of: "handed")
                 let taken = CallOperation.Handed(
                     position: try held.field().count(),

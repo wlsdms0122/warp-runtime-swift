@@ -8,24 +8,21 @@
 import Foundation
 
 // What the type check judged about one expression that its text does not
-// write, for lowering to read where it lowers that expression and for the
-// hand-back proof to read over the body.
+// write, for lowering to read where it lowers that expression.
 enum Judgement: Sendable {
     // A call of a value: the positions it hands a variable in place, the
-    // ones the slot's type marks `inout`, and what it is judged on where it
-    // stands, nil where nothing: its answer where the slot's type writes
-    // `returns`, and each variable handed in place. The run judges a
-    // variable only where the closure it reaches names a type parameter at
-    // that slot, since a closure written with a type there settles every
-    // write to it.
-    case apply(inPlace: [Int], judging: CallJudgement?)
-
-    // A call whose callee declares a wider answer than the call reads, or
-    // hands back in place what it holds as its own type parameter: what it
-    // is judged on where it stands.
-    case call(CallJudgement)
+    // ones the slot's type marks `inout`.
+    case apply(inPlace: [Int])
 
     // A closure literal: what its row carries that the literal does not
     // write, derived from its body.
     case closure(constness: Constness, isolation: Isolation, failing: Failing)
+
+    // A reference: the path it reads, as the walk that judged it placed it.
+    case reference(LoweredPath)
+
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
 }

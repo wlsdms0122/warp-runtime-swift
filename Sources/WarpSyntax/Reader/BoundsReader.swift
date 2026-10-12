@@ -23,72 +23,29 @@ struct BoundsReader {
     }
 
     // MARK: - Public
-    // The signature with its bounds applied, and the check that every bound
-    // names a parameter some slot mentions. A bound on a name nobody wrote
-    // binds nothing, which is a claim the author should hear about where they
-    // wrote it. `steps` are where `bounds` stands.
-    func apply(
-        _ bounds: [Name: String]?,
-        qualifying: (Name) -> Name = { name in name },
-        to signature: Signature,
+    // The contracts each type parameter's bound names. `steps` are where
+    // `bounds` stands.
+    func bounds(
+        _ written: [Name: String]?,
+        in notation: Notation,
         at steps: [Place.Step]
-    ) throws -> Signature {
-        guard let bounds, !bounds.isEmpty else { return signature }
-
+    ) throws -> [Name: Set<Name>] {
         // A bound is the names of contracts, one or several joined with `&`,
-        // and never a type. Read by the one reading every type spelling gets,
-        // so what `&` means here is what it means in a slot.
-        var named: [Name: [Name]] = [:]
+        // read the way a slot's `&` is.
+        var named: [Name: Set<Name>] = [:]
 
-        for (parameter, bound) in bounds.sorted(by: { $0.key < $1.key }) {
-            let here = steps + [.key(parameter.spelling)]
-            let names: [Name]
-            let parsed: TypeExpression
-
+        for (parameter, bound) in (written ?? [:]).sorted(by: { one, other in one.key < other.key }) {
             do {
-                parsed = try TypeReader.parse(bound, qualifying: qualifying)
+                named[parameter] = try TypeReader.contracts(bound, in: notation)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds bind '\(parameter)' to '\(bound)': \(refused.message)", at: here)
-            }
-
-            switch parsed {
-            case let .named(name):
-                names = [name]
-
-            case let .composition(joined):
-                names = joined
-
-            default:
                 throw ReadingError(
-                    "bounds bind '\(parameter)' to"
-                        + " '\(bound)', which is not a contract's name, nor"
-                        + " contracts' names joined with `&`",
-                    at: here
+                    "bounds bind '\(parameter)' to '\(bound)': \(refused.message)",
+                    at: steps + [.key(parameter.spelling)]
                 )
             }
-
-            named[parameter] = names
         }
 
-        let bounded = signature.bounded(by: named)
-
-        let mentioned = Set(bounded.parameterOccurrences.map(\.name))
-
-        let unwritten = named.keys
-            .filter { name in !mentioned.contains(name) }
-            .sorted()
-
-        guard unwritten.isEmpty else {
-            throw ReadingError(
-                "bounds name"
-                    + " \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
-                    + " `some \(unwritten.first?.spelling ?? "")`. A bound rides on a"
-                    + " parameter some slot mentions",
-                at: steps
-            )
-        }
-
-        return bounded
+        return named
     }
 
     // MARK: - Private

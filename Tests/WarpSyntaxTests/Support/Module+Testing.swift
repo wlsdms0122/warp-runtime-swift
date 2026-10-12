@@ -16,7 +16,7 @@ import WarpTestSupport
 extension Module {
     static let testing = try! Module(
         procedures: [
-            "test.fail": Procedure(
+            "Test.fail": Procedure(
                 signature: Signature(of: FailEffect.self),
                 implementation: .effect(FailEffect())
             )

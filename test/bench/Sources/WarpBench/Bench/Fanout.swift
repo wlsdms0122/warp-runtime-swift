@@ -12,7 +12,7 @@ import WarpStandard
 // Procedures that call nothing, dealt into a given number of documents, with
 // the two halves of a build timed apart.
 //
-// A build compiles and then links. Compiling settles what a document says
+// A build compiles and then links. Compiling judges what a document says
 // against what it reaches, and a procedure here reaches nothing outside the document
 // it is written in, so each document's compile is a question about that
 // document alone. Linking lays the compiled documents down together and is one
@@ -33,12 +33,12 @@ struct Fanout {
     private let modules: [Module]
 
     // The same documents already compiled, which is what `link()` is handed.
-    // What that door times is the laying down, so settling the documents again
-    // for every sample would only be time spent outside the clock.
+    // What that entry point times is the laying down, so the documents are
+    // compiled once, outside the clock.
     private let compiled: [Compiled]
 
-    // The vocabulary these were compiled against, held so that every door
-    // times the same build rather than settling it again.
+    // The vocabulary these were compiled against, held so that every entry
+    // point times the same build rather than making it again.
     private let vocabulary: Vocabulary
 
     // MARK: - Initializer
@@ -103,7 +103,7 @@ struct Fanout {
     // its own type and answering what it was sent. It imports nothing, which is
     // what leaves its compile a question about itself.
     private static func document(_ held: Range<Int>) throws -> Module {
-        var types: [Name: TypeExpression] = [:]
+        var types: [Name: TypeDeclaration] = [:]
         var procedures: [Name: Procedure] = [:]
 
         for number in held {
@@ -115,7 +115,7 @@ struct Fanout {
     }
 
     private static func procedure(_ number: Int) throws -> Procedure {
-        let held = Warp.Expression.reference([.key("held"), .key("value")])
+        let held = Warp.Expression.reference([.name("held"), .name("value")])
 
         return Procedure(
             signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
@@ -123,7 +123,7 @@ struct Fanout {
                 Statement(
                     binding: .constant("held"),
                     expression: .cast(
-                        .record(["value": .reference([.key("value")])]),
+                        .record(["value": .reference([.name("value")])]),
                         as: .named(try type(number)),
                         optional: false
                     )

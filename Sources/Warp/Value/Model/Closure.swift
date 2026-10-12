@@ -127,7 +127,7 @@ public struct Closure: Sendable {
     // through a link, so one without a row there is one no link read. A
     // settling reads the row for itself, since it refuses in its caller's
     // words.
-    public func answered() throws -> Linked {
+    func answered() throws -> Linked {
         guard let linked else { throw ExecutionError("a closure no link answered") }
 
         return linked

@@ -22,30 +22,21 @@ indirect enum Operation: Sendable {
 
     case record(RecordOperation)
 
+    // A map literal: each entry's key and value, in the order written, so a
+    // key written twice keeps the later value.
+    case dictionary([(key: Operation, value: Operation)])
+
     // A closure literal: the number its document gave the row its body was
     // lowered into, and which cells of the frame it takes with it, as
     // (outer slot, inner slot).
     case closure(Int, captures: [(Int, Int)])
 
-    // Calling a value. The arguments are positional and settle against the
-    // closure's own row, after the judgement the call stands in holds each
-    // the build did not prove a value of what the slot reads there against
-    // that slot. One the build found handed in place is the caller's place.
+    // Calling a value. The arguments are positional and handed to the
+    // closure's slots as they were read; one the build found handed in place
+    // is the caller's place.
     case apply(Operation, arguments: [Argument])
 
     case cast(Operation, as: LoweredType, optional: Bool)
-
-    // A call's answer judged against what the call reads it as, where the
-    // callee declares a wider one: a type parameter the call filled, the
-    // `returns` a value's slot wrote, a contract's answer. Refused at the run
-    // the way a value arriving at a parameter is. An answer of the type the
-    // call reads is handed on as it came, which is what lets a tie answer the
-    // side that arrived. Nothing after it stands on this type's shape: a field
-    // read stands on the call inside, and a binding or a parameter that
-    // declares a type judges the value where it lands. Each variable it handed
-    // back in place is judged once the call is over, whether it answered or
-    // failed. The build makes one only around a call.
-    case checked(Operation, CallJudgement)
 
     case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
@@ -65,35 +56,6 @@ indirect enum Operation: Sendable {
     case leave(Leave.Reach, target: Name?, Operation?)
 
     // MARK: - Property
-    // The positions a call may hand a variable in place at, nil where this
-    // is no call. A call names them; a call through a contract or of a value
-    // hands a place wherever it wrote one, and the row or closure it reaches
-    // says which it takes in place. A call through a contract hands the
-    // first as what it read, so never that one.
-    var handingInPlace: [Int]? {
-        switch self {
-        case let .call(call):
-            return call.handed.map(\.position)
-
-        case let .dispatch(dispatch):
-            return dispatch.arguments.indices.compactMap { index in
-                guard case .reference = dispatch.arguments[index] else { return nil }
-
-                return index + 1
-            }
-
-        case let .apply(_, arguments):
-            return arguments.indices.compactMap { index in
-                guard case .reference = arguments[index] else { return nil }
-
-                return index
-            }
-
-        default:
-            return nil
-        }
-    }
-
     // MARK: - Initializer
     // MARK: - Public
     // Whether this reads any slot in the range, through a path's index
@@ -116,6 +78,9 @@ indirect enum Operation: Sendable {
         case let .record(held):
             return held.fields.allSatisfy { field in field.walk(visit) }
 
+        case let .dictionary(entries):
+            return entries.allSatisfy { entry in entry.key.walk(visit) && entry.value.walk(visit) }
+
         // An argument handed in place is a place and not an operation, and a
         // place is the node's own to read.
         case let .apply(callee, arguments):
@@ -126,7 +91,7 @@ indirect enum Operation: Sendable {
                     return operation.walk(visit)
                 }
 
-        case let .cast(read, _, _), let .checked(read, _):
+        case let .cast(read, _, _):
             return read.walk(visit)
 
         case let .block(body):
@@ -147,9 +112,10 @@ indirect enum Operation: Sendable {
             return call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
 
         // What a call through a contract hands over is its first and its
-        // `arguments`. The calls beside it are the link's copy of the same, so walking those
-        // too would read one fact twice. An argument handed in place is a
-        // place and not an operation, and a place is the node's own to read.
+        // `arguments`. The calls beside it are the link's copy of the same, so
+        // walking those too would read one fact twice. An argument handed in
+        // place is a place and not an operation, and a place is the node's own
+        // to read.
         case let .dispatch(dispatch):
             return dispatch.first.walk(visit)
                 && dispatch.arguments.allSatisfy { argument in
@@ -188,6 +154,16 @@ indirect enum Operation: Sendable {
                 )
             )
 
+        case let .dictionary(entries):
+            inside = .dictionary(
+                try entries.map { entry in
+                    (
+                        key: try entry.key.rewritten(operation: operation, type: type),
+                        value: try entry.value.rewritten(operation: operation, type: type)
+                    )
+                }
+            )
+
         case let .apply(callee, arguments):
             inside = .apply(
                 try callee.rewritten(operation: operation, type: type),
@@ -202,9 +178,6 @@ indirect enum Operation: Sendable {
                 as: try type(cast),
                 optional: optional
             )
-
-        case let .checked(read, judgement):
-            inside = .checked(try read.rewritten(operation: operation, type: type), try judgement.rewritten(type: type))
 
         case let .block(body):
             inside = .block(try body.rewritten(operation: operation, type: type))
@@ -234,30 +207,10 @@ indirect enum Operation: Sendable {
             )
 
         case let .call(call):
-            inside = .call(
-                CallOperation(
-                    procedure: call.procedure,
-                    arguments: try call.arguments.map { argument in
-                        try argument.map { argument in try argument.rewritten(operation: operation, type: type) }
-                    },
-                    handed: call.handed
-                )
-            )
+            inside = .call(try call.rewritten(operation: operation, type: type))
 
-        // The calls beside a dispatch are the link's to lay out, so they are
-        // handed over as they stand for the relocation to answer.
         case let .dispatch(dispatch):
-            inside = .dispatch(
-                DispatchOperation(
-                    contract: dispatch.contract,
-                    procedure: dispatch.procedure,
-                    first: try dispatch.first.rewritten(operation: operation, type: type),
-                    arguments: try dispatch.arguments.map { argument in
-                        try argument.rewritten(operation: operation, type: type)
-                    },
-                    calls: dispatch.calls
-                )
-            )
+            inside = .dispatch(try dispatch.rewritten(operation: operation, type: type))
 
         case let .leave(reach, target, read):
             inside = .leave(reach, target: target, try read.map { read in try read.rewritten(operation: operation, type: type) })

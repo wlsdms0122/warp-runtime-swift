@@ -71,7 +71,7 @@ struct ControlTests {
                             expression: .conditional(
                                 reference("ok"),
                                 then: [
-                                    Statement(binding: .assignment([.key("either")]), expression: .literal(.string("here"))
+                                    Statement(binding: .assignment([.name("either")]), expression: .literal(.string("here"))
                                     )
                                 ],
                                 else: [Statement(expression: aborting(literal("gone")))]

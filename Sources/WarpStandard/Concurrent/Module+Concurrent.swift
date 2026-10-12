@@ -33,7 +33,7 @@ public extension Module {
                 "Standard.Concurrent.allKeyed": Procedure(
                     description: "Runs every closure, and answers every answer under the closure's key."
                         + " A failure fails the whole procedure, with every piece's failure reported.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: .dictionary(answer)),
+                    signature: Signature(parameters: [pieces(in: keyed)], returns: keyed(answer), bounds: keys),
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.allKeyed"))
                 ),
                 "Standard.Concurrent.first": Procedure(
@@ -47,7 +47,7 @@ public extension Module {
                     description: "Runs every closure under a key, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.dictionary)], returns: answer),
+                    signature: Signature(parameters: [pieces(in: keyed)], returns: answer, bounds: keys),
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.firstKeyed"))
                 )
             ]
@@ -58,6 +58,14 @@ public extension Module {
     // What every piece answers, one type the call fills from the pieces, so
     // what comes back is said in the type.
     private static let answer = TypeExpression.parameter(name: "Answer")
+
+    // Pieces and answers under keys: one type the call fills from the
+    // pieces' map, held to what a key of any map answers.
+    private static func keyed(_ held: TypeExpression) -> TypeExpression {
+        .dictionary(key: .parameter(name: "Key"), value: held)
+    }
+
+    private static let keys: [Name: Set<Name>] = ["Key": [TypeSpelling.hashable]]
 
     // The pieces a fan-out runs, held in a list or under keys: closures that
     // touch nothing another piece could touch at once, each answering the

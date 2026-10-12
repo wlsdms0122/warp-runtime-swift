@@ -14,7 +14,7 @@ struct BlockTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a block's leave judgment is true of the block alone")
+    @Test("a block's leave judgement is true of the block alone")
     func alwaysLeavesIsTrueOfTheBlockAlone() {
         // Given. A block no validator has seen: the property answers from the
         // block itself, so a leaving body counts whatever the result declares,

@@ -55,7 +55,8 @@ struct Bench {
         // MARK: - Private
     }
 
-    // What one build of fanned-out procedures costs, by the door that was asked.
+    // What one build of fanned-out procedures costs, by the entry point that was
+    // asked.
     private struct Cost {
         // MARK: - Property
         let build: Double
@@ -91,7 +92,7 @@ struct Bench {
         init(_ read: [String: [String: Double]]?, over figures: [String], from path: String?) {
             self.path = path
 
-            guard let path else {
+            guard path != nil else {
                 self.rows = nil
                 self.missing = nil
 
@@ -191,7 +192,7 @@ struct Bench {
 
     // As many procedures as the most documents, so the widest spread is one procedure to
     // a document.
-    private static let fanoutWords = documentCounts.reduce(1, max)
+    private static let fanoutProcedures = documentCounts.reduce(1, max)
 
     // MARK: - Initializer
     // MARK: - Public
@@ -273,7 +274,7 @@ struct Bench {
         var costs: [Int: Cost] = [:]
 
         for count in documentCounts {
-            let dealing = try Dealing(of: fanoutWords, across: count)
+            let dealing = try Dealing(of: fanoutProcedures, across: count)
             let fanout = try await Fanout(dealing)
 
             costs[dealing.documents] = Cost(
@@ -285,7 +286,7 @@ struct Bench {
         }
 
         print("")
-        print(Self.table(costs, of: fanoutWords, against: printed?["documents"], from: against))
+        print(Self.table(costs, of: fanoutProcedures, against: printed?["documents"], from: against))
     }
 
     // MARK: - Private
@@ -534,16 +535,12 @@ struct Bench {
     //
     // The procedures, the bodies and the names are the same in every row, and none
     // of them calls another, so nothing here grows with the count except what
-    // having more documents costs. `compile` is the documents settled together
-    // and `alone` the same documents settled one at a time, which is what a
+    // having more documents costs. `compile` is the documents compiled together
+    // and `alone` the same documents compiled one at a time, which is what a
     // build that handed each to its own core would have to do: the gap between
     // them is what a compile stops sharing once they are split. `link` lays
-    // them down together and no spreading takes it away.
-    //
-    // `spread` is what the row would cost on as many cores as it has documents
-    // and nothing else changed: one document's compile, and then the link. It
-    // is a floor rather than a forecast, since it charges nothing for handing
-    // the documents out or for taking the answers back.
+    // them down together and no spreading takes it away. The table's note
+    // says what `floor` is.
     private static func table(
         _ costs: [Int: Cost],
         of procedures: Int,
@@ -552,15 +549,15 @@ struct Bench {
     ) -> String {
         typealias Dealt = (count: Int, cost: Cost)
 
-        let spread: (Dealt) -> Double = { dealt in dealt.cost.alone / Double(dealt.count) + dealt.cost.link }
+        let floor: (Dealt) -> Double = { dealt in dealt.cost.alone / Double(dealt.count) + dealt.cost.link }
         let columns: [Column<Dealt>] = [
             .figure("build us", decimals: 0, moves: true) { dealt in dealt.cost.build / 1000 },
             .figure("compile us", decimals: 0, moves: true) { dealt in dealt.cost.compile / 1000 },
             .figure("alone us", decimals: 0, moves: true) { dealt in dealt.cost.alone / 1000 },
             .figure("link us", decimals: 0, moves: true) { dealt in dealt.cost.link / 1000 },
-            .figure("spread us", decimals: 0, moves: false) { dealt in spread(dealt) / 1000 },
+            .figure("floor us", decimals: 0, moves: false) { dealt in floor(dealt) / 1000 },
             .figure("x", decimals: 2, moves: false) { dealt in
-                spread(dealt) > 0 ? dealt.cost.build / spread(dealt) : 0
+                floor(dealt) > 0 ? dealt.cost.build / floor(dealt) : 0
             }
         ]
         let rows: [(label: String, row: Dealt)] = costs.keys.sorted().compactMap { count in
@@ -578,7 +575,7 @@ struct Bench {
                 + " \(buildSamples)",
             noting: [
                 "`alone` is the documents compiled one at a time rather than together."
-                    + " `spread` is one document's share of that plus the link, which is"
+                    + " `floor` is one document's share of that plus the link, which is"
                     + " what the row costs on as many cores as it has documents and"
                     + " nothing charged for handing them out; `x` is `build` over it."
             ]

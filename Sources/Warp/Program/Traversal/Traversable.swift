@@ -15,12 +15,12 @@ import Foundation
 // nowhere hands in nothing. A step is a `Place.Step` rather than a name,
 // because a statement is found by its name and by its position and only one
 // of those is always there.
-public protocol Traversable {
+protocol Traversable {
     // Everything held in here, each with where it was found.
     func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Node)]
 }
 
-public extension Traversable {
+extension Traversable {
     // Every expression held in here, each with where it was found.
     func subexpressions<Trail>(
         at trail: Trail,

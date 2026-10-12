@@ -21,7 +21,7 @@ func mayFail(_ name: Name = "checked") -> Statement {
 // MARK: - Conditions
 
 // Walking a collection is a loop over its count, so a test writing one writes
-// the type a notation spells `each` with: the round's index against the
+// the construct a notation spells `each` as: the round's index against the
 // material's count, and the element read at that index.
 func walking(
     _ material: Path,
@@ -34,7 +34,7 @@ func walking(
             Call(
                 selector: "Standard.Comparable.lessThan",
                 arguments: [
-                    .reference([.key(round), .key("index")]),
+                    .reference([.name(round), .name("index")]),
                     .call(Call(selector: "Standard.Collection.count", arguments: [.reference(material)]))
                 ]
             )
@@ -43,7 +43,7 @@ func walking(
             body: Body([
                 Statement(
                     binding: .constant(element),
-                    expression: .reference(material.appending(contentsOf: [.indexRef([.key(round), .key("index")])]))
+                    expression: .reference(material.appending(contentsOf: [.indexRef([.name(round), .name("index")])]))
                 )
             ] + body.statements)
         )

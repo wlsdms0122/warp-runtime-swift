@@ -41,13 +41,13 @@ struct Compiling {
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
 
-    // Every judgment the compile asks and every row it builds reads the table
+    // Every judgement the compile asks and every row it builds reads the table
     // the run will read.
     var loweredTypes: LoweredTypeTable { types.loweredTypes }
 
     // The rows folding runs against, held apart from the lowering: a row is
     // written in when the phase that lowered it ends, so what a body folds
-    // through is what stood settled before its phase began rather than
+    // through is what stood lowered before its phase began rather than
     // whatever the row order reached first. Lowering is then the only holder
     // of its own table, and writing a row into it copies nothing.
     private var foldingRows: [Linked] = []
@@ -122,13 +122,13 @@ struct Compiling {
     // One document already compiled laid down, as the document itself wrote
     // it.
     //
-    // Its rows and what it settled are cut by where the document says its
+    // Its rows and what it worked out are cut by where the document says its
     // declarations stand, which is the one place that boundary is drawn.
     //
-    // What it proved about its own bodies and what the build read off one that
-    // declared no answer are read off what it settled rather than off the rows
-    // it stands as. A row is a declaration lowered against a link's types,
-    // and none of those is a type.
+    // What the build read off a body that declared no answer is read off what
+    // it worked out rather than off the rows it stands as. A row is a
+    // declaration lowered against a link's types, and none of those is a
+    // type.
     mutating func lay(
         _ document: Compiled,
         at origin: Int,
@@ -144,13 +144,8 @@ struct Compiling {
 
         assert(held.origin == origin, "a document is laid at the origin it is held at")
 
-        // What the build read off a body stands by the row it was read off.
-        let own = lowering.own(origin)
-
         for (name, answer) in read {
-            guard let row = own[name] else { continue }
-
-            answers[row] = answer
+            self.read(answer, as: name, of: origin)
         }
     }
 
@@ -165,6 +160,7 @@ struct Compiling {
     mutating func resolveEvery() throws {
         for origin in documents.indices {
             lowering.resolve(origin)
+            try lowering.refuseMiscountedCalls(of: origin, at: documents[origin])
 
             for (number, row) in (lowering.documents[origin].named ?? []).enumerated() where row == nil {
                 guard case let .unfound(.sent(declared)) = lowering.documents[origin].numbering.row(
@@ -204,21 +200,14 @@ struct Compiling {
 
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
-    mutating func settle(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
-        try lowering.settle(row, body: block, judgements: judgements, at: place)
+    mutating func lower(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
+        try lowering.lower(row, body: block, judgements: judgements, at: place)
 
         loweredRows.append(row)
     }
 
-    // What a lowered body was settled, over the whole document, to prove of
-    // what it hands back.
-    mutating func record(_ row: Int, handsBackAsDeclared: Bool) {
-        lowering.record(row, handsBackAsDeclared: handsBackAsDeclared)
-    }
-
-    // The stand-ins, while the procedures themselves settle: a procedure folding through
-    // a procedure would be a cycle, and which procedures are already lowered is a fact
-    // of name order rather than of the text.
+    // The rows a fold reads while the procedures themselves are lowered: the
+    // stand-ins the compiler holds there until each lowers.
     func folding() -> ResolvedTable {
         ResolvedTable.documents(
             foldingRows,

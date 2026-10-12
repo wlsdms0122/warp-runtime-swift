@@ -7,10 +7,10 @@
 
 import Foundation
 
-// An effect's door into the run. The arguments arrive settled, the way a
-// body's do; what an effect has beyond a query is the way to write a variable
-// it was handed in place, to call a closure it was handed, and to reach the
-// environment.
+// What an effect is handed in the run. The arguments arrive by position, the
+// way a body's do; what an effect has beyond a query is the way to write a
+// variable it was handed in place, to call a closure it was handed, and to
+// reach the environment.
 public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Property
     // The row being sent: what a trace and a refusal call it, the declaration
@@ -18,7 +18,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // document's numbers.
     private let callee: Linked
 
-    private let settled: Settled
+    private let arguments: ArgumentList
 
     // Where the run was when this was sent, as everything it went through to
     // get here. Provenance, not meaning: a procedure does not know the statement it
@@ -35,20 +35,16 @@ public struct Invocation<P: NativeProcedure>: Sendable {
 
     public var selector: Name { callee.label }
 
-    // The declaration being sent, so a procedure reads its arguments by the names
-    // the declaration gave them.
-    public var signature: Signature { callee.signature }
-
     // MARK: - Initializer
     init(
         of callee: Linked,
-        settled: Settled,
+        arguments: ArgumentList,
         holds: [(position: Int, handle: Handle)],
         trace: Trace,
         evaluator: Evaluator
     ) {
         self.callee = callee
-        self.settled = settled
+        self.arguments = arguments
         self.holds = holds
         self.trace = trace
         self.evaluator = evaluator
@@ -57,7 +53,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Public
     // What an argument holds, named by the procedure's own key.
     public subscript(key: P.Parameters) -> Value {
-        settled[key.position]
+        arguments[key.position]
     }
 
     // What a parameter handed in place holds now.
@@ -73,8 +69,9 @@ public struct Invocation<P: NativeProcedure>: Sendable {
 
     // Writes a value through the hold a parameter was handed. A native procedure
     // declaring a parameter `inout` answers into the caller's variable this
-    // way, and a procedure writing an argument that is not a path is a procedure the
-    // link should have refused.
+    // way. A link hands such a parameter a path, so one that was handed none
+    // is refused here. What the host writes is a value from outside, so it
+    // comes in through the door the parameter's type keeps.
     public func write(_ key: P.Parameters, _ value: Value) throws {
         guard let hold = hold(of: key) else {
             throw ExecutionError(
@@ -82,7 +79,12 @@ public struct Invocation<P: NativeProcedure>: Sendable {
             )
         }
 
-        try hold.write(value, at: [])
+        let slot = callee.slots[key.position]
+
+        try hold.write(
+            try slot.type.slotUnwrapped.settling(outside: value, at: "'\(key.name)'", in: callee.table),
+            at: []
+        )
     }
 
     // Nil for an argument that is null. Null spells as `null`, and a caller
@@ -112,12 +114,8 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         handing arguments: [Value] = [],
         piece label: String? = nil
     ) async throws -> Value {
-        guard callee.sends.indices.contains(key.position) else {
-            throw ExecutionError("'\(selector)' sends '\(key.selector)', and the link resolved no row for it")
-        }
-
-        return try await evaluator.send(
-            callee.sends[key.position],
+        try await evaluator.send(
+            try callee.sent(key.position, as: key.selector),
             from: callee.origin,
             handing: arguments,
             at: label.map { name in trace.appending(.piece(name)) } ?? trace

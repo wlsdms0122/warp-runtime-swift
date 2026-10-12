@@ -7,9 +7,9 @@
 
 import Foundation
 
-// Deliberately not a `RecoverableFailure`. A call that names nothing, or calls
-// with arguments the callee never declared, is an author mistake. Absorbing it
-// into a rescue path would hide the one class of defect building exists to find.
+// What the build refuses: a mistake in what an author wrote, such as a call
+// that names nothing or hands what its callee never declared. No rescue holds
+// one.
 public struct BuildError: WarpError {
     // MARK: - Property
     public let message: String
@@ -50,6 +50,26 @@ public struct BuildError: WarpError {
         BuildError(
             "'\(name)' is private to the document that declares it, and nothing outside"
                 + " that document names it",
+            at: place
+        )
+    }
+
+    // One name declared by two documents of a link, said once for a
+    // procedure, a type and a contract, at the second declaration.
+    static func declaredTwice(_ name: Name, by first: String, and second: String, at place: Place) -> BuildError {
+        BuildError(
+            "'\(name)' is declared by \(first) and by \(second)."
+                + " Two declarations of a name have no way to be told apart",
+            at: place
+        )
+    }
+
+    // One name a link declares as a type and as a contract, which share a
+    // namespace, at the declaration a document wrote second.
+    static func declaredAsBoth(_ name: Name, type: String, contract: String, at place: Place) -> BuildError {
+        BuildError(
+            "'\(name)' is declared as both a type and a contract in this link, as a type by \(type) and as a"
+                + " contract by \(contract). One name cannot stand for a type and a contract at once",
             at: place
         )
     }

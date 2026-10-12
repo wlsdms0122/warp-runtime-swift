@@ -16,11 +16,12 @@ import Foundation
 // already compiled, and nothing about the gathering turns on it.
 protocol Declaring {
     var document: Place.Document { get }
-    var types: [Name: TypeExpression] { get }
+    var types: [Name: TypeDeclaration] { get }
     var contracts: [Name: [Name: ContractProcedure]] { get }
 
     // Which contracts this document says each type answers. Not a type table
-    // and gathered apart from the two: it declares no name, it says
-    // something about two that are declared elsewhere.
+    // and gathered apart from the two: it declares no name, it says something
+    // about a type, declared elsewhere or named by the language, and a
+    // contract declared elsewhere.
     var claims: [Name: Set<Name>] { get }
 }

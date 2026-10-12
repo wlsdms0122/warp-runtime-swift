@@ -39,8 +39,8 @@ struct ModuleNotationTests {
 
     @Test("a top-level body is rejected, because a document is not a procedure")
     func topLevelBodyRejected() {
-        // Given. This was the whole of a document once, and it made every
-        // document an entry point with no way to write one that only declares
+        // Given. A document declares procedures; a body written at its top
+        // would be an entry no key names
         let fixture: Value = ["body": [["let": "done", "value": "end"]]]
 
         // When / Then
@@ -49,15 +49,18 @@ struct ModuleNotationTests {
         }
     }
 
-    @Test("a module that declares nothing is rejected")
-    func emptyModuleRejected() {
-        // Given. It could never be linked into anything
-        let fixture: Value = ["procedures": [:]]
+    @Test("a module may declare no procedure")
+    func aModuleDeclaringNoProcedureIsRead() throws {
+        // Given. A module declaring only a type, which the documents beside it
+        // name
+        let fixture: Value = ["types": ["Geo.Point": ["record": ["x": "Int"]]]]
 
-        // When / Then
-        #expect(throws: ReadingError.self) {
-            try loader.loadDocument(fixture)
-        }
+        // When
+        let sut = try loader.loadDocument(fixture)
+
+        // Then
+        #expect(sut.procedures.isEmpty)
+        #expect(sut.types["Geo.Point"] == .record(["x": .int]))
     }
 
     @Test("a document carries no name of its own")

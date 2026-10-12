@@ -19,10 +19,10 @@ struct LoweredBodyWalkTests {
         case local
         case array
         case record
+        case dictionary
         case closure
         case apply
         case cast
-        case checked
         case block
         case conditional
         case loop
@@ -39,10 +39,10 @@ struct LoweredBodyWalkTests {
             case .local: self = .local
             case .array: self = .array
             case .record: self = .record
+            case .dictionary: self = .dictionary
             case .closure: self = .closure
             case .apply: self = .apply
             case .cast: self = .cast
-            case .checked: self = .checked
             case .block: self = .block
             case .conditional: self = .conditional
             case .loop: self = .loop
@@ -66,16 +66,16 @@ struct LoweredBodyWalkTests {
                 return [.array([leaf])]
 
             case .record:
-                return [.record(RecordOperation(layout: try Layout(fields: ["a"]), fields: [leaf]))]
+                return [.record(RecordOperation(layout: Layout(name: "App.A", ordered: ["a"]), fields: [leaf]))]
+
+            case .dictionary:
+                return [.dictionary([(key: leaf, value: .literal(.null))]), .dictionary([(key: .literal(.null), value: leaf)])]
 
             case .apply:
                 return [.apply(leaf, arguments: [])]
 
             case .cast:
                 return [.cast(leaf, as: .int, optional: false)]
-
-            case .checked:
-                return [.checked(leaf, try #require(CallJudgement(against: .int, handedBack: [])))]
 
             case .block:
                 return [.block(body)]
@@ -221,7 +221,7 @@ struct LoweredBodyWalkTests {
     func anInstructionIsANode() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .assign(address, settling: nil), code: leaf, label: "write")],
+            instructions: [Instruction(binding: .assign(address), code: leaf, label: "write")],
             result: nil
         )
         var instructions = 0
@@ -297,11 +297,11 @@ struct LoweredBodyWalkTests {
         }
     }
 
-    @Test("a rewrite hands a cast's type and a binding's settling to the type door")
+    @Test("a rewrite hands a cast's type to the type door")
     func aRewriteHandsTypesOver() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .bind(0, settling: .int), code: .cast(leaf, as: .string, optional: false), label: "cast")],
+            instructions: [Instruction(binding: .bind(0), code: .cast(leaf, as: .string, optional: false), label: "cast")],
             result: nil
         )
         var types: [LoweredType] = []
@@ -314,7 +314,7 @@ struct LoweredBodyWalkTests {
         })
 
         // Then
-        #expect(types.count == 2 && types.contains(.string) && types.contains(.int))
+        #expect(types == [.string])
     }
 
     // MARK: - Public

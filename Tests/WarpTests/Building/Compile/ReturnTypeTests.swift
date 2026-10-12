@@ -18,8 +18,8 @@ struct ReturnTypeTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a declared answer is settled before the caller sees it")
-    func answerIsSettled() async throws {
+    @Test("a declared answer is held to its declaration before the caller sees it")
+    func answerIsHeldToItsDeclaration() async throws {
         // Given
         let sut = try Module(
             procedures: [
@@ -31,7 +31,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -40,7 +40,7 @@ struct ReturnTypeTests {
         let image = try await builder.build([sut])
         let answer = try await Executor().run(image)
 
-        // Then. Settled to the declared representation, not merely waved past
+        // Then. Held to the declared representation, not merely waved past
         #expect(answer == .int(3))
     }
 
@@ -57,7 +57,7 @@ struct ReturnTypeTests {
                     body: [
                         Statement(binding: .constant("counted"), expression: .literal(.int(3)))
                     ],
-                    result: .reference([.key("counted")])
+                    result: .reference([.name("counted")])
                 )
             ]
         )
@@ -102,7 +102,7 @@ struct ReturnTypeTests {
         #expect(refusal?.message.contains("declaration promises Int") == true)
     }
 
-    @Test("a record literal answered where a declared record is promised takes the name, and a nameless value does not")
+    @Test("a record literal answered where a declared record is promised takes the name, and one a name that declares nothing holds refuses")
     func aLiteralAnsweredTakesTheDeclaredName() async throws {
         // Given. The same list written straight into the answer, and held
         // first by a name that says nothing of the record
@@ -122,13 +122,13 @@ struct ReturnTypeTests {
 
         let written = try module(answering: .array([.record(["id": .literal(.string("a"))])]))
         let held = try module(
-            answering: .reference([.key("made")]),
+            answering: .reference([.name("made")]),
             holding: [Statement(binding: .constant("made"), expression: .array([.record(["id": .literal(.string("a"))])]))]
         )
 
         // When / Then. A literal is written where the promise stands, so it
-        // is a `Task`; a name holds a list of nameless records, and a place
-        // gives no value a name
+        // is a `Task`; a name that declares nothing reads no declared record,
+        // so the literal it holds has none to be
         let image = try await builder.build([written])
 
         #expect(try await Executor().run(image) == .array([.record(Record(name: "Task", ["id": .string("a")]))]))
@@ -136,7 +136,7 @@ struct ReturnTypeTests {
         await #expect {
             try await builder.build([held])
         } throws: { error in
-            error is BuildError && "\(error)".contains("declaration promises Array<Task>")
+            error is BuildError && "\(error)".contains("a record literal is written where a declared record is read")
         }
     }
 
@@ -163,45 +163,6 @@ struct ReturnTypeTests {
         } throws: { error in
             error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
         }
-    }
-
-    @Test("an attempt a body answers is held to the declaration each way on its own")
-    func anAttemptAnswerIsHeldEachWay() async throws {
-        // Given. The body answers an int and the rescue a string, where the declaration promises an int
-        let attempt = Warp.Expression.attempt(
-            Block(
-                body: [
-                    Statement(
-                        expression: .conditional(
-                            .literal(.bool(false)),
-                            then: [Statement(expression: aborting(literal("stops")))],
-                            else: nil
-                        )
-                    )
-                ],
-                result: .literal(.int(1))
-            ),
-            rescue: Block(body: [], result: .literal(.string("s")))
-        )
-
-        let sut = try Module(
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: attempt
-                )
-            ]
-        )
-
-        // When
-        let refusal = await #expect(throws: BuildError.self) {
-            try await builder.build([sut] + Module.standard)
-        }
-
-        // Then
-        #expect(refusal?.message == "answers Int or String, and its declaration promises Int")
     }
 
     // MARK: - Public

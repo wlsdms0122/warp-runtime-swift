@@ -70,7 +70,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "doubled": reference("doubled"),
                         "kept": reference("kept"),
                         "total": reference("total")
@@ -228,7 +228,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "grown": reference("grown"),
                         "moved": reference("moved")
                     ])
@@ -255,14 +255,14 @@ struct CollectionTests {
         )
     }
 
-    @Test("a dictionary is walked and rebuilt without naming its fields")
-    func aDictionaryIsDataRatherThanAType() async throws {
+    @Test("a map is walked and rebuilt by its keys")
+    func aMapIsDataRatherThanAType() async throws {
         // Given
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(key: .string, value: .int))]),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
                             selector: "Standard.Collection.keys",
@@ -280,7 +280,7 @@ struct CollectionTests {
                         ))
                         )
                     ],
-                    result: .record([
+                    result: map([
                         "changed": reference("changed"),
                         "held": reference("held"),
                         "named": reference("named")
@@ -358,7 +358,7 @@ struct CollectionTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(
-                            parameters: [Parameter(name: "data", type: .bytes)]
+                            parameters: [Parameter(name: "data", type: .array(.int))]
                         ),
                         body: [],
                         result: expression

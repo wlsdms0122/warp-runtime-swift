@@ -88,7 +88,7 @@ struct ImportsListTests {
     }
 
     @Test("what a document says it imports is what it sends")
-    func theManifestIsTheTruth() throws {
+    func theImportsListIsTheTruth() throws {
         // Given. A host reads this to decide whether to run the program at
         // all, so a list allowed to drift would be worse than none: it would be
         // trusted and wrong.
@@ -112,11 +112,11 @@ struct ImportsListTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(written[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Numeric.plus")]))
+        #expect(written.map?[ModuleReader.CodingKeys.imports.name] == .array([.string("Standard.Numeric.plus")]))
     }
 
     @Test("a document that says nothing about what it imports is refused")
-    func aSilentManifestIsRefused() {
+    func aSilentImportsListIsRefused() {
         // When / Then. Silence is not a claim a host can act on. The list is
         // read before the program and a grant is decided from it, so a document
         // that leaves it out is asking to be trusted about the one thing worth
@@ -159,7 +159,7 @@ struct ImportsListTests {
     }
 
     @Test("a document that undersells what it imports is refused")
-    func anUntruthfulManifestIsRefused() {
+    func anUntruthfulImportsListIsRefused() {
         // When / Then. The whole value of the list is that it can be believed,
         // and what is said back is the procedure that moved rather than both
         // lists
@@ -184,7 +184,7 @@ struct ImportsListTests {
     }
 
     @Test("a document that oversells what it imports is refused the same way")
-    func anOverstatedManifestIsRefused() {
+    func anOverstatedImportsListIsRefused() {
         // When / Then. The list is the set of what the program sends, not a
         // bound around it: a host grants from this list, and a procedure
         // listed but never sent is a grant the program had no use for
@@ -244,7 +244,7 @@ struct ImportsListTests {
     func aVersionBelowTheEarliestIsRefused() {
         // When / Then. The range is closed at both ends. Below it, a document
         // claims a language that never was.
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.load(["warp": 0, "procedures": ["entry": ["result": "hello"]]])
         }
     }
@@ -326,7 +326,7 @@ struct ImportsListTests {
     @Test("a procedure sent from anywhere inside is counted")
     func everyCornerIsCounted() throws {
         // Given / When. A list that missed one would be a list nobody could
-        // rely on, so every place a message can be written is walked
+        // rely on, so every place a call can be written is walked
         let module = try loader.loadDocument([
             "imports": ["inBody", "inClosure", "inLoop", "inNestedData", "inRescue"],
             "procedures": [

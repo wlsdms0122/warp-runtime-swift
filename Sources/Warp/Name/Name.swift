@@ -12,8 +12,8 @@ import Foundation
 // comparing as different bytes. A name is normal form C or it is refused, so a
 // declaration and a reference can only meet by being the same bytes.
 //
-// One door rather than one check per checker, because the rule is the
-// language's and not any checker's own: the encodings hold record keys to it,
+// One initializer rather than one check per checker, because the rule is the
+// language's and not any checker's own: the encodings hold field names to it,
 // and validation holds every name a program writes as a value to it, and both
 // have to mean the same thing by "normal". A `Name` in hand has been through
 // it, and so has been through the other half of the rule: a name is written,
@@ -46,30 +46,7 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         Name.isIdentifier(spelling.utf8[...])
     }
 
-    // Whether this is spelled the way a declaration, a notation's prefix and a
-    // record's name all spell one: identifiers joined by dots, and not a
-    // scalar's keyword.
-    public var isDeclarable: Bool {
-        let bytes = spelling.utf8
-
-        guard Name.scalarKeywords[spelling] == nil else { return false }
-
-        var end: String.UTF8View.Index? = bytes.endIndex
-
-        while let at = end {
-            let (segment, rest) = Name.segment(of: bytes, endingAt: at)
-
-            guard Name.isIdentifier(bytes[segment]) else { return false }
-
-            end = rest
-        }
-
-        return true
-    }
-
     public var description: String { spelling }
-
-    private static let dot = UInt8(ascii: ".")
 
     // MARK: - Initializer
     public init(_ spelling: String) throws {
@@ -100,8 +77,8 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     }
 
     // A spelling this package built out of parts that are already normal:
-    // names joined by a dot, or ASCII written in this source. The door above
-    // is the one every spelling from outside comes through, and this one is
+    // names joined by a dot, or ASCII written in this source. The initializer
+    // above is the one every spelling from outside comes through, and this one is
     // not reachable from outside the package.
     package init(normal spelling: String) {
         self.spelling = spelling
@@ -110,9 +87,9 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
 
     // MARK: - Public
     // Ordered as bytes. Every place that puts names in order reads this: a
-    // record's entries, a signature's parameter positions, a canonical
-    // writer's keys. Swift's `<` orders under canonical equivalence and would
-    // put two spellings of one name in one place.
+    // record's fields and a signature's parameter positions. Swift's `<`
+    // orders under canonical equivalence and would put two spellings of one
+    // name in one place.
     public static func < (lhs: Name, rhs: Name) -> Bool {
         Name.compared(lhs.spelling, rhs.spelling) < 0
     }
@@ -128,31 +105,23 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         hasher.combine(digest)
     }
 
-    // MARK: - Private
-    // The segment of a dotted spelling ending where the caller says, and
-    // where the one before it ends, which is nothing where this one is the
-    // first, so a caller steps from the end until it stops.
-    //
-    // Every reading of a name reads its bytes, and where a name breaks into
-    // segments is one of those readings: a dot is a dot wherever it stands,
-    // including where the scalar after it combines with it into one character.
-    // A dot at either end stands for an empty segment, which is no
-    // identifier.
-    private static func segment(
-        of bytes: String.UTF8View,
-        endingAt end: String.UTF8View.Index
-    ) -> (segment: Range<String.UTF8View.Index>, rest: String.UTF8View.Index?) {
-        var start = end
-
-        while start > bytes.startIndex, bytes[bytes.index(before: start)] != dot {
-            start = bytes.index(before: start)
+    // Whether these bytes are one identifier, the way `isIdentifier` asks it
+    // of a whole name and a grammar asks it of each segment.
+    static func isIdentifier(_ bytes: String.UTF8View.SubSequence) -> Bool {
+        func letter(_ byte: UInt8) -> Bool {
+            (byte >= 0x41 && byte <= 0x5A) || (byte >= 0x61 && byte <= 0x7A) || byte == 0x5F
         }
 
-        guard start > bytes.startIndex else { return (start ..< end, nil) }
+        func digit(_ byte: UInt8) -> Bool {
+            byte >= 0x30 && byte <= 0x39
+        }
 
-        return (start ..< end, bytes.index(before: start))
+        guard let first = bytes.first, letter(first) else { return false }
+
+        return bytes.allSatisfy { byte in letter(byte) || digit(byte) }
     }
 
+    // MARK: - Private
     // Fowler-Noll-Vo, folded over the bytes once. What it is for is telling
     // two spellings apart before they are compared, so what it needs is to
     // spread and to be cheap to work out.
@@ -202,19 +171,5 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         var spelling = spelling
 
         return spelling.withUTF8 { bytes in read(UnsafeRawBufferPointer(bytes)) }
-    }
-
-    private static func isIdentifier(_ bytes: String.UTF8View.SubSequence) -> Bool {
-        func letter(_ byte: UInt8) -> Bool {
-            (byte >= 0x41 && byte <= 0x5A) || (byte >= 0x61 && byte <= 0x7A) || byte == 0x5F
-        }
-
-        func digit(_ byte: UInt8) -> Bool {
-            byte >= 0x30 && byte <= 0x39
-        }
-
-        guard let first = bytes.first, letter(first) else { return false }
-
-        return bytes.allSatisfy { byte in letter(byte) || digit(byte) }
     }
 }

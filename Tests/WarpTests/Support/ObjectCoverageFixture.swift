@@ -15,8 +15,8 @@ enum ObjectCoverageFixture {
         // up an object the reading would refuse.
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
-            types: ["a.one": .any, "a.two": .never, "a.three": everyTypeExpression],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: .these(["a.nineteen", "a.twenty"]))]],
+            types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": recordOfEveryTypeExpression],
+            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
@@ -69,8 +69,7 @@ enum ObjectCoverageFixture {
                         .string("s"),
                         .bytes([1, 2]),
                         .record(Record(name: "a.three", ["b": .int(2), "a": .int(1)])),
-                        .record(Record(name: nil, ["c": .null])),
-                        .dictionary(Value.Dictionary(ordered: [(name: "k", value: .int(3))])),
+                        .dictionary(Value.Dictionary(ordered: [(key: "k", value: .int(3))])),
                         .procedure(Closure(writer: Closure.Writer(document: .written(Identity([4])), declaration: .procedure("a.ten")), nth: 0, linked: nil, captured: []))
                     ])
                 )
@@ -84,8 +83,9 @@ enum ObjectCoverageFixture {
         description: "what it takes"
     )
 
-    // Every case of `TypeExpression`, each holding something no other holds.
-    static let everyTypeExpression: TypeExpression = .record([
+    // Every case of `TypeExpression`, each holding something no other holds,
+    // as the fields of a declared record.
+    static let recordOfEveryTypeExpression: TypeDeclaration = .record([
         "any": .any,
         "never": .never,
         "null": .null,
@@ -94,59 +94,55 @@ enum ObjectCoverageFixture {
         "Double": .double,
         "String": .string,
         "array": .array(.int),
-        "dictionary": .dictionary(.string),
+        "dictionary": .dictionary(key: .string, value: .string),
         "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
         "nullable": .nullable(.int),
         "named": .named("a.one"),
-        "parameter": .parameter(name: "T", bounds: ["a.four"]),
+        "parameter": .parameter(name: "T"),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",
             path: [
-                .key("k", optional: true),
+                .name("k", optional: true),
                 .index(3, optional: false),
-                .indexRef([.key("inner", optional: false)], optional: true)
+                .indexRef([.name("inner", optional: false)], optional: true)
             ]
         )
     ])
 
-    // Every case of `LoweredType`, the same way.
-    static let everyLoweredType: LoweredType = .record(
-        LoweredRecord(
-            layout: try! Layout(fields: Self.loweredFields.map(\.0)),
-            fields: Self.loweredFields.sorted { one, other in one.0 < other.0 }.map(\.1)
-        )
+    // Every case of `LoweredType` an object writes, each holding something
+    // no other holds, as the parameters of a procedure type.
+    static let everyLoweredType: LoweredType = .procedure(
+        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double)),
+        constness: .unstated,
+        isolation: .isolated
     )
 
-    static let loweredFields: [(Name, LoweredType)] = [
-        ("any", .any),
-        ("never", .never),
-        ("null", .null),
-        ("Bool", .bool),
-        ("Int", .int),
-        ("Double", .double),
-        ("String", .string),
-        ("array", .array(.string)),
-        ("dictionary", .dictionary(.bool)),
-        ("procedure", .procedure(
-            parameters: [.int],
-            returns: .double,
+    static let loweredTypes: [LoweredType] = [
+        .any,
+        .never,
+        .null,
+        .bool,
+        .int,
+        .double,
+        .string,
+        .array(.string),
+        .dictionary(key: .string, value: .bool),
+        .procedure(
+            LoweredProcedureType(parameters: [.int], returns: .double),
             constness: .const,
             isolation: .unstated
-        )),
-        ("variable", .variable(.int)),
-        ("inoutish", .inout(.bool)),
-        ("nullable", .nullable(.string)),
-        ("named", .named(2)),
-        ("parameterContract", .parameter(label: "U", bounds: ["a.five"])),
-        ("parameterNone", .parameter(label: "V", bounds: [])),
-        ("projection", .projection(of: "a.sixteen", path: [.index(1, optional: true)])),
-        ("composition", .composition(["a.five", "a.four"])),
-        ("undeclaredBound", .undeclared(label: "W", because: .noBoundNamed("a.thirteen"))),
-        ("undeclaredType", .undeclared(label: "X", because: .noTypeNamed("a.fourteen"))),
-        ("undeclaredCycle", .undeclared(label: "Y", because: .namesItself))
+        ),
+        .variable(.int),
+        .inout(.bool),
+        .nullable(.string),
+        .named(2),
+        .parameter(label: "U", bounds: ["a.five"]),
+        .parameter(label: "V", bounds: []),
+        .projection(of: "a.sixteen", path: [.index(1, optional: true)]),
+        .composition(["a.five", "a.four"])
     ]
 
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and
@@ -171,7 +167,7 @@ enum ObjectCoverageFixture {
 
     static let everyPart: [Place.Part] = [
         .procedures, .constants, .variables, .types, .contracts, .satisfies,
-        .imports, .parameters, .returns, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
+        .imports, .parameters, .returns, .bounds, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]
 
@@ -183,10 +179,10 @@ enum ObjectCoverageFixture {
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
     static let everyOperation = LoweredBody(
         instructions: [
-            Instruction(binding: .bind(0, settling: .int), code: .literal(.int(1)), label: "bind"),
-            Instruction(binding: .declare(1, settling: nil), code: .literal(.string("s")), label: "declare"),
+            Instruction(binding: .bind(0), code: .literal(.int(1)), label: "bind"),
+            Instruction(binding: .declare(1), code: .literal(.string("s")), label: "declare"),
             Instruction(
-                binding: .assign(Address(slot: 2, steps: everyStep), settling: .bool),
+                binding: .assign(Address(slot: 2, steps: everyStep)),
                 code: .local(Address(slot: 3, steps: [])),
                 label: "assign"
             ),
@@ -205,20 +201,6 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(
-                binding: nil,
-                code: .checked(
-                    .apply(
-                        .local(Address(slot: 6, steps: [])),
-                        arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))]
-                    ),
-                    CallJudgement(
-                        against: .int,
-                        handedBack: [HandedBack(position: 1, against: .string)]
-                    )!
-                ),
-                label: "checked"
-            ),
             Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
@@ -262,13 +244,13 @@ enum ObjectCoverageFixture {
 
     static let everyStep: [Step] = [
         .field(0, "f", optional: false),
-        .key("k", optional: true),
+        .name("k", optional: true),
         .index(2, optional: false),
         .at(Address(slot: 4, steps: []), optional: true)
     ]
 
     static let recordOperation = RecordOperation(
-        layout: try! Layout(fields: ["x", "y"]),
+        layout: Layout(name: "a.four", ordered: ["x", "y"]),
         fields: [.literal(.int(10)), .literal(.int(11))]
     )
 
@@ -292,16 +274,16 @@ enum ObjectCoverageFixture {
     )
 
     // A row a closure literal was lifted into, whose frame holds what the
-    // body that stood it up takes into it.
+    // body that stood it up takes into it, and whose answer is a type
+    // parameter the procedure around it holds to two contracts.
     static func lifted(label: Name) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(returns: .int),
+            signature: Signature(returns: .parameter(name: "T"), bounds: ["T": ["a.five", "a.four"]]),
             access: .internal,
             constness: .unstated,
             isolation: .unstated,
             failing: .unstated,
-            handsBackAsDeclared: false,
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -317,7 +299,6 @@ enum ObjectCoverageFixture {
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
             failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
-            handsBackAsDeclared: false,
             judging: body
                 ? .body(
                     everyOperation,

@@ -44,7 +44,7 @@ public struct Compiled: Sendable, Declaring {
     // link lays these down in the order it was handed the documents to
     // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.
-    let types: [Name: TypeExpression]
+    let types: [Name: TypeDeclaration]
     let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts it said each type answers, as it wrote them. The link
@@ -95,8 +95,8 @@ public struct Compiled: Sendable, Declaring {
     // this document named, each by its own fingerprint.
     //
     // Named and not every object the compile was handed. What a document
-    // reaches outside itself is the procedures it calls and the types its
-    // signatures name, and a document laid beside it that it never names
+    // reaches outside itself is the procedures it calls and the types and
+    // contracts it names, and a document laid beside it that it never names
     // decides nothing about what it compiled to.
     //
     // Nothing where one of them has no fingerprint. An object says what it
@@ -133,8 +133,8 @@ public struct Compiled: Sendable, Declaring {
     let hidden: Set<Name>
 
     // Every name this document declares to the other documents of a link,
-    // read off its tables: the dual of a module's `uses`.
-    var declares: Set<Reference> {
+    // read off its tables: its module's `supplies`.
+    var supplies: Set<Reference> {
         Set(
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
                 + contracts.flatMap { contract, procedures in
@@ -147,15 +147,19 @@ public struct Compiled: Sendable, Declaring {
         )
     }
 
-    // Every name this document reaches outside itself, read off what its
-    // object holds: what its bodies send, the types they and its signatures
-    // stand on, and the names its claims and the pairs it leaned on write.
-    // An object keeps no list of what its document named, so this is that
-    // list worked out again from the facts the object does keep.
-    var reaches: Set<Reference> {
+    // What this document needs of the documents a link lays before it, read
+    // off what its object holds: what its bodies send, and the types they,
+    // its signatures and its declared types stand on. A claim is not among
+    // them: a document claims a type answers a contract declared anywhere in
+    // its link, and the link holds the claim to it.
+    var needs: Set<Reference> {
         var reached = Set(numbering.sending.map(Reference.procedure))
 
         reached.formUnion(typeNumbering.types.map(Reference.type))
+
+        for type in types.values {
+            reached.formUnion(type.mentions.map(Reference.type))
+        }
 
         for row in table {
             reached.formUnion(row.signature.mentions.map(Reference.type))
@@ -167,6 +171,16 @@ public struct Compiled: Sendable, Declaring {
             }
         }
 
+        return outside(reached)
+    }
+
+    // Every name this document reaches outside itself: its module's
+    // `references`. What it needs, and the names its claims and the pairs it
+    // leaned on write. An object keeps no list of what its document named, so
+    // this is that list worked out again from the facts the object does keep.
+    var references: Set<Reference> {
+        var reached = needs
+
         for (type, claimed) in claims {
             reached.insert(.type(type))
             reached.formUnion(claimed.map(Reference.type))
@@ -176,7 +190,7 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion([.type(claim.type), .type(claim.contract)])
         }
 
-        return reached.subtracting(declares)
+        return outside(reached)
     }
 
     // Which document this stands against, which is what a host keeps it
@@ -186,9 +200,12 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Initializer
-    private init(
+    // Each part stated, as a compile stands them up: what the lowering made
+    // by its role, so nothing here is asked of how the parts stand to each
+    // other.
+    init(
         document: Place.Document,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
@@ -225,16 +242,16 @@ public struct Compiled: Sendable, Declaring {
         self.fingerprint = fingerprint
     }
 
-    // The same, where the parts were read apart and what has to be true is how
-    // they stand to each other. Each one alone says nothing wrong; a table
-    // shorter than the spellings it stands for, or a variable numbered past
-    // the ones this holds, is a fact about two of them.
+    // The same, where an object's parts were read apart and what has to be
+    // true is how they stand to each other. Each one alone says nothing
+    // wrong; a table shorter than the spellings it stands for, or a variable
+    // numbered past the ones this holds, is a fact about two of them.
     //
     // This is the only door that sees all of them, so it is the only place
-    // those facts can be asked.
+    // those facts can be asked of bytes read back.
     init(
         document: Place.Document,
-        types: [Name: TypeExpression],
+        types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
         leaned: [Claim: Place],
@@ -288,7 +305,6 @@ public struct Compiled: Sendable, Declaring {
         for row in table {
             try row.judge(
                 standingIn: frame(ofClosure:),
-                reaching: reaches(_:),
                 holding: variables.count,
                 numberedBy: numbering
             )
@@ -358,18 +374,9 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // MARK: - Private
-    // What the row a number a body carries stands for takes, where that row
-    // is this document's own. Which row that is, is the numbering's answer; a
-    // row another document holds, or a number this document never gave, is
-    // the link's.
-    private func reaches(_ number: Int) -> Int? {
-        if let written = numbering.lifted(number) {
-            return table[lifted.lowerBound + written].signature.names.count
-        }
-
-        guard let row = numbering.declaring(number) else { return nil }
-
-        return table[row].signature.names.count
+    // The names among these this document does not declare itself.
+    private func outside(_ reached: Set<Reference>) -> Set<Reference> {
+        reached.subtracting(supplies).subtracting(hidden.map(Reference.procedure))
     }
 
     // The frame of the row a body's closure number stands, or nothing where

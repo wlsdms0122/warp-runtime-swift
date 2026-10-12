@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("Two values are equal by what they hold")
 struct ValueEqualityTests {
@@ -15,9 +16,9 @@ struct ValueEqualityTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("an array holding a procedure is equal to nothing, itself included, the way the procedure is")
-    func anArrayHoldingAProcedureIsNotEqualToItself() {
+    func anArrayHoldingAProcedureIsNotEqualToItself() async throws {
         // Given
-        let procedure = Value.procedure(.assembled())
+        let procedure = try await procedureValue()
         let sut = Value.array([procedure])
 
         // When / Then
@@ -37,16 +38,14 @@ struct ValueEqualityTests {
     }
 
     @Test("a procedure is never equal to a procedure")
-    func proceduresHaveNoEquality() throws {
+    func proceduresHaveNoEquality() async throws {
         // Given / When. There is no honest answer, so the language does not
         // offer one
-        let sut = Value.procedure(
-            Closure.assembled()
-        )
+        let sut = try await procedureValue()
 
         // Then
         #expect(sut != sut)
-        #expect(sut.type == .procedure)
+        #expect(sut.nominal == TypeSpelling.procedure)
     }
 
     // MARK: - Public

@@ -372,16 +372,16 @@ struct ClosureTests {
         #expect(answer == .string("hello, warp"))
     }
 
-    @Test("closures travel in arrays and records like any other value")
+    @Test("closures travel in arrays and maps like any other value")
     func closuresTravelInStructures() async throws {
         // Given
         let sut: Body = [
-            Statement(binding: .constant("table"), expression: .record([
+            Statement(binding: .constant("table"), expression: map([
                     "yes": .closure(Procedure(body: [], result: .literal(.string("y")))),
                     "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
                 ])
             ),
-            Statement(binding: .constant("picked"), expression: .apply(reference("table", "yes"), arguments: []))
+            Statement(binding: .constant("picked"), expression: .apply(.reference([.name("table"), .index("yes")]), arguments: []))
         ]
 
         // When

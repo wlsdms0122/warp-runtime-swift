@@ -1123,7 +1123,15 @@ enum Library {
                                   ref "pick.index"
                                 }
                                 {
-                                  ref "total"
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "total"
+                                      }
+                                      1
+                                    ]
+                                    procedure "Standard.Numeric.plus"
+                                  }
                                 }
                               ]
                               procedure "Standard.Comparable.lessThan"
@@ -1136,7 +1144,7 @@ enum Library {
                   bounds {
                     Element "Standard.Comparable"
                   }
-                  description "The elements in order, for numbers or for strings."
+                  description "The elements in the order lessThan puts them in, for any type that orders."
                   parameters [
                     {
                       name "array"
@@ -1161,7 +1169,7 @@ enum Library {
                 "Standard.Collection.values" {
                   body [
                     {
-                      let "names"
+                      let "keys"
                       value {
                         call {
                           arguments [
@@ -1183,9 +1191,9 @@ enum Library {
                         loop {
                           body [
                             {
-                              let "name"
+                              let "key"
                               value {
-                                ref "names[walk.index]"
+                                ref "keys[walk.index]"
                               }
                             }
                             {
@@ -1197,7 +1205,7 @@ enum Library {
                                       ref "held"
                                     }
                                     {
-                                      ref "dictionary[name]"
+                                      ref "dictionary[key]"
                                     }
                                   ]
                                   procedure "Standard.Collection.appending"
@@ -1215,7 +1223,7 @@ enum Library {
                                   call {
                                     arguments [
                                       {
-                                        ref "names"
+                                        ref "keys"
                                       }
                                     ]
                                     procedure "Standard.Collection.count"
@@ -1229,11 +1237,14 @@ enum Library {
                       }
                     }
                   ]
-                  description "What a record holds, by its names in order."
+                  bounds {
+                    Key "Hashable"
+                  }
+                  description "What a map holds, by its keys in the key order."
                   parameters [
                     {
                       name "dictionary"
-                      type "Dictionary<some Entry>"
+                      type "Dictionary<some Key, some Entry>"
                     }
                   ]
                   result {
@@ -1508,11 +1519,9 @@ enum Library {
                   parameters [
                     {
                       name "lhs"
-                      type "Any"
                     }
                     {
                       name "rhs"
-                      type "Any"
                     }
                   ]
                   result {
@@ -1838,7 +1847,7 @@ enum Library {
                   bounds {
                     T "Standard.Comparable"
                   }
-                  description "The larger of two of a kind, by the one order."
+                  description "The larger of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"
@@ -1888,7 +1897,7 @@ enum Library {
                   bounds {
                     T "Standard.Comparable"
                   }
-                  description "The smaller of two of a kind, by the one order."
+                  description "The smaller of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"

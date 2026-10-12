@@ -26,9 +26,7 @@ struct Compiler {
     }
 
     // MARK: - Public
-    // What the document proves is written into `compiling`. Its own rows stand
-    // as the refusal they would earn until it lowers them, so a procedure
-    // folding through a procedure is refused as the cycle it is.
+    // What the document proves is written into `compiling`.
     func compile(
         _ module: Module,
         at origin: Int,
@@ -59,11 +57,10 @@ struct Compiler {
         // The variables that declared their type, by that type: a slot every
         // body of the document reads, which a call of the value one holds
         // leans on, and what each start settles into.
-        let declaredVariables = try declaredTypes(of: module, in: loweredTypes)
+        let declaredVariables = declaredTypes(of: module, in: loweredTypes)
 
-        // The constants with what each reads as: what seeds the environment a
-        // body is judged in, and what a body binds where it reads one at an
-        // index the run settles.
+        // The constants with what each reads as, which seeds the environment
+        // a body is judged in.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -103,11 +100,6 @@ struct Compiler {
         // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: Procedure] = [:]
 
-        // What each body proved of its answers by itself, and which of this
-        // document's declarations the rest leans on: settled over the whole
-        // document once every body is read.
-        var proofs: [Name: HandBackProof] = [:]
-
         // A declaration, bound and dot-judged: every dot in the body is judged
         // against the type it reaches, every call is gathered, a
         // constant-headed path (judged first, like any path) folds to the
@@ -124,8 +116,6 @@ struct Compiler {
             var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
 
             if let block = declaration.block {
-                // A body not yet lowered stands as its refusal, so a procedure
-                // folding through a procedure is refused as the cycle it is.
                 let folding = Folding(
                     constants: constants,
                     origin: origin,
@@ -138,13 +128,13 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, judgements, proof) = try await TypeChecker().resolvedSites(
+                let (rewritten, gathered, judgements) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
                     declaring: symbol.declared,
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature.parameterBounding.table),
+                    with: context().bounding(declaration.signature.bounds),
                     folding: folding,
                     writing: fulfillment
                 )
@@ -158,8 +148,6 @@ struct Compiler {
                     calls: gathered,
                     judgements: judgements
                 )
-
-                proofs[symbol.declared] = proof
             }
 
             resolvedBodies[symbol.declared] = answer.procedure
@@ -169,14 +157,14 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.settle(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
+                try compiling.lower(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure
         }
 
         // The facts nobody declared. All three are fixed points over what a
-        // body reaches, so a document's answer is settled once the documents
+        // body reaches, so a document's answer is decided once the documents
         // it reaches have theirs, and the standing refused a cycle where that
         // is not so. Read over every declaration the document holds.
         //
@@ -209,7 +197,7 @@ struct Compiler {
 
         Derivation().const(
             among: holding,
-            settling: &const,
+            deriving: &const,
             reading: reading,
             beside: declaredVariables,
             taking: taking,
@@ -218,13 +206,13 @@ struct Compiler {
         )
         Derivation().isolated(
             among: holding,
-            settling: &isolated,
+            deriving: &isolated,
             beside: declaredVariables,
             taking: taking,
             beyond: touchesNothingShared,
             in: loweredTypes
         )
-        Derivation().failing(among: holding, settling: &failing) { selector in behind.failing(of: selector) }
+        Derivation().failing(among: holding, deriving: &failing) { selector in behind.failing(of: selector) }
 
         let ownNames = Set(holding.map(\.declared))
         let constant: @Sendable (Name) -> Bool = { [const] selector in
@@ -274,8 +262,7 @@ struct Compiler {
                 )
             },
             numbering: numbering,
-            variables: boxes,
-            declaring: declaredVariables
+            variables: boxes
         )
 
         assert(heldAt == origin, "a document is compiled at the origin it is held at")
@@ -302,7 +289,7 @@ struct Compiler {
         )
 
         constants = typedConstants.mapValues(\.value)
-        compiling.lowering.settle(constants: typedConstants, of: origin)
+        compiling.lowering.settle(constants: constants, of: origin)
 
         variables = try await self.variables(
             of: module,
@@ -349,14 +336,6 @@ struct Compiler {
             }
         }
 
-        // Which bodies hand back as they declare, settled over all of them at
-        // once, so the order they were read in says nothing.
-        let proven = Derivation().handsBackAsDeclared(proofs)
-
-        for symbol in holding where symbol.procedure.block != nil {
-            compiling.record(try row(of: symbol), handsBackAsDeclared: proven.contains(symbol.declared))
-        }
-
         // The types its bodies and the answers read off them stand on,
         // written as this document's own numbers. Lowering read the link's
         // table to judge, so what it wrote is that link's rows; what leaves
@@ -369,9 +348,7 @@ struct Compiler {
             answering: read
         )
 
-        // Through the one door an object read back goes through, so what a
-        // compile stands up is what a reading would take.
-        return try Compiled(
+        return Compiled(
             document: .of(module),
             types: module.types,
             contracts: module.contracts,
@@ -383,7 +360,7 @@ struct Compiler {
             answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
-            judging: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
+            variables: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
             dependencies: dependencies,
             token: token
         )
@@ -396,9 +373,7 @@ struct Compiler {
     // document is read.
     //
     // One may name another declared beside it, so they are settled in the order
-    // they read each other and that order is worked out first. What is wrong
-    // with a set of constants is a fact about that order, and asking the order
-    // is the whole of finding it.
+    // they read each other, and that order is worked out first.
     private func constants(
         of module: Module,
         at origin: Int,
@@ -422,7 +397,7 @@ struct Compiler {
         // back up in the table the order was read from. Everything this one
         // needs comes before it, and asking again is a second chance to ask
         // a different table.
-        for (name, expression) in try order(module.constants, in: module) {
+        for (name, expression) in order(module.constants) {
             let place = Place.constant(name.spelling, in: .of(module))
 
             try await fulfillment.folding(place) {
@@ -441,8 +416,7 @@ struct Compiler {
 
                 known[name] = (
                     value,
-                    LoweredType(of: value, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: true, in: context.loweredTypes)
+                    LoweredType(of: value, in: context.loweredTypes).refined(by: written.folded)
                 )
             }
         }
@@ -455,8 +429,7 @@ struct Compiler {
     // and no variable; the starting value is a fact the link reads. A variable
     // that declares what it holds has its start held to that at the build,
     // the way an argument is held to its slot, and holds that type; one that
-    // declares nothing holds the type of the settled value, read the way a
-    // constant's is.
+    // declares nothing holds the type its start reads as.
     private func variables(
         of module: Module,
         at origin: Int,
@@ -471,12 +444,12 @@ struct Compiler {
 
         var started: [Name: (value: Value, type: LoweredType)] = [:]
 
-        for (name, variable) in module.variables.sorted { $0.key < $1.key } {
+        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
             let place = Place.variable(name.spelling, in: .of(module))
 
             // A start written as a literal, or as a closure literal that
             // writes no answer, is read as what the variable declares.
-            let declaredType = variable.declared?.lowered(in: context.loweredTypes)
+            let declaredType = declaredTypes[name]
             let start = declaredType.map { declaredType in
                 declaredType.written(
                     declaredType.completing(variable.start, in: context.loweredTypes),
@@ -498,45 +471,22 @@ struct Compiler {
                     in: context
                 )
 
-                guard let declared = variable.declared, let holding = declaredTypes[name] else {
-                    let holding = LoweredType(of: settled, in: context.loweredTypes)
-                        .refined(by: written.folded, fixed: false, in: context.loweredTypes)
+                // A variable holds what it declares, which the start was held
+                // to as it was read, or else what the start reads. An empty
+                // list or map holds no element, so a start of one says
+                // nothing of what the box will hold.
+                let holding = declaredType ?? written.folded.boxed
 
-                    // A variable that declares nothing holds the type its
-                    // start reads as, and an empty list or map holds no
-                    // element, so a start of one says nothing of what the box
-                    // will hold.
-                    guard !holding.holdsNoElement else {
-                        throw BuildError(
-                            "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                                + " and declares no type, so nothing says what it holds. A variable starting empty declares its type or casts its start",
-                            at: place
-                        )
-                    }
-
-                    started[name] = (settled, holding)
-                    return
-                }
-
-                // What the start reads is held to what the variable declares,
-                // the way a name's value is: a nameless record takes a
-                // declared record's name only as a literal or a record built
-                // where the declared record is read.
-                guard written.isHeld(by: holding, inPlace: false, in: context.loweredTypes) else {
+                guard declaredType != nil || !holding.holdsNoElement else {
                     throw BuildError(
-                        "starts as \(written.rendered(in: context.loweredTypes)), and declares \(declared)",
+                        "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
+                            + " and declares no type, so nothing says what it holds."
+                            + " A variable starting empty declares its type or casts its start",
                         at: place
                     )
                 }
 
-                do {
-                    started[name] = (
-                        try holding.settling(settled, at: "the start of '\(name)'", in: context.loweredTypes),
-                        holding
-                    )
-                } catch {
-                    throw BuildError("starts outside \(declared), which it declares: \(error)", at: place)
-                }
+                started[name] = (settled, holding)
             }
         }
 
@@ -550,9 +500,9 @@ struct Compiler {
     // by the one rule, and carries its own place. A closure it holds runs
     // later, so settling proves nothing about the sends inside it, and they
     // pass the gate every gathered call does. What it is written from is read
-    // rather than run, so it passes the gate an operand does. A record it
-    // builds where what it is written into reads a declared record is built
-    // as that record.
+    // rather than run, so it passes the gate an operand does. A record
+    // literal in it is read as the declared record of the place it is
+    // written into.
     private func settled(
         _ expression: Expression,
         as name: Name,
@@ -565,8 +515,9 @@ struct Compiler {
         leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
-        let (judged, calls, sites, written) = try await TypeChecker().resolvedSites(
+        let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
             in: expression,
+            into: declared,
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
             with: context,
@@ -575,13 +526,7 @@ struct Compiler {
         )
 
         try TypeChecker().checked(calls, in: context, writing: fulfillment)
-        try TypeChecker().settles(judged, at: place, given: context, writing: fulfillment)
-
-        var judgements = sites
-
-        if let declared {
-            judgements.record(names: declared.naming(judged, at: place, in: context.loweredTypes))
-        }
+        try TypeChecker().refuseRunning(in: judged, at: place, given: context, writing: fulfillment)
 
         do {
             let value = try await Folding(
@@ -601,98 +546,36 @@ struct Compiler {
         }
     }
 
-    // The types a document's variables declare, lowered once. One naming a
-    // type no module in this link declares is refused at its variable.
-    private func declaredTypes(of module: Module, in table: LoweredTypeTable) throws -> [Name: LoweredType] {
-        var declared: [Name: LoweredType] = [:]
-
-        for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
-            guard let holding = variable.declared?.lowered(in: table) else { continue }
-
-            if case let .undeclared(label, _) = holding {
-                throw BuildError(
-                    "declares type '\(label)', which no module in this link declares",
-                    at: .variable(name.spelling, in: .of(module))
-                )
-            }
-
-            declared[name] = holding
-        }
-
-        return declared
+    // The types a document's variables declare, lowered once.
+    private func declaredTypes(of module: Module, in table: LoweredTypeTable) -> [Name: LoweredType] {
+        module.variables.compactMapValues { variable in variable.declared?.lowered(in: table) }
     }
 
     // The order a module's constants settle in: what a constant reads comes
-    // before it. Constants that wait on each other have no such order, and that
-    // is refused here, standing on one of them.
-    private func order(
-        _ constants: [Name: Expression],
-        in module: Module
-    ) throws -> [(name: Name, expression: Expression)] {
-
+    // before it. The load holds a module's constants to naming no cycle.
+    private func order(_ constants: [Name: Expression]) -> [(name: Name, expression: Expression)] {
         var ordered: [(name: Name, expression: Expression)] = []
-        var settled: Set<Name> = []
+        var placed: Set<Name> = []
 
-        // What the walk is standing on, root first. Where it meets a name
-        // already on it, everything from that name down is the cycle, and
-        // nothing above it is, which is the difference between what names
-        // itself back and what merely waits on something that does.
-        var walking: [Name] = []
+        func place(_ name: Name, reading expression: Expression) {
+            guard placed.insert(name).inserted else { return }
 
-        func place(_ name: Name, reading expression: Expression) throws {
-            guard !settled.contains(name) else { return }
-
-            if let met = walking.firstIndex(of: name) {
-                let cycle = walking[met...].sorted()
-
-                throw BuildError(
-                    "constants \(cycle.map(\.spelling).joined(separator: ", ")) name each other in a"
-                        + " cycle. A constant may name another declared beside it, but"
-                        + " not one that names it back",
-                    // Any of them is where the fix can be made, so the one
-                    // walked to is the first in sorted order: a cycle has no
-                    // first member, and reading one off the walk would name a
-                    // different constant depending on where the walk started.
-                    at: .constant(cycle[0].spelling, in: .of(module))
-                )
-            }
-
-            walking.append(name)
-
-            // Sorted, so a module with two mistakes in it refuses the same one
-            // every run. What a set hands back is seeded per process.
-            for read in mentions(of: expression).sorted() {
+            // Sorted, so the order is the same every run. What a set hands
+            // back is seeded per process.
+            for read in expression.pathHeads.sorted() {
                 // The walk goes only to names this module declared as constants.
                 guard let reading = constants[read] else { continue }
 
-                try place(read, reading: reading)
+                place(read, reading: reading)
             }
 
-            walking.removeLast()
-            settled.insert(name)
             ordered.append((name, expression))
         }
 
         for (name, expression) in constants.sorted(by: { one, other in one.key < other.key }) {
-            try place(name, reading: expression)
+            place(name, reading: expression)
         }
 
         return ordered
-    }
-
-    // Every constant this expression names, at whatever depth.
-    //
-    // Flat, because nothing in here can mean anything but a constant: a body
-    // may not introduce a name the module bound, which is settled where a
-    // module is made, so no scope between a mention and this one can have taken
-    // the spelling. A closure's body is walked with the rest. Making one
-    // captures the scope it was written in, so a sibling it reads has to be
-    // settled by then.
-    private func mentions(of expression: Expression) -> Set<Name> {
-        expression.subexpressions.reduce(into: Set<Name>()) { names, held in
-            guard case let .reference(path) = held else { return }
-
-            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-        }
     }
 }

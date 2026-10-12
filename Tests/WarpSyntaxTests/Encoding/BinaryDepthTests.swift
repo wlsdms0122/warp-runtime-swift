@@ -39,7 +39,7 @@ struct BinaryDepthTests {
     @Test("is refused past the bound rather than ending the process")
     func refusesPastTheBound() throws {
         // When / Then
-        #expect(throws: (any Error).self) {
+        #expect(throws: EncodingRefused.self) {
             try BinaryEncoding().data(from: Self.nested(129))
         }
     }

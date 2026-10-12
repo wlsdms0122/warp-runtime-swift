@@ -21,24 +21,24 @@ struct AnsweringTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a dot stands on what an undeclared call answers")
-    func aDotStandsOnAnUnwrittenAnswer() async throws {
-        // Given. `counts` declares no answer and its body answers a record. The
-        // dot after the call is judged against that record, which is the whole
+    @Test("a path stands on what a call whose declaration writes no answer answers")
+    func aPathStandsOnAnUnwrittenAnswer() async throws {
+        // Given. `counts` declares no answer and its body answers a map. The
+        // path after the call is judged against that map, which is the whole
         // of what this buys: the type the body states does not have to be
         // stated twice.
         let sut = try Module(
             procedures: [
                 "counts": Procedure(
                     body: [],
-                    result: .record(["total": .literal(.int(7))])
+                    result: map(["total": .literal(.int(7))])
                 ),
                 entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "counts")))
                     ],
-                    result: .reference([.key("said"), .key("total")])
+                    result: .reference([.name("said"), .index("total")])
                 )
             ]
         )
@@ -54,7 +54,7 @@ struct AnsweringTests {
         // comes from.
         let sut = try Module(
             procedures: [
-                "innermost": Procedure(body: [], result: .record(["total": .literal(.int(3))])),
+                "innermost": Procedure(body: [], result: map(["total": .literal(.int(3))])),
                 "middle": Procedure(
                     body: [],
                     result: .call(Call(selector: "innermost"))
@@ -64,7 +64,7 @@ struct AnsweringTests {
                     body: [
                         Statement(binding: .constant("said"), expression: .call(Call(selector: "middle")))
                     ],
-                    result: .reference([.key("said"), .key("total")])
+                    result: .reference([.name("said"), .index("total")])
                 )
             ]
         )
@@ -75,11 +75,11 @@ struct AnsweringTests {
 
     @Test("every way out of a body is one of its answers")
     func aReturnIsAnAnswerToo() async throws {
-        // Given. A body whose result answers a record, with and without an
+        // Given. A body whose result answers a map, with and without an
         // early `return` carrying a string. A body hands its caller either way
-        // out, so the second answers what holds both, and a dot on that is
-        // refused the way a dot on `Any` is. Reading the result alone would
-        // have called both a record and let both dots stand.
+        // out, so the second answers what holds both, and a path into that
+        // is refused the way one into `Any` is. Reading the result alone
+        // would have called both a map and let both paths stand.
         func module(leaving early: Bool) throws -> Module {
             try Module(
                 procedures: [
@@ -90,7 +90,7 @@ struct AnsweringTests {
                                 Statement(
                                     expression: .conditional(
                                         equals(
-                                            .reference([.key("flag")]),
+                                            .reference([.name("flag")]),
                                             .literal(.bool(true))
                                         ),
                                         then: [
@@ -106,7 +106,7 @@ struct AnsweringTests {
                                 )
                             ]
                             : [],
-                        result: .record(["total": .literal(.int(7))])
+                        result: map(["total": .literal(.int(7))])
                     ),
                     entryName: Procedure(
                         access: .public,
@@ -116,16 +116,16 @@ struct AnsweringTests {
                                 arguments: [.literal(.bool(true))]
                             )))
                         ],
-                        result: .reference([.key("said"), .key("total")])
+                        result: .reference([.name("said"), .index("total")])
                     )
                 ]
             )
         }
 
-        // When / Then. One way out, and the dot is judged against it
+        // When / Then. One way out, and the path is judged against it
         _ = try await builder.build([module(leaving: false)] + Module.standard)
 
-        // Two, and what holds both says nothing about a field
+        // Two, and what holds both says nothing about an entry
         await #expect {
             try await builder.build([module(leaving: true)] + Module.standard)
         } throws: { error in
@@ -157,10 +157,10 @@ struct AnsweringTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a dot on an answer that would come from itself refuses, and stands once the cycle is broken")
-    func aDotOnACycleAnswerRefuses() async throws {
+    @Test("a path on an answer that would come from itself refuses, and stands once the cycle is broken")
+    func aPathOnACycleAnswerRefuses() async throws {
         // Given. `Any` is what saying nothing looks like at a call site. With
-        // the cycle broken, the same dot reads the record `pong` answers
+        // the cycle broken, the same path reads the map `pong` answers
         func reading(cycling: Bool) throws -> Module {
             try Module(
                 procedures: [
@@ -169,14 +169,14 @@ struct AnsweringTests {
                         body: [],
                         result: cycling
                             ? .call(Call(selector: "ping"))
-                            : .record(["total": .literal(.int(1))])
+                            : map(["total": .literal(.int(1))])
                     ),
                     entryName: Procedure(
                         access: .public,
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(selector: "ping")))
                         ],
-                        result: .reference([.key("said"), .key("total")])
+                        result: .reference([.name("said"), .index("total")])
                     )
                 ]
             )
@@ -186,7 +186,7 @@ struct AnsweringTests {
         await #expect {
             try await builder.build([reading(cycling: true)] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("said.total reads a dot on Any, which declares nothing")
+            error is BuildError && "\(error)".contains("said[\"total\"] indexes into Any, which declares nothing")
         }
 
         _ = try await builder.build([reading(cycling: false)] + Module.standard)
@@ -202,6 +202,7 @@ struct AnsweringTests {
         // a path only that body can read, which nothing fills.
         func module(reading path: Path, answering answer: Path) throws -> Module {
             try Module(
+                types: ["App.Inner": .record(["inner": .int])],
                 procedures: [
                     "peek": Procedure(
                         signature: Signature(
@@ -215,7 +216,7 @@ struct AnsweringTests {
                         body: [
                             Statement(binding: .constant("said"), expression: .call(Call(
                                 selector: "peek",
-                                arguments: [.record(["inner": .literal(.int(1))])]
+                                arguments: [.cast(.record(["inner": .literal(.int(1))]), as: .named("App.Inner"), optional: false)]
                             )))
                         ],
                         result: .reference(path)
@@ -227,13 +228,13 @@ struct AnsweringTests {
         // When / Then. The parameter itself: filled with what the call put
         // there, so the caller reads that record and is held to it
         _ = try await builder.build(
-            [module(reading: [.key("said"), .key("inner")], answering: [.key("of")])]
+            [module(reading: [.name("said"), .name("inner")], answering: [.name("of")])]
                 + Module.standard
         )
 
         await #expect {
             try await builder.build(
-                [module(reading: [.key("said"), .key("missing")], answering: [.key("of")])]
+                [module(reading: [.name("said"), .name("missing")], answering: [.name("of")])]
                     + Module.standard
             )
         } throws: { error in
@@ -245,8 +246,8 @@ struct AnsweringTests {
         await #expect {
             try await builder.build(
                 [module(
-                    reading: [.key("said"), .key("inner")],
-                    answering: [.key("of"), .key("inner")]
+                    reading: [.name("said"), .name("inner")],
+                    answering: [.name("of"), .name("inner")]
                 )] + Module.standard
             )
         } throws: { error in
@@ -258,7 +259,7 @@ struct AnsweringTests {
     func theDeclarationIsNotRewritten() async throws {
         // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
-        // writing it back would make the boundary check a type nobody wrote,
+        // writing it back would make a judgement check a type nobody wrote,
         // and would put it in a document the writer hands back.
         let sut = try Module(
             procedures: [
@@ -273,12 +274,12 @@ struct AnsweringTests {
         #expect(image[entryName]!.signature.returns == nil)
     }
 
-    @Test("what no body settles reads Any, which a typed slot takes only through a cast")
-    func anAnswerNothingSettlesReadsAny() async throws {
+    @Test("what no body decides reads Any, which a typed slot takes only through a cast")
+    func anAnswerNothingDecidesReadsAny() async throws {
         // Given. `held` comes back from a call that declares no answer, and
         // whose body answers what that same call answers. An answer worked out
         // from its own is not one the text states, so nothing is known about
-        // it: inference answers where the text settles and `Any` everywhere
+        // it: inference answers where the text decides and `Any` everywhere
         // else, and a slot of a type takes `Any` only through a cast.
         let sut = try Module(
             procedures: [
@@ -289,7 +290,7 @@ struct AnsweringTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("echo"), expression: .reference([.key("base")]))
+                        Statement(binding: .constant("echo"), expression: .reference([.name("base")]))
                     ]
                 ),
                 "caller": Procedure(
@@ -298,7 +299,7 @@ struct AnsweringTests {
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),
@@ -317,9 +318,9 @@ struct AnsweringTests {
         }
     }
 
-    @Test("a body that settles an answer is held to it, declared or not")
+    @Test("a body that decides an answer is held to it, declared or not")
     func anAnswerReadOffABodyIsJudged() async throws {
-        // Given. The same type, with a body whose answer the text does settle:
+        // Given. The same type, with a body whose answer the text does decide:
         // a body with no result hands back null, and null is not a whole
         // number. What the declaration says stays what it says; what the build
         // reads a call as is what the body hands back.
@@ -327,7 +328,7 @@ struct AnsweringTests {
             procedures: [
                 "callee": Procedure(
                     signature: Signature(parameters: [Parameter(name: "base", type: .int)]),
-                    body: [Statement(binding: .constant("echo"), expression: .reference([.key("base")]))]
+                    body: [Statement(binding: .constant("echo"), expression: .reference([.name("base")]))]
                 ),
                 "caller": Procedure(
                     access: .public,
@@ -335,7 +336,7 @@ struct AnsweringTests {
                         Statement(binding: .constant("held"), expression: .call(Call(selector: "opaque"))),
                         Statement(binding: .constant("call"), expression: .call(Call(
                             selector: "callee",
-                            arguments: [.reference([.key("held")])]
+                            arguments: [.reference([.name("held")])]
                         )))
                     ]
                 ),

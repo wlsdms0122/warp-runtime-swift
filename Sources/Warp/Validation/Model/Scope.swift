@@ -29,17 +29,23 @@ struct Scope: Sendable {
     // spelling.
     let parameters: Set<Name>
 
-    // A procedure's own body: no loop yet.
-    static let procedure = Scope(rounds: [], bound: [], parameters: [])
+    // The type parameters the procedure this body is written in declares,
+    // which are the ones a closure inside it may name.
+    let typeParameters: Set<Name>
 
     // MARK: - Initializer
     // MARK: - Public
-    static func procedure(bound: Set<Name>, parameters: Set<Name> = []) -> Scope {
-        Scope(rounds: [], bound: bound, parameters: parameters)
+    // A procedure's own body: no loop yet.
+    static func procedure(
+        bound: Set<Name>,
+        parameters: Set<Name> = [],
+        typeParameters: Set<Name> = []
+    ) -> Scope {
+        Scope(rounds: [], bound: bound, parameters: parameters, typeParameters: typeParameters)
     }
 
     func inside(_ round: Name?) -> Scope {
-        Scope(rounds: rounds + [round], bound: bound, parameters: parameters)
+        Scope(rounds: rounds + [round], bound: bound, parameters: parameters, typeParameters: typeParameters)
     }
 
     // A procedure written inside another, taking these parameters. It may be
@@ -48,7 +54,7 @@ struct Scope: Sendable {
     // What it captured it may write: a variable's box is one thing under one
     // name everywhere the name is visible, and this body is one of those places.
     func enclosed(taking parameters: Set<Name>) -> Scope {
-        Scope(rounds: [], bound: bound, parameters: self.parameters.union(parameters))
+        Scope(rounds: [], bound: bound, parameters: self.parameters.union(parameters), typeParameters: typeParameters)
     }
 
     // MARK: - Private

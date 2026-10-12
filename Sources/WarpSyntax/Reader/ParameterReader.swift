@@ -8,26 +8,24 @@
 import Foundation
 import Warp
 
-// A parameter, written as a record under the name its body reads it by. A
+// A parameter, written as a mapping under the name its body reads it by. A
 // notation may offer the pair form, `count: Int`; a document has the one
 // spelling.
-public struct ParameterReader: Decodable {
+struct ParameterReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case name
-        case type
-        case description
     }
 
     // MARK: - Property
-    public let parameter: Parameter
+    let parameter: Parameter
 
     // MARK: - Initializer
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let notation = decoder.notation
 
         // The pair form: one key that is the name, holding the type or the
-        // rest of the record. One key is always the pair where a notation
-        // offers it, `name` included, since the record holding nothing but a
+        // rest of the mapping. One key is always the pair where a notation
+        // offers it, `name` included, since the mapping holding nothing but a
         // name reads either way and the notation picks this one.
         if
             notation.pairedParameter,
@@ -41,7 +39,7 @@ public struct ParameterReader: Decodable {
                 do {
                     self.parameter = Parameter(
                         name: name,
-                        type: try TypeReader.parse(spelled) { name in notation.qualified(name, as: .type) }
+                        type: try TypeReader.parse(spelled, in: notation)
                     )
                 } catch let error as TypeFormError {
                     throw ReadingError(error.message, at: decoder.steps)
@@ -64,16 +62,15 @@ public struct ParameterReader: Decodable {
         try KeyGate().rejectUnknownKeys(
             in: decoder,
             known: CodingKeys.self,
+            extra: ParameterFieldsReader.CodingKeys.allCases.map(\.stringValue),
             context: "parameter"
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let name = try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps)
+        let fields = try ParameterFieldsReader(reading: decoder)
 
-        self.parameter = Parameter(
-            name: try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps),
-            type: try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type,
-            description: try container.decodeIfPresent(String.self, forKey: .description)
-        )
+        self.parameter = Parameter(name: name, type: fields.type, description: fields.description)
     }
 
     // MARK: - Public

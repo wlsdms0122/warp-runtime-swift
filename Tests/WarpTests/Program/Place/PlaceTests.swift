@@ -394,11 +394,17 @@ struct PlaceTests {
 
     @Test("a contract is placed the same way")
     func aContractIsPlacedByItsDeclaredKey() async throws {
-        // Given. The other space. A contract's procedure that takes something
-        // other than `Self` first is refused from the declaration alone, which
-        // is the walk that has only the declared keys to go on.
+        // Given. The other space. A contract's procedure naming a type nobody
+        // declared is refused from the declaration alone, which is the walk
+        // that has only the declared keys to go on.
         let sut = try Module(
-            contracts: ["Wallet.Spendable": ["spend": Signature(parameters: [Parameter(name: "of", type: .int)])]],
+            contracts: [
+                "Wallet.Spendable": [
+                    "spend": Signature(
+                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "coin", type: .named("Missing"))]
+                    )
+                ]
+            ],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )
@@ -409,7 +415,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters")
+        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters[1]")
     }
 
     @Test("a statement's construct is the language's name, and says so")
@@ -563,7 +569,7 @@ struct PlaceTests {
         // spaces are walked by different code and an author reading either
         // refusal is reading about the same mistake.
         func declaring(_ type: TypeExpression, as identity: Identity) throws -> Module {
-            try Module(types: ["Pricing.Money": type], procedures: [:], identity: identity)
+            try Module(types: ["Pricing.Money": .alias(type)], identity: identity)
         }
 
         let held = try declaring(.int, as: Identity([0x01]))
@@ -583,11 +589,11 @@ struct PlaceTests {
     @Test("a name written as a type in one document and a contract in another")
     func aNameThatIsBothIsPlacedAtTheContract() async throws {
         // Given. The two tables held against each other, which is the one
-        // judgment that reads both tables. The contract is what the walk is
+        // judgement that reads both tables. The contract is what the walk is
         // standing on when it refuses, so that is what it is addressed to.
-        let type = try Module(types: ["Pricing.Money": .int], procedures: [:], identity: Identity([0x01]))
+        let type = try Module(types: ["Pricing.Money": .alias(.int)], identity: Identity([0x01]))
 
-        let contract = try Module(contracts: ["Pricing.Money": [Name: Signature]()], procedures: [:], identity: Identity([0x02]))
+        let contract = try Module(contracts: ["Pricing.Money": [Name: Signature]()], identity: Identity([0x02]))
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])
 
@@ -602,20 +608,18 @@ struct PlaceTests {
     }
 
     @Test("constants that name each other are placed at one of the cycle, and the same one")
-    func aConstantCycleIsPlacedInSortedOrder() async throws {
-        // Given. A cycle has no first member, so which of them an author is
-        // sent to is chosen rather than found. Read off a dictionary it would
-        // be a different constant per run, and the two below are written in the
-        // order that makes an unsorted answer the likely one.
-        let sut = try Module(
-            constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantCycleIsPlacedInSortedOrder() throws {
+        // Given / When. Refused where the module is made. A cycle has no first
+        // member, so which of them an author is sent to is chosen rather than
+        // found. Read off a dictionary it would be a different constant per run,
+        // and the two below are written in the order that makes an unsorted answer
+        // the likely one.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: ["zebra": reference("alpha"), "alpha": reference("zebra")],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
@@ -624,24 +628,22 @@ struct PlaceTests {
     }
 
     @Test("a constant merely blocked by a cycle is neither placed nor accused")
-    func aConstantWaitingOnARingIsNotOnIt() async throws {
-        // Given. `aardvark` names one of a cycle, so it never settles either and
-        // is still waiting when the cycle is refused. It is sorted first, which
-        // is how it becomes the place if what is waiting is mistaken for what
-        // is wrong, and changing it would leave the cycle exactly as it is.
-        let sut = try Module(
-            constants: [
-                "aardvark": reference("zebra"),
-                "zebra": reference("yak"),
-                "yak": reference("zebra")
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantWaitingOnARingIsNotOnIt() throws {
+        // Given / When. Refused where the module is made. `aardvark` names one of
+        // a cycle, so it never settles either and is still waiting when the cycle
+        // is refused. It is sorted first, which is how it becomes the place if
+        // what is waiting is mistaken for what is wrong, and changing it would
+        // leave the cycle exactly as it is.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: [
+                    "aardvark": reference("zebra"),
+                    "zebra": reference("yak"),
+                    "yak": reference("zebra")
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
@@ -651,24 +653,22 @@ struct PlaceTests {
     }
 
     @Test("a constant on a cycle's edge is not counted as part of it")
-    func aConstantReadByACycleIsNotOnIt() async throws {
-        // Given. `delta` is read by one of a cycle and settles perfectly well,
-        // so the cycle is the only thing wrong here. Narrowing by what nothing
-        // reads keeps it anyway, because something does read it.
-        let sut = try Module(
-            constants: [
-                "beta": .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("gamma"), reference("delta")])),
-                "gamma": reference("beta"),
-                "delta": reference("epsilon"),
-                "epsilon": .literal(.int(1))
-            ],
-            procedures: [entryName: Procedure(access: .public, body: [])],
-            identity: reading
-        )
-
-        // When
-        let error = await #expect(throws: BuildError.self) {
-            try await Builder().build([sut] + Module.standard)
+    func aConstantReadByACycleIsNotOnIt() throws {
+        // Given / When. Refused where the module is made. `delta` is read by one
+        // of a cycle and settles perfectly well, so the cycle is the only thing
+        // wrong here. Narrowing by what nothing reads keeps it anyway, because
+        // something does read it.
+        let error = #expect(throws: ValidationError.self) {
+            try Module(
+                constants: [
+                    "beta": .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("gamma"), reference("delta")])),
+                    "gamma": reference("beta"),
+                    "delta": reference("epsilon"),
+                    "epsilon": .literal(.int(1))
+                ],
+                procedures: [entryName: Procedure(access: .public, body: [])],
+                identity: reading
+            )
         }
 
         // Then
@@ -694,8 +694,8 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.message.contains("the module at 0 in this link") == true)
-        #expect(error?.message.contains("the module at 1 in this link") == true)
+        #expect(error?.message.contains("the module at 0") == true)
+        #expect(error?.message.contains("the module at 1") == true)
     }
 
     // MARK: - Public

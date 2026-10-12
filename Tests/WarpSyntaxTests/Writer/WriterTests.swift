@@ -29,32 +29,33 @@ struct WriterTests {
     // document happens to have, which is exactly where a writer goes wrong.
     private static let assembled: [Module] = [
         // Both cast spellings, over both ways a type is written. A name, and
-        // the mapping a record is. A type written back as a string it cannot be
+        // one applied to another. A type written back as a string it cannot be
         // read from would survive neither direction.
         try! Module(
+            types: ["App.Counted": .record(["count": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "payload", type: .any)]),
                     body: [
                         Statement(binding: .constant("named"), expression: .cast(
-                                .reference([.key("payload")]),
-                                as: .record(["count": .int]),
+                                .reference([.name("payload")]),
+                                as: .named("App.Counted"),
                                 optional: false
                             )
                         ),
                         Statement(binding: .constant("asked"), expression: .cast(
-                                .reference([.key("payload")]),
+                                .reference([.name("payload")]),
                                 as: .array(.string),
                                 optional: true
                             )
                         )
                     ],
-                    result: .reference([.key("named"), .key("count")])
+                    result: .reference([.name("named"), .name("count")])
                 )
             ]
         ),
-        // Messages nested inside other expressions, deeper than a document's
+        // Calls nested inside other expressions, deeper than a document's
         // fixed types would ever place them
         try! Module(
             procedures: [
@@ -70,7 +71,7 @@ struct WriterTests {
                                             .call(
                                                 Call(
                                                     selector: "Standard.Text.text",
-                                                    arguments: [.reference([.key("procedure")])]
+                                                    arguments: [.reference([.name("procedure")])]
                                                 )
                                             ),
                                             .literal(.string("!"))
@@ -81,14 +82,14 @@ struct WriterTests {
                             )
                         ),
                         Statement(binding: .constant("held"), expression: .record([
-                                "line": .reference([.key("joined")]),
+                                "line": .reference([.name("joined")]),
                                 "size": .call(
-                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.key("procedure")])])
+                                    Call(selector: "Standard.Collection.count", arguments: [.reference([.name("procedure")])])
                                 )
                             ])
                         )
                     ],
-                    result: .reference([.key("held")])
+                    result: .reference([.name("held")])
                 )
             ]
         ),
@@ -104,9 +105,9 @@ struct WriterTests {
                             ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
-                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(1)))
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))
                     ],
-                    result: .reference([.key("payload")])
+                    result: .reference([.name("payload")])
                 )
             ]
         )
@@ -135,7 +136,7 @@ struct WriterTests {
                     ["name": "names", "type": "Array<String>"],
                     ["name": "procedure", "type": "String", "description": "what to match"]
                 ],
-                "returns": "Dictionary<Any>",
+                "returns": "Dictionary<String, Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
                     ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -212,7 +213,7 @@ struct WriterTests {
                         ]
                     ]]
                 ],
-                "result": ["record": ["result": ["ref": "pick"]]]
+                "result": ["dictionary": [["result", ["ref": "pick"]]]]
             ],
             "typed": [
                 "parameters": [
@@ -221,7 +222,7 @@ struct WriterTests {
                     ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
-                    ["name": "shaped", "type": ["record": ["done": "Bool", "id": "String"]]]
+                    ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
                 "bounds": ["T": "Scalar"],
@@ -246,7 +247,7 @@ struct WriterTests {
                         ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],
-                    "returns": "Dictionary<Any>",
+                    "returns": "Dictionary<String, Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
                         ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
@@ -254,7 +255,7 @@ struct WriterTests {
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
-                    "result": ["record": ["result": ["ref": "pair"]]]
+                    "result": ["dictionary": [["result", ["ref": "pair"]]]]
                 ]
             ]
         ],
@@ -307,13 +308,13 @@ struct WriterTests {
                         ]],
                         ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
                     ],
-                    "result": ["record": ["result": ["ref": "pick"]]]
+                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
             ]
         ],
         // Loop, attempt
         [
-            "imports": ["test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
+            "imports": ["Test.fail", "Standard.Collection.count", "Standard.Logic.notEqual", "Standard.Comparable.lessThan", "Standard.Numeric.plus"],
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
@@ -353,7 +354,7 @@ struct WriterTests {
                             ]
                         ]]
                     ],
-                    "result": ["record": ["result": ["ref": "tried"]]]
+                    "result": ["dictionary": [["result", ["ref": "tried"]]]]
                 ]
             ]
         ],
@@ -402,7 +403,7 @@ struct WriterTests {
                 ]
             ]
         ],
-        // Messages: calls by position, carried bodies, closures, invocation, templates
+        // Calls: by position, carried bodies, closures, invocation, templates
         [
             "imports": ["Standard.Collection.filter", "Standard.Text.joined", "Standard.Logic.notEqual", "Standard.Text.text"],
             "procedures": [
@@ -445,7 +446,7 @@ struct WriterTests {
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
                         ]
                     ],
-                    "result": ["record": ["result": ["ref": "line"]]]
+                    "result": ["dictionary": [["result", ["ref": "line"]]]]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
@@ -467,44 +468,32 @@ struct WriterTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name two occurrences bound differently has no document to write")
-    func differingOccurrencesAreNotWritten() throws {
-        // Given
-        let sut = try Module(
-            contracts: ["A": [Name: Signature](), "B": [Name: Signature]()],
-            procedures: [
-                "keep": Procedure(
-                    signature: Signature(
-                        parameters: [
-                            Parameter(name: "left", type: .parameter(name: "T", bounds: ["A"])),
-                            Parameter(name: "right", type: .parameter(name: "T", bounds: ["B"]))
-                        ]
-                    ),
-                    body: [],
-                    result: .literal(.null)
-                )
+    @Test("a draft's contract procedure holding a bound is written with it, and the reading refuses it")
+    func aBoundedContractProcedureIsWrittenAsItIs() throws {
+        // Given. A draft is held to no rule, so the bound reaches the writer
+        let draft = Draft(
+            contracts: [
+                "App.Kept": [
+                    "keep": ContractProcedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                            bounds: ["T": ["App.Kept"]]
+                        )
+                    )
+                ]
             ]
         )
 
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: sut)
-        }
-    }
+        // When
+        let written = try Writer().value(of: draft)
 
-    @Test("a contract's procedure that says nothing of its failures has no document to write")
-    func anUnstatedContractFailureIsNotWritten() throws {
-        // Given. A document writing no `failing` says the procedure fails
-        // with nothing, which is a claim this one does not make
-        let sut = try Module(
-            contracts: ["App.Shown": ["show": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)]), failing: .unstated)]],
-            procedures: [:]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: sut)
+        // Then. The bound is written rather than dropped, and the load
+        // refuses it where it stands
+        let refused = #expect(throws: ValidationError.self) {
+            try Loader().load(written, identity: nil)
         }
+
+        #expect(refused?.place?.rendered == "contracts.App.Kept.keep.bounds")
     }
 
     @Test("a call of literal text has no document to write")
@@ -570,7 +559,7 @@ struct WriterTests {
     func aCanonicalDocumentIsWrittenBackUnchanged() throws {
         // Given / When. `canonical` is written in the types themselves, so
         // reading it and writing it must arrive at the same document. A fixed
-        // point only says the writing settled; this says nothing was left
+        // point only says the writing stopped changing; this says nothing was left
         // behind, because every slot the language has is written down here and
         // a slot that stopped being written would go missing from the answer.
         let sut = try sut.value(of: try loader.load(Self.canonical))
@@ -594,7 +583,7 @@ struct WriterTests {
         // Then. What comes back may use none of them, because a spelling is a
         // rule the reading side would have to implement the same way, and the
         // reading side is somewhere else.
-        #expect(Self.keys(in: written).isDisjoint(with: spellings))
+        #expect(try Self.keys(in: written).isDisjoint(with: spellings))
     }
 
     @Test("a spelling whose key is nobody's procedure does not survive being written")
@@ -602,7 +591,7 @@ struct WriterTests {
         // Given. The corpus above cannot answer this. Its notation names the
         // procedure in the document (`{ of: x, equal: y }`), so a key that survived
         // and a procedure that was written look the same on the way out. This one
-        // spells `holds` and reaches `example.holds`, and the key appears in a
+        // spells `holds` and reaches `Example.holds`, and the key appears in a
         // document only if the writing side kept a spelling.
         let loader = Loader()
         let module = try loader.loadProcedure([
@@ -615,19 +604,19 @@ struct WriterTests {
                     ]
                 ]]
             ]
-        ], importing: ["example.holds"], from: Notation(spelling: OwnVocabularySpelling()))
+        ], importing: ["Example.holds"], from: Notation(spelling: OwnVocabularySpelling()))
 
         // When
         let written = try sut.value(of: module)
 
         // Then
-        #expect(!Self.keys(in: written).contains("holds"))
-        #expect(Self.keys(in: written).contains("call"))
+        #expect(try !Self.keys(in: written).contains("holds"))
+        #expect(try Self.keys(in: written).contains("call"))
     }
 
     @Test("a written program runs the way the one it came from did")
     func aWrittenProgramRunsTheSame() async throws {
-        // Given. A fixed point says the writing settled, not that it kept
+        // Given. A fixed point says the writing stopped changing, not that it kept
         // everything. Running both is what notices a slot dropped on the way
         // out.
         let document: Value = [
@@ -684,11 +673,7 @@ struct WriterTests {
                             ]
                         ]
                     ],
-                    "result": ["record": [
-                        "picked": ["ref": "pick"],
-                        "sizes": ["ref": "walked"],
-                        "line": ["ref": "line"]
-                    ]]
+                    "result": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]
                 ]
             ]
         ]
@@ -706,15 +691,15 @@ struct WriterTests {
 
         // Then
         #expect(before == after)
-        #expect(before["picked"] == .string("matched"))
-        #expect(before["sizes"] == .int(3))
-        #expect(before["line"] == .string("hey/matched"))
+        #expect(before.map?["picked"] == .string("matched"))
+        #expect(before.map?["sizes"] == .int(3))
+        #expect(before.map?["line"] == .string("hey/matched"))
     }
 
-    @Test("a spelling is written back as the procedures it stood for")
+    @Test("a spelling is written back as the call it stood for")
     func aSpellingIsWrittenPlainly() throws {
-        // Given. `{ of: x, <Procedure>: y }` is a spelling, and what it means is a
-        // message. Writing keeps the meaning and drops the spelling, which is
+        // Given. `{ of: x, equal: y }` is a spelling, and what it means is a
+        // call. Writing keeps the meaning and drops the spelling, which is
         // the whole reason the layers are worth separating.
         let module = try loader.loadProcedure([
             "parameters": [["name": "procedure", "type": "String"]],
@@ -733,18 +718,18 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
-            let message = body.first?["value"]?["conditional"]?["when"]?["call"]
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
+            let call = body.first?.map?["value"]?.map?["conditional"]?.map?["when"]?.map?["call"]
         else {
             Issue.record("a conditional is written with a condition under `when`")
 
             return
         }
 
-        // The procedure the spelling reached, written as the message it always was.
-        #expect(message["procedure"] == .string("Standard.Logic.equal"))
-        #expect(message["of"] == nil)
-        #expect(message["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
+        // The procedure the spelling reached, written as the call it always was.
+        #expect(call.map?["procedure"] == .string("Standard.Logic.equal"))
+        #expect(call.map?["of"] == nil)
+        #expect(call.map?["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
     @Test("a record whose field is named like a tag is written under `record` and read back as a record")
@@ -758,7 +743,7 @@ struct WriterTests {
                     body: [
                         Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
                         ),
-                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.key("payload")])])
+                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.name("payload")])])
                         )
                     ]
                 )
@@ -771,7 +756,7 @@ struct WriterTests {
 
         // Then
         guard
-            case let .array(body)? = written["procedures"]?["entry"]?["body"],
+            case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
             block.body.statements.count == 2,
             case let .record(payload) = block.body.statements[0].expression,
@@ -782,16 +767,16 @@ struct WriterTests {
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
-        #expect(body.last?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
+        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
+        #expect(body.last?.map?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
         #expect(payload["ref"]?.constantValue == .string("not-a-path"))
-        #expect(held["ref"]?.referencePath == [.key("payload")])
+        #expect(held["ref"]?.referencePath == [.name("payload")])
     }
 
-    @Test("a notation that gave up a procedure cannot write what it said")
+    @Test("a notation that gave up a construct key cannot write what it said")
     func aDroppedKeyCannotBeWritten() throws {
-        // Given. The registry is what a notation *is*, so a type whose procedure it
-        // no longer registers is a type it can no longer write. Answering with
+        // Given. The registry is what a notation *is*, so a construct whose key
+        // it no longer registers is one it can no longer write. Answering with
         // the built-in spelling would put a key in the document that reading it
         // back through this same notation would refuse.
         let module = try loader.loadProcedure([
@@ -812,57 +797,22 @@ struct WriterTests {
             try narrowed.value(of: module)
         }
 
-        // And the same program through a notation that kept the procedure is fine
+        // And the same program through a notation that kept the key is fine
         #expect(throws: Never.self) {
             try sut.value(of: module)
         }
     }
 
-    @Test("a bound outside any signature has no document")
-    func aBoundOutsideASignatureHasNoDocument() throws {
-        // Given. A module's declared type is a procedure type whose slot
-        // carries a bound. No procedure declares this signature, so there is no
-        // `bounds` surface for the claim to land on. Writing the name bare
-        // would be a document that reads back meaning something else.
+    @Test("a bound is written once, in the declaring signature's bounds")
+    func aBoundIsWrittenInTheDeclaringSignature() throws {
+        // Given. A slot names the parameter, and the signature holds the bound
         let bounded = Signature(
             parameters: [
-                Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"]))
+                Parameter(name: "item", type: .parameter(name: "T"))
             ],
-            returns: .bool
+            returns: .bool,
+            bounds: ["T": ["Scalar"]]
         )
-        let module = try Module(
-            types: ["Predicate": .procedure(bounded.type, .unstated)],
-            procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
-            ]
-        )
-
-        // When / Then
-        #expect(throws: WritingError.self) {
-            try sut.value(of: module)
-        }
-
-        // A parameter written on its own refuses too. Every surface below the
-        // declaring procedure answers the same way, whichever entry the caller
-        // came through
-        #expect(throws: WritingError.self) {
-            try sut.value(of: Parameter(name: "item", type: .parameter(name: "T", bounds: ["Scalar"])))
-        }
-
-        // A bounded variable declared as a type directly refuses the same way
-        let variable = try Module(
-            types: ["Loose": .parameter(name: "T", bounds: ["Scalar"])],
-            procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
-            ]
-        )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: variable)
-        }
-
-        // And the same claim carried by a procedure's own slot is written.
-        // Once, as the declaring signature's `bounds`
         let declaring = try Module(
             procedures: [
                 entryName: Procedure(
@@ -874,8 +824,10 @@ struct WriterTests {
             ]
         )
 
+        // When
         let written = try sut.value(of: declaring)
 
+        // Then
         guard
             case let .dictionary(document) = written,
             case let .dictionary(procedures) = document["procedures"],
@@ -921,16 +873,18 @@ struct WriterTests {
     // Every key anywhere in a document. A spelling is a procedure, and a procedure could
     // be written at any depth, so asking whether one survived is asking about
     // the whole of it.
-    private static func keys(in value: Value) -> Set<Name> {
+    private static func keys(in value: Value) throws -> Set<Name> {
         switch value {
         case let .array(elements):
-            return elements.reduce(into: Set<Name>()) { found, element in
-                found.formUnion(keys(in: element))
+            return try elements.reduce(into: Set<Name>()) { found, element in
+                found.formUnion(try keys(in: element))
             }
 
-        case let .dictionary(record):
-            return record.entries.reduce(into: Set(record.names)) { found, entry in
-                found.formUnion(keys(in: entry.value))
+        case let .dictionary(mapping):
+            let named = try mapping.named()
+
+            return try named.reduce(into: Set(named.map(\.name))) { found, entry in
+                found.formUnion(try keys(in: entry.value))
             }
 
         default:

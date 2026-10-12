@@ -56,8 +56,9 @@ struct ExpressionFormTests {
 
     @Test("a bytes value decodes as a bytes literal, and numbers stay numbers")
     func bytesDecodeAsBytes() throws {
-        // Given / When. The one binary kind crosses the Value bridge whole; an
-        // array of small numbers next to it must stay an array of numbers
+        // Given / When. Bytes, the one binary spelling, cross the Value
+        // bridge whole; an array of small numbers next to it stays an array of
+        // numbers
         let bytes = try loader.expression(from: .bytes([0x6A, 0x73]))
         let numbers = try loader.expression(from: .array([.int(1), .int(2)]))
 
@@ -83,7 +84,7 @@ struct ExpressionFormTests {
         let reference = try loader.expression(from: ["ref": "items[0].name"])
 
         // Then
-        #expect(reference.referencePath == [.key("items"), .index(0), .key("name")])
+        #expect(reference.referencePath == [.name("items"), .index(0), .name("name")])
     }
 
     @Test("a record's field named like a tag is a field, and reaches nothing")
@@ -104,7 +105,7 @@ struct ExpressionFormTests {
         #expect(validates(reference), "a field named `ref` names nothing to resolve")
     }
 
-    @Test("a half-spelled form record is rejected at load", arguments: [
+    @Test("a half-spelled form mapping is rejected at load", arguments: [
         ["ref": "a", "extra": "b"] as Value,
         ["ref": 3],
         ["record": ["a": 1], "extra": "b"],
@@ -151,8 +152,8 @@ struct ExpressionFormTests {
         #expect(!validates(reference), "the binding expression reaches outward")
     }
 
-    @Test("a template lowers to the procedures that build it")
-    func templateLowersToProcedures() throws {
+    @Test("a template is spent into the procedures that build it")
+    func templateIsSpentIntoProcedures() throws {
         // Given / When
         let reference = try loader.expression(from: [
             "format": "hello, ${who}",
@@ -183,7 +184,7 @@ struct ExpressionFormTests {
         // And. The binding is substituted, so the placeholder never names
         // anything the template was not given.
         #expect(spelled.selector == Notation.testing.interpolation?.read)
-        #expect(spelled.arguments.first?.referencePath == [.key("name")])
+        #expect(spelled.arguments.first?.referencePath == [.name("name")])
     }
 
     @Test("an index reference inside a placeholder stays inside the template")
@@ -209,14 +210,14 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(path == [.key("items"), .indexRef([.key("cursor")])])
+        #expect(path == [.name("items"), .indexRef([.name("cursor")])])
     }
 
     @Test("a placeholder drilling into a computed binding is refused")
     func drillingIntoAComputedBindingIsRefused() {
         // Given / When / Then. Continuing a path needs a path to continue, and
         // reading the placeholder as written would reach the ambient scope
-        #expect(throws: (any Error).self) {
+        #expect(throws: ReadingError.self) {
             try loader.expression(from: [
                 "format": "hello, ${who.name}",
                 "with": ["who": ["record": ["name": "warp"]]]
@@ -236,7 +237,7 @@ struct ExpressionFormTests {
             return
         }
 
-        #expect(record["target"]?.referencePath == [.key("target")])
+        #expect(record["target"]?.referencePath == [.name("target")])
     }
 
     @Test("a bare mapping where a value is wanted is refused")

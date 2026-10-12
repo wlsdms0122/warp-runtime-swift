@@ -17,7 +17,7 @@ public struct Record: Sendable, Equatable {
     // In the layout's order, one value per field.
     public let values: [Value]
 
-    public var name: Name? {
+    public var name: Name {
         layout.name
     }
 
@@ -33,15 +33,9 @@ public struct Record: Sendable, Equatable {
         values.isEmpty
     }
 
-    // This record's fields as names beside values, for a reader that walks
-    // names rather than a layout.
-    public var asDictionary: Value.Dictionary {
-        Value.Dictionary(ordered: zip(layout.fields, values).map { name, value in (name: name, value: value) })
-    }
-
     // MARK: - Initializer
     // A record of the fields a caller hands in, under a layout of their names.
-    init(name: Name?, _ fields: [Name: Value]) {
+    init(name: Name, _ fields: [Name: Value]) {
         let ordered = fields.map { field in (name: field.key, value: field.value) }
             .sorted { one, other in one.name < other.name }
 
@@ -61,7 +55,7 @@ public struct Record: Sendable, Equatable {
         self.init(layout: layout, values: values)
     }
 
-    // The inner door: the maker already stands on the layout.
+    // Values the maker already laid out on the layout.
     init(layout: Layout, values: [Value]) {
         assert(layout.fields.count == values.count, "a record has one value per field its layout names")
 
@@ -78,7 +72,7 @@ public struct Record: Sendable, Equatable {
     // are, so a name it does not hold is not written but refused.
     public func writing(_ field: Name, with value: Value) throws -> Record {
         guard let place = layout.position(of: field) else {
-            throw ValueRefused("\(layout.name.map { name in "\(name) " } ?? "")has no field '\(field)'")
+            throw ValueRefused("\(name) has no field '\(field)'")
         }
 
         return writing(at: place, with: value)
@@ -99,11 +93,6 @@ public struct Record: Sendable, Equatable {
             layout: layout,
             values: try zip(layout.fields, values).map { field, value in try transform(field, value) }
         )
-    }
-
-    // This record under another name, with the same fields.
-    func named(_ name: Name?) -> Record {
-        Record(layout: Layout(name: name, ordered: layout.fields), values: values)
     }
 
     public static func == (lhs: Record, rhs: Record) -> Bool {

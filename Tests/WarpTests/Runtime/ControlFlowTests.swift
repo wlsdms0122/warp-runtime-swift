@@ -71,10 +71,10 @@ struct ControlFlowTests {
             Warp.Expression.conditional(
                 .literal(.bool(take)),
                 then: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
+                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("then")))
                 ],
                 else: [
-                    Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("else")))
+                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("else")))
                 ]
             )
         }
@@ -107,7 +107,7 @@ struct ControlFlowTests {
         let sut = Warp.Expression.conditional(
             .literal(.bool(false)),
             then: [
-                Statement(binding: .assignment([.key("kept")]), expression: .literal(.string("then")))
+                Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("then")))
             ],
             else: nil
         )
@@ -127,7 +127,7 @@ struct ControlFlowTests {
 
     @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
     func aLoopResultReadsTheBodysOwnDeclaration() async throws {
-        // Given. The entry holds `x` as a declared int box. The body declares
+        // Given. The entry holds `x` in a box declared `Int`. The body declares
         // its own `x`, a string, and the result reads that one: null where no
         // round ran, and the body's otherwise
         let loop = Warp.Expression.loop(
@@ -230,10 +230,10 @@ struct ControlFlowTests {
         // read against the material's count, with the element read at that
         // index, and a round's contribution is what it writes outward
         let sut = walking(
-            [.key("counts")],
+            [.name("counts")],
             element: "element",
             body: [
-                Statement(binding: .assignment([.key("sum")]), expression: .call(
+                Statement(binding: .assignment([.name("sum")]), expression: .call(
                     Call(selector: "Standard.Numeric.plus", arguments: [reference("sum"), reference("element")])
                 ))
             ]

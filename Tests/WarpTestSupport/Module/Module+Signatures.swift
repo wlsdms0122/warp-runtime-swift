@@ -14,12 +14,12 @@ public extension Module {
     init(
         description: String? = nil,
         imports: Set<Name>? = nil,
-        types: [Name: TypeExpression] = [:],
+        types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: Signature]],
         claims: [Name: Set<Name>] = [:],
         constants: [Name: Warp.Expression] = [:],
         variables: [Name: Warp.Expression] = [:],
-        procedures: [Name: Procedure],
+        procedures: [Name: Procedure] = [:],
         identity: Identity? = nil,
         builtin: Bool = false
     ) throws {

@@ -8,17 +8,10 @@
 import Foundation
 import Warp
 
-// `return:`, `break:` and `continue:`.
-//
-// Three forms rather than one under three keys, because the table maps a key
-// to a form and reads back the same way. One form answering to three keys
-// could be written down but not written out. Asked which key means it, the
-// table would have three answers and no way to say which. Three forms also make
-// each key droppable on its own, which one would not.
+// `return:`. Leaves the procedure, with what it answers. The other two leave
+// forms are `BreakForm` and `ContinueForm`.
 //
 //     { value { return { ref "answer" } } }
-//     { value { break null } }
-//     { value { continue "outer" } }
 public struct ReturnForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "return"
@@ -29,12 +22,8 @@ public struct ReturnForm: ConstructForm {
     public init(from decoder: Decoder) throws {
         let written = try ValueReader(from: decoder).value
 
-        // Nothing written answers with nothing. A procedure always answers
-        // something, so this is `null` rather than a procedure that does not.
-        // Through the reader and not around it: what a form refuses with is a
-        // refusal about a document, and only the `Decodable` boundary turns an
-        // expression's own into one. Reading the value here to see whether
-        // anything was written is not that boundary.
+        // Nothing written answers `null`. What is written is read through
+        // `ExpressionReader`, so what it refuses is refused about the document.
         self.value = written == .null ? nil : try ExpressionReader(from: decoder).expression
     }
 

@@ -79,7 +79,7 @@ struct InPlaceTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .assignment([.key("total")]),
+                            binding: .assignment([.name("total")]),
                             expression: .call(
                                 Call(selector: "Standard.Numeric.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
@@ -101,21 +101,21 @@ struct InPlaceTests {
         #expect(second == .int(1))
     }
 
-    @Test("a module variable settled as a dictionary is written under new names")
-    func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
-        // Given. A dictionary of one name to start with: a dictionary's names
-        // are data, so what it reads as is what its entries hold, not which
-        // names it holds them under.
+    @Test("a module variable settled as a map is written under new keys")
+    func moduleVariableSettledAsAMapTakesNewKeys() async throws {
+        // Given. A map of one key to start with: a map's keys are data, so
+        // what it reads as is what its entries hold, not which keys it holds
+        // them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
-            variables: ["seen": .literal(.dictionary(Value.Dictionary(["x": .int(0)])))],
+            variables: ["seen": map(["x": .literal(.int(0))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.string)),
                     body: [
                         Statement(
-                            binding: .assignment([.key("seen")]),
+                            binding: .assignment([.name("seen")]),
                             expression: .call(
                                 Call(
                                     selector: "Standard.Collection.setting",
@@ -139,10 +139,10 @@ struct InPlaceTests {
     @Test("a module variable that starts empty and declares nothing is refused")
     func moduleVariableStartedEmptyIsRefused() async throws {
         // Given. A variable that declares nothing holds the type of its start,
-        // and an empty dictionary holds no entry, so nothing says what the box
+        // and an empty list holds no element, so nothing says what the box
         // will hold
         let sut = try Module(
-            variables: ["seen": .literal(.dictionary(Value.Dictionary([:])))],
+            variables: ["seen": .array([])],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null))
             ]
@@ -162,13 +162,13 @@ struct InPlaceTests {
         // start says nothing about what the box will hold, the declaration
         // does, and a write of something else is held to it.
         let sut = try Module(
-            variables: ["seen": ModuleVariable(.literal(.dictionary(Value.Dictionary([:]))), declared: .dictionary(.int))],
+            variables: ["seen": ModuleVariable(map([:]), declared: .dictionary(key: .string, value: .int))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .dictionary(.int)),
+                    signature: Signature(returns: .dictionary(key: .string, value: .int)),
                     body: [
-                        Statement(binding: .assignment([.key("seen")]), expression: .literal(.string("not a dictionary")))
+                        Statement(binding: .assignment([.name("seen")]), expression: .literal(.string("not a dictionary")))
                     ],
                     result: reference("seen")
                 )
@@ -179,12 +179,12 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<Int>")
+            error is BuildError && "\(error)".contains("writes 'seen' as String, and it holds Dictionary<String, Int>")
         }
     }
 
-    @Test("a module variable's start is settled into the type it declares")
-    func moduleVariableStartIsSettledIntoItsDeclaredType() async throws {
+    @Test("a module variable's start is held to the type it declares")
+    func moduleVariableStartIsHeldToItsDeclaredType() async throws {
         // Given. A start the declared type does not take.
         let sut = try Module(
             variables: ["total": ModuleVariable(.literal(.string("many")), declared: .int)],
@@ -197,42 +197,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("starts as String, and declares Int")
-        }
-    }
-
-    @Test("a document writes only the variables it declares")
-    func aDocumentWritesOnlyItsOwnVariables() {
-        // Given. One write of `App.total`
-        let write = Statement(binding: .assignment([.key("App.total")]), expression: .literal(.int(1)))
-
-        // When / Then. Taken at the load of the document declaring
-        // `App.total`, and refused at the load of one that does not
-        #expect(throws: Never.self) {
-            try Module(
-                variables: ["App.total": .literal(.int(0))],
-                procedures: ["App.poke": Procedure(body: [write])]
-            )
-        }
-        #expect {
-            try Module(procedures: ["other.poke": Procedure(body: [write])])
-        } throws: { error in
-            error is ValidationError && "\(error)".contains("assigns 'App.total', which is not visible here")
-        }
-    }
-
-    @Test("a name is a constant or a variable, and not both")
-    func aNameIsBoundOnce() {
-        // When / Then
-        #expect {
-            try Module(
-                imports: [],
-                constants: ["limit": .literal(.int(1))],
-                variables: ["limit": .literal(.int(2))],
-                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
-            )
-        } throws: { error in
-            "\(error)".contains("one name holds one thing")
+            error is BuildError && "\(error)".contains("holds Int, and what it was given is String")
         }
     }
 
@@ -255,7 +220,7 @@ struct InPlaceTests {
                                     body: [
                                         Statement(
                                             expression: .call(
-                                                Call(selector: "poke", arguments: [.reference([.key("xs"), .index(1)])])
+                                                Call(selector: "poke", arguments: [.reference([.name("xs"), .index(1)])])
                                             )
                                         )
                                     ]
@@ -269,7 +234,7 @@ struct InPlaceTests {
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never),
                     body: [
-                        Statement(binding: .assignment([.key("count")]), expression: .literal(.int(9))),
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(9))),
                         Statement(
                             expression: .call(
                                 Call(selector: "Standard.Control.abort", arguments: [.literal(.string("after"))])
@@ -287,33 +252,6 @@ struct InPlaceTests {
         #expect(answer == .array([.int(1), .int(9)]))
     }
 
-    @Test("a var field holding an inline record is written through")
-    func varFieldHoldingAnInlineRecordIsWrittenThrough() async throws {
-        // Given. A declared type whose `var` field holds a record nobody
-        // declared, so the inner field is nobody's `var` and the path passes
-        let sut = try Module(
-            imports: [],
-            types: ["Outer": .record(["inner": .variable(.record(["a": .int]))])],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [
-                        Statement(
-                            binding: .variable("held"),
-                            expression: .cast(.record(["inner": .record(["a": .literal(.int(1))])]), as: .named("Outer"), optional: false)
-                        ),
-                        Statement(binding: .assignment([.key("held"), .key("inner"), .key("a")]), expression: .literal(.int(5)))
-                    ],
-                    result: reference("held", "inner", "a")
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut) == .int(5))
-    }
-
     @Test("a module variable handed in place is one box, by the parameter and by its name")
     func moduleVariableHandedInPlaceIsOneBox() async throws {
         // Given. A body handed a part of the module variable writes the part,
@@ -326,11 +264,11 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .array(.int)),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(0)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(0)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))], returns: .array(.int)),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.int(9)))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.int(9)))],
                     result: reference("items")
                 )
             ]
@@ -352,11 +290,11 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.key("items"), .index(1)])]))
+                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(1)])]))
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "second", type: .inout(.int))], returns: .int),
-                    body: [Statement(binding: .assignment([.key("items")]), expression: .array([.literal(.int(7))]))],
+                    body: [Statement(binding: .assignment([.name("items")]), expression: .array([.literal(.int(7))]))],
                     result: reference("second")
                 )
             ]
@@ -382,18 +320,18 @@ struct InPlaceTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .variable("table"),
-                            expression: .cast(.record([:]), as: .dictionary(.int), optional: false)
+                            binding: .variable("table", declared: .dictionary(key: .string, value: .int)),
+                            expression: map([:])
                         ),
                         Statement(
-                            expression: .call(Call(selector: "fill", arguments: [reference("table", "k")]))
+                            expression: .call(Call(selector: "fill", arguments: [.reference([.name("table"), .index("k")])]))
                         )
                     ],
-                    result: reference("table", "k")
+                    result: .reference([.name("table"), .index("k")])
                 ),
                 "fill": Procedure(
                     signature: Signature(parameters: [Parameter(name: "slot", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.key("slot")]), expression: .literal(.int(3)))],
+                    body: [Statement(binding: .assignment([.name("slot")]), expression: .literal(.int(3)))],
                     result: .literal(.null)
                 )
             ]
@@ -405,7 +343,7 @@ struct InPlaceTests {
 
     @Test("a write into an inout parameter has to fit the declared type")
     func writeIntoInoutParameterIsHeldToItsType() async throws {
-        // Given. The body writes a string into a parameter declared inout int
+        // Given. The body writes a string into a parameter declared `inout Int`
         let sut = try Module(
             imports: [],
             procedures: [
@@ -414,14 +352,14 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
             ]
@@ -437,7 +375,7 @@ struct InPlaceTests {
 
     @Test("a path handed in place has to read as the declared type")
     func handedPathIsHeldToTheDeclaredType() async throws {
-        // Given. An int element is handed to a parameter declared inout string
+        // Given. An int element is handed to a parameter declared `inout String`
         let sut = try Module(
             imports: [],
             procedures: [
@@ -446,14 +384,14 @@ struct InPlaceTests {
                     body: [
                         Statement(binding: .variable("xs"), expression: .array([.literal(.int(1))])),
                         Statement(
-                            expression: .call(Call(selector: "poke", arguments: [.reference([.key("xs"), .index(0)])]))
+                            expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
                     ],
                     result: .literal(.null)
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.string))]),
-                    body: [Statement(binding: .assignment([.key("first")]), expression: .literal(.string("text")))],
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
                     result: .literal(.null)
                 )
             ]
@@ -472,14 +410,15 @@ struct InPlaceTests {
         // Given. A body handed `all` whole hands `all.items` on to another
         // written body
         let sut = try Module(
-            imports: ["other.grow"],
+            imports: ["Other.grow"],
+            types: ["App.All": .record(["items": .variable(.array(.int))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "all", type: .inout(.record(["items": .array(.int)])))]),
+                    signature: Signature(parameters: [Parameter(name: "all", type: .inout(.named("App.All")))]),
                     body: [
                         Statement(
-                            expression: .call(Call(selector: "other.grow", arguments: [reference("all", "items")]))
+                            expression: .call(Call(selector: "Other.grow", arguments: [reference("all", "items")]))
                         )
                     ],
                     result: .literal(.null)
@@ -489,7 +428,7 @@ struct InPlaceTests {
         let other = try Module(
             imports: [],
             procedures: [
-                "other.grow": Procedure(
+                "Other.grow": Procedure(
                     signature: Signature(parameters: [Parameter(name: "list", type: .inout(.array(.int)))]),
                     body: [],
                     result: .literal(.null)
@@ -500,46 +439,6 @@ struct InPlaceTests {
         // When / Then
         await #expect(throws: Never.self) {
             try await Builder().build([sut, other] + Module.standard)
-        }
-    }
-
-    @Test("inout is written on a parameter and nowhere else")
-    func inoutOutsideAParameterRefuses() async throws {
-        // Given. A declared type with an inout field
-        let sut = try Module(
-            imports: [],
-            types: ["Box": .record(["held": .inout(.int)])],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("only a parameter is handed a variable in place")
-        }
-    }
-
-    @Test("var is written on a declared type's field and nowhere else")
-    func varOutsideADeclaredFieldRefuses() async throws {
-        // Given. A parameter typed var
-        let sut = try Module(
-            imports: [],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
-                    body: [],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("only a field of a declared type is written through")
         }
     }
 
@@ -582,10 +481,9 @@ struct InPlaceTests {
         // Then
         let entry = try #require(image[entryName])
 
-        // The call stands judged on what it hands back in place
         guard
             case let .body(body, _) = entry.implementation,
-            case let .checked(.apply(_, arguments), _)? = body.instructions.last?.code
+            case let .apply(_, arguments)? = body.instructions.last?.code
         else {
             Issue.record("the entry's last statement is a call of a value")
             return
@@ -640,7 +538,7 @@ struct InPlaceTests {
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ExecutionError && "\(error)".contains("takes 'count' in place, and this call hands it a value")
+            error is ArgumentError && "\(error)".contains("takes 'count' in place, and a value from outside is no variable")
         }
     }
 
@@ -660,17 +558,17 @@ struct InPlaceTests {
         let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)]))
         let held: [String: TypeExpression] = [
             "plain": taking,
-            "nullable": .nullable(taking),
+            "nullable": .nullable(.named("App.Hook")),
             "array": .array(taking),
-            "dictionary": .dictionary(taking),
-            "record field": .record(["hook": taking]),
+            "dictionary": .dictionary(key: .string, value: taking),
+            "record field": .named("App.Holder"),
             "declared name": .named("App.Hook")
         ]
         let calling = try? Module(
-            types: ["App.Hook": taking],
+            types: ["App.Hook": .alias(taking), "App.Holder": .record(["hook": taking])],
             procedures: [
                 "App.calling": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped])]),
+                    signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped] ?? .any)]),
                     implementation: .effect(InPlaceCallingEffect())
                 )
             ]
@@ -692,7 +590,9 @@ struct InPlaceTests {
 
     @Test("a literal refused where a parameter handed in place holds a list of a type parameter is named part by part")
     func aRefusedLiteralIsNamedPartByPart() async throws {
-        // Given. `App.g` writes its own `some T` beside a value read as `Any`, and a record of an empty list beside one of `Any`, into lists it was handed in place
+        // Given. `App.list` writes its own `some T` beside a value read as
+        // `Any`, and `App.maps` a map of an empty list beside one of `Any`,
+        // into lists each was handed in place
         let generic = TypeExpression.parameter(name: "T")
         let list = try Module(
             procedures: [
@@ -707,30 +607,30 @@ struct InPlaceTests {
                     ),
                     body: [
                         Statement(
-                            binding: .assignment([.key("xs")]),
-                            expression: .array([.reference([.key("x")]), .reference([.key("junk")])])
+                            binding: .assignment([.name("xs")]),
+                            expression: .array([.reference([.name("x")]), .reference([.name("junk")])])
                         )
                     ],
                     result: .literal(.int(0))
                 )
             ]
         )
-        let records = try Module(
+        let maps = try Module(
             procedures: [
-                "App.records": Procedure(
+                "App.maps": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "ds", type: .inout(.array(.dictionary(.array(generic))))),
+                            Parameter(name: "ds", type: .inout(.array(.dictionary(key: .string, value: .array(generic))))),
                             Parameter(name: "junk", type: .any)
                         ],
                         returns: .int
                     ),
                     body: [
                         Statement(
-                            binding: .assignment([.key("ds")]),
+                            binding: .assignment([.name("ds")]),
                             expression: .array([
-                                .record(["k": .array([])]),
-                                .record(["k": .array([.reference([.key("junk")])])])
+                                map(["k": .array([])]),
+                                map(["k": .array([.reference([.name("junk")])])])
                             ])
                         )
                     ],
@@ -743,13 +643,13 @@ struct InPlaceTests {
         let listRefusal = await #expect(throws: BuildError.self) {
             try await Builder().build([list] + Module.standard)
         }
-        let recordsRefusal = await #expect(throws: BuildError.self) {
-            try await Builder().build([records] + Module.standard)
+        let mapsRefusal = await #expect(throws: BuildError.self) {
+            try await Builder().build([maps] + Module.standard)
         }
 
         // Then
         #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
-        #expect(recordsRefusal?.message == "writes 'ds' as [{ k: [] }, { k: Array<Any> }], and it holds Array<Dictionary<Array<some T>>>")
+        #expect(mapsRefusal?.message == "writes 'ds' as [{ dictionary: [[String, []]] }, { dictionary: [[String, Array<Any>]] }], and it holds Array<Dictionary<String, Array<some T>>>")
     }
 
     // MARK: - Public

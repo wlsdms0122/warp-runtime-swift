@@ -56,15 +56,6 @@ struct NormalFormTests {
         #expect(!(("b" as Name) < "ab"))
     }
 
-    @Test("a type's name is identifiers joined by dots, and never a scalar's keyword", arguments: [
-        ("Account", true), ("Bank.Account", true), ("_x1", true),
-        ("true", false), ("Bank.null", true), ("", false), ("a..b", false), ("foo-bar", false), ("café", false)
-    ])
-    func aTypeNameIsIdentifiersJoinedByDots(name: String, holds: Bool) {
-        // When / Then
-        #expect(((try? Name(name))?.isDeclarable ?? false) == holds)
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

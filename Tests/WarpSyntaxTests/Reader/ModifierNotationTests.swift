@@ -7,7 +7,7 @@
 
 import Foundation
 import Testing
-import Warp
+@testable import Warp
 @testable import WarpSyntax
 
 @Suite("The keywords a slot writes about itself")
@@ -28,10 +28,8 @@ struct ModifierNotationTests {
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
     func everyMarkRoundTrips(mark: SlotMark) throws {
-        // Given. The reading, the writing and the document's vocabulary all
-        // come off one list, so a mark added to it is asked these questions
-        // without anyone remembering to ask. Both forms a marked type takes:
-        // a name, and a procedure under its one key
+        // Given. Both forms a marked type takes: a name, and a procedure
+        // under its one key
         let named = mark.marking(.named("Handle"))
         let form = mark.marking(.procedure(ProcedureType(returns: .int)))
 
@@ -40,76 +38,84 @@ struct ModifierNotationTests {
         let writtenForm = try Writer().value(of: form)
 
         // Then
-        #expect(writtenName == .string("\(mark.rawValue) Handle"))
-        #expect(try TypeReader.parse("\(mark.rawValue) Handle") == named)
+        #expect(writtenName == .string("\(mark.word) Handle"))
+        #expect(try TypeReader.parse("\(mark.word) Handle") == named)
         #expect(SlotMark.marked(named) == mark)
 
         #expect(
             writtenForm == .dictionary([
-                try Name("\(mark.rawValue) procedure"): .dictionary(["returns": "Int"])
+                try Name("\(mark.word) procedure"): .dictionary(["returns": "Int"])
             ])
         )
 
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
-        ])
+        // And the form reads back where the mark may stand: `inout` in front
+        // of a parameter, `var` on a declared type's field
+        switch mark {
+        case .inout:
+            let read = try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["parameters": [["name": "f", "type": writtenForm]]]]
+            ])
 
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
+            #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == form)
+
+        case .variable:
+            let read = try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["result": 1]],
+                "types": ["Box": ["record": ["f": writtenForm]]]
+            ])
+
+            #expect(read.types["Box"] == .record(["f": form]))
+        }
     }
 
     @Test(
-        "a mark is not written inside a mark either",
+        "a mark inside a mark is written as it is where a name carries it, and has no procedure form",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
-    func aMarkIsNotWrittenInsideAMark(mark: SlotMark, inside: SlotMark) throws {
-        // When / Then. What the reading refuses the writing refuses too, in
-        // both the forms a marked type is written in
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: mark.marking(inside.marking(.named("Handle"))))
-        }
+    func aMarkInsideAMarkIsWrittenAsItIs(mark: SlotMark, inside: SlotMark) throws {
+        // Given
+        let named = mark.marking(inside.marking(.named("Handle")))
 
+        // When / Then. A name takes both in front of it, and reads back as it
+        // was written
+        #expect(try Writer().value(of: named) == .string("\(mark.word) \(inside.word) Handle"))
+        #expect(try TypeReader.parse("\(mark.word) \(inside.word) Handle") == named)
+
+        // And a procedure's key carries one
         #expect(throws: WritingError.self) {
-            try Writer().value(of: mark.marking(inside.marking(.procedure(nil))))
+            try Writer().value(of: mark.marking(inside.marking(.procedure(ProcedureType(returns: .int)))))
         }
     }
 
     @Test(
-        "a mark inside a mark is refused, whichever two they are",
+        "a mark inside a mark is refused where the document is read, whichever two they are",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
     func aMarkInsideAMarkIsRefused(mark: SlotMark, inside: SlotMark) throws {
-        // When / Then
-        #expect(throws: TypeFormError.self) {
-            try TypeReader.parse("\(mark.rawValue) \(inside.rawValue) Handle")
+        // When / Then. Each mark stands where it may alone, and no slot takes
+        // two
+        #expect(throws: ValidationError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["result": 1]],
+                "types": ["Box": ["record": ["f": .string("\(mark.word) \(inside.word) Int")]]]
+            ])
         }
-    }
 
-    @Test(
-        "a key carrying two marks is a field's name, whichever two they are",
-        arguments: SlotMark.allCases, SlotMark.allCases
-    )
-    func aKeyCarryingTwoMarksIsAFieldName(mark: SlotMark, inside: SlotMark) throws {
-        // Given. A slot writes one mark, so a key carrying two is not a
-        // procedure form's, and a key that is not one is a field's name like
-        // any other. The writing never makes one: a marked type holding a
-        // marked type is refused before it gets here
-        let key = try Name("\(mark.rawValue) \(inside.rawValue) procedure")
-        let type = TypeExpression.record([key: .record(["returns": .int])])
-
-        // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": [
-                "entry": ["parameters": [["name": "f", "type": written]]]
-            ]
-        ])
-
-        // Then
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
+        #expect(throws: ValidationError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": [
+                    "entry": ["parameters": [["name": "f", "type": .string("\(mark.word) \(inside.word) Int")]]]
+                ]
+            ])
+        }
     }
 
     @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
@@ -125,48 +131,26 @@ struct ModifierNotationTests {
         }
 
         // And the same spelling read back is the mark outside the doubt
-        #expect(try TypeReader.parse("\(mark.rawValue) Task?") == mark.marking(.nullable(.named("Task"))))
-    }
-
-    @Test("a record's field is named whatever the document named it")
-    func aFieldNamedLikeTwoMarksIsStillAField() throws {
-        // Given. The rule about two marks is a procedure form's, and a key is
-        // only that form's once what is under the marks says `procedure`.
-        // Anything else is a field name, and the writer writes one back
-        let type = TypeExpression.record(["var inout x": .int])
-
-        // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
-        ])
-
-        // Then
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
+        #expect(try TypeReader.parse("\(mark.word) Task?") == mark.marking(.nullable(.named("Task"))))
     }
 
     @Test(
-        "a record's only field may be named for a key the reading takes another way",
-        arguments: ["procedure", "var procedure", "const isolated Procedure", "array", "record"]
+        "a declared record's field is named whatever the document named it",
+        arguments: ["procedure", "var procedure", "var inout procedure", "const isolated Procedure", "array", "record", "var inout x"]
     )
-    func aRecordsOnlyFieldMayBeNamedLikeAForm(spelling: String) throws {
-        // Given. A record type is written under `record`, so its field names
-        // are never keys the reading takes as a form
-        let type = TypeExpression.record([try Name(spelling): .int])
+    func aRecordsFieldMayBeNamedLikeAForm(spelling: String) throws {
+        // Given. A record is declared under `record`, so its field names are
+        // never keys the reading takes as a form or a mark
+        let declared = TypeDeclaration.record([try Name(spelling): .int])
+        let module = try Module(types: ["App.T": declared], procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))])
 
         // When
-        let written = try Writer().value(of: type)
-        let read = try Loader().load([
-            "warp": 1,
-            "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "f", "type": written]]]]
-        ])
+        let written = try Writer().value(of: module)
+        let read = try Loader().load(written)
 
         // Then
-        #expect(written == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
-        #expect(read.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
+        #expect(try Writer().value(of: declared) == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
+        #expect(read.types["App.T"] == declared)
     }
 
     @Test(
@@ -227,8 +211,8 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
-    @Test("a keyword written twice is refused", arguments: [
-        "inout inout Int", "var var Int", "const const Procedure", "isolated isolated Procedure"
+    @Test("a modifier written twice is refused", arguments: [
+        "const const Procedure", "isolated isolated Procedure"
     ])
     func aModifierWrittenTwiceIsRefused(written: String) {
         // When / Then
@@ -248,7 +232,7 @@ struct ModifierNotationTests {
                 "entry": Procedure(
                     access: .public,
                     body: [Statement(binding: .constant("x"), expression: .record(["loop": .literal(.int(1))]))],
-                    result: .reference([.key("x")])
+                    result: .reference([.name("x")])
                 )
             ]
         )
@@ -258,13 +242,18 @@ struct ModifierNotationTests {
         let read = try loader.load(written)
 
         // Then. Written under `record`, and read back as the record it was
-        guard case let .array(body)? = written["procedures"]?["entry"]?["body"] else {
+        guard case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"] else {
             Issue.record("the body was not written as an array")
             return
         }
 
-        #expect(body.first?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
-        #expect(read.procedures["entry"]?.body.statements.first?.expression.constantValue == .dictionary(["loop": .int(1)]))
+        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
+        guard case let .record(fields)? = read.procedures["entry"]?.body.statements.first?.expression else {
+            Issue.record("the record literal was not read back as one")
+            return
+        }
+
+        #expect(fields["loop"]?.constantValue == .int(1))
     }
 
     @Test("a module's var and a set path survive the round trip")
@@ -294,7 +283,7 @@ struct ModifierNotationTests {
         #expect(module.variables["total"]?.start.constantValue == .int(0))
         #expect(
             module.procedures["entry"]?.body.statements[1].binding
-                == .assignment([.key("p"), .key("x")])
+                == .assignment([.name("p"), .name("x")])
         )
         #expect(try Writer(registry: loader.registry).value(of: module) == written)
     }

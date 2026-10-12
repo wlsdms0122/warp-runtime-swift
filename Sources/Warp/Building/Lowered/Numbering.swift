@@ -40,10 +40,8 @@ struct Numbering: Sendable {
 
     // How many closures this document numbers. A link resolves them by the rows
     // they took, and a list shorter than this is a document whose bodies are
-    // not all lowered yet. A count and not a list: a closure's reference is
-    // the position it stands at, so a row per closure would hold nothing the
-    // count does not already say, and a number read off an object would
-    // decide how many of them to stand up.
+    // not all lowered yet. A closure's reference is the position it stands at,
+    // so the count says all a list would.
     let closureCount: Int
 
     private let called: [Name: Int]
@@ -118,8 +116,8 @@ struct Numbering: Sendable {
 
         // A closure's number stands behind the spellings, so the last number
         // this numbering gives is the spellings and every closure counted
-        // together. Counted here, because the door below reaches that number
-        // by adding and a sum that leaves an int is not one.
+        // together. Counted here, because the initializer below reaches that
+        // number by adding and a sum that leaves an int is not one.
         var standing = sent.count + declared.count
 
         for count in counts.values {
@@ -132,7 +130,7 @@ struct Numbering: Sendable {
             standing = summed
         }
 
-        // Through the door that numbers a document, so that what a reading
+        // Through the initializer that numbers a document, so that what a reading
         // stands up is a numbering that counting could have reached. A
         // beginning written down is a beginning that can disagree with the one
         // beside it; a count is not.
@@ -141,16 +139,12 @@ struct Numbering: Sendable {
 
     // MARK: - Public
     // What this counts from, said as a value, so an object carries the
-    // numbering its bodies were lowered against.
+    // numbering its bodies were lowered against: what a reading uses and
+    // cannot work out. The numbers a name stands at are arithmetic over the
+    // spellings, so they are not written; how many closures each declaration
+    // wrote is, since lowering a closure literal in a dependency's body asks
+    // where that declaration's run begins.
     //
-    // What is written is what a reading will use and cannot work out. The
-    // numbers a name stands at and what counts from what are one arithmetic
-    // over the spellings, so writing them down would make a numbering whose
-    // parts disagree something an object can hold.
-    //
-    // How many closures each declaration wrote is neither: folding runs a
-    // dependency's body against this, and lowering a closure literal there
-    // asks where that declaration's run begins.
     // The spellings this document declares are written once, beside the
     // table, so only what it sends and what it counted stand here.
     func written(dropping declared: Int) -> Value {
@@ -259,11 +253,15 @@ struct Numbering: Sendable {
     }
 
     // A native's declared sends as the numbers this document gives them, in
-    // the places the native names them at, each handing over what `handing`
-    // says. A run reaches a send by its place, so the places are one send to a
-    // place from the first, and every spelling is one this document numbers;
-    // a native whose sends say otherwise is answered with `SendNumberingError`.
-    func sent(_ sending: [Native.Send], handing: (Native.Send) throws -> Int) throws -> [Sent] {
+    // the places the native names them at, each numbered send asked of
+    // `holding` first. A run reaches a send by its place, so the places are
+    // one send to a place from the first, and every spelling is one this
+    // document numbers; a native whose sends say otherwise is answered with
+    // `SendNumberingError`.
+    func sent(
+        _ sending: [Native.Send],
+        holding: (Native.Send) throws -> Void = { _ in }
+    ) throws -> [Sent] {
         let ordered = sending.sorted { left, right in left.position < right.position }
 
         guard ordered.map(\.position) == Array(ordered.indices) else {
@@ -273,7 +271,9 @@ struct Numbering: Sendable {
         return try ordered.map { send in
             guard let number = call(send.selector) else { throw SendNumberingError.unnumbered(send.selector) }
 
-            return Sent(row: number, handing: try handing(send))
+            try holding(send)
+
+            return Sent(row: number)
         }
     }
 
