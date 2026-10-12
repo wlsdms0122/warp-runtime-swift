@@ -36,8 +36,9 @@ struct TypeChecker {
         case refusal(String)
     }
 
-    // Where a path walk ended: what the whole of the path holds, with the
-    // path each value between its brackets is written into, or the refusal.
+    // Where a path walk ended, a read's or a write's: what the whole of the
+    // path holds, with the path each value between its brackets is written
+    // into, or the refusal.
     private enum PathReading {
         case reads(LoweredType, rewritten: Path)
         case refused(String)
@@ -135,13 +136,6 @@ struct TypeChecker {
         flow: Flow,
         locals: Set<Name>
     )
-
-    // Where a write lands, with the path each value between its brackets is
-    // written into, or why it lands nowhere.
-    private enum Writable {
-        case reaches(LoweredType, rewritten: Path)
-        case refused(String)
-    }
 
     // A declaration whose answer nobody wrote, with what it takes to read one
     // off the body: the body itself, the names in scope before its first
@@ -937,7 +931,7 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
-    ) -> Writable {
+    ) -> PathReading {
         if let refusal = path.writtenThroughAbsence {
             return .refused(refusal)
         }
@@ -1035,7 +1029,7 @@ struct TypeChecker {
             }
         }
 
-        return .reaches(current, rewritten: rewritten)
+        return .reads(current, rewritten: rewritten)
     }
 
     // The declaration an operand or a condition calls that answers only by
@@ -3153,7 +3147,7 @@ struct TypeChecker {
                 try refuse(reason, at: place, when: ask)
                 return nil
 
-            case let .reaches(reached, _):
+            case let .reads(reached, _):
                 return reached
             }
 
@@ -3187,7 +3181,7 @@ struct TypeChecker {
             try refuse(reason, at: place, when: ask)
             return nil
 
-        case let .reaches(reached, placed):
+        case let .reads(reached, placed):
             guard case let .judging(folding?, _, _) = ask else { return (reached, placed) }
 
             let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
