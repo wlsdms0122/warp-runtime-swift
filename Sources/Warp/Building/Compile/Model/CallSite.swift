@@ -22,7 +22,7 @@ struct CallSite: Sendable {
     // literals. By position, the order the arguments were written in.
     let readings: [LoweredType]
 
-    // What an operand that is a list or record literal holds part by part,
+    // What an operand that is a list or map literal holds part by part,
     // by position, where its reading does not say.
     let shapes: [Int: LiteralShape]
 
