@@ -48,31 +48,6 @@ enum LiteralShape: Sendable {
         self = shape ?? .part(reading)
     }
 
-    // A list or a map written out as a value, which is a literal the way one
-    // written part by part is: each element, key and value is a part of its
-    // own. Nil for a value of any other kind, which its reading says whole.
-    init?(literal value: Value, in table: LoweredTypeTable) {
-        switch value {
-        case let .array(elements):
-            self = .list(elements.map { element in
-                LiteralShape(literal: element, in: table) ?? .part(LoweredType(literal: element, in: table))
-            })
-
-        case let .dictionary(entries):
-            self = .map(entries.entries.map { entry in
-                (
-                    key: LiteralShape(literal: entry.key, in: table)
-                        ?? .part(LoweredType(literal: entry.key, in: table)),
-                    value: LiteralShape(literal: entry.value, in: table)
-                        ?? .part(LoweredType(literal: entry.value, in: table))
-                )
-            })
-
-        default:
-            return nil
-        }
-    }
-
     // MARK: - Public
     // Whether a slot takes it, part by part along `everyPart(along:)`. A
     // slot handed in place that names a type parameter takes what

@@ -1350,11 +1350,35 @@ struct TypeChecker {
         ask: Ask
     ) async throws -> Inspection {
         switch expression {
+        // A list or a map written out as a value is a literal the way one
+        // written part by part is, each element, key and value a literal of
+        // its own, so it is judged as that one.
+        case let .literal(.array(elements)):
+            return try await inspected(
+                .array(elements.map(Expression.literal)),
+                naming: name,
+                into: declared,
+                at: place,
+                in: environment,
+                with: context,
+                ask: ask
+            )
+
+        case let .literal(.dictionary(dictionary)):
+            return try await inspected(
+                .dictionary(dictionary.entries.map { entry in (key: .literal(entry.key), value: .literal(entry.value)) }),
+                naming: name,
+                into: declared,
+                at: place,
+                in: environment,
+                with: context,
+                ask: ask
+            )
+
         case let .literal(value):
             return Inspection(
                 rewritten: expression,
-                reading: LoweredType(literal: value, in: context.loweredTypes),
-                literalShape: LiteralShape(literal: value, in: context.loweredTypes)
+                reading: LoweredType(literal: value, in: context.loweredTypes)
             )
 
         // Nothing comes back from here, so there is no value to have a type.
