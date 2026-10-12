@@ -616,9 +616,11 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // Two readings of one slot, joined part by part: null beside a value is
     // what may be null, two lists join by their elements and two maps by
-    // their keys and their values, and two procedures to a procedure. Where two parts still disagree the part
-    // holds neither, which is what `Any` says. A join that guessed would be a
-    // refusal an author cannot act on.
+    // their keys and their values, and two procedures to a procedure. Where
+    // two parts still disagree the part holds neither, which is what `Any`
+    // says, and two maps whose keys join to `Any` are no map type, since a
+    // key answers `Hashable`, so they read `Any` whole. A join that guessed
+    // would be a refusal an author cannot act on.
     //
     // A reading that leaves is not one of the two. It contributes no value, so
     // it cannot disagree with the reading that stays, and the slot holds what
@@ -674,7 +676,9 @@ indirect enum LoweredType: Sendable, Equatable {
             return .array(mine.joined(theirs))
 
         case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
-            return .dictionary(key: myKey.joined(theirKey), value: mine.joined(theirs))
+            let key = myKey.joined(theirKey)
+
+            return key == .any ? .any : .dictionary(key: key, value: mine.joined(theirs))
 
         default:
             return .any
