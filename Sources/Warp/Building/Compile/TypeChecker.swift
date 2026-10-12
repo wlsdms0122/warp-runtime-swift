@@ -1615,7 +1615,10 @@ struct TypeChecker {
         // In the order written, each key before its value: the order the run
         // makes the entries in. The keys join to one type and the values to
         // another, the way a list's elements do, and an empty map holds
-        // `Never` at both, so it is a value of a map of any types.
+        // `Never` at both, so it is a value of a map of any types. What the
+        // keys join to keys the map type the literal reads as, so it answers
+        // `Hashable` as a written key does; where the place declares a map,
+        // each key was held to the key it declares.
         case let .dictionary(entries):
             var environment = environment
             var rewritten: [(key: Expression, value: Expression)] = []
@@ -1659,6 +1662,14 @@ struct TypeChecker {
                 values = values.joined(parts[1].reading)
                 shapes.append((key: parts[0].written, value: parts[1].written))
                 rewritten.append((key: parts[0].rewritten, value: parts[1].rewritten))
+            }
+
+            if declaredParts.key == nil, let refusal = context.loweredTypes.keyRefusal(of: keys, leaning: { claim in
+                if case let .judging(_, fulfillment, _) = ask {
+                    fulfillment.require(claim, at: place)
+                }
+            }) {
+                try refuse(refusal, at: place, when: ask)
             }
 
             // A literal whole number read beside fractions is the fraction it

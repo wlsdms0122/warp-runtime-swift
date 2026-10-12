@@ -271,6 +271,30 @@ final class LoweredTypeTable: Sendable {
         }
     }
 
+    // Why a map keyed by `key` is no map type the language has, or nil
+    // where the key answers `Hashable`: by what the documents claim about
+    // its type, and a type parameter through its bounds. What leans on a
+    // claim goes to `leaning`, for the asker to write down where it stands.
+    // The one sentence a map type is refused in, written or read.
+    func keyRefusal(of key: LoweredType, leaning: (Claim) -> Void) -> String? {
+        switch answering(contract: TypeSpelling.hashable, reading: key, orNull: false) {
+        case let .leansOn(types):
+            for type in types {
+                leaning(Claim(type: type, contract: TypeSpelling.hashable))
+            }
+
+            return nil
+
+        case .decided(true):
+            return nil
+
+        case .decided(false):
+            return "keys a map by \(key.rendered(in: self)), which does not answer `\(TypeSpelling.hashable)`."
+                + " A map's key is of a type that answers `\(TypeSpelling.hashable)`, and a type parameter"
+                + " answers what its bounds name"
+        }
+    }
+
     // The declarations as the run reads them. A link says which order its rows
     // stand in, so a document's types take a run of rows the way its
     // declarations do; where nothing says, the declared spellings order them.
