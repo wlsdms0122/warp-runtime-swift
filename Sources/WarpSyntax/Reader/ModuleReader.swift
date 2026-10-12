@@ -51,12 +51,12 @@ public struct ModuleReader: Decodable {
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
-            types: try Self.record(TypeDeclarationReader.self, in: container, forKey: .types)
+            types: try Self.mapping(TypeDeclarationReader.self, in: container, forKey: .types)
                 .mapValues(\.declared),
-            contracts: try Self.record(ContractReader.self, in: container, forKey: .contracts)
+            contracts: try Self.mapping(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
             // In key order, so that the same refusal comes first every run.
-            claims: try Self.record([String].self, in: container, forKey: .satisfies)
+            claims: try Self.mapping([String].self, in: container, forKey: .satisfies)
                 .sorted { one, other in one.key < other.key }
                 .reduce(into: [Name: Set<Name>]()) { claims, entry in
                     // The key is the type claiming, written as the document
@@ -65,14 +65,16 @@ public struct ModuleReader: Decodable {
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
                     claims[entry.key] = Set(
-                        try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
+                        try entry.value.map { spelled in
+                            notation.qualified(try Name.read(spelled, at: steps), as: .type)
+                        }
                     )
                 },
-            constants: try Self.record(ExpressionReader.self, in: container, forKey: .const)
+            constants: try Self.mapping(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
-            variables: try Self.record(VariableReader.self, in: container, forKey: .variables)
+            variables: try Self.mapping(VariableReader.self, in: container, forKey: .variables)
                 .mapValues(\.variable),
-            procedures: try Self.record(ProcedureReader.self, in: container, forKey: .procedures)
+            procedures: try Self.mapping(ProcedureReader.self, in: container, forKey: .procedures)
                 .mapValues(\.procedure)
         )
     }
@@ -96,11 +98,11 @@ public struct ModuleReader: Decodable {
         return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
     }
 
-    // One of the slots a module declares a record of things under, read
+    // One of the slots a module declares a mapping of things under, read
     // standing on the slot so that what is refused inside it is addressed
     // there. Nothing written is nothing declared, which is what an absent slot
     // is and what a slot written as null says.
-    private static func record<T: Decodable>(
+    private static func mapping<T: Decodable>(
         _ type: T.Type,
         in container: KeyedDecodingContainer<CodingKeys>,
         forKey key: CodingKeys

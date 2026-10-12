@@ -120,7 +120,7 @@ struct Sending {
 
     // MARK: - Private
     // How many arguments a send hands over, held against the parameters it
-    // reaches by the same rule a call written in a body is held to.
+    // reaches: one value to each.
     private func handing(
         of send: Native.Send,
         reaching signature: Signature,

@@ -620,10 +620,10 @@ struct ValidationTests {
     func undeclaredNamesAreNotVisible() throws {
         // Given. There is one way a name gets here, and it is being declared. A
         // run's own values arrive as arguments like everything else.
-        let read = Procedure(body: [Statement(binding: .constant("read"), expression: reference("run", "id"))])
+        let read = Procedure(body: [Statement(binding: .constant("read"), expression: .reference([.name("run"), .index("id")]))])
         let taken = Procedure(
             signature: Signature(parameters: [Parameter(name: "run", type: .dictionary(key: .string, value: .any))]),
-            body: [Statement(binding: .constant("read"), expression: reference("run", "id"))]
+            body: [Statement(binding: .constant("read"), expression: .reference([.name("run"), .index("id")]))]
         )
 
         // When / Then

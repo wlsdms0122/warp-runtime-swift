@@ -117,7 +117,9 @@ struct TypeReader: Decodable {
 
         // MARK: - Initializer
         init?(spelling: String) {
-            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else { return nil }
+            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else {
+                return nil
+            }
 
             self = holding
         }
@@ -184,12 +186,10 @@ struct TypeReader: Decodable {
 
     // What a procedure form's key says, read front to back: a slot's mark if one
     // is written, the modifiers in either order, and `procedure`. Nil where the
-    // key is not a procedure form's, which a record's field name is.
+    // key is not a procedure form's.
     //
     // One mark, because that is what a slot writes. A key carrying two is not
-    // this form's and so is a field name, the way any other key that is not
-    // this form's is: what the spelling of a whole type refuses, a key that
-    // never claimed to be one is not asked.
+    // this form's, so a mapping keyed by it is no type form at all.
     //
     // The mark comes back as itself rather than as something that applies it,
     // so that what was read stays a value the caller can ask about.
@@ -318,7 +318,9 @@ struct TypeReader: Decodable {
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
-            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)))
+            let written = text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)
+
+            return .parameter(name: try named(written))
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -347,8 +349,13 @@ struct TypeReader: Decodable {
             )
         }
 
-        guard let held = holding.holding(try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }) else {
-            throw TypeFormError("type '\(text)' is written with another count of types, and `\(holding.spelling)` takes \(holding.arguments)")
+        let parts = try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }
+
+        guard let held = holding.holding(parts) else {
+            throw TypeFormError(
+                "type '\(text)' is written with another count of types,"
+                    + " and `\(holding.spelling)` takes \(holding.arguments)"
+            )
         }
 
         return held
@@ -417,9 +424,11 @@ struct TypeReader: Decodable {
             return try parse(written, in: notation)
         }
 
-        guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {
+        guard case .dictionary = try ValueReader(from: decoder).value else {
             throw ReadingError(Self.unread, at: decoder.steps)
         }
+
+        let keyed = try decoder.container(keyedBy: AnyCodingKey.self)
 
         // A mapping is a form by its one key. The form is committed by its key
         // *before* what is under it is read, so a malformed signature refuses

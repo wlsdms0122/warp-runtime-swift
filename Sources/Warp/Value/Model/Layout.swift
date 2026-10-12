@@ -13,13 +13,12 @@ import Foundation
 // reader or a host is the same layout for the same fields.
 //
 // A name is part of the layout, so `Account` and `Vault` are two layouts over
-// one set of fields. What a field holds is not.
+// one set of fields. What a field holds is not part of it.
 //
 // Inside a link a name is a row of the lowered type table; outside one it is a
-// spelling, which is why a reader and a host may write one. The door a value
-// from outside comes through holds every name it carries to the record the
-// name declares, whatever the slot declares, so a layout a run holds names a
-// declared record.
+// spelling, which is why a reader and a host may write one. A record from
+// outside is held at the door it comes through to the record its name
+// declares, whatever its slot declares.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
     public let name: Name

@@ -137,10 +137,10 @@ struct OneSpellingTests {
         #expect(throws: ReadingError.self) { try sut.load(document, identity: nil) }
     }
 
-    @Test("a record type nested in another keeps its own refusal and place")
-    func aNestedRecordTypeKeepsItsRefusal() {
-        // Given. The inner record type written bare, the way a document never
-        // writes one
+    @Test("a field's type written as a mapping of fields keeps its own refusal and place")
+    func aFieldTypeWrittenAsFieldsKeepsItsRefusal() {
+        // Given. A field's type written as a mapping of fields, which is no
+        // type form
         let document: Value = [
             "warp": 1,
             "imports": [],

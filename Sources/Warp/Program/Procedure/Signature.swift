@@ -106,18 +106,6 @@ public struct Signature: Sendable, Equatable {
         parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) }
     }
 
-    // Whether a value declared this way may stand where this is required.
-    //
-    // The directions are opposite: what is given takes everything the slot
-    // hands it, and the slot takes everything the given answers. One taking
-    // more than the slot hands and answering less than the slot allows fits.
-    func accepts(_ given: Signature, in types: TypeTable = .empty) -> Bool {
-        let table = types.loweredTypes
-
-        return TypeExpression.procedure(type).lowered(in: table, bounds: bounds)
-            .accepts(TypeExpression.procedure(given.type).lowered(in: table, bounds: given.bounds), in: table)
-    }
-
     // A closure's signature as the procedure it is written in reads it: each
     // type parameter it names held to the bounds `declared` gives that name,
     // since the procedure around it owns the name.

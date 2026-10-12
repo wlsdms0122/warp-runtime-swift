@@ -192,7 +192,7 @@ public struct StatementReader: Decodable {
         return Statement(binding: binding, expression: expression)
     }
 
-    // What stands under `value`: a construct, where the record's one key is a
+    // What stands under `value`: a construct, where the mapping's one key is a
     // construct's, and an expression otherwise. A construct that binds through
     // the statement's name is handed the name the statement introduces.
     private static func expression(

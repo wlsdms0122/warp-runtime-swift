@@ -17,8 +17,8 @@ import Foundation
 public struct Statement: Sendable {
     // The name is inside the case, so a variable without a name is not a value
     // this type can hold. A write names a path rather than a name: `set` reaches
-    // into a variable through its fields and elements, and the head of the path
-    // is the variable it writes.
+    // into a variable through its fields, elements and entries, and the head of
+    // the path is the variable it writes.
     //
     // A name may say what it holds. The declaration is on the two cases that
     // introduce a name, so a write cannot carry one: `set` reaches a name

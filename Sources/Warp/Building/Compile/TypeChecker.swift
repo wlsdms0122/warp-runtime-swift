@@ -50,10 +50,7 @@ struct TypeChecker {
     // answers the type and flow questions alone and refuses nothing (what
     // cannot be read is `Any`) because its askers read a body out of place or
     // more than once: an operand typed where it stands, a round re-read until
-    // its writes stop moving, where a refusal would be transient or repeated. One
-    // walk under two asks, so the rules cannot drift a copy at a time, and so a
-    // body is read once, where a walk per question would compound arm by arm
-    // into an exponential reading of nothing new.
+    // its writes stop moving, where a refusal would be transient or repeated.
     private enum Ask {
         // Judging carries what folds a constant-headed path, where there is
         // one, where it writes down the pairs its calls lean on, and what the
@@ -65,11 +62,9 @@ struct TypeChecker {
         // MARK: - Property
         // Whether this ask keeps what the walk rebuilds. Probing reads a body
         // out of place or more than once, so it hands the expression back as
-        // written instead of paying for a copy nobody takes. In an expression
-        // case the pieces are gathered either way, so a gate there only spares
-        // the final assembly, but a loop or a walk also asks this to choose
-        // between the final probe and a judging re-walk, and that choice
-        // carries refusals and gathered sites, so it is not one to drop.
+        // written. A loop or a walk also asks this to choose between the final
+        // probe and a judging re-walk, which carries refusals and gathered
+        // sites.
         var rewrites: Bool {
             if case .judging = self { return true }
 
@@ -158,7 +153,6 @@ struct TypeChecker {
     }
 
     // MARK: - Property
-
     // MARK: - Initializer
     // MARK: - Public
     // A block with every dot judged and every call gathered, each site carrying
@@ -264,9 +258,9 @@ struct TypeChecker {
     // call graph allows. Each handed back as it is worked out, and the context
     // asked for again, so the next body is read against it.
     //
-    // Handed back rather than returned in a heap: the tables a context is made
-    // of are the build's, one answer changes one entry in each, and rebuilding
-    // them per declaration is the whole graph copied once per node.
+    // Handed back one at a time: one answer changes one entry in each of the
+    // build's tables a context is made of, and rebuilding them per declaration
+    // copies the whole graph once per node.
     func answers(
         of unsaid: [Unsaid],
         reading context: () -> TypingContext,
@@ -1273,7 +1267,7 @@ struct TypeChecker {
 
     // The gate a refusal passes: judging throws it, and the probing ask has
     // none to throw. A refusal the walk states passes here, so it cannot forget
-    // which ask refuses, and what remains after it under reading is the
+    // which ask refuses, and what remains after it under probing is the
     // degraded answer beside each call. The constant-folding throws do not
     // pass here: a folding scope rides only the judging ask.
     private func refuse(
@@ -1575,7 +1569,7 @@ struct TypeChecker {
             // something the run has to answer.
             //
             // The claim is judged first, and on itself: a cast onto a type
-            // that proves nothing opens no door, whatever it was written over.
+            // that proves nothing opens nothing, whatever it was written over.
             // What the claim names is judged where every cast is seen, in the
             // declaration scan. A spelling says that much on its own, and
             // asking it here would ask only of what this walk reaches. What is
@@ -1612,9 +1606,8 @@ struct TypeChecker {
             ) {
                 // Asked of the reading this hands on, not of the spelling that
                 // made it. `payload as? Int` hands on `Int?` and `payload as?
-                // Maybe` hands on `Maybe`. The same type by two spellings, and
-                // reading the question off the spelling let the second catch a
-                // repeat that the first waved through.
+                // Maybe` hands on `Maybe`: the same type by two spellings, so
+                // the question is the type's.
                 try refuse(
                     "reads \(read.rendered(in: context.loweredTypes)) as \(claim.rendered(in: context.loweredTypes)),"
                         + " which it already is."
@@ -2411,7 +2404,7 @@ struct TypeChecker {
         // takes does not exist unless both are written (a conditional with no
         // other arm makes every write indefinite) and an arm that leaves hands
         // on nothing, so the write the staying arm makes is definite again: the
-        // ways that finish all made it. Unreached arms are followed on purpose.
+        // ways that finish all made it. Unreached arms are judged as well.
         case let .conditional(condition, then, otherwise):
             // A condition is data and writes nothing, so the arms stand in the
             // environment the conditional stands in.

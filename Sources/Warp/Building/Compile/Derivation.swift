@@ -487,10 +487,10 @@ struct Derivation {
     // The type this reads, as the slot it came out of says it, and nil where
     // it came out of none. The head is a name a slot declared, and the walk
     // follows that type past it: brackets read an element of a list or an
-    // entry of a map, and a dot reads a field a record type declares. An
-    // array or a dictionary of them says it about every
-    // element, and the value was settled against that type when it was handed
-    // over, so what the type says of the part is what the slot said. A name no
+    // entry of a map, and a dot reads a field a record type declares. A list
+    // or a map of them says it about every element or entry, and the value
+    // was judged against that type when it was handed over, so what the type
+    // says of the part is what the slot said. A name no
     // slot declared says nothing, and anything that is not a name has no slot
     // to say anything.
     private func reached(

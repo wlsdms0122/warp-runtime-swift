@@ -7,10 +7,10 @@
 
 import Foundation
 
-// An effect's door into the run. The arguments arrive by position, the way a
-// body's do; what an effect has beyond a query is the way to write a variable
-// it was handed in place, to call a closure it was handed, and to reach the
-// environment.
+// What an effect is handed in the run. The arguments arrive by position, the
+// way a body's do; what an effect has beyond a query is the way to write a
+// variable it was handed in place, to call a closure it was handed, and to
+// reach the environment.
 public struct Invocation<P: NativeProcedure>: Sendable {
     // MARK: - Property
     // The row being sent: what a trace and a refusal call it, the declaration

@@ -12,8 +12,8 @@ import Foundation
 // comparing as different bytes. A name is normal form C or it is refused, so a
 // declaration and a reference can only meet by being the same bytes.
 //
-// One door rather than one check per checker, because the rule is the
-// language's and not any checker's own: the encodings hold record keys to it,
+// One initializer rather than one check per checker, because the rule is the
+// language's and not any checker's own: the encodings hold field names to it,
 // and validation holds every name a program writes as a value to it, and both
 // have to mean the same thing by "normal". A `Name` in hand has been through
 // it, and so has been through the other half of the rule: a name is written,
@@ -77,8 +77,8 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     }
 
     // A spelling this package built out of parts that are already normal:
-    // names joined by a dot, or ASCII written in this source. The door above
-    // is the one every spelling from outside comes through, and this one is
+    // names joined by a dot, or ASCII written in this source. The initializer
+    // above is the one every spelling from outside comes through, and this one is
     // not reachable from outside the package.
     package init(normal spelling: String) {
         self.spelling = spelling
@@ -87,9 +87,9 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
 
     // MARK: - Public
     // Ordered as bytes. Every place that puts names in order reads this: a
-    // record's entries, a signature's parameter positions, a canonical
-    // writer's keys. Swift's `<` orders under canonical equivalence and would
-    // put two spellings of one name in one place.
+    // record's fields and a signature's parameter positions. Swift's `<`
+    // orders under canonical equivalence and would put two spellings of one
+    // name in one place.
     public static func < (lhs: Name, rhs: Name) -> Bool {
         Name.compared(lhs.spelling, rhs.spelling) < 0
     }

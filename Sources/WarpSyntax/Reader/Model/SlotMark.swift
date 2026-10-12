@@ -14,7 +14,7 @@ import Warp
 // said once here and the reading and the writing come off it. The words are
 // `TypeSpelling`'s.
 //
-// The language's own record of which types are marked is the cases of
+// The language's own list of which types are marked is the cases of
 // `TypeExpression`. What is here is how a spelling carries them, which is this
 // notation's and not something a caller assembling a `TypeExpression` in Swift
 // ever needs.

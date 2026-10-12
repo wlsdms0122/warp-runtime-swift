@@ -49,10 +49,8 @@ public struct Module: Sendable {
     // read by everything that asks which module supplies a reference.
     let supplies: Set<Reference>
 
-    // Types this module declares. A type is a name bound to a
-    // `TypeExpression`, which is the same thing a procedure is with a body in
-    // place of a type. A module declares, and what it declares differs only in
-    // what kind of thing the name stands for.
+    // Types this module declares: each name bound to a record's fields or to
+    // the type an alias stands for.
     public var types: [Name: TypeDeclaration] { source.types }
 
     // Contracts this module declares: a name bound to the procedures a value's

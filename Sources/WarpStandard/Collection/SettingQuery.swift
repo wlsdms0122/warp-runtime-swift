@@ -22,7 +22,10 @@ struct SettingQuery: Query {
         var declared: Parameter {
             switch self {
             case .dictionary:
-                return Parameter(name: "dictionary", type: .dictionary(key: .parameter(name: "Key"), value: .parameter(name: "Value")))
+                return Parameter(
+                    name: "dictionary",
+                    type: .dictionary(key: .parameter(name: "Key"), value: .parameter(name: "Value"))
+                )
 
             case .key:
                 return Parameter(name: "key", type: .parameter(name: "Key"))

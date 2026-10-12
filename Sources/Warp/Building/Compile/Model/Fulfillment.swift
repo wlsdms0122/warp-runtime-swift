@@ -45,14 +45,13 @@ final class Fulfillment: @unchecked Sendable {
         }
     }
 
-    // What is settled inside `body`. A fold runs past the text, so what it
-    // turns up says only which declaration was being settled, and that is what
-    // this answers.
+    // The declaration judged, or the constant settled, inside `body`. A fold
+    // runs past the text, so what it turns up says only which declaration it
+    // was under, and that is what this answers.
     //
     // Scoped rather than set, so a walk that leaves early leaves the answer as
     // it found it. Outside every scope the answer is the document, which is
-    // what a pair turned up by something other than settling one declaration
-    // stands on.
+    // what a pair turned up under no one declaration stands on.
     func folding<Answer>(_ place: Place, _ body: () async throws -> Answer) async rethrows -> Answer {
         let previous = lock.withLock {
             let previous = folding

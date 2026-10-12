@@ -132,7 +132,7 @@ struct TextEncodingTests {
     }
 
     @Test("a field name outside normal form C is refused")
-    func aDenormalKeyIsRefused() throws {
+    func aDenormalFieldIsRefused() throws {
         // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name the value model reads as é
         let text = "warpt 1\nA.P {\n  \"\u{65}\u{301}\" 1\n}\n"
@@ -427,10 +427,10 @@ struct TextEncodingTests {
     }
 
     @Test("a field name outside normal form C never reaches the way out")
-    func aDenormalKeyIsRefusedWhenWriting() {
-        // Given. A record's keys are names, so there is no value carrying one
-        // for a writing to refuse: the refusal is at the door a name comes
-        // through.
+    func aDenormalFieldIsRefusedWhenWriting() {
+        // Given. A record's field names are names, so there is no value
+        // carrying one for a writing to refuse: the refusal is at the
+        // initializer a name comes through.
         let decomposed = "e\u{301}"
 
         // When / Then

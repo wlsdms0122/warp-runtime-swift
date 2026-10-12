@@ -67,12 +67,11 @@ public struct Place: Sendable, Hashable {
     }
 
     // Every part a program has, by the language's own name for it. A part is
-    // where something sits in the structure of a program; the boundary's `Slot` is
-    // what a call fills, and the two are named apart because they are two
-    // things. No spelling rides along: what a document writes a part under is
-    // the reading side's, and a spelling written in two places is one the two
-    // can come to disagree about with nothing going wrong loudly enough to
-    // notice.
+    // where something sits in the structure of a program; a `Slot` is what a
+    // call fills, and the two are named apart because they are two things. No
+    // spelling rides along: what a document writes a part under is the reading
+    // side's, and a spelling written in two places is one the two can come to
+    // disagree about with nothing going wrong loudly enough to notice.
     //
     // One case per part and not per key. A conditional and a loop both hold a
     // condition; that a document writes the two under different keys is a fact

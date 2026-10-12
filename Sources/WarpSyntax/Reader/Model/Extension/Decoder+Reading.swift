@@ -28,8 +28,9 @@ extension Decoder {
         return try decoder.decode(type)
     }
 
-    // A record keyed by names. A value's keys are names already, and a key
-    // from a decoder that is not this package's is read as one here.
+    // A mapping keyed by names, read in the key order. `ValueDecoder` holds
+    // its keys to names, and a key from a decoder that is not this package's
+    // is read as one here.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
         guard let decoder = self as? ValueDecoder else {
             let container = try container(keyedBy: AnyCodingKey.self)

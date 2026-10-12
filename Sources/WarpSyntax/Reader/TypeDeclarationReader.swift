@@ -29,7 +29,9 @@ struct TypeDeclarationReader: Decodable {
         let keys = keyed.allKeys.map(\.name)
 
         if keys == [Self.recordKey] {
-            self.declared = try Self.record(from: try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling)))
+            let fields = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling))
+
+            self.declared = try Self.record(from: fields)
         } else {
             self.declared = .alias(try TypeReader(from: decoder).type)
         }
@@ -40,7 +42,7 @@ struct TypeDeclarationReader: Decodable {
     // A record's fields, each a type. Each field is read where it stands, so a
     // refusal inside one keeps its own place and its own sentence.
     private static func record(from decoder: Decoder) throws -> TypeDeclaration {
-        guard (try? decoder.container(keyedBy: AnyCodingKey.self)) != nil else {
+        guard case .dictionary = try ValueReader(from: decoder).value else {
             throw ReadingError("a record is a mapping of its fields to their types", at: decoder.steps)
         }
 

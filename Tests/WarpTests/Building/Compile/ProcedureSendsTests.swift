@@ -896,7 +896,7 @@ struct ProcedureSendsTests {
         }
     }
 
-    @Test("a procedure handing what the callee cannot take is refused at the boundary")
+    @Test("a procedure handing what the callee cannot take is refused at the door")
     func aMistypedArgumentIsRefused() async throws {
         // Given. `App.mistyping` hands an int to a procedure whose first
         // parameter is declared `String`

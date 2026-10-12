@@ -17,8 +17,8 @@ import WarpSyntax
 // and this asks. A container's structure is not a spelling.
 @Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
-    // What a text spells and a reader could take wrongly: a scalar, or a
-    // name, whether a record's or a field's.
+    // What a text spells and a reader could take wrongly: a scalar, a map's
+    // keys among them, or a name, whether a record's or a field's.
     private enum Spelling: Equatable, CustomStringConvertible {
         case scalar(Value)
         case name(Name)
@@ -79,9 +79,9 @@ struct TextPinTests {
         case let .array(elements):
             elements.forEach { element in walk(element, visit) }
 
-        case let .dictionary(entries):
-            ((try? entries.named()) ?? []).forEach { entry in
-                visit(.name(entry.name))
+        case let .dictionary(map):
+            map.entries.forEach { entry in
+                walk(entry.key, visit)
                 walk(entry.value, visit)
             }
 

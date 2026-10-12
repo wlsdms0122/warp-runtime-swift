@@ -104,7 +104,7 @@ struct LoweredBody: Sendable {
     // up beside what each of those takes with it.
     //
     // One walk answers all of them, because they are read off the same places, and
-    // one door asks it: the row the body belongs to, handed what only the list
+    // one caller asks it: the row the body belongs to, handed what only the list
     // beside it knows.
     struct Standing {
         // MARK: - Property

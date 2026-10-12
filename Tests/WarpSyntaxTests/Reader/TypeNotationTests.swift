@@ -318,7 +318,7 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Dictionary<Int?, Array<String>>") == .dictionary(key: .nullable(.int), value: .array(.string)))
     }
 
-    @Test("a declared type is enforced at the call boundary")
+    @Test("a declared type is enforced at the entry's door")
     func declaredTypeIsEnforced() async throws {
         // Given
         let sut = try loader.loadDocument([

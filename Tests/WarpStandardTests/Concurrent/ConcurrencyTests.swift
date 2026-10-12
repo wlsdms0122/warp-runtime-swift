@@ -62,8 +62,8 @@ struct ConcurrencyTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("all answers a record's closures under the record's keys")
-    func allAnswersARecord() async throws {
+    @Test("allKeyed answers a map's closures under the map's keys")
+    func allKeyedAnswersAMap() async throws {
         // Given
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(

@@ -109,7 +109,7 @@ struct NullableTests {
 
     @Test("a nullable parameter takes null, and nothing given is refused")
     func aNullableParameterTakesNullByType() async throws {
-        // Given. `T?` says null is a value, so the boundary lets it in the way
+        // Given. `T?` says null is a value, so the door lets it in the way
         // the build does
         let sut = try Module(
             procedures: [

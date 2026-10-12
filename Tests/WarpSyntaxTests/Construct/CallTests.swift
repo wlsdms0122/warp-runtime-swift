@@ -57,8 +57,8 @@ struct CallTests {
         // When
         let outputs = try await run(sut, entry: "caller")
 
-        // Then. `bump` declares null, so the null handed reads null at the
-        // callee boundary
+        // Then. `bump` declares null, so the null handed reads null in the
+        // callee
         #expect(outputs.map?["result"] == .record(Record(name: "App.Pair", ["base": .int(41), "bump": .null])))
     }
 

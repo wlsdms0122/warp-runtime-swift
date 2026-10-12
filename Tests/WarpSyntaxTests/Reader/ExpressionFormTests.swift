@@ -105,7 +105,7 @@ struct ExpressionFormTests {
         #expect(validates(reference), "a field named `ref` names nothing to resolve")
     }
 
-    @Test("a half-spelled form record is rejected at load", arguments: [
+    @Test("a half-spelled form mapping is rejected at load", arguments: [
         ["ref": "a", "extra": "b"] as Value,
         ["ref": 3],
         ["record": ["a": 1], "extra": "b"],

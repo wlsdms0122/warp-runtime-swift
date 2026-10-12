@@ -823,7 +823,7 @@ struct Evaluator: Sendable {
         return answer
     }
 
-    // The two doors a native procedure answers through, what it hands back
+    // The two protocols a native procedure answers through, what it hands back
     // settled by the procedure as a value from outside. The procedure's
     // parameters are its own type, so the call is made where that type has
     // a name: handing `any Query` to a generic function opens it.

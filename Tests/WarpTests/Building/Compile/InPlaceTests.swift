@@ -101,11 +101,11 @@ struct InPlaceTests {
         #expect(second == .int(1))
     }
 
-    @Test("a module variable settled as a dictionary is written under new names")
-    func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
-        // Given. A dictionary of one name to start with: a dictionary's names
-        // are data, so what it reads as is what its entries hold, not which
-        // names it holds them under.
+    @Test("a module variable settled as a map is written under new keys")
+    func moduleVariableSettledAsAMapTakesNewKeys() async throws {
+        // Given. A map of one key to start with: a map's keys are data, so
+        // what it reads as is what its entries hold, not which keys it holds
+        // them under.
         let sut = try Module(
             imports: ["Standard.Collection.keys", "Standard.Collection.setting"],
             variables: ["seen": map(["x": .literal(.int(0))])],

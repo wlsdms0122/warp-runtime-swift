@@ -46,6 +46,6 @@ public enum TypeSpelling {
     // map's key, as: a type parameter nothing fills, spelled with a dot,
     // which no document's `some` writes, so it is no parameter a declaration
     // names.
-    public static let selfElement: Name = "Self.Element"
-    public static let selfKey: Name = "Self.Key"
+    static let selfElement: Name = "Self.Element"
+    static let selfKey: Name = "Self.Key"
 }

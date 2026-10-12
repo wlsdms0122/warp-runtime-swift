@@ -225,11 +225,15 @@ public struct Writer: Sendable {
             return .array(try elements.map { element in try value(of: element) })
 
         case let .record(fields):
-            return .dictionary([ExpressionTag.record.key: .dictionary(Value.Dictionary(try fields.mapValues { field in try value(of: field) }))])
+            let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
+
+            return .dictionary([ExpressionTag.record.key: .dictionary(written)])
 
         case let .dictionary(entries):
             return .dictionary([
-                ExpressionTag.dictionary.key: .array(try entries.map { entry in .array([try value(of: entry.key), try value(of: entry.value)]) })
+                ExpressionTag.dictionary.key: .array(
+                    try entries.map { entry in .array([try value(of: entry.key), try value(of: entry.value)]) }
+                )
             ])
 
         case let .closure(procedure):
@@ -348,6 +352,8 @@ public struct Writer: Sendable {
             return (try spelling(LoopForm.self), .dictionary(written))
 
         case let .leave(leave):
+            let target = leave.target.map { name in Value.string(name.spelling) } ?? .null
+
             switch leave.reach {
             case .procedure:
                 var carried = Value.null
@@ -359,10 +365,10 @@ public struct Writer: Sendable {
                 return (try spelling(ReturnForm.self), carried)
 
             case .construct:
-                return (try spelling(BreakForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
+                return (try spelling(BreakForm.self), target)
 
             case .round:
-                return (try spelling(ContinueForm.self), leave.target.map { name in Value.string(name.spelling) } ?? .null)
+                return (try spelling(ContinueForm.self), target)
             }
 
         case let .attempt(attempted, rescue):
@@ -474,7 +480,9 @@ public struct Writer: Sendable {
         // key order.
         case let .dictionary(held):
             return .dictionary([
-                ExpressionTag.dictionary.key: .array(try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) })
+                ExpressionTag.dictionary.key: .array(
+                    try held.entries.map { entry in .array([try literal(entry.key), try literal(entry.value)]) }
+                )
             ])
 
         case .procedure:

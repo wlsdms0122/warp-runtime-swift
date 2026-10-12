@@ -22,7 +22,7 @@ struct AnsweringTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a path stands on what a call whose declaration writes no answer answers")
-    func aDotStandsOnAnUnwrittenAnswer() async throws {
+    func aPathStandsOnAnUnwrittenAnswer() async throws {
         // Given. `counts` declares no answer and its body answers a map. The
         // path after the call is judged against that map, which is the whole
         // of what this buys: the type the body states does not have to be
@@ -158,7 +158,7 @@ struct AnsweringTests {
     }
 
     @Test("a path on an answer that would come from itself refuses, and stands once the cycle is broken")
-    func aDotOnACycleAnswerRefuses() async throws {
+    func aPathOnACycleAnswerRefuses() async throws {
         // Given. `Any` is what saying nothing looks like at a call site. With
         // the cycle broken, the same path reads the map `pong` answers
         func reading(cycling: Bool) throws -> Module {
@@ -259,7 +259,7 @@ struct AnsweringTests {
     func theDeclarationIsNotRewritten() async throws {
         // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
-        // writing it back would make the boundary check a type nobody wrote,
+        // writing it back would make a judgement check a type nobody wrote,
         // and would put it in a document the writer hands back.
         let sut = try Module(
             procedures: [

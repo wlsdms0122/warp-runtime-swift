@@ -583,7 +583,7 @@ struct WriterTests {
         // Then. What comes back may use none of them, because a spelling is a
         // rule the reading side would have to implement the same way, and the
         // reading side is somewhere else.
-        #expect(Self.keys(in: written).isDisjoint(with: spellings))
+        #expect(try Self.keys(in: written).isDisjoint(with: spellings))
     }
 
     @Test("a spelling whose key is nobody's procedure does not survive being written")
@@ -610,8 +610,8 @@ struct WriterTests {
         let written = try sut.value(of: module)
 
         // Then
-        #expect(!Self.keys(in: written).contains("holds"))
-        #expect(Self.keys(in: written).contains("call"))
+        #expect(try !Self.keys(in: written).contains("holds"))
+        #expect(try Self.keys(in: written).contains("call"))
     }
 
     @Test("a written program runs the way the one it came from did")
@@ -873,16 +873,18 @@ struct WriterTests {
     // Every key anywhere in a document. A spelling is a procedure, and a procedure could
     // be written at any depth, so asking whether one survived is asking about
     // the whole of it.
-    private static func keys(in value: Value) -> Set<Name> {
+    private static func keys(in value: Value) throws -> Set<Name> {
         switch value {
         case let .array(elements):
-            return elements.reduce(into: Set<Name>()) { found, element in
-                found.formUnion(keys(in: element))
+            return try elements.reduce(into: Set<Name>()) { found, element in
+                found.formUnion(try keys(in: element))
             }
 
-        case let .dictionary(record):
-            return ((try? record.named()) ?? []).reduce(into: Set(((try? record.named()) ?? []).map(\.name))) { found, entry in
-                found.formUnion(keys(in: entry.value))
+        case let .dictionary(mapping):
+            let named = try mapping.named()
+
+            return try named.reduce(into: Set(named.map(\.name))) { found, entry in
+                found.formUnion(try keys(in: entry.value))
             }
 
         default:

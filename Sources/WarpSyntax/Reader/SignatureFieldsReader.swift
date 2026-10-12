@@ -22,7 +22,7 @@ struct SignatureFieldsReader {
     let signature: Signature
 
     // MARK: - Initializer
-    // Read beside other keys the caller has already held the record to.
+    // Read beside other keys the caller has already held the mapping to.
     init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let bounds = try decoder.descendingIfPresent(to: CodingKeys.bounds)

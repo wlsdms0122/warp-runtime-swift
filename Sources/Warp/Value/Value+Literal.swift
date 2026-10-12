@@ -15,7 +15,7 @@ import Foundation
 // structure out of a string: a path is still a `Path` and a reference is
 // still an `Expression`.
 //
-// Bytes, a named record and a procedure have no literal. A procedure is made
+// Bytes, a record and a procedure have no literal. A procedure is made
 // by capturing a scope, which happens during a run, so nothing written down
 // can name one.
 //

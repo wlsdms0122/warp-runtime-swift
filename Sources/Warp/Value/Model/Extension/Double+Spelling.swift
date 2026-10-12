@@ -88,7 +88,7 @@ extension Double {
         return signed + "0." + String(repeating: "0", count: -exponent - 1) + String(digits)
     }
 
-    // The fraction-side door beside `Int.init?(spelling:)`: the text must be
+    // The fraction's counterpart of `Int.init?(spelling:)`: the text must be
     // the value's own one spelling, so `1e0` and `1.50` read as nothing.
     // Public because the document readers hold the same line.
     public init?(spelling: String) {

@@ -17,7 +17,9 @@ struct KeysQuery: Query {
         case dictionary
 
         // MARK: - Property
-        var declared: Parameter { Parameter(name: "dictionary", type: .dictionary(key: .parameter(name: "Key"), value: .any)) }
+        var declared: Parameter {
+            Parameter(name: "dictionary", type: .dictionary(key: .parameter(name: "Key"), value: .any))
+        }
 
         // MARK: - Initializer
         // MARK: - Public

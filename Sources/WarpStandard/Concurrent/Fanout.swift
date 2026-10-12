@@ -105,17 +105,6 @@ struct Fanout: Sendable {
     }
 
     // MARK: - Private
-    // One piece per entry, in the key order the map holds them in.
-    private func pieces(of held: Value.Dictionary) throws -> [Piece] {
-        try held.entries.enumerated().map { position, entry in
-            Piece(
-                key: entry.key,
-                position: position,
-                closure: try closure(entry.value)
-            )
-        }
-    }
-
     // What the fan-out was handed. Closures to run, under keys in a map or
     // at positions in an array, a position being a list piece's key. Which
     // one arrived decides the type of the answer.
@@ -123,8 +112,18 @@ struct Fanout: Sendable {
         of invocation: Invocation<P>
     ) throws -> ([Piece], keyed: Bool) where P.Parameters == FanoutOperand {
         switch invocation[.pieces] {
+        // One piece per entry, in the key order the map holds them in.
         case let .dictionary(held):
-            return (try pieces(of: held), keyed: true)
+            return (
+                try held.entries.enumerated().map { position, entry in
+                    Piece(
+                        key: entry.key,
+                        position: position,
+                        closure: try closure(entry.value)
+                    )
+                },
+                keyed: true
+            )
 
         case let .array(elements):
             return (

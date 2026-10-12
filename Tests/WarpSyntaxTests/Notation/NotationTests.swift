@@ -90,10 +90,10 @@ struct NotationTests {
         #expect(outputs.map?["result"] == .string("matched"))
     }
 
-    @Test("a record a notation does not claim is the expression it is")
-    func anUnclaimedRecordIsAnExpression() throws {
+    @Test("a mapping a notation does not claim is the expression it is")
+    func anUnclaimedMappingIsAnExpression() throws {
         // Given / When. A condition slot asks for an expression, and a spelling
-        // is one way of arriving at one. A record carrying none of the
+        // is one way of arriving at one. A mapping carrying none of the
         // notation's keys never was a condition type, which is what keeps the
         // spellings optional wherever a condition is asked for.
         let sut = try Loader.testing.loadProcedure([
@@ -195,10 +195,10 @@ struct NotationTests {
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 
-    @Test("a template nobody offers is refused, not read as a record")
+    @Test("a template nobody offers is refused, not read as another form")
     func anUnofferedTemplateIsRefused() {
         // When / Then. The two template keys stay reserved whether or not a
-        // notation offers one. Reading them as an ordinary record would make
+        // notation offers one. Reading them as another form would make
         // the same document mean one thing here and another in the notation
         // next door, and nothing would say so.
         #expect {

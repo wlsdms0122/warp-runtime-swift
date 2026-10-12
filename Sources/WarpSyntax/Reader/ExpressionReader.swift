@@ -10,12 +10,13 @@ import Warp
 
 // The expression grammar. `Expression` has constructs and no spelling; this is the
 // spelling. No front end may hide an expression inside a string, so any
-// notation that can write a record can write every expression:
+// notation that can write a mapping can write every expression:
 //
 //   scalar                  . A literal, and strings are always literal text
 //   array                   . Elements are expressions
 //   { ref: a.b[0] }         . A name to resolve in the scope that reads it
 //   { record: { … } }       . A record whose fields are expressions
+//   { dictionary: [[k, v]] }. A map whose keys and values are expressions
 //   { call: <call> }        . A call where a value is wanted, the same form a
 //                              statement writes
 //   { closure: <procedure> }. A procedure written where a value is wanted
@@ -71,12 +72,12 @@ public struct ExpressionReader: Decodable {
                     }
                 )
 
-            case let .dictionary(fields):
-                return try read(record: fields, at: steps, in: decoder)
+            case .dictionary:
+                return try read(mapping: ValueDecoder(standing: value, at: steps, in: decoder), in: decoder)
 
             // A form is keys the notation reserved, and a name under which a
-            // value stands is not one of them. So a record the document named
-            // is read as the literal it spells, name included, and a procedure
+            // value stands is not one of them. So a record value the document
+            // writes is read as the literal it spells, name included, and a procedure
             // as the value it is, for the `Validator` to refuse; reading
             // either as a form would drop what it is refused for.
             case .record, .procedure:
@@ -87,13 +88,14 @@ public struct ExpressionReader: Decodable {
         }
     }
 
-    // One form, one function, each with its own refusals.
-    private static func read(
-        record: Value.Dictionary,
-        at steps: [Place.Step],
-        in decoder: Decoder
-    ) throws -> Warp.Expression {
-        switch Tagging(try record.named(), reading: ExpressionTag.init) {
+    // One form, one function, each with its own refusals. `mapping` stands on
+    // the mapping the form is written as.
+    private static func read(mapping: ValueDecoder, in decoder: Decoder) throws -> Warp.Expression {
+        let steps = mapping.steps
+        let named = try mapping.named()
+        let names = named.map(\.name)
+
+        switch Tagging(named, reading: ExpressionTag.init) {
         case let .one(tag, written):
             let inside = steps + [.key(tag.rawValue)]
 
@@ -113,22 +115,22 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError(
                 "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
                     + " A record with that field is written under `record`"
-                    + " (found keys: \(try record.named().map(\.name)))"
+                    + " (found keys: \(names))"
             )
 
         case .none:
             break
         }
 
-        if let spelled = try spelled(record, at: steps, in: decoder) { return spelled }
+        if let spelled = try spelled(mapping, naming: Set(names), in: decoder) { return spelled }
 
-        if !Set(try record.named().map(\.name)).isDisjoint(with: Interpolation.keys) { return try template(in: record, at: steps, in: decoder) }
+        if !Set(names).isDisjoint(with: Interpolation.keys) { return try template(in: named, at: steps, in: decoder) }
 
         throw ExpressionFormError(
             "a mapping where a value is wanted is one of"
                 + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
                 + " under its one key. A record is written under `record`"
-                + " (found keys: \(try record.named().map(\.name)))"
+                + " (found keys: \(names))"
         )
     }
 
@@ -136,53 +138,52 @@ public struct ExpressionReader: Decodable {
     // mapping that is not a tag's, and nothing where the notation spells
     // nothing or does not claim it.
     private static func spelled(
-        _ record: Value.Dictionary,
-        at steps: [Place.Step],
+        _ mapping: ValueDecoder,
+        naming names: Set<Name>,
         in decoder: Decoder
     ) throws -> Warp.Expression? {
         guard
             let spelling = decoder.notation.spelling,
-            spelling.claims(Set(try record.named().map(\.name)), in: decoder.notation)
+            spelling.claims(names, in: decoder.notation)
         else { return nil }
 
-        return try spelling.expression(
-            from: ValueDecoder(standing: .dictionary(record), at: steps, in: decoder),
-            in: decoder.notation
-        )
+        return try spelling.expression(from: mapping, in: decoder.notation)
     }
 
-    // `{ record: { … } }`: the fields, each an expression, in the record's
-    // order, so that a record with two bad fields refuses the same one every
-    // run.
+    // `{ record: { … } }`: the fields, each an expression, in the key order
+    // of the mapping that writes them, so that a record literal with two bad
+    // fields refuses the same one every run.
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
     ) throws -> Warp.Expression {
-        // A named record is data written as itself, so it reads as the literal
+        // A record value is data written as itself, so it reads as the literal
         // it writes, and the load holds a literal to holding no record.
         if case .record = written {
             return .literal(written)
         }
 
-        guard case let .dictionary(record) = written else {
+        guard case .dictionary = written else {
             throw ExpressionFormError("`record` takes a mapping of its fields")
         }
 
+        let named = try ValueDecoder(standing: written, at: steps, in: decoder).named()
+
         return .record(
-            try record.named().reduce(into: [Name: Warp.Expression]()) { fields, entry in
-                fields[entry.name] = try read(
-                    entry.value,
-                    at: steps + [.key(entry.name.spelling)],
-                    in: decoder
-                )
+            try named.reduce(into: [Name: Warp.Expression]()) { fields, entry in
+                fields[entry.name] = try read(entry.value, at: steps + [.key(entry.name.spelling)], in: decoder)
             }
         )
     }
 
     // `{ dictionary: [[<key>, <value>], …] }`: the entries in the order
     // written, each a list of two expressions.
-    private static func entries(_ written: Value, at steps: [Place.Step], in decoder: Decoder) throws -> Warp.Expression {
+    private static func entries(
+        _ written: Value,
+        at steps: [Place.Step],
+        in decoder: Decoder
+    ) throws -> Warp.Expression {
         let refusal = "`dictionary` takes its entries as a list, each a list of two: its key and its value"
 
         guard case let .array(entries) = written else { throw ReadingError(refusal, at: steps) }
@@ -234,15 +235,16 @@ public struct ExpressionReader: Decodable {
 
         // A type has two spellings and a cast takes either: the string a
         // built-in or a declared name is written as, and the mapping a
-        // record or a procedure signature is written as.
+        // procedure, an array or a dictionary type is written as.
         let type: TypeExpression
 
         do {
             if case let .string(spelling) = spelled {
                 type = try TypeReader.parse(spelling, in: decoder.notation)
             } else {
-                type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
-                    .type
+                let below = ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside)
+
+                type = try TypeReader(from: below).type
             }
         } catch let error as TypeFormError {
             throw ExpressionFormError("{ \(key): }: \(error.message)")
@@ -261,10 +263,10 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return .closure(
-                try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
-                    .procedure
-            )
+            let key = ExpressionTag.closure.key.spelling
+            let below = ValueDecoder(below: decoder, key: key, holding: written, at: steps)
+
+            return .closure(try ProcedureReader(from: below).procedure)
         } catch let refusal as ReadingError {
             // A reading that says where it is says it deeper than here, and
             // folding it into this form's sentence would spend the address
@@ -281,8 +283,9 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps))
-                .expression
+            let below = ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps)
+
+            return try CallForm(from: below).expression
         } catch let refusal as ReadingError {
             throw refusal
         } catch {
@@ -291,12 +294,15 @@ public struct ExpressionReader: Decodable {
     }
 
     private static func template(
-        in record: Value.Dictionary,
+        in named: [(name: Name, value: Value)],
         at steps: [Place.Step],
         in decoder: Decoder
     ) throws -> Warp.Expression {
+        let names = named.map(\.name)
+        let written = Dictionary(uniqueKeysWithValues: named.map { entry in (entry.name, entry.value) })
+
         // A notation may decline to offer a template, and then these keys are
-        // refused rather than read as an ordinary record. Giving up a spelling
+        // refused rather than read as another form. Giving up a spelling
         // says a text may not write it; it does not hand the keys back to mean
         // something else.
         guard let interpolation = decoder.notation.interpolation else {
@@ -306,42 +312,41 @@ public struct ExpressionReader: Decodable {
             )
         }
 
-        guard try record.named().map(\.name).contains(Interpolation.formatKey) else {
+        guard names.contains(Interpolation.formatKey) else {
             // Only `with` remains, and `with` is `format`'s companion.
             throw ExpressionFormError(
-                "`with` only accompanies `format` (found keys: \(try record.named().map(\.name)))"
+                "`with` only accompanies `format` (found keys: \(names))"
             )
         }
 
-        guard Set(try record.named().map(\.name)).subtracting(Interpolation.keys).isEmpty else {
+        guard Set(names).subtracting(Interpolation.keys).isEmpty else {
             throw ExpressionFormError(
-                "a record with `format` holds `format`, the template, and `with`, its bindings,"
-                    + " and nothing else (found keys: \(try record.named().map(\.name)))"
+                "a mapping with `format` holds `format`, the template, and `with`, its bindings,"
+                    + " and nothing else (found keys: \(names))"
             )
         }
 
-        guard case let .string(template)? = record[Interpolation.formatKey] else {
+        guard case let .string(template)? = written[Interpolation.formatKey] else {
             throw ExpressionFormError("`format` takes a template string")
         }
 
         let bindings: [Name: Warp.Expression]
 
-        switch record[Interpolation.withKey] {
+        switch written[Interpolation.withKey] {
         case nil:
             bindings = [:]
 
-        case let .dictionary(withRecord)?:
-            bindings = try withRecord.named().reduce(into: [Name: Warp.Expression]()) { bound, entry in
-                bound[entry.name] = try read(
-                    entry.value,
-                    at: steps + [.key(Interpolation.withKey.spelling), .key(entry.name.spelling)],
-                    in: decoder
-                )
+        case let .dictionary(mapping)?:
+            let inside = steps + [.key(Interpolation.withKey.spelling)]
+            let named = try ValueDecoder(standing: .dictionary(mapping), at: inside, in: decoder).named()
+
+            bindings = try named.reduce(into: [Name: Warp.Expression]()) { bound, entry in
+                bound[entry.name] = try read(entry.value, at: inside + [.key(entry.name.spelling)], in: decoder)
             }
 
         case let other?:
             throw ExpressionFormError(
-                "`format`'s `with` takes a record of bindings,"
+                "`format`'s `with` takes a mapping of bindings,"
                     + " got \(other.nominal)"
             )
         }

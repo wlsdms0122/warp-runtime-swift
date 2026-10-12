@@ -157,9 +157,9 @@ struct LoadGateTests {
         // supplies arrives as an argument and is written down as one.
         let declared: Value = [
             "parameters": [["name": "run", "type": "Dictionary<String, Any>"]],
-            "body": [["let": "whoami", "value": ["ref": "run.id"]]]
+            "body": [["let": "whoami", "value": ["ref": "run[\"id\"]"]]]
         ]
-        let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run.id"]]]]
+        let assumed: Value = ["body": [["let": "whoami", "value": ["ref": "run[\"id\"]"]]]]
 
         // When / Then
         #expect(throws: Never.self) {

@@ -9,8 +9,8 @@ import Foundation
 
 // What a declaration says it takes. Distinct from `Value.nominal`, the type a
 // value is an instance of: `Any` is only ever something a declaration says,
-// and a type names an element, fields, or a declared name where a value has
-// none.
+// and a type names what a list or a map holds where a value's own type names
+// its kind alone.
 //
 // A type is an expression for the same reason an expression is: it composes.
 // `Array<String>` is `array` applied to `String`, and a name is a name for one
@@ -62,7 +62,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // A field that a path may write through. Only a declared type's field is
     // one: `var Int` in a type declaration says a `set` or an `inout` path may
     // pass this field, and a field written without it stops such a path at the
-    // link. What the value holds is the inner type; this is a fact about the
+    // build. What the value holds is the inner type; this is a fact about the
     // slot and never about a value.
     case variable(TypeExpression)
 
@@ -464,18 +464,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // but it does not *spell* null as a value.
     func declaresNull(in types: TypeTable) -> Bool {
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
-    }
-
-    // Whether a value of `other` may stand where this is declared. Exact on
-    // a declared record, by its name, and one-directional: `Any` on the left accepts anything because nothing
-    // was declared, and a value read as `Any` on the right stands only where
-    // `Any` is declared, until a cast says what it is.
-    //
-    // This is the half of checking the builder can do. What a body computes is
-    // not readable from the text, but what a *call* answers is: it is the
-    // callee's declaration, and a declaration is text.
-    func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
-        lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
     }
 
     // MARK: - Private

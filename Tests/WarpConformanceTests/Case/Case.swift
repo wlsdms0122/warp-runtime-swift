@@ -377,7 +377,7 @@ struct Case: Sendable, CustomStringConvertible {
         self.note = note
 
         // One of `answers`, `reads`, `spells`, `builds` or `refuses`, and
-        // exactly one: a record is not a choice, so the count is counted here.
+        // exactly one: a mapping is not a choice, so the count is counted here.
         guard
             case let .dictionary(expect)? = written["expect"],
             expect.count == 1,
@@ -503,7 +503,7 @@ struct Case: Sendable, CustomStringConvertible {
     }
 
     // MARK: - Private
-    // The documents a case lays beside its program. A list of records, each a
+    // The documents a case lays beside its program. A list of mappings, each a
     // document that reads; anything else is a case no two runners would read
     // alike. One that does not read is the case's own fault, since the
     // question was about the program.
@@ -613,7 +613,7 @@ struct Case: Sendable, CustomStringConvertible {
             entries = declared
 
         case let other?:
-            throw ConformanceError("the vocabulary a case asks for declares its procedures as a record, and not as \(other)")
+            throw ConformanceError("the vocabulary a case asks for declares its procedures as a mapping, and not as \(other)")
         }
 
         if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
@@ -625,13 +625,13 @@ struct Case: Sendable, CustomStringConvertible {
         }
 
         let procedures: [Supplied] = try entries.named().map { entry in
-            guard case let .dictionary(record) = entry.value else {
+            guard case let .dictionary(mapping) = entry.value else {
                 throw ConformanceError("'\(entry.name)' is written the way a procedure is")
             }
 
             let declaration = Value.dictionary(
                 Dictionary(
-                    uniqueKeysWithValues: try record.named()
+                    uniqueKeysWithValues: try mapping.named()
                         .filter { field in !Supplied.ownKeys.contains(field.name) }
                         .map { field in (field.name, field.value) }
                 )
@@ -640,10 +640,10 @@ struct Case: Sendable, CustomStringConvertible {
             return Supplied(
                 name: entry.name,
                 declaration: declaration,
-                answers: record["answers"] ?? .null,
-                runs: try Self.flag(record, "runs", of: entry.name, or: false),
-                isolated: try Self.flag(record, "isolated", of: entry.name, or: true),
-                failing: try Self.failing(record["failing"], of: entry.name)
+                answers: mapping["answers"] ?? .null,
+                runs: try Self.flag(mapping, "runs", of: entry.name, or: false),
+                isolated: try Self.flag(mapping, "isolated", of: entry.name, or: true),
+                failing: try Self.failing(mapping["failing"], of: entry.name)
             )
         }
 
@@ -660,7 +660,7 @@ struct Case: Sendable, CustomStringConvertible {
         return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
     }
 
-    // What the entry is given is a record or is not written. Anything else
+    // What the entry is given is a mapping or is not written. Anything else
     // is refused rather than read as nothing given: a case that wrote
     // `arguments 1` asked a question no runner can answer the same way.
     private static func given(_ written: Value?, of name: String) throws -> [Name: Value] {
@@ -672,15 +672,15 @@ struct Case: Sendable, CustomStringConvertible {
             return Dictionary(uniqueKeysWithValues: try given.named().map { entry in (entry.name, entry.value) })
 
         case let other?:
-            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a record or is not written")
+            throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a mapping or is not written")
         }
     }
 
     // A key the runner reads beside a declaration is a bool or is not written.
     // Anything else is refused rather than read as one of the two: a case that
     // wrote `runs 1` asked a question no runner can answer the same way.
-    private static func flag(_ record: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
-        switch record[key] {
+    private static func flag(_ mapping: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
+        switch mapping[key] {
         case nil: return absent
         case let .bool(flag)?: return flag
         case let other?:
