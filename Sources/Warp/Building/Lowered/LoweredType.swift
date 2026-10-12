@@ -542,37 +542,15 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
-    // Where a field stands in this type, and what stands there. Nil where
-    // the build did not prove a layout: a dictionary, a value that arrived
-    // through `Any`, or a type a call still decides. A box is read through,
-    // since a path reads what the box holds.
-    //
-    // The place is the value's, not only the type's. A value settling to a
-    // record type is built on that type's layout, so a field the link
-    // proved stands where the layout puts it.
-    func place(of field: Name, in table: LoweredTypeTable) -> (position: Int, type: LoweredType)? {
-        switch self {
-        case let .record(held):
-            guard let position = held.position(of: field) else { return nil }
-
-            return (position, held.fields[position])
-
-        case let .named(row):
-            return table.loweredTypes[row].place(of: field, in: table)
-
-        case let .variable(inner), let .inout(inner):
-            return inner.place(of: field, in: table)
-
-        default:
-            return nil
-        }
-    }
-
     // What a dot reading this name reaches: the field a record type
     // declares under the name, as what the field holds. Nil where a dot
-    // reaches nothing the type declares.
+    // reaches nothing the type declares. A box is read through, since a
+    // path reads what the box holds.
     func dotted(_ name: Name, in table: LoweredTypeTable) -> LoweredType? {
         switch self {
+        case let .record(held):
+            return held[name]?.fieldUnwrapped
+
         case let .named(row):
             return table.loweredTypes[row].dotted(name, in: table)
 
@@ -580,13 +558,13 @@ indirect enum LoweredType: Sendable, Equatable {
             return inner.dotted(name, in: table)
 
         default:
-            return place(of: name, in: table)?.type.fieldUnwrapped
+            return nil
         }
     }
 
     // What an element of this stands as, for a walk taking an index. Nil
     // where the build proved no element type.
-    func element(in table: LoweredTypeTable) -> LoweredType? {
+    var element: LoweredType? {
         switch self {
         case let .array(element):
             return element
@@ -597,7 +575,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return value
 
         case let .variable(inner), let .inout(inner):
-            return inner.element(in: table)
+            return inner.element
 
         default:
             return nil
@@ -1988,7 +1966,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
         switch expression {
         case let .array(items):
-            guard let element = element(in: table) else { return expression }
+            guard let element = self.element else { return expression }
 
             return .array(items.map { item in element.reaching(item, in: table, replacing: replacing) })
 

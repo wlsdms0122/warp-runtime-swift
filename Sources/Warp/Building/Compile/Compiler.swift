@@ -61,9 +61,8 @@ struct Compiler {
         // leans on, and what each start settles into.
         let declaredVariables = declaredTypes(of: module, in: loweredTypes)
 
-        // The constants with what each reads as: what seeds the environment a
-        // body is judged in, and what a body binds where it reads one at an
-        // index the run reads.
+        // The constants with what each reads as, which seeds the environment
+        // a body is judged in.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
@@ -267,8 +266,7 @@ struct Compiler {
                 )
             },
             numbering: numbering,
-            variables: boxes,
-            declaring: declaredVariables
+            variables: boxes
         )
 
         assert(heldAt == origin, "a document is compiled at the origin it is held at")
@@ -295,7 +293,7 @@ struct Compiler {
         )
 
         constants = typedConstants.mapValues(\.value)
-        compiling.lowering.settle(constants: typedConstants, of: origin)
+        compiling.lowering.settle(constants: constants, of: origin)
 
         variables = try await self.variables(
             of: module,

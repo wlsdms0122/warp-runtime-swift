@@ -19,6 +19,10 @@ struct JudgementTable: Sendable {
     // record the place it is written into reads.
     private(set) var names: [Place: Name] = [:]
 
+    // The path a statement at a place writes, as the walk that judged where
+    // the write lands placed it.
+    private(set) var writes: [Place: LoweredPath] = [:]
+
     // MARK: - Initializer
     init() {
     }
@@ -50,6 +54,19 @@ struct JudgementTable: Sendable {
         names[place] = name
     }
 
+    // The path the statement at this place writes, or nil where the type
+    // check placed none there.
+    func path(writtenAt place: Place) -> LoweredPath? {
+        writes[place]
+    }
+
+    // The path the statement at this place writes.
+    mutating func record(_ path: LoweredPath, writtenAt place: Place) {
+        assert(writes[place] == nil, "one place stands for one statement")
+
+        writes[place] = path
+    }
+
     // The other's entries beside this table's own, the other's standing
     // where both hold a place.
     mutating func absorb(_ other: JudgementTable) {
@@ -59,6 +76,11 @@ struct JudgementTable: Sendable {
             return theirs
         }
         Self.absorb(other.names, into: &names) { _, theirs in theirs }
+        Self.absorb(other.writes, into: &writes) { _, theirs in
+            assertionFailure("one place stands for one statement")
+
+            return theirs
+        }
     }
 
     // This table with the others' entries beside its own, for a construct

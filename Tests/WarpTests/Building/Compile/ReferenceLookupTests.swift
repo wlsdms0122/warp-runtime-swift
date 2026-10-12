@@ -145,7 +145,7 @@ struct ReferenceLookupTests {
     // MARK: - Private
     private func lookup(_ path: Path, in folding: Folding) async -> Lookup {
         do {
-            return .found(try await folding.read(path, at: .given("test")))
+            return .found(try await folding.read(path.lowered, at: .given("test")))
         } catch let unfit as ReferenceUnfit {
             return .unfit(reason: unfit.reason)
         } catch {

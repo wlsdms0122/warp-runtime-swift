@@ -9,9 +9,9 @@ import Foundation
 
 // Writes what the build proved into a body. Every name becomes the slot the
 // frame holds it in, every selector the row it names, every argument the
-// position of its parameter. Nothing is judged here: a name this walk cannot
-// place is a body the build let through unjudged, and is refused as the
-// build's own mistake.
+// position of its parameter, and every path the steps the type check placed
+// it at. Nothing is judged here: a name this walk cannot place is a body the
+// build let through unjudged, and is refused as the build's own mistake.
 //
 // The table has one row per procedure. A closure literal is a procedure the
 // document wrote inside another, so it is lifted out into a row of its own and
@@ -26,10 +26,6 @@ struct Lowering {
         let numbering: Numbering
         let owned: [Name: Int]
         let variables: [Name: Int]
-
-        // What each variable that declared its type holds. One that declared
-        // none holds nothing, as a body's own `var` does.
-        let variableTypes: [Name: LoweredType]
 
         var closureRows: [Int]
 
@@ -73,13 +69,12 @@ struct Lowering {
         // MARK: - Property
         let origin: Int
         let variables: [Name: Int]
-        let variableTypes: [Name: LoweredType]
 
         // The document's constants, settled, for the slots of a declaration's
         // own body. A body names one only where the fold could not settle the
         // read, an index the run reads, and then the constant takes a slot
         // the body binds before its first statement.
-        let constants: [Name: (value: Value, type: LoweredType)]
+        let constants: [Name: Value]
         let outer: (slots: SlotAllocator, names: SlotScope)?
 
         private(set) var names: [Name] = []
@@ -91,11 +86,6 @@ struct Lowering {
         private var variableSlots: [Name: Int] = [:]
         private var capturedSlots: [Name: Int] = [:]
         private var constantSlots: [Name: Int] = [:]
-
-        // What the build proved stands in a slot, for the slots it proved
-        // anything about. A path reads its head here, so a field of a type
-        // the build laid out is lowered to the place it stands in.
-        private var held: [Int: LoweredType] = [:]
 
         var size: Int { names.count }
 
@@ -113,13 +103,11 @@ struct Lowering {
         init(
             origin: Int,
             variables: [Name: Int],
-            variableTypes: [Name: LoweredType],
-            constants: [Name: (value: Value, type: LoweredType)],
+            constants: [Name: Value],
             outer: (slots: SlotAllocator, names: SlotScope)? = nil
         ) {
             self.origin = origin
             self.variables = variables
-            self.variableTypes = variableTypes
             self.constants = constants
             self.outer = outer
         }
@@ -129,16 +117,6 @@ struct Lowering {
             names.append(name)
 
             return names.count - 1
-        }
-
-        // A slot holds what the build proved, and holds nothing where it
-        // proved nothing.
-        func hold(_ slot: Int, _ type: LoweredType?) {
-            held[slot] = type
-        }
-
-        func held(at slot: Int) -> LoweredType? {
-            held[slot]
         }
 
         func allocateParameter(_ name: Name) -> Int {
@@ -151,8 +129,8 @@ struct Lowering {
         // The slot a name reads from here, the way scope reads a name: what
         // this body declared, then what the body it was written in holds,
         // then the module's variables. A closure reaches a module variable
-        // through the body it was written in, so the hold it takes is that
-        // body's.
+        // through the body it was written in, so the slot it captures is
+        // that body's.
         func slot(of name: Name, in names: SlotScope) -> Int? {
             if let slot = names.slots[name] { return slot }
 
@@ -162,7 +140,6 @@ struct Lowering {
                 let slot = allocate(name)
                 capturedSlots[name] = slot
                 captures.append((taken, slot))
-                hold(slot, outer.slots.held(at: taken))
 
                 return slot
             }
@@ -173,7 +150,6 @@ struct Lowering {
                 let slot = allocate(name)
                 variableSlots[name] = slot
                 reads.append((variable: variable, slot: slot))
-                hold(slot, variableTypes[name])
 
                 return slot
             }
@@ -184,8 +160,7 @@ struct Lowering {
 
             let slot = allocate(name)
             constantSlots[name] = slot
-            constantBindings.append((slot: slot, value: constant.value))
-            hold(slot, constant.type)
+            constantBindings.append((slot: slot, value: constant))
 
             return slot
         }
@@ -254,8 +229,8 @@ struct Lowering {
     // closure's row.
     let loweredTypes: LoweredTypeTable
 
-    // Each document's constants, settled, with what each reads as.
-    private var constants: [Int: [Name: (value: Value, type: LoweredType)]] = [:]
+    // Each document's constants, settled.
+    private var constants: [Int: [Name: Value]] = [:]
 
     // The spellings only a private declaration wears, of every document this
     // lowering holds, for the refusal alone: not in `rows`, since nothing
@@ -315,8 +290,7 @@ struct Lowering {
         standing block: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
-        variables ordered: [Name],
-        declaring variableTypes: [Name: LoweredType] = [:]
+        variables ordered: [Name]
     ) -> (origin: Int, block: Range<Int>) {
         let start = table.count
 
@@ -339,7 +313,6 @@ struct Lowering {
                 variables: ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
                     positions[name.element] = name.offset
                 },
-                variableTypes: variableTypes,
                 closureRows: lifted.indices.map { offset in start + block.count + offset }
             )
         )
@@ -387,7 +360,7 @@ struct Lowering {
     }
 
     // A document's constants, once they settle.
-    mutating func settle(constants settled: [Name: (value: Value, type: LoweredType)], of origin: Int) {
+    mutating func settle(constants settled: [Name: Value], of origin: Int) {
         constants[origin] = settled
     }
 
@@ -398,15 +371,12 @@ struct Lowering {
         let slots = SlotAllocator(
             origin: declared.origin,
             variables: documents[declared.origin].variables,
-            variableTypes: documents[declared.origin].variableTypes,
             constants: constants[declared.origin] ?? [:]
         )
         var scope = SlotScope()
 
         for slot in declared.slots {
-            let allocated = slots.allocateParameter(slot.name)
-            scope.slots[slot.name] = allocated
-            slots.hold(allocated, slot.type)
+            scope.slots[slot.name] = slots.allocateParameter(slot.name)
         }
 
         let body = try lower(
@@ -435,7 +405,7 @@ struct Lowering {
         judgements: JudgementTable,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = SlotAllocator(origin: origin, variables: [:], variableTypes: [:], constants: [:])
+        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
         var scope = SlotScope()
 
         for name in names {
@@ -456,12 +426,12 @@ struct Lowering {
     // Lowers a path read against a frame of constants in slot order, as a
     // body's constant path is when it folds.
     func lower(
-        _ path: Path,
+        _ path: LoweredPath,
         reading names: [Name],
         origin: Int,
         at place: Place
     ) throws -> (Operation, Frame) {
-        let slots = SlotAllocator(origin: origin, variables: [:], variableTypes: [:], constants: [:])
+        let slots = SlotAllocator(origin: origin, variables: [:], constants: [:])
         var scope = SlotScope()
 
         for name in names {
@@ -575,30 +545,23 @@ struct Lowering {
             let binding: Instruction.Binding?
 
             switch statement.binding {
-            // A name that says what it holds holds the declared type, which
-            // the build held what it is given to. One that says nothing holds
-            // what the code it was given stands as.
-            case let .constant(name, declared)?:
+            case let .constant(name, _)?:
                 let slot = context.slots.allocate(name)
-                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, holding ?? standing(code, on: context.slots))
                 binding = .bind(slot)
 
-            // A box that said what it holds holds that type through its
-            // declaration and every write, which the build held to it. One
-            // that said nothing is retyped by each write.
-            case let .variable(name, declared)?:
+            case let .variable(name, _)?:
                 let slot = context.slots.allocate(name)
-                let holding = declared?.lowered(in: loweredTypes)
                 scope.slots[name] = slot
-                context.slots.hold(slot, holding)
                 binding = .declare(slot)
 
-            // A write lands as the build held it, so a box that said what it
-            // holds holds it after a write as it did after its declaration.
+            // A write lands where the build placed it.
             case let .assignment(path)?:
-                binding = .assign(try lower(path, in: scope, on: context.slots, at: here))
+                guard let placed = context.judgements.path(writtenAt: here) else {
+                    throw BuildError.unjudged("a path '\(path.rendered)' the build did not place", at: here)
+                }
+
+                binding = .assign(try lower(placed, in: scope, on: context.slots, at: here))
 
             case nil:
                 binding = nil
@@ -616,43 +579,6 @@ struct Lowering {
         return instructions
     }
 
-    // What lowered code stands as, for the readings the build can prove
-    // without judging anything: a record literal stands as the declared
-    // record it was built under, a call on what its row answers, a cast on
-    // what it casts to, and a path on what it reaches. Nil everywhere else,
-    // which leaves the fields below it to be read by name.
-    private func standing(_ code: Operation, on slots: SlotAllocator) -> LoweredType? {
-        switch code {
-        case let .record(held):
-            return loweredTypes.record(named: held.layout.name).map(LoweredType.named)
-
-        case let .local(address):
-            return address.steps.reduce(slots.held(at: address.slot)) { reached, step in
-                switch step {
-                case let .field(_, name, _):
-                    return reached?.place(of: name, in: loweredTypes)?.type
-
-                case .index, .at:
-                    return reached?.element(in: loweredTypes)
-
-                case .name:
-                    return nil
-                }
-            }
-
-        // The call carries its document's number, so what it answers is read
-        // by the row that number stands for here.
-        case let .call(call):
-            return reached(call.procedure, on: slots).map { row in table[row].returns } ?? nil
-
-        case let .cast(_, type, optional):
-            return optional ? nil : type
-
-        default:
-            return nil
-        }
-    }
-
     // `name` is what the statement this expression is the value of
     // introduces, which a loop binds its round under and an attempt its
     // failure.
@@ -668,9 +594,7 @@ struct Lowering {
             return .literal(value)
 
         case let .reference(path):
-            let address = try lower(path, in: scope, on: context.slots, at: place)
-
-            return .local(address)
+            return .local(try lower(reference: path, in: scope, on: context, at: place))
 
         case let .array(array):
             return .array(try array.enumerated().map { position, element in
@@ -779,16 +703,13 @@ struct Lowering {
         let inner = SlotAllocator(
             origin: context.slots.origin,
             variables: [:],
-            variableTypes: [:],
             constants: [:],
             outer: (context.slots, scope)
         )
         var innerScope = SlotScope()
 
-        for slot in procedure.signature.lowered(in: loweredTypes) {
-            let allocated = inner.allocateParameter(slot.name)
-            innerScope.slots[slot.name] = allocated
-            inner.hold(allocated, slot.type)
+        for name in procedure.signature.names {
+            innerScope.slots[name] = inner.allocateParameter(name)
         }
 
         let body = try lower(block, in: innerScope, on: context.with(slots: inner), at: place.child(.closure))
@@ -865,9 +786,7 @@ struct Lowering {
                     throw BuildError.unjudged("a call of a value handing in place what is no path", at: here)
                 }
 
-                let address = try lower(path, in: scope, on: context.slots, at: here)
-
-                return .reference(address)
+                return .reference(try lower(reference: path, in: scope, on: context, at: here))
             }
         )
     }
@@ -922,7 +841,6 @@ struct Lowering {
 
         if let round, let slot {
             inner.slots[round] = slot
-            context.slots.hold(slot, loweredTypes.prelude(TypeSpelling.round))
         }
 
         let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))
@@ -1025,9 +943,7 @@ struct Lowering {
             return .value(try lower(expression, naming: nil, in: scope, on: context, at: place))
         }
 
-        let address = try lower(path, in: scope, on: context.slots, at: place)
-
-        return .reference(address)
+        return .reference(try lower(reference: path, in: scope, on: context, at: place))
     }
 
     private mutating func lower(
@@ -1060,49 +976,47 @@ struct Lowering {
         )
     }
 
+    // The path a reference at this place reads, as the build placed it.
     private func lower(
-        _ path: Path,
+        reference path: Path,
+        in scope: SlotScope,
+        on context: Context,
+        at place: Place
+    ) throws -> Address {
+        guard case let .reference(placed)? = context.judgements[place] else {
+            throw BuildError.unjudged("a path '\(path.rendered)' the build did not place", at: place)
+        }
+
+        return try lower(placed, in: scope, on: context.slots, at: place)
+    }
+
+    private func lower(
+        _ path: LoweredPath,
         in scope: SlotScope,
         on slots: SlotAllocator,
         at place: Place
     ) throws -> Address {
         guard let head = path.head else {
-            throw BuildError.unjudged("a path '\(path.rendered)' with no name at its head", at: place)
+            throw BuildError.unjudged("a path '\(path.path.rendered)' with no name at its head", at: place)
         }
 
         guard let slot = slots.slot(of: head, in: scope) else {
-            throw BuildError.unjudged("a name '\(head)' in '\(path.rendered)' that nothing declares", at: place)
+            throw BuildError.unjudged("a name '\(head)' in '\(path.path.rendered)' that nothing declares", at: place)
         }
-
-        // What stands where the walk is, so a field of a type the build laid
-        // out is lowered to the place it stands in. It runs out as soon as the
-        // walk reaches something the build did not prove, and every step from
-        // there reads by name.
-        var reached = slots.held(at: slot)
 
         let steps = try path.segments.dropFirst().map { segment -> Step in
             switch segment {
+            case let .field(position, name, optional):
+                return .field(position, name, optional: optional)
+
             case let .name(name, optional):
-                guard let place = reached?.place(of: name, in: loweredTypes) else {
-                    reached = nil
-
-                    return .name(name, optional: optional)
-                }
-
-                reached = place.type
-
-                return .field(place.position, name, optional: optional)
+                return .name(name, optional: optional)
 
             case let .index(index, optional):
-                reached = reached?.element(in: loweredTypes)
-
                 return .index(index, optional: optional)
 
-            case let .indexRef(inner, optional):
-                let address = try lower(inner, in: scope, on: slots, at: place)
-                reached = reached?.element(in: loweredTypes)
-
-                return .at(address, optional: optional)
+            case let .at(inner, optional):
+                return .at(try lower(inner, in: scope, on: slots, at: place), optional: optional)
             }
         }
 
