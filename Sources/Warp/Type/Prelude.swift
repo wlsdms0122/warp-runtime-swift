@@ -26,18 +26,11 @@ enum Prelude {
 
     static let contracts: [Name: [Name: ContractProcedure]] = [TypeSpelling.hashable: [:]]
 
-    // Every kind a value is but a procedure, which is the same as no value,
-    // answers `Hashable`.
+    // Every type the language names a value an instance of answers
+    // `Hashable`. A procedure, which is the same as no value, is none of
+    // them.
     static let claims: [Name: Set<Name>] = Dictionary(
-        uniqueKeysWithValues: [
-            TypeSpelling.null,
-            TypeSpelling.bool,
-            TypeSpelling.int,
-            TypeSpelling.double,
-            TypeSpelling.string,
-            TypeSpelling.array,
-            TypeSpelling.dictionary
-        ].map { type in (type, [TypeSpelling.hashable]) }
+        uniqueKeysWithValues: TypeExpression.nominalTypes.keys.map { type in (type, [TypeSpelling.hashable]) }
     )
 
     // Every name declared here.
@@ -45,14 +38,6 @@ enum Prelude {
 
     // The field a round holds: how many rounds ran before it.
     static let index: Name = "index"
-
-    // Where the run puts the fields of the two records it builds, as their
-    // declarations lay them out.
-    static let failure = Layout(
-        name: TypeSpelling.failure,
-        ordered: [FailurePayload.details, FailurePayload.message, FailurePayload.type]
-    )
-    static let round = Layout(name: TypeSpelling.round, ordered: [Prelude.index])
 
     // Where the declarations stand: ahead of every document, written by none.
     static let document = Place.Document.assembled
