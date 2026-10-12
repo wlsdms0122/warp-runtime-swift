@@ -18,7 +18,7 @@ struct RecordOperation: Sendable {
 
     // MARK: - Initializer
     // The same, where the two were read apart and the pairing is what has to be
-    // true. The inner door is reached with a pairing this proved, which is what
+    // true. The unchecked initializer is reached with a pairing this proved, which is what
     // makes its promise a fact rather than an assumption.
     init(layout: Layout, judging fields: [Operation]) throws {
         guard layout.fields.count == fields.count else {
@@ -30,7 +30,7 @@ struct RecordOperation: Sendable {
         self.init(layout: layout, fields: fields)
     }
 
-    // The inner door: the maker already stands on the layout.
+    // The unchecked initializer: the maker already stands on the layout.
     init(layout: Layout, fields: [Operation]) {
         assert(layout.fields.count == fields.count, "a record literal has one field per place its layout names")
 

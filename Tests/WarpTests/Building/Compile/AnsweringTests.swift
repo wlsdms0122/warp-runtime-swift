@@ -259,7 +259,7 @@ struct AnsweringTests {
     func theDeclarationIsNotRewritten() async throws {
         // Given. The reading is the build's own note to itself. A declaration is
         // a promise, and one read off a body is not a promise anybody made:
-        // writing it back would make the boundary check a type nobody wrote,
+        // writing it back would make a judgement check a type nobody wrote,
         // and would put it in a document the writer hands back.
         let sut = try Module(
             procedures: [

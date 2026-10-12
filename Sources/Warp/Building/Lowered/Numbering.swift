@@ -116,8 +116,8 @@ struct Numbering: Sendable {
 
         // A closure's number stands behind the spellings, so the last number
         // this numbering gives is the spellings and every closure counted
-        // together. Counted here, because the door below reaches that number
-        // by adding and a sum that leaves an int is not one.
+        // together. Counted here, because the initializer below reaches that
+        // number by adding and a sum that leaves an int is not one.
         var standing = sent.count + declared.count
 
         for count in counts.values {
@@ -130,7 +130,7 @@ struct Numbering: Sendable {
             standing = summed
         }
 
-        // Through the door that numbers a document, so that what a reading
+        // Through the initializer that numbers a document, so that what a reading
         // stands up is a numbering that counting could have reached. A
         // beginning written down is a beginning that can disagree with the one
         // beside it; a count is not.

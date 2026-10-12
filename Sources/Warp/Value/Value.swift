@@ -87,11 +87,11 @@ public indirect enum Value: Sendable, Equatable {
                 .sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
         }
 
-        // The inner door: entries in the key order, under keys none of which
+        // The unchecked initializer: entries in the key order, under keys none of which
         // is the same as another. An object's list of entries carries both
         // facts once its reading judged the order, so what stands on it comes
         // through here rather than being sorted again. A value born outside a
-        // link has neither behind it and comes through the door above.
+        // link has neither behind it and comes through the initializer above.
         init(ordered entries: [(key: Value, value: Value)]) {
             self.entries = entries
         }

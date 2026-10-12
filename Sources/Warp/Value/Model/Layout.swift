@@ -40,7 +40,7 @@ public struct Layout: Sendable, Hashable {
         self.init(name: name, ordered: fields)
     }
 
-    // The inner door: names already in order, none repeating, where the maker
+    // The unchecked initializer: names already in order, none repeating, where the maker
     // sorted them itself.
     init(name: Name, ordered fields: [Name]) {
         assert(fields.ordered, "a layout's fields are ordered by name")

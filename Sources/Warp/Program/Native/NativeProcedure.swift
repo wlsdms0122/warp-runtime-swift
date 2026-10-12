@@ -8,7 +8,7 @@
 import Foundation
 
 // A procedure implemented natively rather than written as a body. What every
-// one of them says about itself, whichever door it answers through.
+// one of them says about itself, whichever protocol it answers through.
 //
 // The parameters and the imports are here because they are the procedure's
 // own: the names it declares are the names its body reads, the procedures it

@@ -283,8 +283,7 @@ struct BytesTests {
     @Test("a bytes literal fills an array slot at the build, and crosses it whole")
     func aBytesConstantFillsAnArraySlot() async throws {
         // Given. Bytes are a list of whole numbers at the build, and the
-        // boundary has nothing to settle: the slot asked for an array and
-        // bytes are one
+        // slot has nothing to judge: it asked for an array and bytes are one
         let sut = try Module(
             procedures: [
                 "keep": Procedure(

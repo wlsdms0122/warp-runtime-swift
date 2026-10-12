@@ -9,7 +9,7 @@ import Foundation
 
 // A spelling that cannot be a name.
 //
-// Raised by the one door names come through, so the sentence says what the
+// Raised by the one initializer names come through, so the sentence says what the
 // spelling was rather than where it was met. The side that met it says that, by
 // placing this or by refusing in its own terms.
 public struct NameRefused: WarpError {

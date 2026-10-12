@@ -11,7 +11,7 @@ import Foundation
 // spelling that is not a name is a mistake being made where it can be read, and
 // there is nothing to answer with. The same reaction a duplicate key in a value
 // literal gets. A spelling that arrived from anywhere else goes through the
-// throwing door.
+// throwing initializer.
 extension Name: ExpressibleByStringLiteral {
     public init(stringLiteral spelling: String) {
         do {
