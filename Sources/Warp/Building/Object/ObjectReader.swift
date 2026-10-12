@@ -271,6 +271,18 @@ struct ObjectReader {
         }
     }
 
+    // What a struct is applied to, written only where it is applied to
+    // anything.
+    private func applied<T>(_ value: Value, _ read: (Value) throws -> T) throws -> [T] {
+        let arguments = try Field(value, of: "arguments").list(read)
+
+        guard !arguments.isEmpty else {
+            throw ObjectRefused("'arguments' holds nothing, and a struct applied to no types writes no list")
+        }
+
+        return arguments
+    }
+
     private func name(_ value: Value) throws -> Name {
         try Field(value, of: "a name").name()
     }
@@ -327,8 +339,9 @@ struct ObjectReader {
         return read
     }
 
-    // A declared type: a struct, its fields under the struct's tag, or the
-    // type an alias stands for.
+    // A declared type: a struct, its fields under the struct's tag and its
+    // type parameters and their bounds where it takes any, or the type an
+    // alias stands for.
     private func declaration(_ value: Value) throws -> TypeDeclaration {
         var cursor = try FieldCursor(value, of: "type")
 
@@ -338,9 +351,32 @@ struct ObjectReader {
 
         let fields = try keyed(cursor.next(), of: "struct", expression)
 
+        guard !cursor.isAtEnd else { return .struct(fields) }
+
+        let typeParameters = try Field(cursor.next(), of: "typeParameters").list(name)
+
+        guard !typeParameters.isEmpty else {
+            throw ObjectRefused("'typeParameters' lists nothing, and a struct taking none writes no list")
+        }
+
+        // Each name is one parameter, and a mention fills them by name.
+        guard Set(typeParameters).count == typeParameters.count else {
+            throw ObjectRefused("'typeParameters' lists a name twice, and a struct takes each type once")
+        }
+
+        let bounds = try keyed(cursor.next(), of: "bounds") { written in
+            let contracts = try Field(written, of: "bounds").ordered(name)
+
+            guard !contracts.isEmpty else {
+                throw ObjectRefused("'bounds' holds a type parameter to nothing")
+            }
+
+            return Set(contracts)
+        }
+
         try cursor.end()
 
-        return .struct(fields)
+        return .struct(fields, typeParameters: typeParameters, bounds: bounds)
     }
 
     private func expression(_ value: Value) throws -> TypeExpression {
@@ -369,7 +405,11 @@ struct ObjectReader {
         case .variable: read = .variable(try expression(cursor.next()))
         case .`inout`: read = .inout(try expression(cursor.next()))
         case .nullable: read = .nullable(try expression(cursor.next()))
-        case .named: read = .named(try name(cursor.next()))
+        case .named:
+            let named = try name(cursor.next())
+
+            read = .named(named, arguments: try cursor.isAtEnd ? [] : applied(cursor.next(), expression))
+
         case .parameter: read = .parameter(name: try name(cursor.next()))
 
         // One contract is written by its name, so a composition joins two
@@ -614,6 +654,7 @@ struct ObjectReader {
         case .fields: read = .fields
         case .bounds: read = .bounds
         case .entries: read = .entries
+        case .typeParameters: read = .typeParameters
         case nil: throw ObjectRefused("'part' names a part this reads none of")
         }
 
@@ -730,7 +771,11 @@ struct ObjectReader {
         case .variable: read = .variable(try lowered(cursor.next()))
         case .`inout`: read = .inout(try lowered(cursor.next()))
         case .nullable: read = .nullable(try lowered(cursor.next()))
-        case .named: read = .named(try cursor.field().count())
+        case .named:
+            let row = try cursor.field().count()
+
+            read = .named(row, arguments: try cursor.isAtEnd ? [] : applied(cursor.next(), lowered))
+
         case .parameter:
             read = .parameter(
                 label: try name(cursor.next()),

@@ -66,6 +66,7 @@ public extension Place {
             ]
 
         case .fields: [.key(ExpressionTag.struct.rawValue)]
+        case .typeParameters: [.key(TypeDeclarationReader.typeParametersKey.spelling)]
         case .entries: [.key(ExpressionTag.dictionary.rawValue)]
 
         case .callee: [.key(CallForm.CodingKeys.procedure.stringValue)]

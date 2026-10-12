@@ -962,8 +962,12 @@ struct Validator: Sendable {
         case .any, .never, .null, .bool, .int, .double, .string:
             return
 
-        case let .named(name):
+        case let .named(name, arguments):
             try held(name, as: .mention, at: place)
+
+            for argument in arguments {
+                try written(argument, in: context, at: place)
+            }
 
         // One contract is written by its name, so a composition joins two
         // or more.
@@ -1002,9 +1006,17 @@ struct Validator: Sendable {
 
         case let .parameter(name):
             guard context.takes(typeParameter: name) else {
+                guard case .struct = context else {
+                    throw ValidationError(
+                        "writes `\(type.rendered)`, and nothing here is"
+                            + " filled by a call. A type parameter lives in a signature",
+                        at: place
+                    )
+                }
+
                 throw ValidationError(
-                    "writes `\(type.rendered)`, and nothing here is"
-                        + " filled by a call. A type parameter lives in a signature",
+                    "writes `\(type.rendered)`, and the struct lists no '\(name)' under `typeParameters`."
+                        + " A field writes a type parameter its struct lists, which a mention fills",
                     at: place
                 )
             }
@@ -1071,13 +1083,39 @@ struct Validator: Sendable {
     // as any type is.
     private func written(_ declared: TypeDeclaration, at place: Place) throws {
         switch declared {
-        case let .struct(fields):
+        case let .struct(fields, typeParameters, bounds):
+            for (position, parameter) in typeParameters.enumerated() {
+                let here = place.part(.typeParameters).index(position)
+
+                try held(parameter, as: .typeParameter, at: here)
+
+                guard !typeParameters[..<position].contains(parameter) else {
+                    throw ValidationError("lists '\(parameter)' twice", at: here)
+                }
+            }
+
+            for (parameter, contracts) in bounds.sorted(by: { one, other in one.key < other.key }) {
+                let here = place.part(.bounds).key(parameter.spelling)
+
+                guard typeParameters.contains(parameter) else {
+                    throw ValidationError(
+                        "bounds '\(parameter)', which `typeParameters` does not list."
+                            + " A bound rides on a parameter the struct takes",
+                        at: here
+                    )
+                }
+
+                for contract in contracts.sorted() {
+                    try held(contract, as: .contractMention, at: here)
+                }
+            }
+
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.part(.fields).key(name.spelling)
 
                 try held(name, as: .value, at: here)
                 try marked(field, at: here)
-                try written(field.fieldUnwrapped, in: .value, at: here)
+                try written(field.fieldUnwrapped, in: .struct(declaring: Set(typeParameters)), at: here)
             }
 
         case let .alias(type):

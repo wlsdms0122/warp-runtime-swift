@@ -71,9 +71,10 @@ extension TypeExpression {
         // Types and contracts are two tables and no name is in both, so a
         // mention is looked for in each. A contract standing as a type is a
         // value of whatever answers it.
-        case let .named(name):
+        // A struct applied to types is the row and what it is applied to.
+        case let .named(name, arguments):
             if let row = table.row(named: name) {
-                return table.mention(of: row)
+                return table.mention(of: row).applied(to: arguments.map { argument in argument.lowered(in: table, bounds: bounds) })
             }
 
             guard table.declaresContract(name) else { return .never }

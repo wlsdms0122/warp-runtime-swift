@@ -113,9 +113,9 @@ struct TypingContext: Sendable {
     // types, so it has to look through a name to find one. The table lowered
     // every declaration once, so following a name is reading a row.
     func resolve(_ type: LoweredType) -> LoweredType {
-        guard case let .named(row) = type else { return type }
+        guard case let .named(row, arguments) = type else { return type }
 
-        return resolve(loweredTypes.loweredTypes[row])
+        return resolve(loweredTypes.declared(row, applied: arguments))
     }
 
     // MARK: - Private

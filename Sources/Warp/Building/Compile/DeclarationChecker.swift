@@ -280,7 +280,7 @@ struct DeclarationChecker {
         // Types and contracts are two tables and no name is in both, so a
         // mention reaches whichever declares it. A contract standing here is
         // a value of whatever type answers it.
-        case let .named(name):
+        case let .named(name, arguments):
             guard table.types[name] != nil || table.contracts[name] != nil else {
                 throw BuildError(
                     "names type '\(name)', which no module in this"
@@ -288,6 +288,12 @@ struct DeclarationChecker {
                     at: place
                 )
             }
+
+            for argument in arguments {
+                try mentioned(in: argument, at: place, bounds: bounds, resolve: table)
+            }
+
+            try applied(name, to: arguments, at: place, bounds: bounds, in: table)
 
         case let .array(inner), let .inout(inner), let .variable(inner):
             try mentioned(in: inner, at: place, bounds: bounds, resolve: table)
@@ -328,13 +334,66 @@ struct DeclarationChecker {
         resolve table: TypeTable
     ) throws {
         switch declared {
-        case let .struct(fields):
+        case let .struct(fields, _, bounds):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
-                try mentioned(in: field, at: place.part(.fields).key(name.spelling), resolve: table)
+                try mentioned(in: field, at: place.part(.fields).key(name.spelling), bounds: bounds, resolve: table)
             }
+
+            try judge(bounds: bounds, at: place, in: table)
 
         case let .alias(type):
             try mentioned(in: type, at: place, resolve: table)
+        }
+    }
+
+    // A declared name applied to as many types as its declaration takes:
+    // a struct to one per type parameter it lists, each answering the
+    // bounds of its position the way a map's key answers `Hashable`, and
+    // an alias or a contract to none. Where the table cannot say whether
+    // one answers, the pair is written down where the mention stands.
+    private func applied(
+        _ name: Name,
+        to arguments: [TypeExpression],
+        at place: Place,
+        bounds: [Name: Set<Name>],
+        in table: TypeTable
+    ) throws {
+        guard case let .struct(_, typeParameters, declaredBounds) = table.types[name] else {
+            guard arguments.isEmpty else {
+                throw BuildError(
+                    "applies '\(name)' to \(arguments.count) type(s), and '\(name)' is no struct"
+                        + " taking type parameters. Only a struct lists them",
+                    at: place
+                )
+            }
+
+            return
+        }
+
+        guard arguments.count == typeParameters.count else {
+            let taking = typeParameters.map { parameter in "'\(parameter)'" }.joined(separator: ", ")
+
+            throw BuildError(
+                "applies '\(name)' to \(arguments.count) type(s), and '\(name)' takes"
+                    + (typeParameters.isEmpty ? " none" : " \(typeParameters.count), its type parameters \(taking)"),
+                at: place
+            )
+        }
+
+        let types = table.loweredTypes
+
+        for (parameter, argument) in zip(typeParameters, arguments) {
+            for contract in declaredBounds[parameter, default: []].sorted() {
+                if let refusal = types.refusal(
+                    of: argument.lowered(in: types, bounds: bounds),
+                    answering: contract,
+                    orNull: false,
+                    as: "applies '\(name)' at '\(parameter)' to",
+                    leaning: { claim in types.fulfillment?.require(claim, at: place) }
+                ) {
+                    throw BuildError(refusal, at: place)
+                }
+            }
         }
     }
 

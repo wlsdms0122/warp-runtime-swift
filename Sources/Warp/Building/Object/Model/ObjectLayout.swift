@@ -142,6 +142,7 @@ enum ObjectLayout {
         case fields
         case bounds
         case entries
+        case typeParameters
     }
 
     enum ConditionHolderTag: Int {

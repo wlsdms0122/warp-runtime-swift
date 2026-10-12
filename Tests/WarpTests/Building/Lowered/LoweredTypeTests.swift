@@ -236,7 +236,7 @@ struct LoweredTypeTests {
         let table = try #require(compiled.first { one in one.declared.contains("App.entry") }).types
 
         // Then. The parameter naming the nullable type need not be given.
-        guard case let .struct(fields)? = table["App.Kinds"],
+        guard case let .struct(fields, _, _)? = table["App.Kinds"],
             case let .procedure(soft?, _, _)? = fields["soft"]
         else {
             Issue.record("the declared struct holds its procedure type")

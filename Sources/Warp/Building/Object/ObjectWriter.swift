@@ -237,11 +237,21 @@ struct ObjectWriter {
     }
 
     // A declared type: a struct under the struct's tag, its fields by name,
-    // and an alias as the type it stands for.
+    // then, where it takes any, its type parameters in order and their
+    // bounds by name, and an alias as the type it stands for.
     private func declaration(_ declared: TypeDeclaration) throws(ObjectUnwritable) -> Value {
         switch declared {
-        case let .struct(fields):
-            return tagged(ObjectLayout.TypeTag.struct, try keyed(fields, type))
+        case let .struct(fields, typeParameters, bounds):
+            let written = try keyed(fields, type)
+
+            guard !typeParameters.isEmpty else { return tagged(ObjectLayout.TypeTag.struct, written) }
+
+            return tagged(
+                ObjectLayout.TypeTag.struct,
+                written,
+                .array(typeParameters.map(name)),
+                keyed(bounds) { contracts in .array(contracts.sorted().map(name)) }
+            )
 
         case let .alias(stands):
             return try type(stands)
@@ -296,8 +306,12 @@ struct ObjectWriter {
         case let .nullable(held):
             return tagged(Tag.nullable, try type(held))
 
-        case let .named(spelling):
-            return tagged(Tag.named, name(spelling))
+        // What a struct is applied to follows its name where it is applied
+        // to anything.
+        case let .named(spelling, arguments):
+            guard !arguments.isEmpty else { return tagged(Tag.named, name(spelling)) }
+
+            return tagged(Tag.named, name(spelling), .array(try arguments.map(type)))
 
         case let .parameter(spelling):
             return tagged(Tag.parameter, name(spelling))
@@ -467,6 +481,7 @@ struct ObjectWriter {
         case .fields: return tagged(Tag.fields)
         case .bounds: return tagged(Tag.bounds)
         case .entries: return tagged(Tag.entries)
+        case .typeParameters: return tagged(Tag.typeParameters)
         }
     }
 
@@ -577,8 +592,10 @@ struct ObjectWriter {
         case let .nullable(held):
             return tagged(Tag.nullable, try lowered(held))
 
-        case let .named(row):
-            return tagged(Tag.named, .int(row))
+        case let .named(row, arguments):
+            guard !arguments.isEmpty else { return tagged(Tag.named, .int(row)) }
+
+            return tagged(Tag.named, .int(row), .array(try arguments.map(lowered)))
 
         case let .parameter(label, bounds):
             return tagged(Tag.parameter, name(label), .array(bounds.sorted().map(name)))

@@ -118,24 +118,81 @@ final class LoweredTypeTable: Sendable {
     // declares, or the one an alias of a struct stands for. Nil where the
     // name declares no struct.
     func structRow(named name: Name) -> Int? {
-        guard let row = row(named: name), case let .named(declared) = mention(of: row) else { return nil }
+        guard let row = row(named: name), case let .named(declared, _) = mention(of: row) else { return nil }
 
         return declared
+    }
+
+    // What a row stands for where a mention applies it to `arguments`: a
+    // struct with each of its type parameters read as the type at its
+    // position, and what an alias stands for otherwise.
+    func declared(_ row: Int, applied arguments: [LoweredType]) -> LoweredType {
+        guard case let .struct(declared) = loweredTypes[row] else { return loweredTypes[row] }
+
+        return .struct(declared.applied(to: arguments))
+    }
+
+    // What a struct literal taking type parameters is applied to where its
+    // fields read as `fields`: each parameter filled as a call's arguments
+    // fill a declaration's, so a parameter read two ways is read as the
+    // first and the other field is judged against it, and `Never` where no
+    // field reads one, as an empty list's element is. Empty for a struct
+    // taking none.
+    func arguments(of row: Int, filling fields: [Name: LoweredType]) -> [LoweredType] {
+        guard case let .struct(declared) = loweredTypes[row], !declared.typeParameters.isEmpty else { return [] }
+
+        let read = declared.named.compactMap { name, field in fields[name].map { reading in (field.fieldUnwrapped, reading) } }
+        let filled = Substitution(filling: read.map(\.0), against: read.map(\.1), in: self).readings
+
+        return declared.typeParameters.map { parameter in filled[parameter] ?? .never }
+    }
+
+    // What a struct value taking type parameters is applied to where its
+    // fields read as `fields`: each parameter as every reading of it joined,
+    // as a list value reads as its elements joined, and `Never` where no
+    // field reads one. Empty for a struct taking none.
+    func arguments(of row: Int, joining fields: [Name: LoweredType]) -> [LoweredType] {
+        guard case let .struct(declared) = loweredTypes[row], !declared.typeParameters.isEmpty else { return [] }
+
+        var joined: [Name: LoweredType] = [:]
+
+        for (name, field) in declared.named {
+            guard let reading = fields[name] else { continue }
+
+            let read = Substitution(filling: [field.fieldUnwrapped], against: [reading], in: self)
+
+            for (parameter, type) in read.readings.merging(read.disagreeing, uniquingKeysWith: { first, second in first.joined(second) }) {
+                joined[parameter] = joined[parameter].map { held in held.joined(type) } ?? type
+            }
+        }
+
+        return declared.typeParameters.map { parameter in joined[parameter] ?? .never }
     }
 
     // A value from outside with every struct it holds, at any depth, held to
     // the struct its name declares: an alias's name is its struct's, the
     // fields its declaration does not name are left out, the struct is judged
-    // against its declaration, and a name that declares no struct is the name
-    // of no type here. So every struct the run holds is a value of the struct
+    // against its declaration applied to what the name applies it to, or,
+    // where the name applies it to nothing, to what its fields fill its type
+    // parameters with, and a name that declares no struct is the name of no
+    // type here. So every struct the run holds is a value of the struct
     // its name declares, whatever slot it came in at, and this is the one
     // place a value is fitted.
-    func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
+    //
+    // `type` is what the place the value stands at declares, where one does,
+    // walked in step with the value: a struct whose place applies it to
+    // types is judged applied to them, and only where nothing says are its
+    // arguments read off its fields.
+    func resolvingNames(in value: Value, under type: LoweredType?, at path: @autoclosure () -> String) throws -> Value {
         guard value.holdsStruct else { return value }
+
+        let place = type?.literalPlace
 
         switch value {
         case let .array(items):
-            return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
+            return .array(try items.enumerated().map { index, item in
+                try resolvingNames(in: item, under: place?.element, at: "\(path())[\(index)]")
+            })
 
         // A key is a value like any other, so a struct in it is held as one
         // in an entry is. That can make two keys one, which refuses as a map
@@ -144,7 +201,11 @@ final class LoweredTypeTable: Sendable {
             let resolved = try entries.entries.map { key, item in
                 let at = "\(path())\(Path([.index(key)]).rendered)"
 
-                return (key: try resolvingNames(in: key, at: at), value: try resolvingNames(in: item, at: at))
+                guard case let .dictionary(keyType, valueType)? = place else {
+                    return (key: try resolvingNames(in: key, under: nil, at: at), value: try resolvingNames(in: item, under: nil, at: at))
+                }
+
+                return (key: try resolvingNames(in: key, under: keyType, at: at), value: try resolvingNames(in: item, under: valueType, at: at))
             }
 
             do {
@@ -154,16 +215,35 @@ final class LoweredTypeTable: Sendable {
             }
 
         case let .struct(instance):
-            let fields = try instance.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
-
-            guard let row = self.structRow(named: instance.name), case let .struct(declared) = loweredTypes[row] else {
+            guard
+                let named = self.row(named: instance.name).map(mention(of:)),
+                case let .named(row, written) = named,
+                case let .struct(declared) = loweredTypes[row]
+            else {
                 throw ArgumentError("\(path()): is a \(instance.name), which no document declares as a struct")
             }
 
-            let kept = zip(fields.names, fields.values).filter { name, _ in declared[name] != nil }
-            let named = Struct(layout: Layout(name: labels[row], ordered: kept.map(\.0)), values: kept.map(\.1))
+            // What the name applies the struct to, an alias's arguments, or
+            // what its place does where the place names no type parameter
+            // in them, or nothing yet.
+            let said: [LoweredType]? = if !written.isEmpty {
+                written
+            } else if case let .named(placed, arguments)? = place, placed == row, !arguments.isEmpty,
+                !arguments.contains(where: \.namesParameter) {
+                arguments
+            } else {
+                nil
+            }
 
-            return try LoweredType.named(row).settling(.struct(named), at: path(), in: self)
+            let fields = said.map { said in declared.applied(to: said) } ?? declared
+            let resolved = try instance.mapValues { field, held in
+                try resolvingNames(in: held, under: fields[field], at: "\(path()).\(field)")
+            }
+            let kept = zip(resolved.names, resolved.values).filter { name, _ in declared[name] != nil }
+            let fitted = Struct(layout: Layout(name: labels[row], ordered: kept.map(\.0)), values: kept.map(\.1))
+            let arguments = try said ?? self.arguments(of: row, holding: fitted, at: path())
+
+            return try LoweredType.named(row, arguments: arguments).settling(.struct(fitted), at: path(), in: self)
 
         default:
             return value
@@ -174,7 +254,7 @@ final class LoweredTypeTable: Sendable {
     // compile or a link holds stands on the `Prelude`, and one a caller
     // assembled with nothing declared reads it as no value's type.
     func prelude(_ name: Name) -> LoweredType {
-        row(named: name).map(LoweredType.named) ?? .never
+        row(named: name).map { row in .named(row) } ?? .never
     }
 
     // Whether a row is a declared struct's.
@@ -369,6 +449,38 @@ final class LoweredTypeTable: Sendable {
     }
 
     // MARK: - Private
+    // What a struct from outside is applied to where its place does not say:
+    // what the value reads as, each parameter its fields' readings joined,
+    // and a bounded one held to its bounds, which `Any`, what readings of
+    // several types join to, answers none.
+    private func arguments(of row: Int, holding instance: Struct, at path: String) throws -> [LoweredType] {
+        guard case let .struct(declared) = loweredTypes[row] else { return [] }
+
+        let arguments = self.arguments(
+            of: row,
+            joining: Dictionary(uniqueKeysWithValues: zip(instance.names, instance.values.map { field in LoweredType(of: field, in: self) }))
+        )
+        let bounds = declared.fields.reduce(into: [Name: [Name]]()) { found, field in
+            found.merge(field.typeParameters) { first, _ in first }
+        }
+
+        for (parameter, argument) in zip(declared.typeParameters, arguments) {
+            for contract in bounds[parameter] ?? [] {
+                if let refusal = refusal(
+                    of: argument,
+                    answering: contract,
+                    orNull: false,
+                    as: "'\(parameter)' is read as",
+                    leaning: { claim in fulfillment?.require(folded: claim) }
+                ) {
+                    throw ArgumentError("\(path): \(refusal)")
+                }
+            }
+        }
+
+        return arguments
+    }
+
     // What a slot reads a value as: its own marks off, and where it takes null
     // as well, null off too, nil where null is all the value is.
     private func read(_ given: LoweredType, orNull: Bool) -> LoweredType? {

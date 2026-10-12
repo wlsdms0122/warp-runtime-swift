@@ -42,8 +42,9 @@ indirect enum LoweredType: Sendable, Equatable {
     case `inout`(LoweredType)
     case nullable(LoweredType)
 
-    // A declared type, by its row in the table.
-    case named(Int)
+    // A declared type, by its row in the table, with the types a struct
+    // taking type parameters is applied to, in the order it lists them.
+    case named(Int, arguments: [LoweredType] = [])
 
     // A type parameter the call fills, and the contracts the signature
     // held it to, in name order. The label is the spelling that ties one
@@ -96,8 +97,8 @@ indirect enum LoweredType: Sendable, Equatable {
         return false
     }
 
-    // Whether a type parameter stands anywhere in this type. A declared name
-    // or a composition writes none.
+    // Whether a type parameter stands anywhere in this type. A composition
+    // writes none.
     var namesParameter: Bool {
         switch self {
         case .parameter:
@@ -113,8 +114,12 @@ indirect enum LoweredType: Sendable, Equatable {
             return (signature?.parameters ?? []).contains { parameter in parameter.namesParameter }
                 || (signature?.returns?.namesParameter ?? false)
 
-        // A declared struct writes no type parameter.
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .named, .composition, .projection:
+        // A mention of a struct names what it is applied to. The struct's
+        // own parameters are its declaration's, which a mention fills.
+        case let .named(_, arguments):
+            return arguments.contains(where: \.namesParameter)
+
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .projection:
             return false
         }
     }
@@ -137,7 +142,12 @@ indirect enum LoweredType: Sendable, Equatable {
                 found.merge(part.typeParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .named, .composition, .projection:
+        case let .named(_, arguments):
+            return arguments.reduce(into: [:]) { found, argument in
+                found.merge(argument.typeParameters) { first, _ in first }
+            }
+
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .projection:
             return [:]
         }
     }
@@ -172,7 +182,7 @@ indirect enum LoweredType: Sendable, Equatable {
     // which hold no value of their own. Nil for a type that names no row.
     var row: Int? {
         switch self {
-        case let .named(row):
+        case let .named(row, _):
             return row
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -180,6 +190,22 @@ indirect enum LoweredType: Sendable, Equatable {
 
         default:
             return nil
+        }
+    }
+
+    // What the declared struct this stands on is applied to, through the
+    // same marks. Empty for a type naming no row and for a struct taking
+    // no type parameters.
+    var arguments: [LoweredType] {
+        switch self {
+        case let .named(_, arguments):
+            return arguments
+
+        case let .nullable(inner), let .variable(inner), let .inout(inner):
+            return inner.arguments
+
+        default:
+            return []
         }
     }
 
@@ -238,8 +264,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner):
             return .nullable(inner.asHeld)
 
+        case let .named(row, arguments):
+            return .named(row, arguments: arguments.map(\.asHeld))
+
         case .any, .never, .null, .bool, .int, .double, .string, .struct, .procedure, .variable, .inout,
-            .named, .parameter, .composition, .projection:
+            .parameter, .composition, .projection:
             return self
         }
     }
@@ -266,8 +295,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .procedure(signature, _, _):
             return .procedure(signature?.with(failing: .unstated), constness: .unstated, isolation: .unstated)
 
+        case let .named(row, arguments):
+            return .named(row, arguments: arguments.map(\.boxed))
+
         case .any, .never, .null, .bool, .int, .double, .string, .struct, .variable, .inout,
-            .named, .parameter, .composition, .projection:
+            .parameter, .composition, .projection:
             return self
         }
     }
@@ -319,13 +351,17 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .dictionary(key, value):
             return key.holdsNoElement || value.holdsNoElement
 
+        case let .named(_, arguments):
+            return arguments.contains(where: \.holdsNoElement)
+
         default:
             return false
         }
     }
 
     // This type read by its bounded parameters alone: each as the
-    // composition of its bounds, and every other position as `Any`. What is
+    // composition of its bounds, and every other position, what a struct is
+    // applied to among them, as `Any`. What is
     // handed where it stands at a call has to fit this, and what the call
     // filled the parameters with judges the rest.
     var boundedAlone: LoweredType {
@@ -431,8 +467,22 @@ indirect enum LoweredType: Sendable, Equatable {
         // A struct reads as the struct its name declares, an alias's name
         // its struct's, and as `Any` under a name this table declares none
         // under, which a door refuses before anything reads it.
+        // A struct taking type parameters reads as applied to what its
+        // fields read them as.
         case let .struct(instance):
-            self = table.structRow(named: instance.name).map(LoweredType.named) ?? .any
+            guard let row = table.structRow(named: instance.name) else {
+                self = .any
+
+                return
+            }
+
+            self = .named(
+                row,
+                arguments: table.arguments(
+                    of: row,
+                    joining: Dictionary(uniqueKeysWithValues: zip(instance.names, instance.values.map { field in LoweredType(of: field, in: table) }))
+                )
+            )
 
         // A map reads as what its keys and its values hold, joined, and is a
         // map where its keys join to `Any`: a door holds a value to the type
@@ -529,7 +579,13 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .struct(structType):
             return structType.fields.contains { field in field.carriesProcedureTakingInPlace(in: table, walked: walked) }
 
-        case let .named(row):
+        // What a struct is applied to is held in its fields, and what its
+        // declaration writes is walked once.
+        case let .named(row, arguments):
+            guard !arguments.contains(where: { argument in argument.carriesProcedureTakingInPlace(in: table, walked: walked) }) else {
+                return true
+            }
+
             guard !walked.contains(row) else { return false }
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
@@ -570,8 +626,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .struct(held):
             return held[name]?.fieldUnwrapped
 
-        case let .named(row):
-            return table.loweredTypes[row].dotted(name, in: table)
+        case let .named(row, arguments):
+            return table.declared(row, applied: arguments).dotted(name, in: table)
 
         case let .variable(inner), let .inout(inner):
             return inner.dotted(name, in: table)
@@ -627,6 +683,12 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case let (.array(element), .array(judgedElement)):
             return .array(element.refined(by: judgedElement))
+
+        // A value says nothing of what a struct is applied to, and a struct
+        // is one type only at the same arguments, so the constant is the
+        // struct its expression was judged as.
+        case let (.named(row, _), .named(judgedRow, _)) where row == judgedRow:
+            return written
 
         case let (.dictionary(key, value), .dictionary(judgedKey, judgedValue)):
             return LoweredType(keyedBy: key.refined(by: judgedKey), holding: value.refined(by: judgedValue))
@@ -704,8 +766,57 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
             return LoweredType(keyedBy: myKey.joined(theirKey), holding: mine.joined(theirs))
 
+        // One struct is one type only at the same arguments, so two readings
+        // of it join where each is that one type, a whole literal read as
+        // the number beside it.
+        case let (.named(row, mine), .named(theirRow, theirs)) where row == theirRow:
+            let joined = zip(mine, theirs).map { argument, other in argument.joined(other) }
+            let one = LoweredType.named(row, arguments: joined)
+
+            return reads(as: one) && other.reads(as: one) ? one : .any
+
         default:
             return .any
+        }
+    }
+
+    // Whether this reading is `declared` itself: what one struct's two
+    // mentions have to be to be one type. What the reading says of one value
+    // and no declaration writes is read as what is declared: a whole literal
+    // as the number it names, `Never`, what holds no value, as any type, and
+    // a procedure as its positions and answer, the constness, isolation and
+    // failing derived for it meeting what the declaration asks, as a write
+    // handed in place is judged.
+    func reads(as declared: LoweredType) -> Bool {
+        switch (self, declared) {
+        case (.wholeLiteral, .int), (.wholeLiteral, .double), (.never, _):
+            return true
+
+        case let (.procedure(given, constness, isolation), .procedure(asked, wanted, wantedIsolation)):
+            guard wanted != .const || constness == .const, wantedIsolation != .isolated || isolation == .isolated else {
+                return false
+            }
+
+            guard let asked, let given else { return asked == given }
+
+            return given.failing.fails(within: asked.failing)
+                && given.parameters.count == asked.parameters.count
+                && zip(given.parameters, asked.parameters).allSatisfy { mine, theirs in mine.reads(as: theirs) }
+                && (given.returns ?? .any).reads(as: asked.returns ?? .any)
+
+        case let (.array(mine), .array(theirs)), let (.nullable(mine), .nullable(theirs)):
+            return mine.reads(as: theirs)
+
+        case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
+            return myKey.reads(as: theirKey) && mine.reads(as: theirs)
+
+        case let (.named(row, mine), .named(theirRow, theirs)):
+            return row == theirRow
+                && mine.count == theirs.count
+                && zip(mine, theirs).allSatisfy { argument, other in argument.reads(as: other) }
+
+        default:
+            return self == declared
         }
     }
 
@@ -749,7 +860,7 @@ indirect enum LoweredType: Sendable, Equatable {
         case .procedure:
             return TypeSpelling.procedure
 
-        case let .named(row):
+        case let .named(row, _):
             return table.labels[row]
 
         case let .variable(inner), let .inout(inner):
@@ -844,8 +955,10 @@ indirect enum LoweredType: Sendable, Equatable {
 
         // A declared struct is nominal: a value of it fits only its own
         // name, whatever the structure, and nothing else is a value of it.
+        // Applied to types, it is one type only where it is applied to the
+        // same ones.
         case (.named, _), (_, .named):
-            return self == other
+            return other.reads(as: self)
 
         // A nullable slot takes anything nullable whose declared half it
         // takes; null and what cannot be null were taken above. What may be
@@ -936,6 +1049,9 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.dictionary(myKey, mine), .dictionary(theirKey, theirs)):
             return myKey.takesInPlace(theirKey, in: table) && mine.takesInPlace(theirs, in: table)
 
+        case (.named, .named):
+            return written.reads(as: self)
+
         case let (.nullable(mine), _):
             return mine.takesInPlace(written, in: table)
 
@@ -990,8 +1106,9 @@ indirect enum LoweredType: Sendable, Equatable {
         // A declared struct is its name: one struct shares its values with
         // itself and with no other, and a value of a decided kind is none
         // of them.
-        case let (.named(mine), .named(theirs)):
-            return mine == theirs
+        case let (.named(row, mine), .named(theirRow, theirs)):
+            return row == theirRow
+                && zip(mine, theirs).allSatisfy { argument, other in argument.couldBothHold(reading: other, in: table) }
 
         case let (.named, other), let (other, .named):
             return !other.isDecidedKind
@@ -1096,6 +1213,13 @@ indirect enum LoweredType: Sendable, Equatable {
             myKey.binding(against: theirKey, into: &substitution, taking: &taking, holding: &holding, in: table)
             mine.binding(against: theirs, into: &substitution, taking: &taking, holding: &holding, in: table)
 
+        // One struct is walked into by what it is applied to, as a list by
+        // its element.
+        case let (.named(row, mine), .named(theirRow, theirs)) where row == theirRow:
+            for (argument, other) in zip(mine, theirs) {
+                argument.binding(against: other, into: &substitution, taking: &taking, holding: &holding, in: table)
+            }
+
         // What a procedure handed here takes is what it accepts, not a value
         // the call hands, so it is read into `taking`: it fills a parameter
         // only where nothing handed does, and the procedure is then judged
@@ -1155,7 +1279,7 @@ indirect enum LoweredType: Sendable, Equatable {
             return .array(element.filling(filled))
 
         case let .dictionary(key, value):
-            return .dictionary(key: key.filling(filled), value: value.filling(filled))
+            return LoweredType(keyedBy: key.filling(filled), holding: value.filling(filled))
 
         case let .procedure(signature, constness, isolation):
             return .procedure(
@@ -1172,6 +1296,9 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case let .nullable(inner):
             return inner.filling(filled).admittingNull
+
+        case let .named(row, arguments):
+            return .named(row, arguments: arguments.map { argument in argument.filling(filled) })
 
         default:
             return self
@@ -1237,8 +1364,11 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner):
             return try inner.replacingRows(by: type).admittingNull
 
-        case let .named(row):
-            return try type(row)
+        // A struct's arguments are answered too, and stand on what the row
+        // is answered by: a row's own mention, or an alias, which takes no
+        // arguments of its own and may stand for a struct applied to some.
+        case let .named(row, arguments):
+            return try type(row).applied(to: try arguments.map { argument in try argument.replacingRows(by: type) })
 
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
@@ -1271,8 +1401,12 @@ indirect enum LoweredType: Sendable, Equatable {
         case .never:
             throw ArgumentError("\(path()): declares Never, and nothing is ever that")
 
-        case let .named(row):
-            return try table.loweredTypes[row].settling(value, at: path(), in: table)
+        // A mention naming no arguments, what a value from outside is
+        // settled by once its door applied it, reads them off the value.
+        case let .named(row, arguments):
+            let applied = arguments.isEmpty ? LoweredType(of: value, in: table).arguments : arguments
+
+            return try table.declared(row, applied: applied).settling(value, at: path(), in: table)
 
         // Null arrives as itself; anything else is held to the declared half.
         case let .nullable(inner):
@@ -1374,7 +1508,7 @@ indirect enum LoweredType: Sendable, Equatable {
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        try settling(try table.resolvingNames(in: value, at: path()), at: path(), in: table)
+        try settling(try table.resolvingNames(in: value, under: self, at: path()), at: path(), in: table)
     }
 
     // What a cast does, said once. The judgement is `settling`'s; what this
@@ -1519,8 +1653,10 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .struct(held):
             return held.name.spelling
 
-        case let .named(row):
-            return table.labels[row].spelling
+        case let .named(row, arguments):
+            guard !arguments.isEmpty else { return table.labels[row].spelling }
+
+            return "\(table.labels[row].spelling)<\(arguments.map { argument in argument.rendered(in: table) }.joined(separator: ", "))>"
 
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"
@@ -1560,8 +1696,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let (.double, .int(whole)):
             return .double(Double(whole))
 
-        case let (.named(row), _):
-            return table.loweredTypes[row].written(value, in: table)
+        case let (.named(row, arguments), _):
+            return table.declared(row, applied: arguments).written(value, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.written(value, in: table)
@@ -1604,8 +1740,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case (.double, .wholeLiteral):
             return .double
 
-        case let (.named(row), _):
-            return table.loweredTypes[row].written(reading, in: table)
+        case let (.named(row, arguments), _):
+            return table.declared(row, applied: arguments).written(reading, in: table)
 
         case let (.nullable(inner), _), let (.variable(inner), _), let (.inout(inner), _):
             return inner.written(reading, in: table)
@@ -1715,8 +1851,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner):
             return .nullable(inner.spelled(in: table))
 
-        case let .named(row):
-            return .named(table.labels[row])
+        case let .named(row, arguments):
+            return .named(table.labels[row], arguments: arguments.map { argument in argument.spelled(in: table) })
 
         case let .parameter(label, _):
             return .parameter(name: label)
@@ -1727,6 +1863,15 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .projection(of, path):
             return .projection(of: of, path: path)
         }
+    }
+
+    // This mention of a row applying it to `arguments`: a struct's own row
+    // takes them, and an alias, which takes none, is what it stands for, a
+    // struct applied to types included.
+    func applied(to arguments: [LoweredType]) -> LoweredType {
+        guard !arguments.isEmpty, case let .named(row, written) = self, written.isEmpty else { return self }
+
+        return .named(row, arguments: arguments)
     }
 
     // How a struct reads in a message, each field beside how it reads, in
@@ -1758,8 +1903,8 @@ indirect enum LoweredType: Sendable, Equatable {
                 && myIsolation == theirIsolation
                 && mine == theirs
 
-        case let (.named(mine), .named(theirs)):
-            return mine == theirs
+        case let (.named(mine, myArguments), .named(theirs, theirArguments)):
+            return mine == theirs && myArguments == theirArguments
 
         case let (.parameter(myLabel, mine), .parameter(theirLabel, theirs)):
             return myLabel == theirLabel && mine == theirs
@@ -2009,8 +2154,8 @@ indirect enum LoweredType: Sendable, Equatable {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.reaching(expression, in: table, replacing: replacing)
 
-        case let .named(row):
-            return table.loweredTypes[row].reaching(expression, in: table, replacing: replacing)
+        case let .named(row, arguments):
+            return table.declared(row, applied: arguments).reaching(expression, in: table, replacing: replacing)
 
         default:
             break

@@ -16,6 +16,8 @@ import Warp
 //   Dictionary<String, Task>  . The same, for a map: its key's type and its
 //                                value's
 //   Task                      . A name some module declares
+//   Box<Int>                  . A struct some module declares, applied to
+//                                the types its type parameters stand for
 //   { procedure: { parameters: [], returns:, failing: [] } }
 //                             . A procedure, written as the types it is called
 //                                with, what it answers and what it may fail
@@ -345,11 +347,24 @@ struct TypeReader: Decodable {
 
         let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
 
+        // A declared name applied to types is a struct taking type
+        // parameters, and how many it takes is its declaration's, which the
+        // build reads where the name resolves. A type the language names
+        // takes none.
         guard let holding = Holding(spelling: head) else {
-            throw TypeFormError(
-                "type '\(head)' takes no argument. Only "
-                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: " and ")
-                    + " do"
+            let name = try named(head.trimmingCharacters(in: Path.whiteSpace))
+
+            guard TypeExpression.keywords[name] == nil else {
+                throw TypeFormError(
+                    "type '\(head)' takes no argument. Only "
+                        + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: ", ")
+                        + " and a struct a module declares with type parameters do"
+                )
+            }
+
+            return .named(
+                qualifying(name),
+                arguments: try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }
             )
         }
 

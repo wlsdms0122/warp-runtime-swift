@@ -404,7 +404,7 @@ struct TypeChecker {
     private func refuseFields(
         _ written: [Name: LiteralShape],
         of declared: LoweredStruct,
-        named label: Name,
+        named label: String,
         at place: Place,
         in table: LoweredTypeTable,
         fulfillment: Fulfillment
@@ -1740,11 +1740,16 @@ struct TypeChecker {
         // fields, and built under the struct's name. Its fields are read in
         // name order, the order the run evaluates them in, so what one
         // field's write means to the next is the same fact at the run.
+        //
+        // A struct taking type parameters is read as applied to what its
+        // place applies it to, and where the place leaves one to a call, to
+        // what its fields read the parameter as.
         case let .struct(literal):
             let row = declared?.row
+            let applied = declared?.arguments ?? []
             var held: LoweredStruct?
 
-            if let row, case let .struct(fields) = context.loweredTypes.loweredTypes[row] {
+            if let row, case let .struct(fields) = context.loweredTypes.declared(row, applied: applied) {
                 held = fields
             } else {
                 try refuse(
@@ -1760,6 +1765,7 @@ struct TypeChecker {
             var judgements = JudgementTable()
             var flowed = Flow()
             var shapes: [Name: LiteralShape] = [:]
+            var readings: [Name: LoweredType] = [:]
 
             for (name, field) in literal.sorted(by: { $0.key < $1.key }) {
                 let inner = try await inspected(
@@ -1777,6 +1783,7 @@ struct TypeChecker {
                 calls += inner.calls
                 judgements.absorb(inner.judgements)
                 shapes[name] = inner.written
+                readings[name] = inner.written.folded
                 rewritten[name] = inner.rewritten
             }
 
@@ -1794,9 +1801,21 @@ struct TypeChecker {
             }
 
             let label = context.loweredTypes.labels[row]
+            let read = context.loweredTypes.arguments(of: row, filling: readings)
+            let reading = LoweredType.named(
+                row,
+                arguments: zip(applied, read).map { written, read in written.namesParameter ? read : written }
+            )
 
             if case let .judging(_, fulfillment, _) = ask {
-                try refuseFields(shapes, of: held, named: label, at: place, in: context.loweredTypes, fulfillment: fulfillment)
+                try refuseFields(
+                    shapes,
+                    of: held,
+                    named: LoweredType.named(row, arguments: applied).rendered(in: context.loweredTypes),
+                    at: place,
+                    in: context.loweredTypes,
+                    fulfillment: fulfillment
+                )
             }
 
             judgements.record(label, ofStructAt: place)
@@ -1805,7 +1824,7 @@ struct TypeChecker {
                 rewritten: ask.rewrites ? .struct(rewritten) : expression,
                 calls: calls,
                 judgements: judgements,
-                reading: .named(row),
+                reading: reading,
                 flow: flowed
             )
 

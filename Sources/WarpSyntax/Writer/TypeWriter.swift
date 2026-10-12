@@ -43,11 +43,22 @@ struct TypeWriter {
     }
 
     // A declared type: a struct under `struct`, its fields beside their
-    // types, and an alias as the type it stands for.
+    // types, the type parameters it takes and their bounds where it takes
+    // any, and an alias as the type it stands for.
     func value(of declared: TypeDeclaration) throws -> Value {
         switch declared {
-        case let .struct(fields):
-            return .dictionary([TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))])
+        case let .struct(fields, typeParameters, bounds):
+            var written: [Name: Value] = [TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))]
+
+            if !typeParameters.isEmpty {
+                written[TypeDeclarationReader.typeParametersKey] = .array(typeParameters.map { name in .string(name.spelling) })
+            }
+
+            if let bounds = self.bounds(bounds) {
+                written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
+            }
+
+            return .dictionary(written)
 
         case let .alias(type):
             return try value(of: type)
@@ -56,16 +67,22 @@ struct TypeWriter {
 
     // The bounds, written once, at the signature that declares the names.
     func bounds(of signature: Signature) -> Value? {
-        guard !signature.bounds.isEmpty else { return nil }
+        bounds(signature.bounds)
+    }
+
+    // MARK: - Private
+    // Each type parameter beside the contracts it is bounded by, joined with
+    // `&`, or nothing where none is bounded.
+    private func bounds(_ bounds: [Name: Set<Name>]) -> Value? {
+        guard !bounds.isEmpty else { return nil }
 
         return .dictionary(
-            signature.bounds.mapValues { named in
+            bounds.mapValues { named in
                 Value.string(named.sorted().map(\.spelling).joined(separator: " & "))
             }
         )
     }
 
-    // MARK: - Private
     // What a type is written as, before the reading is asked about it.
     private func form(of type: TypeExpression) throws -> Value {
         switch type {
@@ -78,8 +95,17 @@ struct TypeWriter {
         case .string: return .string(TypeSpelling.string.spelling)
         case .selfType: return .string(TypeSpelling.selfType.spelling)
 
-        case let .named(name):
-            return .string(name.spelling)
+        // What a struct is applied to is written between its brackets, and
+        // each of those has a spelling: a procedure type that writes its
+        // signature reaches one through a declared name.
+        case let .named(name, arguments):
+            guard !arguments.isEmpty else { return .string(name.spelling) }
+
+            let spelled = try arguments.map { argument in
+                try self.named(argument, at: "between a struct's brackets. A procedure type is declared and written by its name")
+            }
+
+            return .string("\(name.spelling)<\(spelled.joined(separator: ", "))>")
 
         // No document spells this. It is a type the build worked out from a
         // body, and the load refuses one written into a declaration; a draft

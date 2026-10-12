@@ -253,7 +253,24 @@ struct ClaimChecker {
             }
         }
 
-        let claimed = languageType ?? .named(type)
+        // A claim about a struct taking type parameters is about every value
+        // of it, whatever it is applied to, as one about `Array` is about
+        // every list: each parameter is one no call fills, held to the
+        // bounds the struct declares.
+        var claimed = languageType ?? .named(type)
+        var held = TypeExpression.nominalBounds
+        var standing: [Name: Name] = [:]
+
+        if languageType == nil, case let .struct(_, typeParameters, bounds)? = types[type]?.held {
+            let names = typeParameters.map { parameter in Name(normal: "\(TypeSpelling.selfType).\(parameter)") }
+
+            for (parameter, name) in zip(typeParameters, names) {
+                standing[name] = parameter
+                held[name] = bounds[parameter]
+            }
+
+            claimed = .named(type, arguments: names.map { name in .parameter(name: name) })
+        }
 
         var answering: [Name: Name] = [:]
 
@@ -289,6 +306,8 @@ struct ClaimChecker {
                 reading: witness.held.facts?.answer,
                 answering: type,
                 claimed: claimed,
+                holding: held,
+                standing: standing,
                 of: contract,
                 procedure: procedure,
                 in: table
@@ -353,6 +372,8 @@ struct ClaimChecker {
         reading read: LoweredType?,
         answering type: Name,
         claimed: TypeExpression,
+        holding held: [Name: Set<Name>],
+        standing: [Name: Name],
         of contract: Name,
         procedure: Name,
         in table: TypeTable
@@ -372,7 +393,7 @@ struct ClaimChecker {
         let substituted = Signature(
             parameters: replaced.parameters,
             returns: replaced.returns,
-            bounds: replaced.bounds.merging(TypeExpression.nominalBounds) { mine, _ in mine }
+            bounds: replaced.bounds.merging(held) { mine, _ in mine }
         )
         let takes = given.lowered(in: loweredTypes).map(\.type)
         let asks = substituted.lowered(in: loweredTypes).map(\.type)
@@ -387,10 +408,18 @@ struct ClaimChecker {
             for reading in substitution.everyReading(of: parameter)
                 where !LoweredType.composition(bounds).accepts(reading, in: loweredTypes) {
                 // An element of a list or a map the claim is about is whatever
-                // it holds, which no spelling of a document names.
-                let read = reading == .parameter(label: TypeSpelling.selfElement, bounds: [])
-                    ? "whatever element a value of '\(type)' holds"
-                    : reading.rendered(in: loweredTypes)
+                // it holds, and a struct's parameter whatever a value of it is
+                // applied to there, which no spelling of a document names.
+                let read: String = switch reading {
+                case .parameter(label: TypeSpelling.selfElement, bounds: []):
+                    "whatever element a value of '\(type)' holds"
+
+                case let .parameter(label, _) where standing[label] != nil:
+                    "whatever a value of '\(type)' is applied to at '\(standing[label].map(\.spelling) ?? "")'"
+
+                default:
+                    reading.rendered(in: loweredTypes)
+                }
 
                 return "is named for '\(type)' and the procedure '\(procedure)' that"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
