@@ -2721,7 +2721,7 @@ struct TypeChecker {
 
             // A closure literal written here, at any depth, is completed by
             // the type it is written into.
-            let target = writtenInto(by: written.binding, in: environment, with: context, at: here)
+            let target = try writtenInto(by: written.binding, in: environment, with: context, at: here, when: ask)
             let statement = target.map { into in
                 Statement(binding: written.binding, expression: into.completing(written.expression, in: context.loweredTypes))
             } ?? written
@@ -3178,13 +3178,16 @@ struct TypeChecker {
     // The type a statement writes its value into, where it is known before
     // the value is read: what a name declares, or what a write reaches in a
     // box held to a type or through a path. A whole write a box takes as its
-    // new type writes into none, and neither does a write the check refuses.
+    // new type writes into none. A write's path is written before its value,
+    // so a path that may not be written is refused here, with its own reason,
+    // whatever the value is.
     private func writtenInto(
         by binding: Statement.Binding?,
         in environment: [Name: Binding],
         with context: TypingContext,
-        at place: Place
-    ) -> LoweredType? {
+        at place: Place,
+        when ask: Ask
+    ) throws -> LoweredType? {
         switch binding {
         case let .constant(_, declared?)?, let .variable(_, declared?)?:
             return declared.lowered(in: context.loweredTypes)
@@ -3194,11 +3197,14 @@ struct TypeChecker {
 
             guard path.segments.count > 1 else { return box.heldType }
 
-            guard case let .reaches(reached, _) = writable(path, from: box, in: environment, with: context, at: place) else {
+            switch writable(path, from: box, in: environment, with: context, at: place) {
+            case let .refused(reason):
+                try refuse(reason, at: place, when: ask)
                 return nil
-            }
 
-            return reached
+            case let .reaches(reached, _):
+                return reached
+            }
 
         default:
             return nil
@@ -3223,6 +3229,9 @@ struct TypeChecker {
         if path.segments.count == 1, let fixed = box.heldType {
             slot = fixed
         } else {
+            // The value runs before the write lands, and may itself write the
+            // head or a name the path indexes with, so the path is walked in
+            // the names as the value left them: what the write lands in.
             switch writable(path, from: box, in: environment, with: context, at: place) {
             case let .refused(reason):
                 try refuse(reason, at: place, when: ask)

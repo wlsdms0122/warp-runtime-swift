@@ -126,6 +126,41 @@ struct DeclaredNameTests {
         }
     }
 
+    @Test("a record literal written through a field without var is refused for the field")
+    func aLiteralWrittenThroughAFixedFieldIsRefusedForTheField() async throws {
+        // Given. `p` declares the record the literal would be read as, and
+        // not `var`, so the path is what stops the write
+        let sut = try Module(
+            types: [
+                "App.A": .record(["k": .string]),
+                "App.W": .record(["p": .named("App.A")])
+            ],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .variable("w", declared: .named("App.W")),
+                            expression: .record(["p": .record(["k": .literal(.string("x"))])])
+                        ),
+                        Statement(
+                            binding: .assignment([.name("w"), .name("p")]),
+                            expression: .record(["k": .literal(.string("y"))])
+                        )
+                    ],
+                    result: reference("w")
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("w.p writes through 'p', which the type declares without `var`")
+        }
+    }
+
     @Test("what a name says it holds is what the run puts in it")
     func aDeclarationHoldsTheValue() async throws {
         // Given. The value is a whole number and the name says it holds a
