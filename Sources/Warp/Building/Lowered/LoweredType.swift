@@ -1301,15 +1301,11 @@ indirect enum LoweredType: Sendable, Equatable {
             return .dictionary(
                 Value.Dictionary(
                     ordered: try held.entries.map { written in
-                        let at = "\(path())[\(Rendering(written.key).text())]"
+                        let at = "\(path())\(Path([.index(written.key)]).rendered)"
 
                         return (
                             key: try key.settling(written.key, at: at, in: table),
-                            value: try entry.settling(
-                                written.value,
-                                at: "\(path())\(Path([.index(written.key)]).rendered)",
-                                in: table
-                            )
+                            value: try entry.settling(written.value, at: at, in: table)
                         )
                     }
                 )
