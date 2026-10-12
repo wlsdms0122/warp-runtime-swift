@@ -33,7 +33,7 @@ struct FoldingTests {
         let reference: Path = [.name("count")]
 
         // When
-        let value = try await sut.read(reference, at: .given("test"))
+        let value = try await sut.read(reference.lowered, at: .given("test"))
 
         // Then
         #expect(value == .int(3))
@@ -45,7 +45,7 @@ struct FoldingTests {
         let reference: Path = [.name("maybe")]
 
         // When
-        let value = try await sut.read(reference, at: .given("test"))
+        let value = try await sut.read(reference.lowered, at: .given("test"))
 
         // Then
         #expect(value == .null)
@@ -70,7 +70,7 @@ struct FoldingTests {
         let reference: Path = [.name("record"), .index("gone", optional: true)]
 
         // When / Then
-        #expect(try await sut.read(reference, at: .given("test")) == .null)
+        #expect(try await sut.read(reference.lowered, at: .given("test")) == .null)
     }
 
     @Test("a type-misusing path throws ReferenceUnfit")
@@ -80,7 +80,7 @@ struct FoldingTests {
 
         // When / Then
         await #expect(throws: ReferenceUnfit.self) {
-            try await sut.read(reference, at: .given("test"))
+            try await sut.read(reference.lowered, at: .given("test"))
         }
     }
 

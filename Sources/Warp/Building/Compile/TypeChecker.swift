@@ -37,10 +37,9 @@ struct TypeChecker {
     }
 
     // Where a path walk ended, a read's or a write's: what the whole of the
-    // path holds, with the path each value between its brackets is written
-    // into, or the refusal.
+    // path holds, with the path as the walk placed it, or the refusal.
     private enum PathReading {
-        case reads(LoweredType, rewritten: Path)
+        case reads(LoweredType, placed: LoweredPath)
         case refused(String)
     }
 
@@ -657,9 +656,8 @@ struct TypeChecker {
 
         var walked: Path = [.name(head)]
 
-        // The segments walked, each value between the brackets written into
-        // the place it stands in.
-        var rewritten: Path = [.name(head)]
+        // The segments walked as the run reads them.
+        var placed = LoweredPath([.name(head, optional: false)])
 
         // Whether an optional segment read past a possible absence. The one
         // thing that makes the whole path's answer nullable.
@@ -726,7 +724,7 @@ struct TypeChecker {
                         return .refused(reason)
 
                     case let .reads(_, standing):
-                        return .reads(reached, rewritten: rewritten.appending(contentsOf: standing.segments))
+                        return .reads(reached, placed: placed.appending(contentsOf: standing))
                     }
                 }
 
@@ -740,7 +738,7 @@ struct TypeChecker {
                         return .refused(reason)
 
                     case let .reads(_, standing):
-                        return .reads(.never, rewritten: rewritten.appending(contentsOf: standing.segments))
+                        return .reads(.never, placed: placed.appending(contentsOf: standing))
                     }
                 }
 
@@ -761,7 +759,7 @@ struct TypeChecker {
                         return .refused(reason)
 
                     case let .reads(_, standing):
-                        return .reads(.null, rewritten: rewritten.appending(contentsOf: standing.segments))
+                        return .reads(.null, placed: placed.appending(contentsOf: standing))
                     }
                 }
 
@@ -819,16 +817,16 @@ struct TypeChecker {
 
                 if let refused = indexed(element) { return refused }
 
-                rewritten.append(.indexRef(standing, optional: optionally))
+                placed.append(.at(standing, optional: optionally))
 
-            case let (.index(index, _), .array(element)):
+            case let (.index(index, optionally), .array(element)):
                 if let refusal = position(index, at: walked, in: context.loweredTypes) {
                     return .refused(refusal)
                 }
 
                 if let refused = indexed(element) { return refused }
 
-                rewritten.append(segment)
+                placed.append(.index(index, optional: optionally))
 
             // Brackets on a map read the entry under a key of its key type,
             // written there or read by the run. A key written there is a
@@ -845,7 +843,7 @@ struct TypeChecker {
                 if optionally { optional = true }
 
                 current = entry
-                rewritten.append(.indexRef(standing, optional: optionally))
+                placed.append(.at(standing, optional: optionally))
 
             case let (.index(index, optionally), .dictionary(key, entry)):
                 if let refusal = written(key: index, keyedBy: key, at: walked, in: context.loweredTypes) {
@@ -857,7 +855,7 @@ struct TypeChecker {
                 if optionally { optional = true }
 
                 current = entry
-                rewritten.append(.index(key.written(index, in: context.loweredTypes), optional: optionally))
+                placed.append(.index(key.written(index, in: context.loweredTypes), optional: optionally))
 
             case (.index, _), (.indexRef, _):
                 return .refused(
@@ -870,8 +868,8 @@ struct TypeChecker {
             // found at run, and so is a `?.` on one it does declare: the type
             // proves the field is there, so the spelling that expects absence
             // says nothing, unless it just read past the record's own null.
-            case let (.name(key, _), .record(fields)):
-                guard let field = fields[key] else {
+            case let (.name(key, optionally), .record(fields)):
+                guard let position = fields.position(of: key) else {
                     return .refused(
                         "\(walked.rendered) names '\(key)',"
                             + " which \(current.rendered(in: context.loweredTypes)) does not declare."
@@ -883,8 +881,8 @@ struct TypeChecker {
 
                 if let refusal = needless(.field(key)) { return refusal }
 
-                current = field.fieldUnwrapped
-                rewritten.append(segment)
+                current = fields.fields[position].fieldUnwrapped
+                placed.append(.field(position, key, optional: optionally))
 
             // A type with no fields, a map among them, has no name here to
             // read. The procedure by this spelling is sent with a written
@@ -900,7 +898,7 @@ struct TypeChecker {
             }
         }
 
-        return .reads(optional ? current.admittingNull : current, rewritten: rewritten)
+        return .reads(optional ? current.admittingNull : current, placed: placed)
     }
 
     // The inner index paths a fold can settle. `items[C]` reads its index from
@@ -908,11 +906,11 @@ struct TypeChecker {
     // into the image. Recursive, because an index path holds index paths of its
     // own (`items[names[C]]`) and the promise is about all of them.
     private func foldedIndexReferences(
-        _ path: Path,
+        _ path: LoweredPath,
         at place: Place,
         folding: Folding
-    ) async throws -> Path {
-        var folded: Path = []
+    ) async throws -> LoweredPath {
+        var folded = LoweredPath([])
 
         for segment in path.segments {
             folded.append(try await self.folded(segment, at: place, folding: folding))
@@ -938,7 +936,7 @@ struct TypeChecker {
 
         var current = box.type
         var walked = Path(Array(path.segments.prefix(1)))
-        var rewritten = walked
+        var placed = LoweredPath(path.head.map { head in [.name(head, optional: false)] } ?? [])
 
         for segment in path.segments.dropFirst() {
             walked.append(segment)
@@ -946,13 +944,15 @@ struct TypeChecker {
             current = context.resolve(current)
 
             switch (segment, current) {
-            case let (.name(key, _), .record(fields)):
-                guard let field = fields[key] else {
+            case let (.name(key, optionally), .record(fields)):
+                guard let position = fields.position(of: key) else {
                     return .refused(
                         "\(walked.rendered) names '\(key)', which \(current.rendered(in: context.loweredTypes))"
                             + " does not declare"
                     )
                 }
+
+                let field = fields.fields[position]
 
                 if !field.isVariable {
                     return .refused(
@@ -963,7 +963,7 @@ struct TypeChecker {
                 }
 
                 current = field.fieldUnwrapped
-                rewritten.append(segment)
+                placed.append(.field(position, key, optional: optionally))
 
             // What stands between the brackets is judged as a read's is: a
             // position in a list and a key in a map.
@@ -974,7 +974,7 @@ struct TypeChecker {
 
                 case let .reads(_, standing):
                     current = entry
-                    rewritten.append(.indexRef(standing, optional: optionally))
+                    placed.append(.at(standing, optional: optionally))
                 }
 
             case let (.index(index, optionally), .dictionary(key, entry)):
@@ -983,7 +983,7 @@ struct TypeChecker {
                 }
 
                 current = entry
-                rewritten.append(.index(key.written(index, in: context.loweredTypes), optional: optionally))
+                placed.append(.index(key.written(index, in: context.loweredTypes), optional: optionally))
 
             case let (.indexRef(inner, optionally), .array(element)):
                 switch indexReference(inner, in: environment, with: context, at: place) {
@@ -992,16 +992,16 @@ struct TypeChecker {
 
                 case let .reads(_, standing):
                     current = element
-                    rewritten.append(.indexRef(standing, optional: optionally))
+                    placed.append(.at(standing, optional: optionally))
                 }
 
-            case let (.index(index, _), .array(element)):
+            case let (.index(index, optionally), .array(element)):
                 if let refusal = position(index, at: walked, in: context.loweredTypes) {
                     return .refused(refusal)
                 }
 
                 current = element
-                rewritten.append(segment)
+                placed.append(.index(index, optional: optionally))
 
             case (.name, .any), (.index, .any), (.indexRef, .any):
                 return .refused(
@@ -1029,7 +1029,7 @@ struct TypeChecker {
             }
         }
 
-        return .reads(current, rewritten: rewritten)
+        return .reads(current, placed: placed)
     }
 
     // The declaration an operand or a condition calls that answers only by
@@ -1137,24 +1137,28 @@ struct TypeChecker {
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
-        var rewritten: Path = []
+        var placed = LoweredPath([])
 
         for segment in path.segments {
-            guard case let .indexRef(inner, optionally) = segment else {
-                rewritten.append(segment)
-                continue
-            }
+            switch segment {
+            case let .name(name, optional):
+                placed.append(.name(name, optional: optional))
 
-            switch reading(of: inner, in: environment, with: context, at: place) {
-            case let .refused(reason):
-                return .refused(reason)
+            case let .index(index, optional):
+                placed.append(.index(index, optional: optional))
 
-            case let .reads(_, standing):
-                rewritten.append(.indexRef(standing, optional: optionally))
+            case let .indexRef(inner, optional):
+                switch reading(of: inner, in: environment, with: context, at: place) {
+                case let .refused(reason):
+                    return .refused(reason)
+
+                case let .reads(_, standing):
+                    placed.append(.at(standing, optional: optional))
+                }
             }
         }
 
-        return .reads(.any, rewritten: rewritten)
+        return .reads(.any, placed: placed)
     }
 
     // The one machine that judges an index reference on a list, answering
@@ -1240,18 +1244,18 @@ struct TypeChecker {
     // One index path a fold settles. The recursion of the gathering above,
     // written out because reading a constant runs, and what runs is a call.
     private func folded(
-        _ segment: PathSegment,
+        _ segment: LoweredPath.Segment,
         at place: Place,
         folding: Folding
-    ) async throws -> PathSegment {
-        guard case let .indexRef(written, optionally) = segment else { return segment }
+    ) async throws -> LoweredPath.Segment {
+        guard case let .at(written, optionally) = segment else { return segment }
 
         // An index path indexed in turn by what only the run reads stays a
         // path however it is headed: the run reads it.
         let inner = try await foldedIndexReferences(written, at: place, folding: folding)
 
         guard let head = folding.boundHead(of: inner) else {
-            return .indexRef(inner, optional: optionally)
+            return .at(inner, optional: optionally)
         }
 
         // The mark rides the fold: which element or entry is read settles
@@ -1409,31 +1413,44 @@ struct TypeChecker {
 
                 return Inspection(rewritten: expression, reading: .any, flow: reached)
 
-            case let .reads(read, rewritten):
+            case let .reads(read, placed):
                 guard case let .judging(folding, _, _) = ask else {
                     return Inspection(rewritten: expression, reading: read, flow: reached)
                 }
 
-                guard let folding else {
-                    return Inspection(rewritten: .reference(rewritten), reading: read, flow: reached)
+                // What stays a path reaches the lowering as it was placed.
+                func reference(_ placed: LoweredPath) -> Inspection {
+                    var judgements = JudgementTable()
+
+                    judgements.record(.reference(placed), at: place)
+
+                    return Inspection(
+                        rewritten: .reference(placed.path),
+                        judgements: judgements,
+                        reading: read,
+                        flow: reached
+                    )
                 }
+
+                guard let folding else { return reference(placed) }
 
                 // An inner index path may read a constant too. `items[C]` folds
                 // its index the way a whole constant path folds, so no constant
                 // name survives into the image. One indexed by what only the run
                 // reads (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
-                let folded = try await foldedIndexReferences(rewritten, at: place, folding: folding)
+                let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
 
                 // What an index settled to stands as if it were written there,
                 // and is judged as such.
-                if folded != rewritten, case let .refused(reason) = reading(of: folded, in: environment, with: context, at: place) {
+                if
+                    folded != placed,
+                    case let .refused(reason) = reading(of: folded.path, in: environment, with: context, at: place)
+                {
                     throw BuildError(reason, at: place)
                 }
 
-                guard let head = folding.boundHead(of: folded) else {
-                    return Inspection(rewritten: .reference(folded), reading: read, flow: reached)
-                }
+                guard let head = folding.boundHead(of: folded) else { return reference(folded) }
 
                 do {
                     let value = try await folding.read(folded, at: place)
@@ -2803,9 +2820,8 @@ struct TypeChecker {
             // write is held to.
             var into: LoweredType?
 
-            // What the statement binds, a write's path as it was placed where
-            // the write lands.
-            var binding = statement.binding
+            // A write's path, as the walk where it lands placed it.
+            var placed: LoweredPath?
 
             switch statement.binding {
             case let .constant(id, _)?:
@@ -2839,6 +2855,7 @@ struct TypeChecker {
 
                 if box.heldType == nil, path.segments.count == 1 {
                     environment[id] = Binding(.assigned, inner.reading)
+                    placed = LoweredPath([.name(id, optional: false)])
 
                     if !locals.contains(id) {
                         flowed.land((inner.reading, true), on: id)
@@ -2851,7 +2868,7 @@ struct TypeChecker {
                     let landed = try await landing(path, from: box, in: environment, with: context, at: here, when: ask)
                 else { break }
 
-                binding = .assignment(landed.placed)
+                placed = landed.placed
                 into = try refuseUnfit(
                     inner.written,
                     writtenTo: path,
@@ -2880,8 +2897,18 @@ struct TypeChecker {
 
             // Literals are read as the type they land in reads them.
             let written = ask.rewrites ? into.map { into in into.written(inner.rewritten, in: context.loweredTypes) } : nil
+            let standing = Statement(
+                binding: placed.map { placed in .assignment(placed.path) } ?? statement.binding,
+                expression: written ?? inner.rewritten
+            )
 
-            rewritten.append(Statement(binding: binding, expression: written ?? inner.rewritten))
+            // Lowering reads a write's path at the place its statement stands
+            // at as judging leaves it.
+            if let placed, ask.rewrites {
+                judgements.record(placed, writtenAt: place.statement(standing, at: position))
+            }
+
+            rewritten.append(standing)
         }
 
         return (ask.rewrites ? rewritten : body, calls, judgements, environment, .null, flowed, locals)
@@ -3171,9 +3198,9 @@ struct TypeChecker {
         with context: TypingContext,
         at place: Place,
         when ask: Ask
-    ) async throws -> (slot: LoweredType, placed: Path)? {
-        if path.segments.count == 1, let fixed = box.heldType {
-            return (fixed, path)
+    ) async throws -> (slot: LoweredType, placed: LoweredPath)? {
+        if let head = path.head, path.segments.count == 1, let fixed = box.heldType {
+            return (fixed, LoweredPath([.name(head, optional: false)]))
         }
 
         switch writable(path, from: box, in: environment, with: context, at: place) {
@@ -3188,7 +3215,7 @@ struct TypeChecker {
 
             if
                 folded != placed,
-                case let .refused(reason) = writable(folded, from: box, in: environment, with: context, at: place)
+                case let .refused(reason) = writable(folded.path, from: box, in: environment, with: context, at: place)
             {
                 throw BuildError(reason, at: place)
             }
