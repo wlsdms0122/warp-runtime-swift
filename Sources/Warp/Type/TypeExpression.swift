@@ -466,17 +466,5 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         lowered(in: types.loweredTypes).declaresNull(in: types.loweredTypes)
     }
 
-    // Whether a value of `other` may stand where this is declared. Exact on
-    // a declared record, by its name, and one-directional: `Any` on the left accepts anything because nothing
-    // was declared, and a value read as `Any` on the right stands only where
-    // `Any` is declared, until a cast says what it is.
-    //
-    // This is the half of checking the builder can do. What a body computes is
-    // not readable from the text, but what a *call* answers is: it is the
-    // callee's declaration, and a declaration is text.
-    func accepts(_ other: TypeExpression, in types: TypeTable = .empty) -> Bool {
-        lowered(in: types.loweredTypes).accepts(other.lowered(in: types.loweredTypes), in: types.loweredTypes)
-    }
-
     // MARK: - Private
 }
