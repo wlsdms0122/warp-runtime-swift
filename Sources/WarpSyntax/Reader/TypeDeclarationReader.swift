@@ -29,7 +29,9 @@ struct TypeDeclarationReader: Decodable {
         let keys = keyed.allKeys.map(\.name)
 
         if keys == [Self.recordKey] {
-            self.declared = try Self.record(from: try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling)))
+            let fields = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling))
+
+            self.declared = try Self.record(from: fields)
         } else {
             self.declared = .alias(try TypeReader(from: decoder).type)
         }

@@ -117,7 +117,9 @@ struct TypeReader: Decodable {
 
         // MARK: - Initializer
         init?(spelling: String) {
-            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else { return nil }
+            guard let holding = Self.allCases.first(where: { holding in holding.spelling == spelling }) else {
+                return nil
+            }
 
             self = holding
         }
@@ -316,7 +318,9 @@ struct TypeReader: Decodable {
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
-            return .parameter(name: try named(text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)))
+            let written = text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)
+
+            return .parameter(name: try named(written))
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -345,8 +349,13 @@ struct TypeReader: Decodable {
             )
         }
 
-        guard let held = holding.holding(try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }) else {
-            throw TypeFormError("type '\(text)' is written with another count of types, and `\(holding.spelling)` takes \(holding.arguments)")
+        let parts = try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }
+
+        guard let held = holding.holding(parts) else {
+            throw TypeFormError(
+                "type '\(text)' is written with another count of types,"
+                    + " and `\(holding.spelling)` takes \(holding.arguments)"
+            )
         }
 
         return held

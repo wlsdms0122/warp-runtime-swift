@@ -58,7 +58,8 @@ struct DecodedQuery: Query {
 
         for (position, element) in elements.enumerated() {
             guard case let .int(number) = element, UInt8(exactly: number) != nil else {
-                return "Standard.Text.decoded asks an Array<Int> of bytes, and [\(position)] is \(Rendering(element).text()), which is no whole number from 0 to 255"
+                return "Standard.Text.decoded asks an Array<Int> of bytes, and [\(position)] is"
+                    + " \(Rendering(element).text()), which is no whole number from 0 to 255"
             }
         }
 

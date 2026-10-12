@@ -28,10 +28,12 @@ struct VariableReader: Decodable {
             return
         }
 
-        let declared = try container.decode(TypeReader.self, forKey: AnyCodingKey(stringValue: Self.typeKey.spelling)).type
-        let start = try container.decode(ExpressionReader.self, forKey: AnyCodingKey(stringValue: Self.valueKey.spelling)).expression
+        let typeKey = AnyCodingKey(stringValue: Self.typeKey.spelling)
+        let valueKey = AnyCodingKey(stringValue: Self.valueKey.spelling)
+        let declared = try container.decode(TypeReader.self, forKey: typeKey)
+        let start = try container.decode(ExpressionReader.self, forKey: valueKey)
 
-        self.variable = ModuleVariable(start, declared: declared)
+        self.variable = ModuleVariable(start.expression, declared: declared.type)
     }
 
     // MARK: - Public

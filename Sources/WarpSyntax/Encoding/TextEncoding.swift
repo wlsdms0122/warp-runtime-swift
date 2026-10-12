@@ -273,7 +273,10 @@ public struct TextEncoding {
     private func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !Self.delimiters.contains(next) else { return }
 
-        throw refused("a token runs straight into \(shown(next)), and whitespace or a bracket separates the two", at: reading.startIndex)
+        throw refused(
+            "a token runs straight into \(shown(next)), and whitespace or a bracket separates the two",
+            at: reading.startIndex
+        )
     }
 
     private func quoted(from reading: inout ArraySlice<Unicode.Scalar>) throws -> String {
@@ -714,7 +717,9 @@ public struct TextEncoding {
             // by one has no writing there.
             case let .record(name, count):
                 if standsAsKey, readsAsText(name.spelling) {
-                    throw EncodingRefused("a record named '\(name)' stands as a key, where the text reads a bare name as text")
+                    throw EncodingRefused(
+                        "a record named '\(name)' stands as a key, where the text reads a bare name as text"
+                    )
                 }
 
                 text += name.spelling + " "

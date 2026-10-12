@@ -10,12 +10,12 @@ import Foundation
 // Takes every module this link was given and answers with an image, or
 // refuses.
 //
-// A build is handed its whole module graph at once. The procedures a program can
-// call are the procedures the host put in front of it, so what to build is the
-// host's statement and joining the names up is this. A module's `imports` says what it
-// asks for and never where to find it. Which declaration a run starts from is
-// the run's argument: an image is every declaration the link judged, and a
-// host starts a run from any public one.
+// A build is handed its whole module graph at once. The procedures a program
+// can call are the procedures the host put in front of it, so what to build is
+// the host's statement and joining the names up is this. A module's `imports`
+// says what it asks for and never where to find it. Which declaration a run
+// starts from is the run's argument: an image is every declaration the link
+// judged, and a host starts a run from any public one.
 //
 // Every declaration is judged. A misspelled procedure in an arm today's
 // arguments never take is a defect whether or not a run walks that way, and so
@@ -27,10 +27,11 @@ import Foundation
 // another module in the same link.
 //
 // A name is its declared spelling and nothing else. A call site says
-// `Standard.Math.floored`, and that is the one declaration it can mean, wherever it was
-// written; the image the executor runs is spelled the way the documents were,
-// so a run never has to ask again. Constants settle here: compiling folds a
-// read of one into its value wherever the run has nothing left to decide.
+// `Standard.Math.floored`, and that is the one declaration it can mean,
+// wherever it was written; the image the executor runs is spelled the way the
+// documents were, so a run never has to ask again. Constants settle here:
+// compiling folds a read of one into its value wherever the run has nothing
+// left to decide.
 //
 // Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
@@ -105,9 +106,9 @@ public struct Builder: Sendable {
     // host compiling against them more than once pays for that once.
     //
     // What it costs is every declaration behind the one being compiled: its
-    // signature lowered into slots, and for a native the host's procedure joined to
-    // it under its spelling. A host brings the same vocabulary every run, and
-    // this is where it stops turning it into rows every time.
+    // signature lowered into slots, and for a native the host's procedure
+    // joined to it under its spelling. A host brings the same vocabulary every
+    // run, and this is where it stops turning it into rows every time.
     public func lay(_ compiled: [Compiled], supplying natives: Supplying) throws -> Laid {
         guard !compiled.isEmpty else { return .none }
 

@@ -10,14 +10,14 @@ import Foundation
 // The native code a host brings to a link, by the spelling each procedure was
 // declared under.
 //
-// A compiled document names the procedures it left to native code and carries none
-// of it. What runs is a Swift value the host built, and a document has no way
-// to say what that value is, so the code arrives beside the objects and a
+// A compiled document names the procedures it left to native code and carries
+// none of it. What runs is a Swift value the host built, and a document has no
+// way to say what that value is, so the code arrives beside the objects and a
 // link joins the two by name.
 //
 // Held by the host rather than read out of the modules at every call. The
-// procedures a host brings are the same procedures every run, and joining them up is
-// what a link would otherwise pay for again each time.
+// procedures a host brings are the same procedures every run, and joining them
+// up is what a link would otherwise pay for again each time.
 public struct Supplying: Sendable {
     // A procedure a host brought, beside what it declares about itself. Read
     // once when the supply is built: a link asks the same questions of the

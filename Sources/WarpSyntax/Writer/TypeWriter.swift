@@ -110,7 +110,10 @@ struct TypeWriter {
             return .string("\(TypeReader.Holding.array.spelling)<\(spelling)>")
 
         case let .dictionary(key, value):
-            guard case let .string(keySpelling) = try form(of: key), case let .string(valueSpelling) = try form(of: value) else {
+            guard
+                case let .string(keySpelling) = try form(of: key),
+                case let .string(valueSpelling) = try form(of: value)
+            else {
                 return .dictionary([
                     Name(normal: TypeReader.Holding.dictionary.rawValue): .dictionary([
                         TypeReader.DictionaryTypeReader.CodingKeys.key.name: try self.value(of: key),

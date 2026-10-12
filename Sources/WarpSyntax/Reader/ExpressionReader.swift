@@ -179,7 +179,11 @@ public struct ExpressionReader: Decodable {
 
     // `{ dictionary: [[<key>, <value>], …] }`: the entries in the order
     // written, each a list of two expressions.
-    private static func entries(_ written: Value, at steps: [Place.Step], in decoder: Decoder) throws -> Warp.Expression {
+    private static func entries(
+        _ written: Value,
+        at steps: [Place.Step],
+        in decoder: Decoder
+    ) throws -> Warp.Expression {
         let refusal = "`dictionary` takes its entries as a list, each a list of two: its key and its value"
 
         guard case let .array(entries) = written else { throw ReadingError(refusal, at: steps) }
@@ -238,8 +242,9 @@ public struct ExpressionReader: Decodable {
             if case let .string(spelling) = spelled {
                 type = try TypeReader.parse(spelling, in: decoder.notation)
             } else {
-                type = try TypeReader(from: ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside))
-                    .type
+                let below = ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside)
+
+                type = try TypeReader(from: below).type
             }
         } catch let error as TypeFormError {
             throw ExpressionFormError("{ \(key): }: \(error.message)")
@@ -258,10 +263,10 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return .closure(
-                try ProcedureReader(from: ValueDecoder(below: decoder, key: ExpressionTag.closure.key.spelling, holding: written, at: steps))
-                    .procedure
-            )
+            let key = ExpressionTag.closure.key.spelling
+            let below = ValueDecoder(below: decoder, key: key, holding: written, at: steps)
+
+            return .closure(try ProcedureReader(from: below).procedure)
         } catch let refusal as ReadingError {
             // A reading that says where it is says it deeper than here, and
             // folding it into this form's sentence would spend the address
@@ -278,8 +283,9 @@ public struct ExpressionReader: Decodable {
         in decoder: Decoder
     ) throws -> Warp.Expression {
         do {
-            return try CallForm(from: ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps))
-                .expression
+            let below = ValueDecoder(below: decoder, key: ExpressionTag.call.key.spelling, holding: written, at: steps)
+
+            return try CallForm(from: below).expression
         } catch let refusal as ReadingError {
             throw refusal
         } catch {

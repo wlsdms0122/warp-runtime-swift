@@ -65,7 +65,9 @@ public struct ModuleReader: Decodable {
                     let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
 
                     claims[entry.key] = Set(
-                        try entry.value.map { spelled in notation.qualified(try Name.read(spelled, at: steps), as: .type) }
+                        try entry.value.map { spelled in
+                            notation.qualified(try Name.read(spelled, at: steps), as: .type)
+                        }
                     )
                 },
             constants: try Self.mapping(ExpressionReader.self, in: container, forKey: .const)

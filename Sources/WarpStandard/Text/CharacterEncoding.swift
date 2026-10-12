@@ -26,7 +26,8 @@ enum CharacterEncoding: String, CaseIterable, Sendable {
 
         guard let encoding = CharacterEncoding(rawValue: name) else {
             throw ExecutionError(
-                "\(procedure) asks the name of an encoding it has (\(Self.names.joined(separator: ", "))), and '\(name)' is not one"
+                "\(procedure) asks the name of an encoding it has (\(Self.names.joined(separator: ", "))),"
+                    + " and '\(name)' is not one"
             )
         }
 
