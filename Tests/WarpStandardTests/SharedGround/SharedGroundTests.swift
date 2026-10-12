@@ -231,13 +231,6 @@ struct SharedGroundTests {
         #expect(!Value.int(0).matches(.double(.nan)))
     }
 
-    @Test("a whole and a fraction have no order")
-    func wholeAndFractionHaveNoOrder() async throws {
-        // When / Then. Ordering compares two of one type
-        #expect(Value.order(.int(1), .double(2.5)) == nil)
-        #expect(Value.order(.double(2.5), .int(1)) == nil)
-    }
-
     // MARK: - Public
     // MARK: - Private
     // An entry that sends one procedure a subject and an operand.

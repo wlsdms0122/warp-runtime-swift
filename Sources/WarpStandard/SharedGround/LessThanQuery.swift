@@ -49,14 +49,35 @@ struct LessThanQuery: Query {
 
         // A pair with no order is refused rather than answered false: false
         // claims the opposite comparison would say something, and it would not.
-        guard let order = Value.order(lhs, rhs) else {
+        guard let less = ordered(lhs, rhs) else {
             throw ExecutionError(
                 "\(procedure) asks \(lhs.nominal) and \(rhs.nominal), which have no order"
             )
         }
 
-        return .bool(order == .orderedAscending)
+        return .bool(less)
     }
 
     // MARK: - Private
+    // Whether one orders before the other, for the kinds that order: whole
+    // numbers, fractions and strings. Nil is a pair with no order: two of
+    // different kinds, a kind that does not order, and a fraction that is
+    // not a number, which orders with nothing.
+    private func ordered(_ lhs: Value, _ rhs: Value) -> Bool? {
+        switch (lhs, rhs) {
+        case let (.int(first), .int(second)):
+            return first < second
+
+        case let (.double(first), .double(second)):
+            guard !first.isNaN, !second.isNaN else { return nil }
+
+            return first < second
+
+        case let (.string(first), .string(second)):
+            return first < second
+
+        default:
+            return nil
+        }
+    }
 }

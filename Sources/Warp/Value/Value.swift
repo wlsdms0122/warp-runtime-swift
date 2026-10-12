@@ -674,35 +674,6 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // How two values of one kind stand to each other, for the kinds that
-    // order: whole numbers, fractions and strings. Nil is a pair with no
-    // order: two of different kinds, a kind that does not order, and a
-    // fraction that is not a number, which orders with nothing. `lessThan`
-    // answers the language's own types by this.
-    public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
-        switch (left, right) {
-        case let (.int(first), .int(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.double(first), .double(second)):
-            guard !first.isNaN, !second.isNaN else { return nil }
-
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.string(first), .string(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        default:
-            return nil
-        }
-    }
-
     // Sameness as `equal` answers it. Strict except that worth unifies a
     // whole number with the fraction of the same worth, and bytes, being an
     // array, equal the array of the same elements, applied recursively

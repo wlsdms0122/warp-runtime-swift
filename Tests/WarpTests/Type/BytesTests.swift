@@ -35,7 +35,6 @@ struct BytesTests {
 
         // …and the spellings stay two values, the way 1 and 1.0 do.
         #expect(bytes != ints)
-        #expect(Value.order(bytes, ints) == nil)
     }
 
     @Test("an array slot that asks nothing of a byte takes the compact spelling whole")
