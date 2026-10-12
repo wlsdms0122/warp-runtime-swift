@@ -743,7 +743,8 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The part a path names, in a record by the place the build put the field
-    // at, in a map by key and in an array by position. Every index was read
+    // at, in a map by key and in a list by position, bytes read through the
+    // one projection that owns their equation. Every index was read
     // to a value before this, and the build judged the path against the
     // value's declared type, so a part not held is refused as what it is: an
     // entry not written yet, or a type with no such part.
@@ -751,6 +752,16 @@ public indirect enum Value: Sendable, Equatable {
         guard let step = path.first else { return self }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' reads element \(index) of an array holding \(elements.count)")
+            }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.reading(at: rest, under: rendered)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -776,15 +787,6 @@ public indirect enum Value: Sendable, Equatable {
 
             return try entry.reading(at: rest, under: rendered)
 
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
-                )
-            }
-
-            return try elements[index].reading(at: rest, under: rendered)
-
         default:
             throw ExecutionError(
                 "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
@@ -799,6 +801,14 @@ public indirect enum Value: Sendable, Equatable {
         guard let step = path.first else { return self }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else { return nil }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.written(at: rest, under: rendered)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -818,11 +828,6 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(map), .index(key)):
             return try map[key: key]?.written(at: rest, under: rendered)
 
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else { return nil }
-
-            return try elements[index].written(at: rest, under: rendered)
-
         default:
             throw ExecutionError(
                 "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
@@ -831,8 +836,9 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one part replaced: the part the path names, in a record
-    // by the place the build put the field at, in a map by key and in an
-    // array by position. The rest is kept as it was. The build judged the
+    // by the place the build put the field at, in a map by key and in a list
+    // by position, a list answering in the spelling it was in where that
+    // still holds. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
     // value before this. A map's keys are its own, so an entry under one not
     // held yet is made.
@@ -840,6 +846,17 @@ public indirect enum Value: Sendable, Equatable {
         guard let step = path.first else { return value }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' writes element \(index) of an array holding \(elements.count)")
+            }
+
+            var written = Array(elements)
+            written[index] = try written[index].writing(value, at: rest, under: rendered)
+
+            return respelled(written)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -863,17 +880,6 @@ public indirect enum Value: Sendable, Equatable {
             let entry = try (map[key: key] ?? .null).writing(value, at: rest, under: rendered)
 
             return .dictionary(map.writing(key: key, with: entry))
-
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' writes element \(index) of an array holding \(elements.count)"
-                )
-            }
-
-            var written = elements
-            written[index] = try elements[index].writing(value, at: rest, under: rendered)
-            return .array(written)
 
         case (.null, _):
             throw ExecutionError(
