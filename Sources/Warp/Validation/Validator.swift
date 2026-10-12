@@ -129,18 +129,14 @@ struct Validator: Sendable {
         }
 
         // A claim names two types: the one it is about and the contract it
-        // says that type answers. A claim about a type the language names a
-        // value an instance of (`Int`, `Array`) is about no declaration, so
-        // its key is that type's and no name a document writes.
+        // says that type answers.
         for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
             let place = Place.satisfies(type.spelling, in: .of(module))
 
-            if TypeExpression.nominalTypes[type] == nil {
-                try held(type, as: .type, at: place)
-            }
+            try held(type, as: .claimedType, at: place)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .mention, at: place)
+                try held(contract, as: .contractMention, at: place)
             }
         }
 
@@ -898,7 +894,7 @@ struct Validator: Sendable {
             try held(parameter, as: .typeParameter, at: here)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .mention, at: here)
+                try held(contract, as: .contractMention, at: here)
             }
         }
 
@@ -972,7 +968,7 @@ struct Validator: Sendable {
             }
 
             for name in names.sorted() {
-                try held(name, as: .mention, at: place)
+                try held(name, as: .contractMention, at: place)
             }
 
         // The build's own note to itself: a type it read out of a body, which

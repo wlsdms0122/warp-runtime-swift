@@ -10,11 +10,15 @@ import Foundation
 // Which names may be written where. Each place below holds a name to its own
 // grammar:
 //
-// - a type's name: a type or a contract a module declares, the type a claim
-//   is about, and a record's name. Identifiers joined by dots, a dot being a
-//   character of the name.
-// - a mention: a type or a contract named in a type, a bound or a claim. A
+// - a type's name: a type or a contract a module declares. Identifiers
+//   joined by dots, a dot being a character of the name.
+// - a mention: a type or a contract named in a type, and a record's name. A
 //   type's name, or a name the language declares itself.
+// - a contract's mention: the contract a bound, a part joined with `&` or a
+//   claim names. A type's name, or the contract the language declares, since
+//   a record the language declares is no contract.
+// - a claimed type: the type a claim is about. A mention, or a type the
+//   language names a value an instance of.
 // - a type parameter's name: the `T` of `some T` and a key of `bounds`. One
 //   identifier, since the signature that names it is the only place it means
 //   anything.
@@ -32,6 +36,8 @@ import Foundation
 public enum NameGrammar: Sendable {
     case type
     case mention
+    case contractMention
+    case claimedType
     case typeParameter
     case value
     case contractProcedure
@@ -57,6 +63,12 @@ public enum NameGrammar: Sendable {
 
         case .mention:
             return Prelude.names.contains(name) || NameGrammar.type.holds(name)
+
+        case .contractMention:
+            return Prelude.contracts[name] != nil || NameGrammar.type.holds(name)
+
+        case .claimedType:
+            return TypeExpression.nominalTypes[name] != nil || NameGrammar.mention.holds(name)
 
         case .typeParameter:
             return !NameGrammar.reserved.contains(name) && name.isIdentifier
@@ -94,7 +106,7 @@ public enum NameGrammar: Sendable {
     // wrote the name.
     public func refusal(of name: Name) -> String {
         switch self {
-        case .type, .mention:
+        case .type, .mention, .contractMention, .claimedType:
             return "'\(name)' is no name a module gives a type or a contract: such a name is identifiers"
                 + " joined by dots, and a word the language writes itself (`Int`, `some`, `null` and the rest)"
                 + " is the language's"
