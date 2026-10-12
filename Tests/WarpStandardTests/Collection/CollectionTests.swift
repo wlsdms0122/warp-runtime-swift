@@ -256,7 +256,7 @@ struct CollectionTests {
     }
 
     @Test("a map is walked and rebuilt by its keys")
-    func aDictionaryIsDataRatherThanAType() async throws {
+    func aMapIsDataRatherThanAType() async throws {
         // Given
         let sut = try Module(
             procedures: [

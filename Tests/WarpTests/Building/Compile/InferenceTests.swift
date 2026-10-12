@@ -737,7 +737,7 @@ struct InferenceTests {
     }
 
     @Test("a cast to another declared record is refused, since a record is its name")
-    func aCastOntoADisjointRecordIsRefused() async throws {
+    func aCastOntoAnotherRecordIsRefused() async throws {
         // Given. A declared record is its name, so no value is one record
         // and another at once
         let sut = try Module(

@@ -91,7 +91,7 @@ struct NotationTests {
     }
 
     @Test("a mapping a notation does not claim is the expression it is")
-    func anUnclaimedRecordIsAnExpression() throws {
+    func anUnclaimedMappingIsAnExpression() throws {
         // Given / When. A condition slot asks for an expression, and a spelling
         // is one way of arriving at one. A mapping carrying none of the
         // notation's keys never was a condition type, which is what keeps the

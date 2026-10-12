@@ -102,7 +102,7 @@ struct InPlaceTests {
     }
 
     @Test("a module variable settled as a map is written under new keys")
-    func moduleVariableSettledAsADictionaryTakesNewNames() async throws {
+    func moduleVariableSettledAsAMapTakesNewKeys() async throws {
         // Given. A map of one key to start with: a map's keys are data, so
         // what it reads as is what its entries hold, not which keys it holds
         // them under.

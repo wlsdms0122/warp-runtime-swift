@@ -138,7 +138,7 @@ struct OneSpellingTests {
     }
 
     @Test("a field's type written as a mapping of fields keeps its own refusal and place")
-    func aNestedRecordTypeKeepsItsRefusal() {
+    func aFieldTypeWrittenAsFieldsKeepsItsRefusal() {
         // Given. A field's type written as a mapping of fields, which is no
         // type form
         let document: Value = [

@@ -290,7 +290,7 @@ struct BinaryEncodingTests {
     }
 
     @Test("a field name outside normal form C is refused")
-    func aDenormalKeyIsRefused() throws {
+    func aDenormalFieldIsRefused() throws {
         // Given. É as e-plus-mark: valid UTF-8, ascending order, and a second
         // byte spelling for a name whose NFC form is one character. Accepting
         // it would let one name sort to two places and a record hold a field
@@ -349,7 +349,7 @@ struct BinaryEncodingTests {
     }
 
     @Test("a field name outside normal form C never reaches the way out")
-    func aDenormalKeyIsRefusedWhenWriting() {
+    func aDenormalFieldIsRefusedWhenWriting() {
         // Given. A record's field names are names, so there is no value
         // carrying one for a writing to refuse: the refusal is at the
         // initializer a name comes through.

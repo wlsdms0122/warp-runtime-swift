@@ -46,7 +46,7 @@ struct NotationGateTests {
     }
 
     @Test("a statement written as something other than a mapping is refused")
-    func statementMustBeARecord() {
+    func statementMustBeAMapping() {
         // Given / When / Then
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure(["body": ["done"]])
