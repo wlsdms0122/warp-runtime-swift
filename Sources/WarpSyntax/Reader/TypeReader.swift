@@ -417,9 +417,11 @@ struct TypeReader: Decodable {
             return try parse(written, in: notation)
         }
 
-        guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {
+        guard case .dictionary = try ValueReader(from: decoder).value else {
             throw ReadingError(Self.unread, at: decoder.steps)
         }
+
+        let keyed = try decoder.container(keyedBy: AnyCodingKey.self)
 
         // A mapping is a form by its one key. The form is committed by its key
         // *before* what is under it is read, so a malformed signature refuses

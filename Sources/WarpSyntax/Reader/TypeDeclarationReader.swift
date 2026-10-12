@@ -40,7 +40,7 @@ struct TypeDeclarationReader: Decodable {
     // A record's fields, each a type. Each field is read where it stands, so a
     // refusal inside one keeps its own place and its own sentence.
     private static func record(from decoder: Decoder) throws -> TypeDeclaration {
-        guard (try? decoder.container(keyedBy: AnyCodingKey.self)) != nil else {
+        guard case .dictionary = try ValueReader(from: decoder).value else {
             throw ReadingError("a record is a mapping of its fields to their types", at: decoder.steps)
         }
 

@@ -15,16 +15,16 @@ struct ValueDecoder: Decoder {
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
         let mapping: Value.Dictionary
+
+        // The names the mapping's keys are, in the key order.
+        let names: [Name]
+
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            mapping.keys.compactMap { key in
-                guard case let .string(text) = key else { return nil }
-
-                return Key(stringValue: text)
-            }
+            names.compactMap { name in Key(stringValue: name.spelling) }
         }
 
         // MARK: - Initializer
@@ -321,12 +321,9 @@ struct ValueDecoder: Decoder {
 
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .dictionary(mapping) = value else {
-            throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
-        }
-
-        return KeyedDecodingContainer(KeyedContainer(
-            mapping: mapping,
+        KeyedDecodingContainer(KeyedContainer(
+            mapping: try mapping(),
+            names: try named().map(\.name),
             codingPath: codingPath,
             steps: steps,
             userInfo: userInfo
@@ -391,24 +388,23 @@ struct ValueDecoder: Decoder {
         }
     }
 
-    // A record of readers, read in the order the names sort in.
-    //
-    // `Dictionary` reads its keys in hash order, and the seed for that changes
-    // from one process to the next. Two entries that are both wrong would then
-    // be refused in either order, and the one line an author is given would not
-    // be the same line twice, which is the whole of what an address is for.
-    // Sorted rather than as-written because a document is a value by then and a
-    // value's record has no order to have kept.
+    // A mapping of readers, each read in the key order, so that of two
+    // entries that are both wrong the same one is refused every run.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
-        guard case let .dictionary(mapping) = value else {
-            throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
+        try named().reduce(into: [Name: T]()) { read, entry in
+            read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
         }
+    }
 
-        return try mapping.named()
-            .sorted { left, right in left.name.spelling < right.name.spelling }
-            .reduce(into: [Name: T]()) { read, entry in
-                read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)
-            }
+    // The entries of the mapping this stands on, under the names their keys
+    // are, in the key order. A document's mappings are keyed by names, and a
+    // key that is no name refuses here, at the mapping that writes it.
+    func named() throws -> [(name: Name, value: Value)] {
+        do {
+            return try mapping().named()
+        } catch let refusal as ValueRefused {
+            throw ReadingError(refusal.message, at: steps)
+        }
     }
 
     // The one place a Codable type is made from a value, shared by all three
@@ -446,11 +442,16 @@ struct ValueDecoder: Decoder {
     // MARK: - Private
     // Looked up where the map keeps it, under the key's text.
     private func held(_ key: String) throws -> Value? {
-        guard case let .dictionary(held) = value else {
+        try mapping()[key: .string(key)]
+    }
+
+    // The mapping this stands on.
+    private func mapping() throws -> Value.Dictionary {
+        guard case let .dictionary(mapping) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
-        return held[key: .string(key)]
+        return mapping
     }
 
     private func descending(to key: String, holding held: Value) -> ValueDecoder {
