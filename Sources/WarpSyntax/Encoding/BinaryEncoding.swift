@@ -161,16 +161,6 @@ public struct BinaryEncoding {
         }
     }
 
-    // A map read out of the bytes. Its keys arrived ascending, so none is the
-    // same as another.
-    private func map(_ held: [(key: Value, value: Value)]) throws -> Value {
-        do {
-            return .dictionary(try Value.Dictionary(held))
-        } catch let refusal as ValueRefused {
-            throw EncodingRefused(refusal.message)
-        }
-    }
-
     private func write(_ value: Value, into bytes: inout Data) throws {
         var walk = ValueWalk(value)
 
@@ -390,8 +380,10 @@ public struct BinaryEncoding {
                     var held = held
                     held.append((key: key, value: value))
 
+                    // Strictly ascending, so the map's door finds no key the
+                    // same as another.
                     if expecting == 1 {
-                        completed = try map(held)
+                        completed = .dictionary(try Value.Dictionary(held))
                     } else {
                         opened.append(.map(expecting: expecting - 1, held: held, key: nil))
                     }
