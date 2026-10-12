@@ -374,7 +374,7 @@ struct LoweringTests {
                 "App.take": Procedure(
                     signature: Signature(
                         parameters: [
-                            Parameter(name: "of", type: .inout(.procedure(ProcedureType(parameters: [.named("Count")], returns: .null),
+                            Parameter(name: "of", type: .inout(.procedure(ProcedureType(parameters: [.named("Count")], returns: .null, failing: .these([])),
                                     .const,
                                     .isolated
                                 ))

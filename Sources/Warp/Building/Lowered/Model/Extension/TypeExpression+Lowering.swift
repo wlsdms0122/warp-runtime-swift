@@ -51,7 +51,8 @@ extension TypeExpression {
                 type.map { type in
                     LoweredProcedureType(
                         parameters: type.parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) },
-                        returns: type.returns?.lowered(in: table, bounds: bounds)
+                        returns: type.returns?.lowered(in: table, bounds: bounds),
+                        failing: type.failing
                     )
                 },
                 constness: constness,

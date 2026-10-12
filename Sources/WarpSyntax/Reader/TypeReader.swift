@@ -16,21 +16,22 @@ import Warp
 //   Dictionary<String, Task>  . The same, for a map: its key's type and its
 //                                value's
 //   Task                      . A name some module declares
-//   { procedure: { parameters: [], returns: } }
+//   { procedure: { parameters: [], returns:, failing: [] } }
 //                             . A procedure, written as the types it is called
-//                                with and what it answers. Bare `Procedure` says
-//                                only that it is one
+//                                with, what it answers and what it may fail
+//                                with. Bare `Procedure` says only that it is one
 //
 // A mapping is one of these by its one key. A record is a structure a
 // module declares under `types`, and a type names it.
 struct TypeReader: Decodable {
     // The inside of a procedure type: the types a value is applied with, in
-    // position order, and what it answers. No names, since a value carries
-    // none.
+    // position order, what it answers and what it may fail with. No names,
+    // since a value carries none.
     struct ProcedureTypeReader: Decodable {
         enum CodingKeys: String, CodingKey, CaseIterable {
             case parameters
             case returns
+            case failing
         }
 
         // MARK: - Property
@@ -52,7 +53,10 @@ struct TypeReader: Decodable {
                     .map(\.type) ?? [],
                 returns: try container
                     .decodeIfPresent(TypeReader.self, forKey: .returns)?
-                    .type
+                    .type,
+                failing: try container
+                    .decodeIfPresent([String].self, forKey: .failing)
+                    .map { failures in .these(Set(failures)) } ?? .unstated
             )
         }
 

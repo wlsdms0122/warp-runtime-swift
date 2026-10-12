@@ -98,11 +98,15 @@ struct Derivation {
     // body starts failing nothing and gains what it reaches, and a declaration
     // that says nothing about itself makes everything reaching it say nothing
     // too. Two procedures calling each other stop where nothing more is
-    // added, which the finite set of declared names guarantees.
+    // added, which the finite set of declared names guarantees. `beside` is
+    // the module's variables by the type each declared, which a call of a
+    // value one holds is judged on.
     func failing(
         among symbols: [Symbol],
         deriving failing: inout [Name: Failing],
-        beyond: @escaping (Name) -> Failing?
+        beside declared: [Name: LoweredType],
+        beyond: @escaping (Name) -> Failing?,
+        in table: LoweredTypeTable
     ) {
         let own = Set(symbols.map(\.declared))
 
@@ -111,17 +115,24 @@ struct Derivation {
         }
 
         let bodies = symbols
-            .compactMap { symbol in symbol.procedure.block.map { block in (symbol.declared, block) } }
+            .compactMap { symbol in
+                symbol.procedure.block.map { block in
+                    (symbol.declared, block, opening(of: symbol, beside: declared, in: table))
+                }
+            }
             .sorted { $0.0 < $1.0 }
 
         while true {
             var grown = false
 
-            for (name, block) in bodies {
+            for (name, block, bound) in bodies {
                 let before = failing
-                let read = self.failing(block) { selector in
-                    own.contains(selector) ? before[selector] : beyond(selector)
-                }
+                let read = self.failing(
+                    block,
+                    given: { selector in own.contains(selector) ? before[selector] : beyond(selector) },
+                    bound: bound,
+                    in: table
+                )
 
                 guard read != failing[name] else { continue }
 
@@ -134,27 +145,47 @@ struct Derivation {
     }
 
     // What may come out of a block: everything its statements and its result
-    // may fail with.
-    func failing(_ block: Block, given failing: (Name) -> Failing?) -> Failing {
-        self.failing(block.body, given: failing)
-            .joined(block.result.map { result in self.failing(result, given: failing) } ?? .these([]))
-    }
+    // may fail with. `bound` is the type a slot declared each name in scope
+    // holds, which a call of a value is judged on; a name a statement binds
+    // holds it for the rest of the block, by the rule `declaredType` reads.
+    func failing(
+        _ block: Block,
+        given failing: (Name) -> Failing?,
+        bound declaredTypes: [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) -> Failing {
+        var declaredTypes = declaredTypes
+        var carried = Failing.these([])
 
-    func failing(_ body: Body, given failing: (Name) -> Failing?) -> Failing {
-        body.statements.reduce(Failing.these([])) { carried, statement in
-            carried.joined(self.failing(statement.expression, given: failing))
+        for statement in block.body.statements {
+            carried = carried.joined(self.failing(statement.expression, given: failing, bound: declaredTypes, in: table))
+            declaring(statement, into: &declaredTypes, in: table)
         }
+
+        return carried.joined(
+            block.result.map { result in self.failing(result, given: failing, bound: declaredTypes, in: table) }
+                ?? .these([])
+        )
     }
 
-    func failing(_ expression: Expression, given failing: (Name) -> Failing?) -> Failing {
+    func failing(
+        _ expression: Expression,
+        given failing: (Name) -> Failing?,
+        bound declared: [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) -> Failing {
         func read(_ inner: Expression) -> Failing {
-            self.failing(inner, given: failing)
+            self.failing(inner, given: failing, bound: declared, in: table)
         }
 
-        let here = failingHere(expression, given: failing)
+        func read(_ block: Block) -> Failing {
+            self.failing(block, given: failing, bound: declared, in: table)
+        }
+
+        let here = failingHere(expression, given: failing, bound: { name in declared[name] }, in: table)
 
         switch expression {
-        case .literal, .reference, .closure, .apply:
+        case .literal, .reference, .closure:
             return here
 
         case let .cast(value, _, _):
@@ -172,21 +203,24 @@ struct Derivation {
         case let .call(call):
             return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
 
+        case let .apply(callee, arguments):
+            return arguments.reduce(read(callee).joined(here)) { carried, argument in carried.joined(read(argument)) }
+
         case let .block(block):
-            return self.failing(block, given: failing)
+            return read(block)
 
         case let .conditional(condition, then, otherwise):
             return read(condition)
-                .joined(self.failing(then, given: failing))
-                .joined(otherwise.map { arm in self.failing(arm, given: failing) } ?? .these([]))
+                .joined(read(Block(body: then)))
+                .joined(otherwise.map { arm in read(Block(body: arm)) } ?? .these([]))
 
         case let .loop(condition, body):
-            return read(condition).joined(self.failing(body, given: failing))
+            return read(condition).joined(read(body))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
         case let .attempt(_, rescue):
-            return self.failing(rescue, given: failing)
+            return read(rescue)
 
         case let .leave(leave):
             return leave.value.map(read) ?? .these([])
@@ -196,7 +230,12 @@ struct Derivation {
     // What may come out of this node itself, apart from the nodes it holds:
     // the one judgement of where a run may fail, which `failing` gathers over
     // a tree and the type check asks where a way may end by failing.
-    func failingHere(_ expression: Expression, given failing: (Name) -> Failing?) -> Failing {
+    func failingHere(
+        _ expression: Expression,
+        given failing: (Name) -> Failing?,
+        bound declared: (Name) -> LoweredType?,
+        in table: LoweredTypeTable
+    ) -> Failing {
         switch expression {
         // A cast that names a type the value did not arrive as fails, and
         // that is the one failure the runtime itself raises. The optional
@@ -206,9 +245,10 @@ struct Derivation {
             return optional ? .these([]) : .these([CastRefused.type])
 
         // Which value is called is decided at run time, so what may come out
-        // of it is not knowable here.
-        case .apply:
-            return .unstated
+        // of it is what the slot it came out of says, and nothing is known
+        // where it came out of none or the slot named nothing.
+        case let .apply(callee, _):
+            return reached(callee, given: declared, in: table)?.procedureFailing ?? .unstated
 
         case let .call(call):
             return failing(call.selector) ?? .unstated
@@ -307,9 +347,8 @@ struct Derivation {
         let own = Set(symbols.map(\.declared))
 
         // The body beside the names it may write and the type a slot declared
-        // each name before its first statement holds: the module's variables
-        // and its own parameters, since a call of a value is judged on what
-        // the slot it came out of says.
+        // each name before its first statement holds, since a call of a value
+        // is judged on what the slot it came out of says.
         let bodies = symbols.reduce(
             into: [Name: (block: Block, declaring: Set<Name>, bound: [Name: LoweredType])]()
         ) { table, symbol in
@@ -318,9 +357,7 @@ struct Derivation {
             table[symbol.declared] = (
                 block,
                 declaring(symbol.procedure.signature),
-                variables.merging(
-                    symbol.procedure.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
-                ) { _, parameter in parameter }
+                opening(of: symbol, beside: variables, in: loweredTypes)
             )
         }
 
@@ -379,18 +416,7 @@ struct Derivation {
                 declared.insert(name)
             }
 
-            // A later name of the same spelling is a different name, so the
-            // table is read forward.
-            if let binding = statement.binding, let name = binding.introduced {
-                let held = declaredType(
-                    of: binding,
-                    reading: statement.expression,
-                    given: { name in declaredTypes[name] },
-                    in: fact.table
-                )
-
-                declaredTypes[name] = held
-            }
+            declaring(statement, into: &declaredTypes, in: fact.table)
         }
 
         return block.result.map { result in
@@ -482,6 +508,38 @@ struct Derivation {
         case let .attempt(body, rescue):
             return holds(body) && holds(rescue)
         }
+    }
+
+    // The type a slot declared each name a body reads holds before its first
+    // statement: the module's variables, and its own parameters over them.
+    private func opening(
+        of symbol: Symbol,
+        beside variables: [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) -> [Name: LoweredType] {
+        variables.merging(symbol.procedure.signature.environment(in: table).compactMapValues(\.declaredType)) { _, parameter in
+            parameter
+        }
+    }
+
+    // The type a name a statement binds holds for the rest of its block. A
+    // later name of the same spelling is a different name, so the table is
+    // read forward.
+    private func declaring(
+        _ statement: Statement,
+        into declaredTypes: inout [Name: LoweredType],
+        in table: LoweredTypeTable
+    ) {
+        guard let binding = statement.binding, let name = binding.introduced else { return }
+
+        let reading = declaredTypes
+
+        declaredTypes[name] = declaredType(
+            of: binding,
+            reading: statement.expression,
+            given: { name in reading[name] },
+            in: table
+        )
     }
 
     // The type this reads, as the slot it came out of says it, and nil where

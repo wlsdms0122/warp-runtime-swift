@@ -12,8 +12,7 @@ import Foundation
 // reads as `type`.
 //
 // Derived for a body from what it casts, calls and rescues; declared by a
-// native procedure, which is the only one that can say. One that says nothing
-// fails nothing: the judge reads the empty set for it.
+// native procedure, a contract's procedure and a procedure type.
 public enum Failing: Sendable, Equatable {
     // No claim. What comes out of this is not knowable before the run.
     case unstated
@@ -59,6 +58,14 @@ public enum Failing: Sendable, Equatable {
         guard case let .these(failures) = self else { return false }
 
         return failures.isSubset(of: allowed)
+    }
+
+    // Whether this stands where a slot says `allowed` may come out: anywhere
+    // a slot claims nothing, and within what it names otherwise.
+    func fails(within allowed: Failing) -> Bool {
+        guard case let .these(names) = allowed else { return true }
+
+        return fails(within: names)
     }
 
     // MARK: - Private

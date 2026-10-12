@@ -290,7 +290,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated Procedure<(Int) -> Int> where inout Procedure<(Int) -> Int> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int) -> Int failing nothing> where inout Procedure<(Int) -> Int> is declared")
         }
     }
 

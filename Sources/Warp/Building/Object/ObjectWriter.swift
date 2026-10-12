@@ -332,12 +332,14 @@ struct ObjectWriter {
         }
     }
 
-    // A procedure type is `[parameters, returns]`: the types it is applied
-    // with, in position order, and what it answers or nothing.
+    // A procedure type is `[parameters, returns, failing]`: the types it is
+    // applied with, in position order, what it answers or nothing, and what it
+    // may fail with.
     private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try type.parameters.map(self.type)),
-            try ObjectWriter.maybe(type.returns, self.type)
+            try ObjectWriter.maybe(type.returns, self.type),
+            failing(type.failing)
         ])
     }
 
@@ -561,6 +563,7 @@ struct ObjectWriter {
                     .array(try written.map(lowered))
                 },
                 try ObjectWriter.maybe(signature?.returns, lowered),
+                ObjectWriter.maybe(signature?.failing, failing),
                 self.constness(constness),
                 self.isolation(isolation)
             )

@@ -157,6 +157,12 @@ struct TypeWriter {
                 written[TypeReader.ProcedureTypeReader.CodingKeys.returns.name] = try value(of: returns)
             }
 
+            if case let .these(failures) = type.failing {
+                written[TypeReader.ProcedureTypeReader.CodingKeys.failing.name] = .array(
+                    failures.sorted().map(Value.string)
+                )
+            }
+
             return .dictionary([try Name(spelling): .dictionary(written)])
         }
     }
