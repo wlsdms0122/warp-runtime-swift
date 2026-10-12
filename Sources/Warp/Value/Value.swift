@@ -841,7 +841,8 @@ public indirect enum Value: Sendable, Equatable {
     // still holds. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
     // value before this. A map's keys are its own, so an entry under one not
-    // held yet is made.
+    // held yet is made where the write lands on it, and holds nothing for a
+    // write to pass through.
     func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return value }
 
@@ -877,15 +878,18 @@ public indirect enum Value: Sendable, Equatable {
             return .record(try record.writing(name, with: try field.writing(value, at: rest, under: rendered)))
 
         case let (.dictionary(map), .index(key)):
-            let entry = try (map[key: key] ?? .null).writing(value, at: rest, under: rendered)
+            guard let held = map[key: key] else {
+                guard rest.isEmpty else {
+                    throw ExecutionError(
+                        "'\(rendered)' writes through \(Path([step.spelled]).rendered),"
+                            + " an entry the map does not hold. Write the whole entry first"
+                    )
+                }
 
-            return .dictionary(map.writing(key: key, with: entry))
+                return .dictionary(map.writing(key: key, with: value))
+            }
 
-        case (.null, _):
-            throw ExecutionError(
-                "'\(rendered)' writes through \(Path([step.spelled]).rendered), which holds nothing yet."
-                    + " Write the whole entry first"
-            )
+            return .dictionary(map.writing(key: key, with: try held.writing(value, at: rest, under: rendered)))
 
         default:
             throw ExecutionError(
