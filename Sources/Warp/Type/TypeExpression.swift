@@ -237,12 +237,13 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             guard let type else { return spelling }
 
             let written = type.parameters.map(\.rendered)
+            let failing = type.failing == .unstated ? "" : " failing \(type.failing.rendered)"
 
             // Rendered as what it accepts, because a message is about what would
             // have fit. Which half was written is a fact about the source rather
             // than about the value being refused.
             return "\(spelling)<(\(written.joined(separator: ", ")))"
-                + " -> \((type.returns ?? .any).rendered)>"
+                + " -> \((type.returns ?? .any).rendered)\(failing)>"
 
         case let .array(element):
             return "Array<\(element.rendered)>"

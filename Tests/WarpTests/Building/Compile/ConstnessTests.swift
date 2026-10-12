@@ -121,7 +121,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
         }
     }
 
@@ -152,7 +152,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
         }
     }
 
@@ -189,7 +189,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
         }
     }
 

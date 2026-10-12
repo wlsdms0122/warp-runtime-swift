@@ -8,10 +8,10 @@
 import Foundation
 
 // What a slot asks of a procedure value: the types it is applied with, in
-// position order, and what it answers. No names. A name is a declaration's or
-// a closure's, read by its body; a value is applied by position, so two
-// closures that name their parameters differently are one type where the
-// types agree.
+// position order, what it answers and what may come out of it when the work
+// goes wrong. No names. A name is a declaration's or a closure's, read by its
+// body; a value is applied by position, so two closures that name their
+// parameters differently are one type where the types agree.
 public struct ProcedureType: Sendable, Equatable {
     // MARK: - Property
     // Each parameter's type, marks included, since `inout` is a fact about the
@@ -20,6 +20,9 @@ public struct ProcedureType: Sendable, Equatable {
 
     // What an application answers, or nil where nothing was declared.
     public let returns: TypeExpression?
+
+    // What an application may fail with, unstated where nothing was declared.
+    public let failing: Failing
 
     // Every declared name this type reaches, through what it takes and what
     // it answers.
@@ -48,17 +51,24 @@ public struct ProcedureType: Sendable, Equatable {
     }
 
     // MARK: - Initializer
-    public init(parameters: [TypeExpression] = [], returns: TypeExpression? = nil) {
+    public init(parameters: [TypeExpression] = [], returns: TypeExpression? = nil, failing: Failing = .unstated) {
         self.parameters = parameters
         self.returns = returns
+        self.failing = failing
     }
 
     // MARK: - Public
+    // The same type claiming `failing` instead.
+    func claiming(_ failing: Failing) -> ProcedureType {
+        ProcedureType(parameters: parameters, returns: returns, failing: failing)
+    }
+
     // This type with `Self` written as `type` wherever it stands.
     func replacingSelf(with type: TypeExpression) -> ProcedureType {
         ProcedureType(
             parameters: parameters.map { parameter in parameter.replacingSelf(with: type) },
-            returns: returns?.replacingSelf(with: type)
+            returns: returns?.replacingSelf(with: type),
+            failing: failing
         )
     }
 

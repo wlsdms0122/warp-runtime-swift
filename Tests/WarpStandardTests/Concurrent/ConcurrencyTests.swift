@@ -170,7 +170,7 @@ struct ConcurrencyTests {
             try await answer(of: [sut], result: reference("placed"))
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("holds const isolated Procedure<(Any) -> Any> where isolated Procedure<(")
+                && "\(error)".contains("holds const isolated Procedure<(Any) -> Any failing nothing> where isolated Procedure<(")
         }
     }
 
@@ -386,7 +386,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Int>, Int] where Array<isolated Procedure<() -> Any>> is declared")
+            "\(error)".contains("with pieces, which holds [const isolated Procedure<() -> Int failing nothing>, Int] where Array<isolated Procedure<() -> Any>> is declared")
         }
     }
 

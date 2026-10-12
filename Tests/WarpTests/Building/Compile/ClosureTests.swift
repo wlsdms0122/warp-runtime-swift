@@ -212,7 +212,7 @@ struct ClosureTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Int> where Procedure<(Int) -> Any> is declared")
+                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Int failing nothing> where Procedure<(Int) -> Any> is declared")
         }
     }
 
@@ -260,7 +260,7 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
         }
     }
 

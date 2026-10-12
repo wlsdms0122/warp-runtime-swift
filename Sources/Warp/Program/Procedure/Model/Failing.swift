@@ -61,5 +61,13 @@ public enum Failing: Sendable, Equatable {
         return failures.isSubset(of: allowed)
     }
 
+    // Whether this stands where a slot says `allowed` may come out: anywhere
+    // a slot claims nothing, and within what it names otherwise.
+    public func fails(within allowed: Failing) -> Bool {
+        guard case let .these(names) = allowed else { return true }
+
+        return fails(within: names)
+    }
+
     // MARK: - Private
 }

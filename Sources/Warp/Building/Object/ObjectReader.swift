@@ -462,7 +462,8 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "procedure type")
         let read = ProcedureType(
             parameters: try Field(cursor.next(), of: "parameters").list(expression),
-            returns: try cursor.field().maybe(expression)
+            returns: try cursor.field().maybe(expression),
+            failing: try failing(cursor.next())
         )
 
         try cursor.end()
@@ -700,19 +701,28 @@ struct ObjectReader {
         case .array: read = .array(try lowered(cursor.next()))
         case .dictionary: read = .dictionary(key: try lowered(cursor.next()), value: try lowered(cursor.next()))
         // A type that writes no parameters writes no signature, so it says
-        // nothing of an answer either.
+        // nothing of an answer or of what it may fail with either.
         case .procedure:
             let parameters = try cursor.field().maybe { written in
                 try Field(written, of: "parameters").list(lowered)
             }
             let returns = try cursor.field().maybe(lowered)
+            let claimed = try cursor.field().maybe(failing)
 
             guard parameters != nil || returns == nil else {
                 throw ObjectRefused("a procedure type writes what it answers and nothing of what it takes")
             }
 
+            // A signature says what may fail out of it, `unstated` included,
+            // and a type writing none says nothing of it.
+            guard (parameters == nil) == (claimed == nil) else {
+                throw ObjectRefused("a procedure type writes what it may fail with exactly where it writes what it takes")
+            }
+
             read = .procedure(
-                parameters.map { parameters in LoweredProcedureType(parameters: parameters, returns: returns) },
+                parameters.map { parameters in
+                    LoweredProcedureType(parameters: parameters, returns: returns, failing: claimed ?? .unstated)
+                },
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())
             )

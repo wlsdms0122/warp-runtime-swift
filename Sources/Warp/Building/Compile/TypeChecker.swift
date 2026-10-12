@@ -1640,7 +1640,7 @@ struct TypeChecker {
 
             var flow = inner.flow
 
-            if failsHere(expression, given: context) {
+            if failsHere(expression, in: environment, given: context) {
                 flow.fail()
             }
 
@@ -1970,6 +1970,12 @@ struct TypeChecker {
                 taking: context.signature(of:),
                 in: context.loweredTypes
             )
+            let failing = Derivation().failing(
+                body,
+                given: context.failing(of:),
+                bound: bound,
+                in: context.loweredTypes
+            )
 
             if case .judging = ask {
                 rewritten = .closure(
@@ -1984,7 +1990,7 @@ struct TypeChecker {
                     .closure(
                         constness: const ? .const : .unstated,
                         isolation: isolated ? .isolated : .unstated,
-                        failing: Derivation().failing(body, given: context.failing(of:))
+                        failing: failing
                     ),
                     at: place.child(.closure)
                 )
@@ -1997,7 +2003,7 @@ struct TypeChecker {
                 calls: calls,
                 judgements: judgements,
                 reading: TypeExpression.procedure(
-                    procedure.signature.type,
+                    procedure.signature.type.claiming(failing),
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
@@ -2087,7 +2093,7 @@ struct TypeChecker {
                     ).flow)
                 }
 
-                if failsHere(expression, given: context) {
+                if failsHere(expression, in: environment, given: context) {
                     flow.fail()
                 }
 
@@ -2187,7 +2193,7 @@ struct TypeChecker {
 
             judgements.record(.apply(inPlace: handed), at: place)
 
-            if failsHere(expression, given: context) {
+            if failsHere(expression, in: environment, given: context) {
                 flow.fail()
             }
 
@@ -2213,7 +2219,7 @@ struct TypeChecker {
 
             // What the operands took is taken by the call, and so is what it
             // hands in place.
-            let mayFail = failsHere(expression, given: context)
+            let mayFail = failsHere(expression, in: environment, given: context)
             let slots = context.slots(of: call.selector)
             var flow = heldInPlace(
                 call.arguments,
@@ -2652,7 +2658,14 @@ struct TypeChecker {
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
             // build found, which is none.
-            if Derivation().failing(block, given: context.failing(of:)).failsNothing {
+            let failures = Derivation().failing(
+                block,
+                given: context.failing(of:),
+                bound: environment.compactMapValues(\.declaredType),
+                in: context.loweredTypes
+            )
+
+            if failures.failsNothing {
                 try refuse(
                     "attempts a body that cannot fail, so its rescue is a body"
                         + " no run reaches. What a rescue catches is what the"
@@ -3105,8 +3118,17 @@ struct TypeChecker {
     }
 
     // Whether a run may fail at this node itself, by the one judgement of it.
-    private func failsHere(_ expression: Expression, given context: TypingContext) -> Bool {
-        !Derivation().failingHere(expression, given: context.failing(of:)).failsNothing
+    private func failsHere(
+        _ expression: Expression,
+        in environment: [Name: Binding],
+        given context: TypingContext
+    ) -> Bool {
+        !Derivation().failingHere(
+            expression,
+            given: context.failing(of:),
+            bound: environment.compactMapValues(\.declaredType),
+            in: context.loweredTypes
+        ).failsNothing
     }
 
     // What a call hands in place at these positions, each variable held from
