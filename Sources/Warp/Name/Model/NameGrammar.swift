@@ -24,8 +24,8 @@ import Foundation
 //   anything.
 // - a value's name: a constant, a module variable, a parameter, a statement's
 //   name, a loop's round, an attempt's failure and a record type's field. What
-//   a path reads back as one key, since a path is how each one is reached, and
-//   there a dot is a step.
+//   a path reads back as one name, since a path is how each one is reached,
+//   and there a dot is a step.
 // - a contract's procedure's name: the key it is asked under. One identifier,
 //   since a call spells it after the contract's name and a dot, and a dot in
 //   it would make one spelling two contracts' procedures.
@@ -73,7 +73,7 @@ public enum NameGrammar: Sendable {
         case .typeParameter:
             return !NameGrammar.reserved.contains(name) && name.isIdentifier
 
-        // White space at a key's ends is not part of it where a path is read.
+        // White space at a name's ends is not part of it where a path is read.
         case .value:
             guard
                 let first = name.spelling.unicodeScalars.first,

@@ -862,9 +862,8 @@ struct Validator: Sendable {
     }
 
     // What a path's steps are held to wherever it is written: a name it
-    // reads is a value's, the one name a path reads back as one step, and
-    // what stands between the brackets is a whole number, a text or a path,
-    // the three a path is written with there.
+    // reads is a value's, and what stands between the brackets is a whole
+    // number, a text or a path, the three a path is written with there.
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
