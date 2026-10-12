@@ -8,8 +8,8 @@
 import Foundation
 
 // Where a type is written, which is what decides the words that may stand in
-// it. Each is a fact of the text: a type parameter lives where a call fills
-// it, and `Self` where a contract is answered.
+// it. Each is a fact of the text: a type parameter lives where a call or a
+// mention fills it, and `Self` where a contract is answered.
 enum TypeContext: Sendable {
     // A procedure's signature, which declares the type parameters it names.
     case signature
@@ -21,6 +21,10 @@ enum TypeContext: Sendable {
     // The signature of a contract's procedure.
     case contract
 
+    // A field of a declared struct taking these type parameters, which a
+    // mention of the struct fills.
+    case `struct`(declaring: Set<Name>)
+
     // The type a value is said to have: what a name, a module variable
     // included, says it holds, what a cast reads a value as, and what a
     // declared type's field holds or an alias stands for.
@@ -31,7 +35,7 @@ enum TypeContext: Sendable {
     var takesSelf: Bool {
         switch self {
         case .contract: true
-        case .signature, .closure, .value: false
+        case .signature, .closure, .struct, .value: false
         }
     }
 
@@ -41,17 +45,17 @@ enum TypeContext: Sendable {
     var declaresTypeParameters: Bool {
         switch self {
         case .signature, .contract: true
-        case .closure, .value: false
+        case .closure, .struct, .value: false
         }
     }
 
     // MARK: - Initializer
     // MARK: - Public
-    // Whether `some T` may stand here: a call fills it.
+    // Whether `some T` may stand here: a call or a mention fills it.
     func takes(typeParameter name: Name) -> Bool {
         switch self {
         case .signature, .contract: true
-        case let .closure(declared): declared.contains(name)
+        case let .closure(declared), let .struct(declared): declared.contains(name)
         case .value: false
         }
     }

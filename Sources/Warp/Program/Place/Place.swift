@@ -101,6 +101,9 @@ public struct Place: Sendable, Hashable {
         // What a struct is written with: its fields, each under its name.
         case fields
 
+        // The type parameters a declared struct lists, by position.
+        case typeParameters
+
         // What a map literal is written with: its entries in order, each a
         // key and a value.
         case entries
@@ -137,6 +140,7 @@ public struct Place: Sendable, Hashable {
             case .result: "result"
             case .subject: "subject"
             case .fields: "fields"
+            case .typeParameters: "typeParameters"
             case .entries: "entries"
             case .callee: "callee"
             case .arguments: "arguments"

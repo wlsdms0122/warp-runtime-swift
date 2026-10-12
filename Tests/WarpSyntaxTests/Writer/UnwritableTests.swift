@@ -104,6 +104,21 @@ struct UnwritableTests {
         }
     }
 
+    @Test("a struct applied to types writes them between its brackets, and one applied to a signature has no document")
+    func aStructAppliedToTypesSpellsOrRefuses() throws {
+        // When / Then. Each type a struct is applied to is written by its
+        // spelling, and a procedure type that writes its signature spells as
+        // a mapping rather than a name
+        #expect(
+            try sut.value(of: TypeExpression.named("App.Box", arguments: [.int, .parameter(name: "T")]))
+                == .string("App.Box<Int, some T>")
+        )
+
+        #expect(throws: WritingError.self) {
+            try sut.value(of: TypeExpression.named("App.Box", arguments: [.procedure(ProcedureType(returns: .int))]))
+        }
+    }
+
     @Test("a path holding a name no path spells has no document")
     func aPathWithAnUnspellableNameIsRefused() throws {
         // Given. A name holding a dot or a bracket is one segment to the

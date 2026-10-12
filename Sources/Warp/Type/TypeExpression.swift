@@ -75,10 +75,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // The declared type, or null. `?.` answers this.
     case nullable(TypeExpression)
 
-    // A type a module declared. Kept rather than expanded so that a type may
-    // name itself (`Tree` with children of `Array<Tree>` is a type, not a
-    // regress) which means resolving one needs the table it was declared in.
-    case named(Name)
+    // A type a module declared, with the types it is applied to where its
+    // declaration takes type parameters, in the order it lists them. Kept
+    // rather than expanded so that a type may name itself (`Tree` with
+    // children of `Array<Tree>` is a type, not a regress) which means
+    // resolving one needs the table it was declared in.
+    case named(Name, arguments: [TypeExpression] = [])
 
     // A type parameter, filled by whatever the call site puts there. The name
     // is what ties one signature's mentions together: `first` takes
@@ -251,8 +253,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .dictionary(key, value):
             return "Dictionary<\(key.rendered), \(value.rendered)>"
 
-        case let .named(name):
-            return name.spelling
+        case let .named(name, arguments):
+            guard !arguments.isEmpty else { return name.spelling }
+
+            return "\(name.spelling)<\(arguments.map(\.rendered).joined(separator: ", "))>"
 
         case let .nullable(inner):
             return "\(inner.rendered)?"
@@ -281,8 +285,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner), let .nullable(inner):
             inner.mentions
 
-        case let .named(name):
-            [name]
+        case let .named(name, arguments):
+            arguments.reduce(into: [name]) { mentioned, argument in mentioned.formUnion(argument.mentions) }
 
         case let .composition(names):
             names
@@ -313,7 +317,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner):
             return inner.parameterNames
 
-        case .any, .never, .null, .bool, .int, .double, .string, .named:
+        case let .named(_, arguments):
+            return arguments.reduce(into: []) { names, argument in names.formUnion(argument.parameterNames) }
+
+        case .any, .never, .null, .bool, .int, .double, .string:
             return []
         }
     }
@@ -339,7 +346,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .variable(inner), let .inout(inner):
             return inner.isGeneric
 
-        case .any, .never, .null, .bool, .int, .double, .string, .named, .composition, .selfType:
+        case let .named(_, arguments):
+            return arguments.contains(where: \.isGeneric)
+
+        case .any, .never, .null, .bool, .int, .double, .string, .composition, .selfType:
             return false
         }
     }
@@ -382,9 +392,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // map of one.
     var hasSpelling: Bool {
         switch self {
-        case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
+        case .any, .never, .null, .bool, .int, .double, .string, .parameter, .composition,
             .selfType, .projection:
             return true
+
+        case let .named(_, arguments):
+            return arguments.allSatisfy(\.hasSpelling)
 
         case let .procedure(type, _, _):
             return type == nil
@@ -452,7 +465,10 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .nullable(inner):
             return .nullable(inner.replacingSelf(with: type))
 
-        case .any, .never, .null, .bool, .int, .double, .string, .named, .parameter, .composition,
+        case let .named(name, arguments):
+            return .named(name, arguments: arguments.map { argument in argument.replacingSelf(with: type) })
+
+        case .any, .never, .null, .bool, .int, .double, .string, .parameter, .composition,
             .projection:
             return self
         }
