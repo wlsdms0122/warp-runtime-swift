@@ -14,13 +14,13 @@ import Warp
 struct ValueDecoder: Decoder {
     private struct KeyedContainer<Key: CodingKey>: KeyedDecodingContainerProtocol {
         // MARK: - Property
-        let record: Value.Dictionary
+        let mapping: Value.Dictionary
         let codingPath: [CodingKey]
         let steps: [Place.Step]
         let userInfo: [CodingUserInfoKey: Any]
 
         var allKeys: [Key] {
-            record.keys.compactMap { key in
+            mapping.keys.compactMap { key in
                 guard case let .string(text) = key else { return nil }
 
                 return Key(stringValue: text)
@@ -30,7 +30,7 @@ struct ValueDecoder: Decoder {
         // MARK: - Initializer
         // MARK: - Public
         func contains(_ key: Key) -> Bool {
-            (try? Name(key.stringValue)).flatMap { name in record[name] } != nil
+            (try? Name(key.stringValue)).flatMap { name in mapping[name] } != nil
         }
 
         func decodeNil(forKey key: Key) throws -> Bool {
@@ -66,7 +66,7 @@ struct ValueDecoder: Decoder {
 
         // MARK: - Private
         private func value(forKey key: Key) throws -> Value {
-            guard let name = try? Name(key.stringValue), let value = record[name] else {
+            guard let name = try? Name(key.stringValue), let value = mapping[name] else {
                 throw ReadingError(
                     "no value for key '\(key.stringValue)'",
                     at: steps + [.key(key.stringValue)]
@@ -321,12 +321,12 @@ struct ValueDecoder: Decoder {
 
     // MARK: - Public
     func container<Key: CodingKey>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> {
-        guard case let .dictionary(record) = value else {
+        guard case let .dictionary(mapping) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
         return KeyedDecodingContainer(KeyedContainer(
-            record: record,
+            mapping: mapping,
             codingPath: codingPath,
             steps: steps,
             userInfo: userInfo
@@ -400,11 +400,11 @@ struct ValueDecoder: Decoder {
     // Sorted rather than as-written because a document is a value by then and a
     // value's record has no order to have kept.
     func read<T: Decodable>(_ type: [Name: T].Type) throws -> [Name: T] {
-        guard case let .dictionary(record) = value else {
+        guard case let .dictionary(mapping) = value else {
             throw ReadingError("expected \(TypeSpelling.dictionary), found \(value.nominal)", at: steps)
         }
 
-        return try record.named()
+        return try mapping.named()
             .sorted { left, right in left.name.spelling < right.name.spelling }
             .reduce(into: [Name: T]()) { read, entry in
                 read[entry.name] = try descending(to: entry.name.spelling, holding: entry.value).decode(T.self)

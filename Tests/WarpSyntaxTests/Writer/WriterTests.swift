@@ -880,8 +880,8 @@ struct WriterTests {
                 found.formUnion(keys(in: element))
             }
 
-        case let .dictionary(record):
-            return ((try? record.named()) ?? []).reduce(into: Set(((try? record.named()) ?? []).map(\.name))) { found, entry in
+        case let .dictionary(mapping):
+            return ((try? mapping.named()) ?? []).reduce(into: Set(((try? mapping.named()) ?? []).map(\.name))) { found, entry in
                 found.formUnion(keys(in: entry.value))
             }
 
