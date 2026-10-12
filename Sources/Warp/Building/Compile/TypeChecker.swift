@@ -882,8 +882,7 @@ struct TypeChecker {
                         "\(walked.rendered) names '\(key)',"
                             + " which \(current.rendered(in: context.loweredTypes)) does not declare."
                             + " A procedure is sent with a written call, and data"
-                            + " past the declaration is read by declaring it,"
-                            + " or through `Dictionary<String, Any>`"
+                            + " past the declaration is read by declaring it"
                     )
                 }
 
