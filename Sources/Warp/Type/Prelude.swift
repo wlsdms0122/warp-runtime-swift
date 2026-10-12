@@ -39,6 +39,8 @@ enum Prelude {
     // The field a round holds: how many rounds ran before it.
     static let index: Name = "index"
 
-    // Where the declarations stand: ahead of every document, written by none.
+    // Where the declarations stand: ahead of every document, written by none,
+    // before the first a host hands over.
     static let document = Place.Document.assembled
+    static let handed = -1
 }

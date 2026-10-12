@@ -30,10 +30,18 @@ struct TypeNamespace {
     init(_ documents: [any Declaring]) throws {
         // The language's own stand as no document's, ahead of every one.
         var types = Prelude.types.reduce(into: [Name: Placed<TypeDeclaration>]()) { types, declared in
-            types[declared.key] = Placed(declared.value, at: .type(declared.key.spelling, in: Prelude.document), of: -1)
+            types[declared.key] = Placed(
+                declared.value,
+                at: .type(declared.key.spelling, in: Prelude.document),
+                of: Prelude.handed
+            )
         }
         var contracts = Prelude.contracts.reduce(into: [Name: Placed<[Name: ContractProcedure]>]()) { contracts, declared in
-            contracts[declared.key] = Placed(declared.value, at: .contract(declared.key.spelling, in: Prelude.document), of: -1)
+            contracts[declared.key] = Placed(
+                declared.value,
+                at: .contract(declared.key.spelling, in: Prelude.document),
+                of: Prelude.handed
+            )
         }
 
         for (handed, held) in documents.enumerated() {
@@ -41,9 +49,19 @@ struct TypeNamespace {
                 let declaration = Placed(type, at: .type(name.spelling, in: held.document), of: handed)
 
                 // Read before written. Written first, the entry that says what
-                // this collides with is the one this call overwrote.
+                // this collides with is the one this call overwrote. The only
+                // contracts gathered yet are the language's.
                 if let first = types[name] {
                     throw BuildError.declaredTwice(name, by: first.spelled, and: declaration.spelled, at: declaration.place)
+                }
+
+                if let contract = contracts[name] {
+                    throw BuildError.declaredAsBoth(
+                        name,
+                        type: declaration.spelled,
+                        contract: contract.spelled,
+                        at: declaration.place
+                    )
                 }
 
                 types[name] = declaration
@@ -59,11 +77,10 @@ struct TypeNamespace {
                 )
 
                 if let declared = types[name] {
-                    throw BuildError(
-                        "'\(name)' is declared as both a type and a contract in"
-                            + " this link, as a type by \(declared.spelled) and as a"
-                            + " contract by \(declaration.spelled). One name cannot"
-                            + " stand for a type and a contract at once",
+                    throw BuildError.declaredAsBoth(
+                        name,
+                        type: declared.spelled,
+                        contract: declaration.spelled,
                         at: declaration.place
                     )
                 }
@@ -78,7 +95,11 @@ struct TypeNamespace {
 
         var claims: [Placed<Claim>] = Prelude.claims.sorted { $0.key < $1.key }.flatMap { type, contracts in
             contracts.sorted().map { contract in
-                Placed(Claim(type: type, contract: contract), at: .satisfies(type.spelling, in: Prelude.document), of: -1)
+                Placed(
+                    Claim(type: type, contract: contract),
+                    at: .satisfies(type.spelling, in: Prelude.document),
+                    of: Prelude.handed
+                )
             }
         }
         var claimed = Set(claims.map(\.held))
