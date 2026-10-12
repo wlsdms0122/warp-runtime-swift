@@ -26,9 +26,7 @@ struct Compiler {
     }
 
     // MARK: - Public
-    // What the document proves is written into `compiling`. Its own rows stand
-    // as the refusal they would earn until it lowers them, so a procedure
-    // folding through a procedure is refused as the cycle it is.
+    // What the document proves is written into `compiling`.
     func compile(
         _ module: Module,
         at origin: Int,
@@ -119,8 +117,6 @@ struct Compiler {
             var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
 
             if let block = declaration.block {
-                // A body not yet lowered stands as its refusal, so a procedure
-                // folding through a procedure is refused as the cycle it is.
                 let folding = Folding(
                     constants: constants,
                     origin: origin,
