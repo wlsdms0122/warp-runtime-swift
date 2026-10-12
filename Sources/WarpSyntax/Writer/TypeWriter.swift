@@ -168,8 +168,8 @@ struct TypeWriter {
 
         case let .dictionary(form) where form.count == 1
             && ((try? form.named()[0].name).map(TypeReader.readsAsAProcedure) ?? false):
-            // A key carries one mark, and a key carrying two reads back as a
-            // record whose field is named after them.
+            // A key carries one mark, and a key carrying two reads back as no
+            // type form.
             if let inside = SlotMark.marked(inner) {
                 throw WritingError(
                     "`\(inside.word)` is written inside `\(mark.word)`, and a procedure's key"

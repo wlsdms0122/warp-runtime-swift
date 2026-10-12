@@ -9,7 +9,7 @@ import Foundation
 
 // A declaration, or a closure literal, read against a lowered type table: the
 // parameters a door settles values at and the answer a host's is settled
-// against, which are that table's rows. What a document settles without one
+// against, which are that table's rows. What a document compiles without one
 // is `Judged`.
 //
 // A written body is lowered code with its frame layout; a native answers as it

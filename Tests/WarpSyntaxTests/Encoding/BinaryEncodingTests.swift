@@ -350,9 +350,9 @@ struct BinaryEncodingTests {
 
     @Test("a field name outside normal form C never reaches the way out")
     func aDenormalKeyIsRefusedWhenWriting() {
-        // Given. A record's keys are names, so there is no value carrying one
-        // for a writing to refuse: the refusal is at the door a name comes
-        // through.
+        // Given. A record's field names are names, so there is no value
+        // carrying one for a writing to refuse: the refusal is at the
+        // initializer a name comes through.
         let decomposed = "e\u{301}"
 
         // When / Then

@@ -184,12 +184,10 @@ struct TypeReader: Decodable {
 
     // What a procedure form's key says, read front to back: a slot's mark if one
     // is written, the modifiers in either order, and `procedure`. Nil where the
-    // key is not a procedure form's, which a record's field name is.
+    // key is not a procedure form's.
     //
     // One mark, because that is what a slot writes. A key carrying two is not
-    // this form's and so is a field name, the way any other key that is not
-    // this form's is: what the spelling of a whole type refuses, a key that
-    // never claimed to be one is not asked.
+    // this form's, so a mapping keyed by it is no type form at all.
     //
     // The mark comes back as itself rather than as something that applies it,
     // so that what was read stays a value the caller can ask about.

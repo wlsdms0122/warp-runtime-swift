@@ -462,7 +462,7 @@ indirect enum LoweredType: Sendable, Equatable {
 
     // What a value written as a literal reads as: a whole number as one
     // whose place may read it as a fraction, at whatever depth of a list or
-    // a record it stands, and anything else as the value it is.
+    // a map it stands, and anything else as the value it is.
     init(literal value: Value, in table: LoweredTypeTable) {
         switch value {
         case .int:
