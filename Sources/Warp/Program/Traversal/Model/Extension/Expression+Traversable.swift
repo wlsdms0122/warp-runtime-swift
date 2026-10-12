@@ -37,8 +37,8 @@ extension Expression: Traversable {
         case let .array(array):
             array.enumerated().flatMap { position, element in inner(element, as: .element(position)) }
 
-        case let .record(record):
-            record.sorted { mine, theirs in mine.key < theirs.key }
+        case let .struct(literal):
+            literal.sorted { mine, theirs in mine.key < theirs.key }
                 .flatMap { name, field in inner(field, as: .field(name)) }
 
         // In the order written, each key before its value.

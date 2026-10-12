@@ -15,7 +15,7 @@ import Warp
 //   scalar                  . A literal, and strings are always literal text
 //   array                   . Elements are expressions
 //   { ref: a.b[0] }         . A name to resolve in the scope that reads it
-//   { record: { … } }       . A record whose fields are expressions
+//   { struct: { … } }       . A struct whose fields are expressions
 //   { dictionary: [[k, v]] }. A map whose keys and values are expressions
 //   { call: <call> }        . A call where a value is wanted, the same form a
 //                              statement writes
@@ -24,7 +24,7 @@ import Warp
 //                              mismatch as null
 //
 // A mapping is one of these by its one key, so a field name is never a key
-// the grammar reads: a record is written under `record` whatever its fields
+// the grammar reads: a struct is written under `struct` whatever its fields
 // are called.
 //
 // A string is never re-parsed into anything live.
@@ -76,11 +76,11 @@ public struct ExpressionReader: Decodable {
                 return try read(mapping: ValueDecoder(standing: value, at: steps, in: decoder), in: decoder)
 
             // A form is keys the notation reserved, and a name under which a
-            // value stands is not one of them. So a record value the document
+            // value stands is not one of them. So a struct value the document
             // writes is read as the literal it spells, name included, and a procedure
             // as the value it is, for the `Validator` to refuse; reading
             // either as a form would drop what it is refused for.
-            case .record, .procedure:
+            case .struct, .procedure:
                 return .literal(value)
             }
         } catch let error as ExpressionFormError {
@@ -101,7 +101,7 @@ public struct ExpressionReader: Decodable {
 
             switch tag {
             case .reference: return try reference(written, at: inside)
-            case .record: return try fields(under: written, at: inside, in: decoder)
+            case .struct: return try fields(under: written, at: inside, in: decoder)
             case .dictionary: return try entries(written, at: inside, in: decoder)
             case .call: return try call(written, at: steps, in: decoder)
             case .closure: return try closure(written, at: steps, in: decoder)
@@ -114,7 +114,7 @@ public struct ExpressionReader: Decodable {
         case let .among(tags):
             throw ExpressionFormError(
                 "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping."
-                    + " A record with that field is written under `record`"
+                    + " A struct with that field is written under `struct`"
                     + " (found keys: \(names))"
             )
 
@@ -129,7 +129,7 @@ public struct ExpressionReader: Decodable {
         throw ExpressionFormError(
             "a mapping where a value is wanted is one of"
                 + " \(ExpressionTag.allCases.map { tag in "`\(tag.key)`" }.sorted().joined(separator: ", ")),"
-                + " under its one key. A record is written under `record`"
+                + " under its one key. A struct is written under `struct`"
                 + " (found keys: \(names))"
         )
     }
@@ -150,27 +150,27 @@ public struct ExpressionReader: Decodable {
         return try spelling.expression(from: mapping, in: decoder.notation)
     }
 
-    // `{ record: { … } }`: the fields, each an expression, in the key order
-    // of the mapping that writes them, so that a record literal with two bad
+    // `{ struct: { … } }`: the fields, each an expression, in the key order
+    // of the mapping that writes them, so that a struct literal with two bad
     // fields refuses the same one every run.
     private static func fields(
         under written: Value,
         at steps: [Place.Step],
         in decoder: Decoder
     ) throws -> Warp.Expression {
-        // A record value is data written as itself, so it reads as the literal
-        // it writes, and the load holds a literal to holding no record.
-        if case .record = written {
+        // A struct value is data written as itself, so it reads as the literal
+        // it writes, and the load holds a literal to holding no struct.
+        if case .struct = written {
             return .literal(written)
         }
 
         guard case .dictionary = written else {
-            throw ExpressionFormError("`record` takes a mapping of its fields")
+            throw ExpressionFormError("`struct` takes a mapping of its fields")
         }
 
         let named = try ValueDecoder(standing: written, at: steps, in: decoder).named()
 
-        return .record(
+        return .struct(
             try named.reduce(into: [Name: Warp.Expression]()) { fields, entry in
                 fields[entry.name] = try read(entry.value, at: steps + [.key(entry.name.spelling)], in: decoder)
             }

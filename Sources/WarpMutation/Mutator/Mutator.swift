@@ -19,7 +19,7 @@ import Warp
 // which of them the answer was about.
 public struct Mutator: Sendable {
     // One step down into a value: a position in a list, the entry under a
-    // key of a map, the key itself, or a field of a record.
+    // key of a map, the key itself, or a field of a struct.
     private enum Step {
         case position(Int)
         case entry(Value)
@@ -143,8 +143,8 @@ public struct Mutator: Sendable {
                 walk(entry.value, at: steps + [.entry(entry.key)], visit)
             }
 
-        case let .record(record):
-            for (name, field) in zip(record.names, record.values) {
+        case let .struct(instance):
+            for (name, field) in zip(instance.names, instance.values) {
                 walk(field, at: steps + [.field(name)], visit)
             }
 
@@ -189,15 +189,15 @@ public struct Mutator: Sendable {
 
             return .dictionary(dictionary.removing(key: key).writing(key: replaced, with: held))
 
-        case let (.field(field), .record(record)):
+        case let (.field(field), .struct(instance)):
             guard
-                let position = record.layout.position(of: field),
-                let held = replacing(steps.dropFirst(), in: record.values[position], with: mutated)
+                let position = instance.layout.position(of: field),
+                let held = replacing(steps.dropFirst(), in: instance.values[position], with: mutated)
             else {
                 return nil
             }
 
-            return .record(record.mapValues { name, value in name == field ? held : value })
+            return .struct(instance.mapValues { name, value in name == field ? held : value })
 
         default:
             return nil

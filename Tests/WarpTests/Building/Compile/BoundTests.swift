@@ -350,7 +350,7 @@ struct BoundTests {
         // Given. `describe` promises what answers the contract, and the
         // witness answers a whole number
         let sut = try Module(
-            types: ["Bank.Card": .record(["last": .string])],
+            types: ["Bank.Card": .struct(["last": .string])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .array(.named("App.Describable")))]],
             claims: ["Bank.Card": ["App.Describable"]],
             procedures: [
@@ -365,7 +365,7 @@ struct BoundTests {
                     body: [
                         Statement(
                             binding: .constant("card"),
-                            expression: .cast(.record(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
+                            expression: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
                         )
                     ],
                     result: .call(Call(selector: "App.Describable.describe", arguments: [reference("card")]))
@@ -386,7 +386,7 @@ struct BoundTests {
         // Given. `Box` answers `Printable` by showing a `Card`, `Card` claims
         // `Describable` and answers nothing it asks
         let sut = try Module(
-            types: ["App.Box": .record(["n": .int]), "Bank.Card": .record(["last": .string])],
+            types: ["App.Box": .struct(["n": .int]), "Bank.Card": .struct(["last": .string])],
             contracts: [
                 "App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)],
                 "App.Printable": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .named("App.Describable"))]
@@ -396,7 +396,7 @@ struct BoundTests {
                 "App.Box.show": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Box"))], returns: .named("Bank.Card")),
                     body: [],
-                    result: .cast(.record(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
+                    result: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -404,7 +404,7 @@ struct BoundTests {
                     body: [
                         Statement(
                             binding: .constant("box"),
-                            expression: .cast(.record(["n": .literal(.int(1))]), as: .named("App.Box"), optional: false)
+                            expression: .cast(.struct(["n": .literal(.int(1))]), as: .named("App.Box"), optional: false)
                         ),
                         Statement(
                             binding: .constant("shown"),
@@ -659,7 +659,7 @@ struct BoundTests {
         // parameter its signature bounds by `App.Marked`, where the contract
         // writes `String` and answers `Int`
         let sut = try Module(
-            types: ["Bank.Card": .record(["last": .string])],
+            types: ["Bank.Card": .struct(["last": .string])],
             contracts: Self.markers("App.Marked").merging([
                 "App.Kept": [
                     "keep": Signature(
@@ -685,7 +685,7 @@ struct BoundTests {
                     body: [
                         Statement(
                             binding: .constant("card"),
-                            expression: .cast(.record(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
+                            expression: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
                         )
                     ],
                     result: .call(Call(selector: "App.Kept.keep", arguments: [reference("card"), .literal(.string("y"))]))

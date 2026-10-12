@@ -26,8 +26,8 @@ struct CallTests {
         // Given
         let sut = try loader.loadDocument([
             "types": [
-                "App.Pair": ["record": ["base": "Int", "bump": "Int?"]],
-                "App.Echo": ["record": ["pair": "App.Pair"]]
+                "App.Pair": ["struct": ["base": "Int", "bump": "Int?"]],
+                "App.Echo": ["struct": ["pair": "App.Pair"]]
             ],
             "procedures": [
                 "caller": [
@@ -45,10 +45,10 @@ struct CallTests {
                         [
                             "let": "echo",
                             "type": "App.Pair",
-                            "value": ["record": ["base": ["ref": "base"], "bump": ["ref": "bump"]]]
+                            "value": ["struct": ["base": ["ref": "base"], "bump": ["ref": "bump"]]]
                         ]
                     ],
-                    "result": ["record": ["pair": ["ref": "echo"]]],
+                    "result": ["struct": ["pair": ["ref": "echo"]]],
                     "returns": "App.Echo"
                 ]
             ]
@@ -59,7 +59,7 @@ struct CallTests {
 
         // Then. `bump` declares null, so the null handed reads null in the
         // callee
-        #expect(outputs.map?["result"] == .record(Record(name: "App.Pair", ["base": .int(41), "bump": .null])))
+        #expect(outputs.map?["result"] == .struct(Struct(name: "App.Pair", ["base": .int(41), "bump": .null])))
     }
 
     @Test("a constant argument violating the callee signature is rejected at the build")
@@ -102,11 +102,11 @@ struct CallTests {
             ]
         ])
         let elsewhere = try loader.loadDocument([
-            "types": ["App.Said": ["record": ["said": "String"]]],
+            "types": ["App.Said": ["struct": ["said": "String"]]],
             "procedures": [
                 "some-other-file.greet": [
                     "body": [["let": "word", "value": "hello"]],
-                    "result": ["record": ["said": ["ref": "word"]]],
+                    "result": ["struct": ["said": ["ref": "word"]]],
                     "returns": "App.Said"
                 ]
             ]

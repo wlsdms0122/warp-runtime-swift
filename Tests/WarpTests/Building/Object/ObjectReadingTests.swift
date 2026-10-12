@@ -167,7 +167,7 @@ struct ObjectReadingTests {
 
     @Test("is refused where it is a document")
     func aDocument() async throws {
-        // Given. A record that says `warp` where an object says `object`. What
+        // Given. A struct that says `warp` where an object says `object`. What
         // tells the two apart at the door is what each says it is.
         let parts = try await parts()
 
@@ -264,16 +264,16 @@ struct ObjectReadingTests {
 
     @Test("is refused where a layout's names are not in order")
     func aLayoutOutOfOrder() async throws {
-        // Given. A body answering a record literal, which the object writes as
-        // the record's layout beside the code filling each field.
+        // Given. A body answering a struct literal, which the object writes as
+        // the struct's layout beside the code filling each field.
         let sut = try Module(
-            types: ["App.Pair": .record(["a": .int, "b": .string])],
+            types: ["App.Pair": .struct(["a": .int, "b": .string])],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("App.Pair")),
                     body: [],
-                    result: .record(["a": .literal(.int(1)), "b": .literal(.string("s"))])
+                    result: .struct(["a": .literal(.int(1)), "b": .literal(.string("s"))])
                 )
             ]
         )
@@ -286,12 +286,12 @@ struct ObjectReadingTests {
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
-            case var .array(record) = operation[1],
-            case var .array(layout) = record[0],
+            case var .array(built) = operation[1],
+            case var .array(layout) = built[0],
             case let .array(names) = layout[1],
             names.count > 1
         else {
-            Issue.record("an object writes a record literal as its layout and its fields")
+            Issue.record("an object writes a struct literal as its layout and its fields")
 
             return
         }
@@ -299,8 +299,8 @@ struct ObjectReadingTests {
         // The names swapped and the fields left where they were. A reading that
         // put the names back in order would pair each with the other's code.
         layout[1] = .array(names.reversed())
-        record[0] = .array(layout)
-        operation[1] = .array(record)
+        built[0] = .array(layout)
+        operation[1] = .array(built)
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
@@ -380,7 +380,7 @@ struct ObjectReadingTests {
         // order. The values read alike either way, so what breaks is quieter:
         // one object would have two writings and a cache key two answers.
         let sut = try Module(
-            types: ["App.One": .record(["x": .int]), "App.Two": .record(["y": .int])],
+            types: ["App.One": .struct(["x": .int]), "App.Two": .struct(["y": .int])],
             procedures: [
                 "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
@@ -406,16 +406,16 @@ struct ObjectReadingTests {
         }
     }
 
-    @Test("is refused where a record value's fields stand out of order")
-    func aRecordOutOfOrder() async throws {
-        // Given. A real object whose body answers a constant holding a record,
-        // which the build folds to the record value it is, its fields turned
+    @Test("is refused where a struct value's fields stand out of order")
+    func aStructOutOfOrder() async throws {
+        // Given. A real object whose body answers a constant holding a struct,
+        // which the build folds to the struct value it is, its fields turned
         // around. A reading that sorted them would read two writings as one
         // object.
         let sut = try Module(
-            types: ["App.Pair": .record(["a": .int, "b": .int])],
+            types: ["App.Pair": .struct(["a": .int, "b": .int])],
             constants: [
-                "pair": .cast(.record(["a": .literal(.int(1)), "b": .literal(.int(2))]), as: .named("App.Pair"), optional: false)
+                "pair": .cast(.struct(["a": .literal(.int(1)), "b": .literal(.int(2))]), as: .named("App.Pair"), optional: false)
             ],
             procedures: [
                 "App.entry": Procedure(
@@ -440,7 +440,7 @@ struct ObjectReadingTests {
             case let .array(values) = value[3],
             names.count == 2
         else {
-            Issue.record("an object writes a record literal as its names and values")
+            Issue.record("an object writes a struct literal as its names and values")
 
             return
         }
@@ -539,7 +539,7 @@ struct ObjectReadingTests {
         // set reads the same either way, so what breaks is quieter: one
         // object would have two writings.
         let sut = try Module(
-            types: ["App.Box": .record(["v": .int])],
+            types: ["App.Box": .struct(["v": .int])],
             contracts: [
                 "App.One": ["one": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)],
                 "App.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
@@ -980,7 +980,7 @@ struct ObjectReadingTests {
     // what it means to mutate.
     private func parts() async throws -> Value.Dictionary {
         try await parts(of: try Module(
-            types: ["App.Point": .record(["x": .int, "y": .int])],
+            types: ["App.Point": .struct(["x": .int, "y": .int])],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,

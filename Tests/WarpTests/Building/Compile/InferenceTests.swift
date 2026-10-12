@@ -263,7 +263,7 @@ struct InferenceTests {
         // Given
         let sut = try Module(
             types: [
-                "Task": .record([
+                "Task": .struct([
                         "done": .bool,
                         "id": .string
                     ])
@@ -736,14 +736,14 @@ struct InferenceTests {
         }
     }
 
-    @Test("a cast to another declared record is refused, since a record is its name")
-    func aCastOntoAnotherRecordIsRefused() async throws {
-        // Given. A declared record is its name, so no value is one record
+    @Test("a cast to another declared struct is refused, since a struct is its name")
+    func aCastOntoAnotherStructIsRefused() async throws {
+        // Given. A declared struct is its name, so no value is one struct
         // and another at once
         let sut = try Module(
             types: [
-                "App.Failed": .record(["type": .string, "message": .string]),
-                "App.Reasons": .record(["failures": .dictionary(key: .string, value: .string)])
+                "App.Failed": .struct(["type": .string, "message": .string]),
+                "App.Reasons": .struct(["failures": .dictionary(key: .string, value: .string)])
             ],
             procedures: [
                 entryName: Procedure(
@@ -780,7 +780,7 @@ struct InferenceTests {
         // actually asks whether both could hold. Both sides name themselves,
         // which is the case a guard living inside one expansion could not bound
         let sut = try Module(
-            types: ["Tree": .record(["value": .int, "children": .array(.named("Tree"))])],
+            types: ["Tree": .struct(["value": .int, "children": .array(.named("Tree"))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1070,7 +1070,7 @@ struct InferenceTests {
         // names at every step, for a cast's reading and a declared parameter's
         // alike.)
         let sut = try Module(
-            types: ["Person": .record(["name": .string])],
+            types: ["Person": .struct(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1140,7 +1140,7 @@ struct InferenceTests {
         // must stand too. Folding the parameter walk's reading to `Any` made
         // the second refuse on a type the author never wrote
         let sut = try Module(
-            types: ["App.Outer": .record(["a": .named("App.Inner")]), "App.Inner": .record(["b": .string])],
+            types: ["App.Outer": .struct(["a": .named("App.Inner")]), "App.Inner": .struct(["b": .string])],
             procedures: [
                 "peek": Procedure(
                     signature: Signature(
@@ -1158,7 +1158,7 @@ struct InferenceTests {
                     body: [],
                     result: .call(Call(
                         selector: "peek",
-                        arguments: [.cast(.record(["a": .record(["b": .literal(.string("deep"))])]), as: .named("App.Outer"), optional: false)]
+                        arguments: [.cast(.struct(["a": .struct(["b": .literal(.string("deep"))])]), as: .named("App.Outer"), optional: false)]
                     ))
                 )
             ]
@@ -1230,12 +1230,12 @@ struct InferenceTests {
 
     @Test("a cast is not called needless where what it reads holds any inside")
     func aCastIntoAnUnprovenFieldStands() async throws {
-        // Given. The reading proves a record is there and proves nothing about
+        // Given. The reading proves a struct is there and proves nothing about
         // `data`. Calling this cast needless would refuse the author both ways:
         // the cast as saying nothing, and the dot it would have allowed as
         // unjudgeable
         let sut = try Module(
-            types: ["App.Payload": .record(["data": .any]), "App.Named": .record(["name": .string])],
+            types: ["App.Payload": .struct(["data": .any]), "App.Named": .struct(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1267,7 +1267,7 @@ struct InferenceTests {
         // it writes back is what was written: a refusal and a document both
         // read the author's spelling
         let sut = try Module(
-            types: ["Person": .record(["name": .string])],
+            types: ["Person": .struct(["name": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1312,7 +1312,7 @@ struct InferenceTests {
         // dot is judged against that type, and the run is left only the
         // question of what arrived
         let sut = try Module(
-            types: ["App.Whatever": .record(["whatever": .string])],
+            types: ["App.Whatever": .struct(["whatever": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1338,13 +1338,13 @@ struct InferenceTests {
         _ = try await builder.build([sut] + Module.standard)
     }
 
-    @Test("a field the record does not declare is refused, ?. or not")
+    @Test("a field the struct does not declare is refused, ?. or not")
     func anUndeclaredFieldIsRefused() async throws {
         // Given. The type proved the absence, so no spelling reads past it:
         // `?.` speaks about what may be absent at run, not about what the
         // declaration already decided
         let sut = try Module(
-            types: ["App.Task": .record(["id": .string])],
+            types: ["App.Task": .struct(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1369,7 +1369,7 @@ struct InferenceTests {
 
         // The optional spelling changes nothing a declaration decided.
         let optional = try Module(
-            types: ["App.Task": .record(["id": .string])],
+            types: ["App.Task": .struct(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1856,13 +1856,13 @@ struct InferenceTests {
         }
     }
 
-    @Test("a dot on a record is a read, and a procedure there is written as a call")
-    func aDotOnARecordDoesNotReachAProcedure() async throws {
-        // Given. The record does not declare the name, and a type with fields
+    @Test("a dot on a struct is a read, and a procedure there is written as a call")
+    func aDotOnAStructDoesNotReachAProcedure() async throws {
+        // Given. The struct does not declare the name, and a type with fields
         // reads fields alone: the procedure by that name is not consulted, and the
         // refusal says to write the call
         let sut = try Module(
-            types: ["App.Task": .record(["id": .string])],
+            types: ["App.Task": .struct(["id": .string])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -1870,7 +1870,7 @@ struct InferenceTests {
                     body: [
                         Statement(
                             binding: .constant("task", declared: .named("App.Task")),
-                            expression: .record(["id": .literal(.string("a"))])
+                            expression: .struct(["id": .literal(.string("a"))])
                         )
                     ],
                     result: .reference([.name("task"), .name("absolute")])

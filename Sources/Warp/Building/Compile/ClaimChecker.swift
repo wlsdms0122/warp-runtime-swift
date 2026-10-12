@@ -213,7 +213,7 @@ struct ClaimChecker {
         let (type, contract) = (claim.held.type, claim.held.contract)
 
         // A type the language names stands for itself, and one a document
-        // declares for the record behind it.
+        // declares for the struct behind it.
         let languageType = TypeExpression.nominalTypes[type]
 
         guard languageType != nil || types[type] != nil else {
@@ -240,14 +240,14 @@ struct ClaimChecker {
             return .waits("\(claim.spelled) says " + reason)
         }
 
-        // A value of a declared type is an instance of the record it is and of
+        // A value of a declared type is an instance of the struct it is and of
         // no other name, so a claim about a declared name that is not itself
-        // a record, an alias included, is about no type a value is.
+        // a struct, an alias included, is about no type a value is.
         if languageType == nil {
-            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresRecord(row) else {
+            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresStruct(row) else {
                 throw BuildError(
-                    "'\(type)' is not itself a record, and no value is an instance of it under that name."
-                        + " A claim about a declared type is about a record, under the name it was declared",
+                    "'\(type)' is not itself a struct, and no value is an instance of it under that name."
+                        + " A claim about a declared type is about a struct, under the name it was declared",
                     at: claim.place
                 )
             }

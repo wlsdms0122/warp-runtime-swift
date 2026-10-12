@@ -130,7 +130,7 @@ public struct ConstructRegistry: Sendable {
         }
 
         // A tag is read as its expression wherever one stands, a statement's
-        // `value` included, so a construct under a tag would take a record, a
+        // `value` included, so a construct under a tag would take a struct, a
         // reference or a call for itself.
         guard ExpressionTag(key) == nil else {
             throw ConstructRegistryError(

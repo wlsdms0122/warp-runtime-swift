@@ -8,14 +8,14 @@
 import Foundation
 
 // A path as the type check placed it: its segments as the run reads them,
-// with no slot named yet. A dot on a record whose layout the build proved
+// with no slot named yet. A dot on a struct whose layout the build proved
 // stands at the place the field takes; a dot on a type a call decides is read
 // by its name; what stands between brackets is written into the place it
 // stands in, and an index the run reads is a path of its own. The type check
 // works it out once, where it judges the path, and lowering names the slots.
 struct LoweredPath: Sendable, Equatable {
     enum Segment: Sendable, Equatable {
-        // A field of a record whose layout the build proved: the place it
+        // A field of a struct whose layout the build proved: the place it
         // stands in, beside the spelling the path wrote.
         case field(Int, Name, optional: Bool)
 

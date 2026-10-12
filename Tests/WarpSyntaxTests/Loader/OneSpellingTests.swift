@@ -80,21 +80,21 @@ struct OneSpellingTests {
         }
     }
 
-    @Test("a named record under the record tag is the literal it writes, refused for the record it holds")
-    func aNamedRecordUnderTheTagIsRefused() throws {
+    @Test("a named struct under the struct tag is the literal it writes, refused for the struct it holds")
+    func aNamedStructUnderTheTagIsRefused() throws {
         // Given
         let point = try Value.holding([(name: Name("x"), value: Value.int(1))], named: "Point")
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["result": ["record": point]]]
+            "procedures": ["entry": ["result": ["struct": point]]]
         ]
 
         // When / Then
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal holds a record")
+            error is ValidationError && "\(error)".contains("a literal holds a struct")
         }
     }
 
@@ -144,7 +144,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "types": ["App.Outer": ["record": ["inner": ["id": "String"]]]],
+            "types": ["App.Outer": ["struct": ["inner": ["id": "String"]]]],
             "procedures": ["entry": ["result": 1]]
         ]
 
@@ -152,13 +152,13 @@ struct OneSpellingTests {
         #expect {
             try Loader().load(document, identity: nil)
         } throws: { error in
-            (error as? ReadingError)?.place?.rendered == "types.App.Outer.record.inner"
-                && "\(error)".contains("A record is declared under its name in `types` as `{ record: { … } }`")
+            (error as? ReadingError)?.place?.rendered == "types.App.Outer.struct.inner"
+                && "\(error)".contains("A struct is declared under its name in `types` as `{ struct: { … } }`")
         }
     }
 
-    @Test("a refusal inside a record or a cast is placed under the tag the text wrote", arguments: [
-        (written: Value.dictionary(["record": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.record.a"),
+    @Test("a refusal inside a struct or a cast is placed under the tag the text wrote", arguments: [
+        (written: Value.dictionary(["struct": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.struct.a"),
         (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "Int"])]), place: "procedures.entry.result.as?.of")
     ])
     func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) {

@@ -26,12 +26,12 @@ struct LinkBoundaryTests {
         // numbered in the order they sort, so one more name ahead of `Thing`
         // moves what its number stands for
         let mine = try await Builder().build(
-            try link(declaring: ["App.Thing": .record(["a": .int])])
+            try link(declaring: ["App.Thing": .struct(["a": .int])])
         )
         let theirs = try await Builder().build(
             try link(declaring: [
-                "App.Alpha": .record(["z": .string]),
-                "App.Thing": .record(["a": .int])
+                "App.Alpha": .struct(["z": .string]),
+                "App.Thing": .struct(["a": .int])
             ])
         )
 

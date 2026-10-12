@@ -10,7 +10,7 @@ import Foundation
 // A path segment as the run reads it. An index written as a name is the slot
 // path it reads the position or the key from.
 enum Step: Sendable {
-    // A field of a record whose layout the build proved: the place it stands
+    // A field of a struct whose layout the build proved: the place it stands
     // in, which is where a read and a write both land, beside the spelling
     // the path wrote, which is what a sentence calls it.
     case field(Int, Name, optional: Bool)

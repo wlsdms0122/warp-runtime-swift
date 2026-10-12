@@ -15,8 +15,8 @@ struct JudgementTable: Sendable {
     // MARK: - Property
     private(set) var judgements: [Place: Judgement] = [:]
 
-    // The name a record literal at a place is built under: the declared
-    // record the place it is written into reads.
+    // The name a struct literal at a place is built under: the declared
+    // struct the place it is written into reads.
     private(set) var names: [Place: Name] = [:]
 
     // The path a statement at a place writes, as the walk that judged where
@@ -41,14 +41,14 @@ struct JudgementTable: Sendable {
         judgements[place] = judgement
     }
 
-    // The name the record literal at this place is built under, or nil
+    // The name the struct literal at this place is built under, or nil
     // where the type check judged none there.
-    func name(ofRecordAt place: Place) -> Name? {
+    func name(ofStructAt place: Place) -> Name? {
         names[place]
     }
 
-    // The name the record literal at this place is built under.
-    mutating func record(_ name: Name, ofRecordAt place: Place) {
+    // The name the struct literal at this place is built under.
+    mutating func record(_ name: Name, ofStructAt place: Place) {
         assert(names[place] == nil, "one place stands for one expression")
 
         names[place] = name

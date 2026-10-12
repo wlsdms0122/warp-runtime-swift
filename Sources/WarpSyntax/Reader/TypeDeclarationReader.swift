@@ -8,15 +8,15 @@
 import Foundation
 import Warp
 
-// A type a module declares, as a document writes it under `types`: a record,
-// its fields under `record`, each beside its type, or any type, which the
+// A type a module declares, as a document writes it under `types`: a struct,
+// its fields under `struct`, each beside its type, or any type, which the
 // declared name is then a second spelling of.
 struct TypeDeclarationReader: Decodable {
     // MARK: - Property
     let declared: TypeDeclaration
 
-    // The key a record is declared under.
-    static let recordKey: Name = "record"
+    // The key a struct is declared under.
+    static let structKey: Name = "struct"
 
     // MARK: - Initializer
     init(from decoder: Decoder) throws {
@@ -28,10 +28,10 @@ struct TypeDeclarationReader: Decodable {
 
         let keys = keyed.allKeys.map(\.name)
 
-        if keys == [Self.recordKey] {
-            let fields = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.recordKey.spelling))
+        if keys == [Self.structKey] {
+            let fields = try keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.structKey.spelling))
 
-            self.declared = try Self.record(from: fields)
+            self.declared = try Self.structDeclaration(from: fields)
         } else {
             self.declared = .alias(try TypeReader(from: decoder).type)
         }
@@ -39,13 +39,13 @@ struct TypeDeclarationReader: Decodable {
 
     // MARK: - Public
     // MARK: - Private
-    // A record's fields, each a type. Each field is read where it stands, so a
+    // A struct's fields, each a type. Each field is read where it stands, so a
     // refusal inside one keeps its own place and its own sentence.
-    private static func record(from decoder: Decoder) throws -> TypeDeclaration {
+    private static func structDeclaration(from decoder: Decoder) throws -> TypeDeclaration {
         guard case .dictionary = try ValueReader(from: decoder).value else {
-            throw ReadingError("a record is a mapping of its fields to their types", at: decoder.steps)
+            throw ReadingError("a struct is a mapping of its fields to their types", at: decoder.steps)
         }
 
-        return .record(try decoder.read([Name: TypeReader].self).mapValues(\.type))
+        return .struct(try decoder.read([Name: TypeReader].self).mapValues(\.type))
     }
 }

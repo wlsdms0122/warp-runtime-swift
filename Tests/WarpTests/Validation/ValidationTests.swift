@@ -287,7 +287,7 @@ struct ValidationTests {
             ([Statement(expression: .conditional(construct, then: [], else: nil))], "body[0].conditional.condition"),
             ([Statement(expression: .loop(while: construct, body: Block(body: [])))], "body[0].loop.condition"),
             ([Statement(binding: .constant("list"), expression: .array([construct]))], "body.list[0].array[0]"),
-            ([Statement(binding: .constant("pair"), expression: .record(["a": construct]))], "body.pair[0].record.fields.a"),
+            ([Statement(binding: .constant("pair"), expression: .struct(["a": construct]))], "body.pair[0].struct.fields.a"),
             ([Statement(binding: .constant("read"), expression: .cast(construct, as: .int, optional: false))], "body.read[0].cast.subject"),
             ([Statement(binding: .constant("held"), expression: .block(Block(body: [], result: construct)))], "body.held[0].block.result"),
             ([Statement(expression: .leave(Leave(reach: .procedure, value: construct)))], "body[0].leave")
@@ -739,7 +739,7 @@ struct ValidationTests {
     @Test("a claim about a type the language names stands as one about a declared type")
     func aClaimAboutALanguageTypeStands() throws {
         // When / Then. `Int` is a type a value is an instance of, as a declared
-        // record is, and `Int` names no document to import.
+        // struct is, and `Int` names no document to import.
         let sut = try Module(
             imports: [],
             contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
@@ -791,13 +791,13 @@ struct ValidationTests {
         }
     }
 
-    @Test("a record type's field and a contract's parameter are value names, held where a module built in Swift writes them")
+    @Test("a struct type's field and a contract's parameter are value names, held where a module built in Swift writes them")
     func aFieldAndAContractParameterAreValueNames() throws {
         // When / Then. A dot in a field's name is a step to a path, so no path
         // reaches the field
         #expect {
             try Module(
-                types: ["App.Held": .record(["a.b": .int])],
+                types: ["App.Held": .struct(["a.b": .int])],
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
@@ -853,17 +853,17 @@ struct ValidationTests {
     ])
     func aPathReadsValueNames(step: Name) throws {
         // Given
-        let record = Statement(binding: .variable("d"), expression: .record(["a": .literal(.int(1))]))
+        let literal = Statement(binding: .variable("d"), expression: .struct(["a": .literal(.int(1))]))
 
         // When / Then. A read and a write
-        #expect(!validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name(step)]))]))
-        #expect(!validates(body: [record, Statement(binding: .assignment([.name("d"), .name(step)]), expression: .literal(.int(2)))]))
-        #expect(validates(body: [record, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name("a")]))]))
+        #expect(!validates(body: [literal, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name(step)]))]))
+        #expect(!validates(body: [literal, Statement(binding: .assignment([.name("d"), .name(step)]), expression: .literal(.int(2)))]))
+        #expect(validates(body: [literal, Statement(binding: .constant("x"), expression: .reference([.name("d"), .name("a")]))]))
     }
 
-    @Test("a literal holds no record, at whatever depth it holds one", arguments: [
-        Value.record(Record(name: "Ghost.T", ["x": .int(1)])),
-        .array([.record(Record(name: "Int", ["x": .int(1)]))])
+    @Test("a literal holds no struct, at whatever depth it holds one", arguments: [
+        Value.struct(Struct(name: "Ghost.T", ["x": .int(1)])),
+        .array([.struct(Struct(name: "Int", ["x": .int(1)]))])
     ])
     func aNamedLiteralIsRefused(carried: Value) throws {
         // When / Then
@@ -872,7 +872,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("a literal holds a record")
+            error is ValidationError && "\(error)".contains("a literal holds a struct")
         }
     }
 
@@ -1197,9 +1197,9 @@ struct ValidationTests {
         }
     }
 
-    @Test("a name that is no record and comes back to itself refuses at the load")
+    @Test("a name that is no struct and comes back to itself refuses at the load")
     func aNameComingBackRefusesAtTheLoad() throws {
-        // Given. A record may name itself, and a name that is no record
+        // Given. A struct may name itself, and a name that is no struct
         // spells no type where it reaches itself, through names or a structure
         let cycles: [[Name: TypeDeclaration]] = [
             ["Loop": .alias(.named("Loop"))],
@@ -1229,7 +1229,7 @@ struct ValidationTests {
         // A recursive type loads: the name reaches a type on the way back.
         #expect(throws: Never.self) {
             try Module(
-                types: ["Tree": .record(["children": .array(.named("Tree"))])],
+                types: ["Tree": .struct(["children": .array(.named("Tree"))])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,

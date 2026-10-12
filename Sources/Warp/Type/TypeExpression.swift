@@ -17,7 +17,7 @@ import Foundation
 // of these rather than a separate kind of thing, which is why a module declares
 // a type the same way it declares anything, by binding a name to something.
 //
-// A record type is declared, in `types`, and named here: a value fits with
+// A struct type is declared, in `types`, and named here: a value fits with
 // exactly its name. What arrives from outside gains fields, so the door it
 // comes through fits it to the declaration first, and every other place
 // holds a value as it is.

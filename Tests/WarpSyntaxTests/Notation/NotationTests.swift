@@ -121,14 +121,14 @@ struct NotationTests {
         #expect(condition.referencePath == path("ready"))
     }
 
-    @Test("a record a notation would claim is written under `record` and read back as a record there")
-    func aRecordANotationWouldClaimIsWrittenUnderRecord() throws {
+    @Test("a struct a notation would claim is written under `struct` and read back as a struct there")
+    func aStructANotationWouldClaimIsWrittenUnderStruct() throws {
         // Given. Writing and reading are inverses, and a reading side with
         // spellings is a different far side from one without. Written bare
         // for a notation that recognises a condition by its subject key, these
-        // fields would come back a call. Under `record` they are a record's
+        // fields would come back a call. Under `struct` they are a struct's
         // fields whatever they are called.
-        let module = try Self.conditional(on: .record([
+        let module = try Self.conditional(on: .struct([
             "of": .reference(path("word")),
             "equal": .literal(.string("hey"))
         ]))
@@ -142,22 +142,22 @@ struct NotationTests {
             case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             let condition = body.first?.map?["value"]?.map?["conditional"]?.map?["when"],
             case let .body(block) = read.procedures[entryName]?.implementation,
-            case let .conditional(.record(fields), _, _) = block.body.statements.first?.expression
+            case let .conditional(.struct(fields), _, _) = block.body.statements.first?.expression
         else {
-            Issue.record("a record written for a notation reads back as a record there")
+            Issue.record("a struct written for a notation reads back as a struct there")
 
             return
         }
 
-        #expect(condition.map?["record"]?.map?["of"] == Value.dictionary(["ref": .string("word")]))
+        #expect(condition.map?["struct"]?.map?["of"] == Value.dictionary(["ref": .string("word")]))
         #expect(Set(fields.keys) == ["of", "equal"])
     }
 
-    @Test("a record that some notation would read as a condition is still a record")
-    func aRecordInAConditionSlotStaysARecord() throws {
-        // Given. The same record, written for a document. A document's
+    @Test("a struct that some notation would read as a condition is still a struct")
+    func aStructInAConditionSlotStaysAStruct() throws {
+        // Given. The same struct, written for a document. A document's
         // condition slot is an expression like any other and no notation is
-        // reading it back, so the record is data and is written as data.
+        // reading it back, so the struct is data and is written as data.
         let module = try Module(
             procedures: [
                 entryName: Procedure(
@@ -165,7 +165,7 @@ struct NotationTests {
                     signature: Signature(parameters: [Parameter(name: "word", type: .bool)]),
                     body: [
                         Statement(expression: .conditional(
-                            .record([
+                            .struct([
                                 "of": .reference(path("word")),
                                 "equal": .literal(.string("hey"))
                             ]),
@@ -181,13 +181,13 @@ struct NotationTests {
         let written = try Writer().value(of: module)
         let read = try sut.load(written)
 
-        // Then. The same record arrived, rather than a call
+        // Then. The same struct arrived, rather than a call
         guard
             case let .body(block) = read.procedures[entryName]?.implementation,
             case let .conditional(condition, _, _) = block.body.statements.first?.expression,
-            case let .record(fields) = condition
+            case let .struct(fields) = condition
         else {
-            Issue.record("a record written in a condition slot reads back as a record")
+            Issue.record("a struct written in a condition slot reads back as a struct")
 
             return
         }
@@ -284,7 +284,7 @@ struct NotationTests {
         // Given. The spelling these tests read with, left unspent in a
         // document. `load` takes a document, and a document has no spellings,
         // so the mapping is not the call some table would have made of it:
-        // standing bare it is refused, and under `record` it is a record.
+        // standing bare it is refused, and under `struct` it is a struct.
         func document(asking asked: Value) -> Value {
             [
                 "warp": .int(ModuleReader.version),
@@ -303,7 +303,7 @@ struct NotationTests {
         let spelled: Value = ["of": ["ref": "word"], "is": "hey"]
 
         // When
-        let module = try sut.load(document(asking: ["record": spelled]))
+        let module = try sut.load(document(asking: ["struct": spelled]))
 
         // Then
         #expect {
@@ -313,9 +313,9 @@ struct NotationTests {
         }
         guard
             case let .body(block) = module.procedures[entryName]?.implementation,
-            case let .record(fields) = block.body.statements.first?.expression
+            case let .struct(fields) = block.body.statements.first?.expression
         else {
-            Issue.record("a document read with no notation reads a record as a record")
+            Issue.record("a document read with no notation reads a struct as a struct")
 
             return
         }

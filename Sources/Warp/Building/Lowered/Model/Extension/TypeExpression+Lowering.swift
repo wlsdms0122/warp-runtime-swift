@@ -9,7 +9,7 @@ import Foundation
 
 extension TypeExpression {
     // This type as the run reads it, with every declared name resolved: a
-    // record to its row, and an alias to what it stands for. A name nothing
+    // struct to its row, and an alias to what it stands for. A name nothing
     // declares, a bound naming no contract and `Self` outside a contract
     // stand for no type, so each lowers to `Never`. A build refuses the first
     // two in every document and object before it reads a lowering, and a

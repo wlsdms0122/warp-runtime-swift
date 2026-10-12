@@ -48,7 +48,7 @@ struct ObjectWriter {
     // Every part by the key it stands under. What this cannot write is a
     // closure holding a box of the run that made it or written by a document
     // nobody wrote down, a dependency no fingerprint was worked out for, and
-    // a lowered type holding a record's fields. Each is the one error thrown
+    // a lowered type holding a struct's fields. Each is the one error thrown
     // on the way down, and an object of what holds it is not written.
     func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
         let parts = try ObjectLayout.Key.allCases.map { (key) throws(ObjectUnwritable) -> (Name, Value) in
@@ -86,12 +86,12 @@ struct ObjectWriter {
         case let .array(items):
             return tagged(Tag.array, .array(try items.map(self.value)))
 
-        case let .record(record):
+        case let .struct(instance):
             return tagged(
-                Tag.record,
-                name(record.name),
-                .array(record.layout.fields.map(name)),
-                .array(try record.values.map(self.value))
+                Tag.struct,
+                name(instance.name),
+                .array(instance.layout.fields.map(name)),
+                .array(try instance.values.map(self.value))
             )
 
         // The keys in the key order the map holds them in, and the values
@@ -236,12 +236,12 @@ struct ObjectWriter {
         ObjectWriter.maybe(document.identity) { identity in .bytes(identity.bytes) }
     }
 
-    // A declared type: a record under the record's tag, its fields by name,
+    // A declared type: a struct under the struct's tag, its fields by name,
     // and an alias as the type it stands for.
     private func declaration(_ declared: TypeDeclaration) throws(ObjectUnwritable) -> Value {
         switch declared {
-        case let .record(fields):
-            return tagged(ObjectLayout.TypeTag.record, try keyed(fields, type))
+        case let .struct(fields):
+            return tagged(ObjectLayout.TypeTag.struct, try keyed(fields, type))
 
         case let .alias(stands):
             return try type(stands)
@@ -486,7 +486,7 @@ struct ObjectWriter {
         case .literal: return tagged(Tag.literal)
         case .reference: return tagged(Tag.reference)
         case .array: return tagged(Tag.array)
-        case .record: return tagged(Tag.record)
+        case .struct: return tagged(Tag.struct)
         case .dictionary: return tagged(Tag.dictionary)
         case .closure: return tagged(Tag.closure)
         case .cast: return tagged(Tag.cast)
@@ -509,7 +509,7 @@ struct ObjectWriter {
         }
     }
 
-    // A layout is written `[name, fields]`: the declared record's name, and
+    // A layout is written `[name, fields]`: the declared struct's name, and
     // the field names in their order.
     private func layout(_ layout: Layout) -> Value {
         .array([name(layout.name), .array(layout.fields.map(name))])
@@ -548,11 +548,11 @@ struct ObjectWriter {
         case let .dictionary(key, value):
             return tagged(Tag.dictionary, try lowered(key), try lowered(value))
 
-        // A declared record's fields are its declaration's, written under
-        // `types`; a body stands on the record by its name alone.
-        case .record:
+        // A declared struct's fields are its declaration's, written under
+        // `types`; a body stands on the struct by its name alone.
+        case .struct:
             throw ObjectUnwritable(
-                "a lowered type holds a record's fields, and an object names a record"
+                "a lowered type holds a struct's fields, and an object names a struct"
                     + " by its place in 'typeNumbering'"
             )
 
@@ -693,8 +693,8 @@ struct ObjectWriter {
         case let .array(elements):
             return tagged(Tag.array, .array(try elements.map(self.operation)))
 
-        case let .record(record):
-            return tagged(Tag.record, try recordOperation(record))
+        case let .struct(built):
+            return tagged(Tag.struct, try structOperation(built))
 
         case let .dictionary(entries):
             return tagged(
@@ -767,8 +767,8 @@ struct ObjectWriter {
         }
     }
 
-    private func recordOperation(_ record: RecordOperation) throws(ObjectUnwritable) -> Value {
-        .array([layout(record.layout), .array(try record.fields.map(operation))])
+    private func structOperation(_ built: StructOperation) throws(ObjectUnwritable) -> Value {
+        .array([layout(built.layout), .array(try built.fields.map(operation))])
     }
 
     private func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {

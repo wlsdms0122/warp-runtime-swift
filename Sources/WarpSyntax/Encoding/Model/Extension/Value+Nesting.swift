@@ -61,8 +61,8 @@ extension Value {
         case let .array(elements):
             return elements.enumerated().map { index, element in (.index(index), element) }
 
-        case let .record(record):
-            return zip(record.layout.fields, record.values).map { name, value in (.key(name.spelling), value) }
+        case let .struct(instance):
+            return zip(instance.layout.fields, instance.values).map { name, value in (.key(name.spelling), value) }
 
         case let .dictionary(held):
             return held.entries.flatMap { entry in

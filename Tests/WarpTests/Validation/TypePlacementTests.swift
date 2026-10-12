@@ -95,7 +95,7 @@ struct TypePlacementTests {
         #expect {
             try Module(
                 imports: [],
-                types: ["Box": .record(["held": .inout(.int)])],
+                types: ["Box": .struct(["held": .inout(.int)])],
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
             )
         } throws: { error in
@@ -119,7 +119,7 @@ struct TypePlacementTests {
                 ]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".contains("`var` is written on a field of the record a type in `types` declares")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the struct a type in `types` declares")
         }
     }
 
@@ -178,7 +178,7 @@ struct TypePlacementTests {
 
         #expect(throws: Never.self) {
             try Module(
-                types: ["App.R": .record(["a": .variable(.nullable(.array(.int)))])],
+                types: ["App.R": .struct(["a": .variable(.nullable(.array(.int)))])],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
@@ -191,23 +191,23 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("var stands on a field of the record a declared type is, and nowhere inside an alias", arguments: [
+    @Test("var stands on a field of the struct a declared type is, and nowhere inside an alias", arguments: [
         TypeExpression.variable(.int),
         .array(.variable(.int)),
         .dictionary(key: .string, value: .variable(.int))
     ])
     func aVarInsideADeclaredTypeIsRefused(type: TypeExpression) throws {
-        // When / Then. A field is a declared record's, and nothing else is
+        // When / Then. A field is a declared struct's, and nothing else is
         // written through
         #expect {
             try Module(types: ["App.T": .alias(type)])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("`var` is written on a field of the record")
+            error is ValidationError && "\(error)".contains("`var` is written on a field of the struct")
         }
 
-        // And on the declared record's own field it stands
+        // And on the declared struct's own field it stands
         #expect(throws: Never.self) {
-            try Module(types: ["App.T": .record(["a": .variable(.int)])])
+            try Module(types: ["App.T": .struct(["a": .variable(.int)])])
         }
     }
 

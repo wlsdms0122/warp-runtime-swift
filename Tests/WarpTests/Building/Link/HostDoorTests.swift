@@ -11,7 +11,7 @@ import Testing
 
 @Suite("A host settles a value against a declaration the build holds")
 struct HostDoorTests {
-    // A procedure the host answers handing the closure it was given a record
+    // A procedure the host answers handing the closure it was given a struct
     // holding a field the closure's parameter never names.
     private struct HandingQuery: Query {
         enum Parameters: Int, ParameterSet {
@@ -40,7 +40,7 @@ struct HostDoorTests {
 
             return try await question.call(
                 closure,
-                handing: [.record(Record(name: "App.Ticket", ["id": .string("a"), "extra": .int(1)]))]
+                handing: [.struct(Struct(name: "App.Ticket", ["id": .string("a"), "extra": .int(1)]))]
             )
         }
 
@@ -75,7 +75,7 @@ struct HostDoorTests {
         // MARK: - Private
     }
 
-    // A failure carrying a record under a name, the way a procedure the host
+    // A failure carrying a struct under a name, the way a procedure the host
     // answers fills `details` with whatever it holds.
     private struct CarryingFailure: RecoverableFailure {
         // MARK: - Property
@@ -121,7 +121,7 @@ struct HostDoorTests {
         get throws {
             try Module(
                 imports: [],
-                types: ["Bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .struct(["balance": .int])],
                 procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
             )
         }
@@ -135,17 +135,17 @@ struct HostDoorTests {
         let image = try await Builder().build([sut])
 
         // When
-        let settled = try image.settling(.record(Record(name: "Bank.Account", ["balance": .int(1)])), as: "Bank.Account")
+        let settled = try image.settling(.struct(Struct(name: "Bank.Account", ["balance": .int(1)])), as: "Bank.Account")
 
         // Then
-        guard case let .record(record) = settled else {
-            Issue.record("the value did not settle to a record")
+        guard case let .struct(instance) = settled else {
+            Issue.record("the value did not settle to a struct")
 
             return
         }
 
-        #expect(record.name == "Bank.Account")
-        #expect(record.names == ["balance"])
+        #expect(instance.name == "Bank.Account")
+        #expect(instance.names == ["balance"])
     }
 
     @Test("a declaration the build does not have refuses")
@@ -166,7 +166,7 @@ struct HostDoorTests {
 
         // When / Then
         #expect {
-            try image.settling(.record(Record(name: "Bank.Account", ["balance": .string("much")])), as: "Bank.Account")
+            try image.settling(.struct(Struct(name: "Bank.Account", ["balance": .string("much")])), as: "Bank.Account")
         } throws: { error in
             error is ArgumentError && "\(error)".contains("expected Int, got String")
         }
@@ -179,7 +179,7 @@ struct HostDoorTests {
 
         // When
         let settled = try image.settling(
-            .record(Record(name: "Bank.Account", ["balance": .int(1), "note": .string("x")])),
+            .struct(Struct(name: "Bank.Account", ["balance": .int(1), "note": .string("x")])),
             as: "Bank.Account"
         )
 
@@ -192,7 +192,7 @@ struct HostDoorTests {
     func aValueHandedToAClosureIsFitted() async throws {
         // Given
         let handing = try Module(
-            types: ["App.Ticket": .record(["id": .string])],
+            types: ["App.Ticket": .struct(["id": .string])],
             procedures: [
                 "App.handing": Procedure(
                     signature: Signature(of: HandingQuery.self, returns: .string),
@@ -259,35 +259,35 @@ struct HostDoorTests {
         }
     }
 
-    @Test("what a failure carries comes in through the door, a record under an alias's name as its record")
+    @Test("what a failure carries comes in through the door, a struct under an alias's name as its struct")
     func aFailuresPayloadComesInThroughTheDoor() async throws {
         // Given. `App.carry` fails carrying `App.Q { a: 1 }`, `App.Q` an alias
-        // of the record `App.P`, and the rescue answers what it carried
-        let image = try await Builder().build(try carrying(.record(Record(name: "App.Q", ["a": .int(1)]))))
+        // of the struct `App.P`, and the rescue answers what it carried
+        let image = try await Builder().build(try carrying(.struct(Struct(name: "App.Q", ["a": .int(1)]))))
 
         // When
         let answer = try await Executor().run(image)
 
         // Then
-        guard case let .record(record) = answer else {
-            Issue.record("the rescue answered \(answer), not the record")
+        guard case let .struct(instance) = answer else {
+            Issue.record("the rescue answered \(answer), not the struct")
 
             return
         }
 
-        #expect(record.name == "App.P")
+        #expect(instance.name == "App.P")
     }
 
     @Test("what a failure carries under a name no document declares refuses at the door")
     func aFailuresPayloadUnderAnUndeclaredNameRefuses() async throws {
         // Given
-        let image = try await Builder().build(try carrying(.record(Record(name: "App.Z", ["a": .int(1)]))))
+        let image = try await Builder().build(try carrying(.struct(Struct(name: "App.Z", ["a": .int(1)]))))
 
         // When / Then. The rescue never reads it
         await #expect {
             try await Executor().run(image)
         } throws: { error in
-            error is ArgumentError && "\(error)".contains("'failed'.details[\"held\"]: is a App.Z, which no document declares as a record")
+            error is ArgumentError && "\(error)".contains("'failed'.details[\"held\"]: is a App.Z, which no document declares as a struct")
         }
     }
 
@@ -429,7 +429,7 @@ struct HostDoorTests {
     // details and answers what the failure carried there.
     private func carrying(_ held: Value) throws -> [Module] {
         let carry = try Module(
-            types: ["App.P": .record(["a": .int]), "App.Q": .alias(.named("App.P"))],
+            types: ["App.P": .struct(["a": .int]), "App.Q": .alias(.named("App.P"))],
             procedures: [
                 "App.carry": Procedure(
                     signature: Signature(of: CarryingEffect.self),

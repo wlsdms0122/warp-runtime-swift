@@ -25,11 +25,11 @@ public protocol RecoverableFailure: WarpError {
 public extension RecoverableFailure {
     var details: Value.Dictionary { Value.Dictionary([:]) }
 
-    // Built here and not by a conformer, so every payload is the record
+    // Built here and not by a conformer, so every payload is the struct
     // `Failure` the language declares.
     var payload: Value {
-        .record(
-            Record(
+        .struct(
+            Struct(
                 name: TypeSpelling.failure,
                 [
                     FailurePayload.type: .string(type),

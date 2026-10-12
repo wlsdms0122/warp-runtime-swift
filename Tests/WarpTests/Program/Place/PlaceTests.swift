@@ -378,7 +378,7 @@ struct PlaceTests {
         // Given. A type declared as `Wallet.Coin`. The place is spelled from
         // that key, which is what the document writes.
         let sut = try Module(
-            types: ["Wallet.Coin": .record(["amount": .named("Missing")])],
+            types: ["Wallet.Coin": .struct(["amount": .named("Missing")])],
             procedures: [entryName: Procedure(access: .public, body: [])],
             identity: reading
         )

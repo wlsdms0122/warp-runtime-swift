@@ -18,7 +18,7 @@ struct LoweredBodyWalkTests {
         case literal
         case local
         case array
-        case record
+        case `struct`
         case dictionary
         case closure
         case apply
@@ -38,7 +38,7 @@ struct LoweredBodyWalkTests {
             case .literal: self = .literal
             case .local: self = .local
             case .array: self = .array
-            case .record: self = .record
+            case .struct: self = .struct
             case .dictionary: self = .dictionary
             case .closure: self = .closure
             case .apply: self = .apply
@@ -65,8 +65,8 @@ struct LoweredBodyWalkTests {
             case .array:
                 return [.array([leaf])]
 
-            case .record:
-                return [.record(RecordOperation(layout: Layout(name: "App.A", ordered: ["a"]), fields: [leaf]))]
+            case .struct:
+                return [.struct(StructOperation(layout: Layout(name: "App.A", ordered: ["a"]), fields: [leaf]))]
 
             case .dictionary:
                 return [.dictionary([(key: leaf, value: .literal(.null))]), .dictionary([(key: .literal(.null), value: leaf)])]

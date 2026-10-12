@@ -194,13 +194,13 @@ struct ObjectReader {
 
         // A value the model refuses is one the writing could not have laid
         // down, and so one this reading refuses as an object.
-        case .record:
+        case .struct:
             let named = try name(cursor.next())
             let names = try cursor.field().list(name)
             let values = try cursor.field().list(self.value)
 
             read = try refusing {
-                .record(try Record(layout: try Layout(name: named, judging: names), checking: values))
+                .struct(try Struct(layout: try Layout(name: named, judging: names), checking: values))
             }
 
         // The keys in the key order, none the same as another, which is how
@@ -327,20 +327,20 @@ struct ObjectReader {
         return read
     }
 
-    // A declared type: a record, its fields under the record's tag, or the
+    // A declared type: a struct, its fields under the struct's tag, or the
     // type an alias stands for.
     private func declaration(_ value: Value) throws -> TypeDeclaration {
         var cursor = try FieldCursor(value, of: "type")
 
-        guard ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) == .record else {
+        guard ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) == .struct else {
             return .alias(try expression(value))
         }
 
-        let fields = try keyed(cursor.next(), of: "record", expression)
+        let fields = try keyed(cursor.next(), of: "struct", expression)
 
         try cursor.end()
 
-        return .record(fields)
+        return .struct(fields)
     }
 
     private func expression(_ value: Value) throws -> TypeExpression {
@@ -357,8 +357,8 @@ struct ObjectReader {
         case .string: read = .string
         case .array: read = .array(try expression(cursor.next()))
         case .dictionary: read = .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
-        // A record type is written once, as a declared type's own.
-        case .record: throw ObjectRefused("'type' writes a record, which stands only as a type a document declares")
+        // A struct type is written once, as a declared type's own.
+        case .struct: throw ObjectRefused("'type' writes a struct, which stands only as a type a document declares")
         case .procedure:
             read = .procedure(
                 try cursor.field().maybe(procedureType),
@@ -645,7 +645,7 @@ struct ObjectReader {
         case .literal: read = .literal
         case .reference: read = .reference
         case .array: read = .array
-        case .record: read = .record
+        case .struct: read = .struct
         case .dictionary: read = .dictionary
         case .closure: read = .closure
         case .cast: read = .cast
@@ -913,7 +913,7 @@ struct ObjectReader {
         case .literal: read = .literal(try self.value(cursor.next()))
         case .local: read = .local(try address(cursor.next()))
         case .array: read = .array(try Field(cursor.next(), of: "array").list(operation))
-        case .record: read = .record(try recordOperation(cursor.next()))
+        case .struct: read = .struct(try structOperation(cursor.next()))
         case .dictionary:
             read = .dictionary(try Field(cursor.next(), of: "dictionary").list { written in
                 var entry = try FieldCursor(written, of: "entry")
@@ -1004,10 +1004,10 @@ struct ObjectReader {
         return read
     }
 
-    private func recordOperation(_ value: Value) throws -> RecordOperation {
-        var cursor = try FieldCursor(value, of: "record")
+    private func structOperation(_ value: Value) throws -> StructOperation {
+        var cursor = try FieldCursor(value, of: "struct")
         let held = try layout(cursor.next())
-        let read = try RecordOperation(
+        let read = try StructOperation(
             layout: held,
             judging: try cursor.field().list(operation)
         )

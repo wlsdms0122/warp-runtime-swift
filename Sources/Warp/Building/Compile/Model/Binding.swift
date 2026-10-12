@@ -107,7 +107,7 @@ struct Binding: Equatable, Sendable {
             self.init(.declared(inner.slotUnwrapped), inner.slotUnwrapped)
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .array, .dictionary, .record, .procedure, .variable, .nullable,
+            .array, .dictionary, .struct, .procedure, .variable, .nullable,
             .named, .parameter, .composition, .projection:
             self.init(.fixed(declared: declared), declared)
         }

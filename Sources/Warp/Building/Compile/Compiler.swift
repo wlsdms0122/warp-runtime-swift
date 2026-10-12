@@ -506,8 +506,8 @@ struct Compiler {
     // by the one rule, and carries its own place. A closure it holds runs
     // later, so settling proves nothing about the sends inside it, and they
     // pass the gate every gathered call does. What it is written from is read
-    // rather than run, so it passes the gate an operand does. A record
-    // literal in it is read as the declared record of the place it is
+    // rather than run, so it passes the gate an operand does. A struct
+    // literal in it is read as the declared struct of the place it is
     // written into.
     private func settled(
         _ expression: Expression,

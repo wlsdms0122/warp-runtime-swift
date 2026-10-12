@@ -91,17 +91,17 @@ struct FoldedContractTests {
                 "App.giveEarly": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false)
+                    result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false)
                 ),
                 "App.giveLate": Procedure(
                     signature: Signature(returns: .any),
                     body: [],
-                    result: .cast(.record(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
+                    result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
                 )
             ]
         )
         let typed = try Module(
-            types: ["Bank.Plain": .record(["note": .string]), "Zed.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .struct(["note": .string]), "Zed.Plain": .struct(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         // `aaa` settles first and `zzz` last, and the pair the list
@@ -132,17 +132,17 @@ struct FoldedContractTests {
 
     @Test("a value wearing a name is written down where the table cannot decide")
     func aNamedValueIsWrittenDown() async throws {
-        // Given. A procedure answering `Any` hands a named record, cast to a
+        // Given. A procedure answering `Any` hands a named struct, cast to a
         // contract, where the contract is asked, and the reading says nothing
         // about what arrives, so nothing is written down where the call is
         // read.
         let typed = try Module(
-            types: ["Bank.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .struct(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let modules = try documents(
             returning: .any,
-            giving: .cast(.record(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
+            giving: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
         ) + [typed] + Module.standard
 
         // When. Each document compiled against the ones before it, so the

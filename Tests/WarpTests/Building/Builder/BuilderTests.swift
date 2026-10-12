@@ -118,16 +118,16 @@ struct BuilderTests {
         #expect(answer == .int(7))
     }
 
-    @Test("a closure a constant holds inside a record reads the constants beside it")
-    func aClosureInsideARecordCapturesItsSiblings() async throws {
+    @Test("a closure a constant holds inside a struct reads the constants beside it")
+    func aClosureInsideAStructCapturesItsSiblings() async throws {
         // Given. What captures is the closure and not the constant holding it,
-        // so a closure nested in a record has the same demand on the order as
+        // so a closure nested in a struct has the same demand on the order as
         // one written on its own.
         let sut = try Module(
-            types: ["App.Runner": .record(["run": .procedure(ProcedureType(returns: .int))])],
+            types: ["App.Runner": .struct(["run": .procedure(ProcedureType(returns: .int))])],
             constants: [
                 "apply": .cast(
-                    .record([
+                    .struct([
                         "run": .closure(Procedure(
                             signature: Signature(returns: .int),
                             body: [],

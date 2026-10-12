@@ -17,20 +17,20 @@ struct MutatorTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("walks a record's fields the way it walks a map's entries")
-    func aRecordIsWalked() {
+    @Test("walks a struct's fields the way it walks a map's entries")
+    func aStructIsWalked() {
         // Given
-        let point = Value.record(Record(name: "App.Point", ["x": .int(1), "y": .int(2)]))
+        let point = Value.struct(Struct(name: "App.Point", ["x": .int(1), "y": .int(2)]))
 
         // When
         let mutations = sut.mutations(of: point)
 
-        // Then. The record and each of its fields is a place
+        // Then. The struct and each of its fields is a place
         #expect(sut.placeCount(of: point) == 3)
         #expect(
             mutations.contains { mutation in
                 mutation.path == ".x"
-                    && mutation.value == .record(Record(name: "App.Point", ["x": .int(-1), "y": .int(2)]))
+                    && mutation.value == .struct(Struct(name: "App.Point", ["x": .int(-1), "y": .int(2)]))
             }
         )
     }

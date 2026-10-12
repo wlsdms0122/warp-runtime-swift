@@ -411,7 +411,7 @@ struct InPlaceTests {
         // written body
         let sut = try Module(
             imports: ["Other.grow"],
-            types: ["App.All": .record(["items": .variable(.array(.int))])],
+            types: ["App.All": .struct(["items": .variable(.array(.int))])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -549,7 +549,7 @@ struct InPlaceTests {
             "nullable",
             "array",
             "dictionary",
-            "record field",
+            "struct field",
             "declared name"
         ]
     )
@@ -561,11 +561,11 @@ struct InPlaceTests {
             "nullable": .nullable(.named("App.Hook")),
             "array": .array(taking),
             "dictionary": .dictionary(key: .string, value: taking),
-            "record field": .named("App.Holder"),
+            "struct field": .named("App.Holder"),
             "declared name": .named("App.Hook")
         ]
         let calling = try? Module(
-            types: ["App.Hook": .alias(taking), "App.Holder": .record(["hook": taking])],
+            types: ["App.Hook": .alias(taking), "App.Holder": .struct(["hook": taking])],
             procedures: [
                 "App.calling": Procedure(
                     signature: Signature(parameters: [Parameter(name: "body", type: held[wrapped] ?? .any)]),

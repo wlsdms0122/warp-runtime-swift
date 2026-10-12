@@ -9,7 +9,7 @@ import Foundation
 @testable import Warp
 @testable import WarpSyntax
 
-// A notation of the plainest kind: an operator record is a subject and a
+// A notation of the plainest kind: an operator mapping is a subject and a
 // procedure sent to it, `{ of: <expression>, <Procedure>: <expression> }`. The
 // subject stands first and the operand second, the positions every standard
 // procedure the table reaches takes them at.
@@ -39,7 +39,7 @@ struct TestConditionSpelling: ExpressionSpelling {
 
     // MARK: - Initializer
     // MARK: - Public
-    // A record carrying a subject is a call written this way, and a record
+    // A struct carrying a subject is a call written this way, and a struct
     // that is not is the expression it is.
     func claims(_ names: Set<Name>, in notation: Notation) -> Bool {
         names.contains(Self.subjectKey)
@@ -55,7 +55,7 @@ struct TestConditionSpelling: ExpressionSpelling {
             throw DecodingError.dataCorrupted(
                 .init(
                     codingPath: container.codingPath,
-                    debugDescription: "an operator record is one key and its subject."
+                    debugDescription: "an operator mapping is one key and its subject."
                         + " { of: <expression>, <procedure>: <expression> }; found: \(found.sorted())"
                 )
             )

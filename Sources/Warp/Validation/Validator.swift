@@ -19,7 +19,7 @@ struct Validator: Sendable {
     // What a declared name that comes back to itself is refused with, by a
     // document's load and by an object's reading alike.
     static let comingBack = "names itself through what it stands for, and no type spells itself."
-        + " A type that holds itself is a declared record"
+        + " A type that holds itself is a declared struct"
 
     // MARK: - Initializer
     init() {
@@ -154,16 +154,16 @@ struct Validator: Sendable {
         try declared(module)
     }
 
-    // Whether a declared name that is no record comes back to itself through
+    // Whether a declared name that is no struct comes back to itself through
     // the names it mentions, at any depth: a spelling that reaches itself
-    // spells no type, and a type that holds itself is a declared record. A
-    // record on the way stands as its own name, so the walk stops there. Asked
+    // spells no type, and a type that holds itself is a declared struct. A
+    // struct on the way stands as its own name, so the walk stops there. Asked
     // of every module's types here and of every object's where it is read;
     // across documents the module graph stands each after what it names, so
     // no later stage meets one.
     func comesBack(_ name: Name, in types: [Name: TypeDeclaration]) -> Bool {
         func standsAsAName(_ mentioned: Name) -> Bool {
-            if case .record = types[mentioned] { true } else { false }
+            if case .struct = types[mentioned] { true } else { false }
         }
 
         guard let declared = types[name], !standsAsAName(name) else { return false }
@@ -491,17 +491,17 @@ struct Validator: Sendable {
         // one as a literal is carrying something no text spells and nothing
         // reads back. A caller assembling a program in Swift is the only one that
         // can build it, and this is the door it comes through. Nor does a
-        // literal hold a record: a record is the value of a declared record,
-        // made by a record literal written where one is read.
+        // literal hold a struct: a struct is the value of a declared struct,
+        // made by a struct literal written where one is read.
         case let .literal(value):
             guard !value.holdsProcedure else {
                 throw ValidationError(Value.procedureIsNotData, at: place)
             }
 
-            guard !value.holdsRecord else {
+            guard !value.holdsStruct else {
                 throw ValidationError(
-                    "a literal holds a record, and a record is written by a record literal where its declared"
-                        + " record is read",
+                    "a literal holds a struct, and a struct is written by a struct literal where its declared"
+                        + " struct is read",
                     at: place
                 )
             }
@@ -517,8 +517,8 @@ struct Validator: Sendable {
                 try validate(element, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
             }
 
-        case let .record(record):
-            for (name, field) in record.sorted(by: { one, other in one.key < other.key }) {
+        case let .struct(literal):
+            for (name, field) in literal.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.child(.field(name))
 
                 try held(field, asValueAt: here)
@@ -1058,20 +1058,20 @@ struct Validator: Sendable {
 
         case .variable:
             throw ValidationError(
-                "writes `\(type.rendered)`, and `var` is written on a field of the record a type in"
+                "writes `\(type.rendered)`, and `var` is written on a field of the struct a type in"
                     + " `types` declares",
                 at: place
             )
         }
     }
 
-    // A declared type held to where it is written. A record's field is
+    // A declared type held to where it is written. A struct's field is
     // reached by a path alone, so its name is a value's, and it may be
     // written `var`, which a path writes through; an alias's type is written
     // as any type is.
     private func written(_ declared: TypeDeclaration, at place: Place) throws {
         switch declared {
-        case let .record(fields):
+        case let .struct(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
                 let here = place.part(.fields).key(name.spelling)
 

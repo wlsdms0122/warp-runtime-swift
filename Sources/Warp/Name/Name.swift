@@ -28,8 +28,8 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     private let digest: Int
 
     // The keywords the text encoding reads bare as values, and what each one
-    // is. A name is never one of them: a bare `true` in front of a record
-    // would otherwise be read as the record's name, and the value would be
+    // is. A name is never one of them: a bare `true` in front of a struct
+    // would otherwise be read as the struct's name, and the value would be
     // gone.
     public static let scalarKeywords: [String: Value] = [
         "null": .null,
@@ -87,7 +87,7 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
 
     // MARK: - Public
     // Ordered as bytes. Every place that puts names in order reads this: a
-    // record's fields and a signature's parameter positions. Swift's `<`
+    // struct's fields and a signature's parameter positions. Swift's `<`
     // orders under canonical equivalence and would put two spellings of one
     // name in one place.
     public static func < (lhs: Name, rhs: Name) -> Bool {

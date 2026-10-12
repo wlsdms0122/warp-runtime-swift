@@ -170,7 +170,7 @@ struct BakedTests {
         // Given. A document sending a contract's procedure, which no row
         // answers, before a procedure another document declares.
         let bank = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             contracts: [
                 "App.Describable": [
                     "describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)
@@ -194,7 +194,7 @@ struct BakedTests {
                     body: [
                         Statement(
                             binding: .constant("account"),
-                            expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
+                            expression: .cast(.struct(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
                         ),
                         Statement(
                             binding: .constant("said"),

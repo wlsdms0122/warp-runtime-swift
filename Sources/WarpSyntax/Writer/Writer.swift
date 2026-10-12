@@ -169,7 +169,7 @@ public struct Writer: Sendable {
             written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
         }
 
-        // A record holding nothing but the name is one pair, which a notation
+        // A struct holding nothing but the name is one pair, which a notation
         // offering the pair form reads as a name and its type. There it is
         // written as the pair holding nothing.
         guard written.count > 1 || !readBy.pairedParameter else {
@@ -224,10 +224,10 @@ public struct Writer: Sendable {
         case let .array(elements):
             return .array(try elements.map { element in try value(of: element) })
 
-        case let .record(fields):
+        case let .struct(fields):
             let written = Value.Dictionary(try fields.mapValues { field in try value(of: field) })
 
-            return .dictionary([ExpressionTag.record.key: .dictionary(written)])
+            return .dictionary([ExpressionTag.struct.key: .dictionary(written)])
 
         case let .dictionary(entries):
             return .dictionary([
@@ -468,9 +468,9 @@ public struct Writer: Sendable {
         case .null, .bool, .int, .double, .string, .bytes:
             return value
 
-        // A draft is written as it is, held to no rule, so a record is
+        // A draft is written as it is, held to no rule, so a struct is
         // written with its name and reads back as the literal it was.
-        case .record:
+        case .struct:
             return value
 
         case let .array(elements):
@@ -498,7 +498,7 @@ public struct Writer: Sendable {
         case .literal: "a literal"
         case .reference: "a reference"
         case .array: "an array"
-        case .record: "a record"
+        case .struct: "a struct"
         case .dictionary: "a map"
         case .closure: "a closure"
         case .apply: "a call of a value"

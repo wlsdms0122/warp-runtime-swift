@@ -15,7 +15,7 @@ import Warp
 //
 // A whole number and a fraction are different tokens here by grammar. `1` is
 // whole and `1.0` is a fraction. And there is nothing else: no commas to
-// forget, no colons; a map is `{ key value … }`, a record `Name { field value
+// forget, no colons; a map is `{ key value … }`, a struct `Name { field value
 // … }` and an array `[ value … ]`.
 //
 // One value, one spelling. The writer lays a text out one way (sorted keys,
@@ -64,13 +64,13 @@ public struct TextEncoding {
     // A container being put back together, and where it began. A sum rather
     // than two optionals, so "neither" and "both" are not states the code has
     // to promise never to reach. A map with no key is one waiting for its
-    // next key, and a record with no field one waiting for its next field's
+    // next key, and a struct with no field one waiting for its next field's
     // name. What each holds is handed to the value's own door when it closes,
     // which refuses a key or a field written twice.
     private enum Opened {
         case array([Value], at: Int)
         case map(held: [(key: Value, value: Value)], key: Value?, at: Int)
-        case record(held: [(name: Name, value: Value)], field: Name?, name: Name, at: Int)
+        case `struct`(held: [(name: Name, value: Value)], field: Name?, name: Name, at: Int)
     }
 
     // MARK: - Property
@@ -417,10 +417,10 @@ public struct TextEncoding {
             var completed: (value: Value, at: Int)?
 
             switch opened.last {
-            // A record waits for a field's name where everything else waits
+            // A struct waits for a field's name where everything else waits
             // for a value, and a closing brace is only honest in that
             // position.
-            case let .record(held, nil, name, begun):
+            case let .struct(held, nil, name, begun):
                 switch token {
                 case .braceClose:
                     opened.removeLast()
@@ -434,12 +434,12 @@ public struct TextEncoding {
                 case let .bare(spelling) where readsAsText(spelling), let .string(spelling):
                     let field = try fieldName(spelling, at: at)
 
-                    opened[opened.count - 1] = .record(held: held, field: field, name: name, at: begun)
+                    opened[opened.count - 1] = .struct(held: held, field: field, name: name, at: begun)
 
                     continue
 
                 default:
-                    throw refused("a record writes a field name here", at: at)
+                    throw refused("a struct writes a field name here", at: at)
                 }
 
             // A map waits for a key. Text written bare or quoted is the
@@ -494,11 +494,11 @@ public struct TextEncoding {
                     case let .map(_, key?, _):
                         throw refused("'\(Rendering(key).text())' is written with no value", at: at)
 
-                    case let .record(_, field?, _, _):
+                    case let .struct(_, field?, _, _):
                         throw refused("'\(field)' is written with no value", at: at)
 
                     default:
-                        throw refused("nothing here is a map or a record to close", at: at)
+                        throw refused("nothing here is a map or a struct to close", at: at)
                     }
 
                 case let .string(string):
@@ -507,15 +507,15 @@ public struct TextEncoding {
                 case let .bytes(bytes):
                     completed = (.bytes(bytes), at)
 
-                // A bare token in front of a brace is the record's name, the
+                // A bare token in front of a brace is the struct's name, the
                 // declared type the value names, where it is no scalar's
-                // writing; what a record's name may be is the value's to hold.
+                // writing; what a struct's name may be is the value's to hold.
                 // A scalar is a scalar, the map after it the next value.
                 case let .bare(bare):
                     if tokens.first?.token == .braceOpen, !writesScalar(bare), let name = try? Name(bare) {
                         try opening(opened, at: at)
                         tokens.removeFirst()
-                        opened.append(.record(held: [], field: nil, name: name, at: at))
+                        opened.append(.struct(held: [], field: nil, name: name, at: at))
 
                         continue
                     }
@@ -545,16 +545,16 @@ public struct TextEncoding {
 
                     opened.append(.map(held: held, key: nil, at: at))
 
-                case let .record(held, field?, name, at):
+                case let .struct(held, field?, name, at):
                     var held = held
                     held.append((name: field, value: value))
 
-                    opened.append(.record(held: held, field: nil, name: name, at: at))
+                    opened.append(.struct(held: held, field: nil, name: name, at: at))
 
-                // A record with no field is waiting for a field's name, and
+                // A struct with no field is waiting for a field's name, and
                 // every token it could meet in that state was answered above.
-                case .record(_, nil, _, _):
-                    throw refused("a record writes a field name here", at: begun)
+                case .struct(_, nil, _, _):
+                    throw refused("a struct writes a field name here", at: begun)
                 }
             }
         }
@@ -650,7 +650,7 @@ public struct TextEncoding {
 
         while let step = try walk.next() {
             switch step {
-            case .key, .field, .arrayClose, .mapClose, .recordClose:
+            case .key, .field, .arrayClose, .mapClose, .structClose:
                 break
 
             default:
@@ -713,12 +713,12 @@ public struct TextEncoding {
 
                 continue
 
-            // Where a key stands, a bare identifier is text, so a record named
+            // Where a key stands, a bare identifier is text, so a struct named
             // by one has no writing there.
-            case let .record(name, count):
+            case let .struct(name, count):
                 if standsAsKey, readsAsText(name.spelling) {
                     throw EncodingRefused(
-                        "a record named '\(name)' stands as a key, where the text reads a bare name as text"
+                        "a struct named '\(name)' stands as a key, where the text reads a bare name as text"
                     )
                 }
 
@@ -761,7 +761,7 @@ public struct TextEncoding {
                 depth -= 1
                 text += String(repeating: "  ", count: depth) + "]"
 
-            case .mapClose, .recordClose:
+            case .mapClose, .structClose:
                 depth -= 1
                 text += String(repeating: "  ", count: depth) + "}"
             }

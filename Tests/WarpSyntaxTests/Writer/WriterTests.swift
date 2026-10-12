@@ -32,7 +32,7 @@ struct WriterTests {
         // one applied to another. A type written back as a string it cannot be
         // read from would survive neither direction.
         try! Module(
-            types: ["App.Counted": .record(["count": .int])],
+            types: ["App.Counted": .struct(["count": .int])],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -81,7 +81,7 @@ struct WriterTests {
                                 )
                             )
                         ),
-                        Statement(binding: .constant("held"), expression: .record([
+                        Statement(binding: .constant("held"), expression: .struct([
                                 "line": .reference([.name("joined")]),
                                 "size": .call(
                                     Call(selector: "Standard.Collection.count", arguments: [.reference([.name("procedure")])])
@@ -99,9 +99,9 @@ struct WriterTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .record([
+                        Statement(binding: .constant("payload"), expression: .struct([
                                 "ref": .literal(.string("not-a-path")),
-                                "deep": .array([.record(["value": .literal(.int(1))])])
+                                "deep": .array([.struct(["value": .literal(.int(1))])])
                             ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
@@ -124,7 +124,7 @@ struct WriterTests {
         "warp": 1,
         "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
         "description": "one of every type",
-        "types": ["Task": ["record": ["done": "Bool", "id": "String"]]],
+        "types": ["Task": ["struct": ["done": "Bool", "id": "String"]]],
         "contracts": ["Scalar": [:]],
         "satisfies": ["Int": ["Scalar"], "String": ["Scalar"]],
         "const": ["limit": 10],
@@ -139,8 +139,8 @@ struct WriterTests {
                 "returns": "Dictionary<String, Any>",
                 "body": [
                     ["let": "list", "value": [1, 2, 3]],
-                    ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
-                    ["let": "tagged", "value": ["record": ["ref": "not-a-path"]]],
+                    ["let": "pair", "value": ["struct": ["a": ["ref": "procedure"], "b": 2]]],
+                    ["let": "tagged", "value": ["struct": ["ref": "not-a-path"]]],
                     ["var": "seen", "value": 0],
                     ["let": "indexed", "value": ["ref": "names[0]"]],
                     ["let": "computed", "value": ["ref": "names[seen].count"]],
@@ -235,10 +235,10 @@ struct WriterTests {
     // usually is. Spellings and all, since what comes out the far side is the
     // thing under test.
     static let corpus: [Value] = [
-        // Literals, references, records, arrays and a field named like a tag
+        // Literals, references, structs, arrays and a field named like a tag
         [
             "description": "the types that need no name",
-            "types": ["Task": ["record": ["id": "String", "done": "Bool"]]],
+            "types": ["Task": ["struct": ["id": "String", "done": "Bool"]]],
             "const": ["limit": 10],
             "procedures": [
                 "entry": [
@@ -250,8 +250,8 @@ struct WriterTests {
                     "returns": "Dictionary<String, Any>",
                     "body": [
                         ["let": "list", "value": [1, 2, 3]],
-                        ["let": "pair", "value": ["record": ["a": ["ref": "procedure"], "b": 2]]],
-                        ["let": "tagged", "value": ["record": ["ref": "literal-text"]]],
+                        ["let": "pair", "value": ["struct": ["a": ["ref": "procedure"], "b": 2]]],
+                        ["let": "tagged", "value": ["struct": ["ref": "literal-text"]]],
                         ["var": "count", "value": ["ref": "counted"]],
                         ["set": "count", "value": 2]
                     ],
@@ -539,9 +539,9 @@ struct WriterTests {
         #expect(once == twice)
     }
 
-    @Test("a named record is data wherever it stands, written plainly and read back so")
-    func aNamedRecordIsWrittenPlainly() throws {
-        // Given. A field named for a tag, under a name that makes the record
+    @Test("a named struct is data wherever it stands, written plainly and read back so")
+    func aNamedStructIsWrittenPlainly() throws {
+        // Given. A field named for a tag, under a name that makes the struct
         // data
         let point = try Value.holding([(name: Name("ref"), value: Value.int(1))], named: "Point")
 
@@ -549,7 +549,7 @@ struct WriterTests {
         // itself
         #expect(try Writer().value(of: Expression.literal(point)) == point)
         guard case let .literal(read) = try Loader().expression(from: point), read == point else {
-            Issue.record("the named record was not read as itself")
+            Issue.record("the named struct was not read as itself")
 
             return
         }
@@ -732,18 +732,18 @@ struct WriterTests {
         #expect(call.map?["arguments"] == .array([.dictionary(["ref": .string("procedure")]), .string("hey")]))
     }
 
-    @Test("a record whose field is named like a tag is written under `record` and read back as a record")
-    func aFieldNamedLikeATagIsWrittenUnderRecord() throws {
+    @Test("a struct whose field is named like a tag is written under `struct` and read back as a struct")
+    func aFieldNamedLikeATagIsWrittenUnderStruct() throws {
         // Given. A payload with a field called `ref` is not a reference, and a
-        // record of expressions with one is not either
+        // struct of expressions with one is not either
         let module = try Module(
             procedures: [
                 "entry": Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("payload"), expression: .record(["ref": .literal(.string("not-a-path"))])
+                        Statement(binding: .constant("payload"), expression: .struct(["ref": .literal(.string("not-a-path"))])
                         ),
-                        Statement(binding: .constant("held"), expression: .record(["ref": .reference([.name("payload")])])
+                        Statement(binding: .constant("held"), expression: .struct(["ref": .reference([.name("payload")])])
                         )
                     ]
                 )
@@ -759,16 +759,16 @@ struct WriterTests {
             case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             case let .body(block) = read.procedures["entry"]?.implementation,
             block.body.statements.count == 2,
-            case let .record(payload) = block.body.statements[0].expression,
-            case let .record(held) = block.body.statements[1].expression
+            case let .struct(payload) = block.body.statements[0].expression,
+            case let .struct(held) = block.body.statements[1].expression
         else {
-            Issue.record("a record written under `record` reads back as a record")
+            Issue.record("a struct written under `struct` reads back as a struct")
 
             return
         }
 
-        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["ref": "not-a-path"])]))
-        #expect(body.last?.map?["value"] == .dictionary(["record": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
+        #expect(body.first?.map?["value"] == .dictionary(["struct": .dictionary(["ref": "not-a-path"])]))
+        #expect(body.last?.map?["value"] == .dictionary(["struct": .dictionary(["ref": .dictionary(["ref": "payload"])])]))
         #expect(payload["ref"]?.constantValue == .string("not-a-path"))
         #expect(held["ref"]?.referencePath == [.name("payload")])
     }

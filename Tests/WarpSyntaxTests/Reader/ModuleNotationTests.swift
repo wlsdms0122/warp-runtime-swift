@@ -53,14 +53,14 @@ struct ModuleNotationTests {
     func aModuleDeclaringNoProcedureIsRead() throws {
         // Given. A module declaring only a type, which the documents beside it
         // name
-        let fixture: Value = ["types": ["Geo.Point": ["record": ["x": "Int"]]]]
+        let fixture: Value = ["types": ["Geo.Point": ["struct": ["x": "Int"]]]]
 
         // When
         let sut = try loader.loadDocument(fixture)
 
         // Then
         #expect(sut.procedures.isEmpty)
-        #expect(sut.types["Geo.Point"] == .record(["x": .int]))
+        #expect(sut.types["Geo.Point"] == .struct(["x": .int]))
     }
 
     @Test("a document carries no name of its own")

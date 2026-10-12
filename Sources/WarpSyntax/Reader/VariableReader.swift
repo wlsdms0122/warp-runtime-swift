@@ -10,7 +10,7 @@ import Warp
 
 // A module variable's entry: its start written as an expression, or exactly
 // `{ type, value }` saying what the variable holds beside the start. A
-// record is written under `record`, so a record never meets this form.
+// struct is written under `struct`, so a struct never meets this form.
 struct VariableReader: Decodable {
     // MARK: - Property
     let variable: ModuleVariable

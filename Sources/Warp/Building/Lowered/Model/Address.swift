@@ -12,7 +12,7 @@ import Foundation
 // name reads one, and a parameter handed in place is the caller's.
 //
 // One type because the four are one act. Every fact the build works out about
-// reaching a name (which slot, which of a record's places, which row a procedure
+// reaching a name (which slot, which of a struct's places, which row a procedure
 // sends) is worked out once and read from here, rather than spelled again
 // wherever a path is written.
 struct Address: Sendable {

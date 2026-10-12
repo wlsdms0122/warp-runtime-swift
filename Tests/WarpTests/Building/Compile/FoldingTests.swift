@@ -17,7 +17,7 @@ struct FoldingTests {
     private let bindings: [Name: Value] = [
         "count": .int(3),
         "maybe": .null,
-        "record": .dictionary(["a": .int(1)])
+        "struct": .dictionary(["a": .int(1)])
     ]
     private let sut: Folding
 
@@ -67,7 +67,7 @@ struct FoldingTests {
     func absentPathReadsAsNull() async throws {
         // Given. The head of every reference is checked at load, so what is
         // left to be absent at run time is an entry nobody set
-        let reference: Path = [.name("record"), .index("gone", optional: true)]
+        let reference: Path = [.name("struct"), .index("gone", optional: true)]
 
         // When / Then
         #expect(try await sut.read(reference.lowered, at: .given("test")) == .null)

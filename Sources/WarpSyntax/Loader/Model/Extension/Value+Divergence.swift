@@ -14,7 +14,7 @@ extension Value {
     // The steps down to the first place this and `other` hold different
     // things, walked in key order, with what `other` holds there, or nil
     // where they are one value. A key one side has and the other does not is
-    // a place they part, and so is a record's name.
+    // a place they part, and so is a struct's name.
     func divergence(from other: Value) -> (steps: [Place.Step], held: Value?)? {
         guard nominal == other.nominal else { return ([], other) }
 

@@ -65,10 +65,10 @@ struct ModifierNotationTests {
                 "warp": 1,
                 "imports": [],
                 "procedures": ["entry": ["result": 1]],
-                "types": ["Box": ["record": ["f": writtenForm]]]
+                "types": ["Box": ["struct": ["f": writtenForm]]]
             ])
 
-            #expect(read.types["Box"] == .record(["f": form]))
+            #expect(read.types["Box"] == .struct(["f": form]))
         }
     }
 
@@ -103,7 +103,7 @@ struct ModifierNotationTests {
                 "warp": 1,
                 "imports": [],
                 "procedures": ["entry": ["result": 1]],
-                "types": ["Box": ["record": ["f": .string("\(mark.word) \(inside.word) Int")]]]
+                "types": ["Box": ["struct": ["f": .string("\(mark.word) \(inside.word) Int")]]]
             ])
         }
 
@@ -135,13 +135,13 @@ struct ModifierNotationTests {
     }
 
     @Test(
-        "a declared record's field is named whatever the document named it",
-        arguments: ["procedure", "var procedure", "var inout procedure", "const isolated Procedure", "array", "record", "var inout x"]
+        "a declared struct's field is named whatever the document named it",
+        arguments: ["procedure", "var procedure", "var inout procedure", "const isolated Procedure", "array", "struct", "var inout x"]
     )
-    func aRecordsFieldMayBeNamedLikeAForm(spelling: String) throws {
-        // Given. A record is declared under `record`, so its field names are
+    func aStructsFieldMayBeNamedLikeAForm(spelling: String) throws {
+        // Given. A struct is declared under `struct`, so its field names are
         // never keys the reading takes as a form or a mark
-        let declared = TypeDeclaration.record([try Name(spelling): .int])
+        let declared = TypeDeclaration.struct([try Name(spelling): .int])
         let module = try Module(types: ["App.T": declared], procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))])
 
         // When
@@ -149,7 +149,7 @@ struct ModifierNotationTests {
         let read = try Loader().load(written)
 
         // Then
-        #expect(try Writer().value(of: declared) == .dictionary(["record": .dictionary([try Name(spelling): "Int"])]))
+        #expect(try Writer().value(of: declared) == .dictionary(["struct": .dictionary([try Name(spelling): "Int"])]))
         #expect(read.types["App.T"] == declared)
     }
 
@@ -221,9 +221,9 @@ struct ModifierNotationTests {
         }
     }
 
-    @Test("a record field named like a construct is data on the way out and back")
+    @Test("a struct field named like a construct is data on the way out and back")
     func aFieldNamedLikeAConstructStaysData() throws {
-        // Given. A statement whose value is a record literal with one field
+        // Given. A statement whose value is a struct literal with one field
         // spelled like a construct key
         let loader = Loader()
         let module = try Module(
@@ -231,7 +231,7 @@ struct ModifierNotationTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    body: [Statement(binding: .constant("x"), expression: .record(["loop": .literal(.int(1))]))],
+                    body: [Statement(binding: .constant("x"), expression: .struct(["loop": .literal(.int(1))]))],
                     result: .reference([.name("x")])
                 )
             ]
@@ -241,15 +241,15 @@ struct ModifierNotationTests {
         let written = try Writer(registry: loader.registry).value(of: module)
         let read = try loader.load(written)
 
-        // Then. Written under `record`, and read back as the record it was
+        // Then. Written under `struct`, and read back as the struct it was
         guard case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"] else {
             Issue.record("the body was not written as an array")
             return
         }
 
-        #expect(body.first?.map?["value"] == .dictionary(["record": .dictionary(["loop": 1])]))
-        guard case let .record(fields)? = read.procedures["entry"]?.body.statements.first?.expression else {
-            Issue.record("the record literal was not read back as one")
+        #expect(body.first?.map?["value"] == .dictionary(["struct": .dictionary(["loop": 1])]))
+        guard case let .struct(fields)? = read.procedures["entry"]?.body.statements.first?.expression else {
+            Issue.record("the struct literal was not read back as one")
             return
         }
 
@@ -267,7 +267,7 @@ struct ModifierNotationTests {
             "procedures": [
                 "entry": [
                     "body": [
-                        ["var": "p", "value": ["record": ["x": 1]]],
+                        ["var": "p", "value": ["struct": ["x": 1]]],
                         ["set": "p.x", "value": 2],
                         ["set": "total", "value": ["ref": "p.x"]]
                     ],

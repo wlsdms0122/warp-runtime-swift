@@ -7,12 +7,12 @@
 
 import Foundation
 
-// The declared types as the run reads them: by row. A declared record survives
+// The declared types as the run reads them: by row. A declared struct survives
 // into the run as a row rather than being expanded, since it is nominal and may
 // name itself, and a row is read by number. An alias is a spelling: a mention
 // of it lowers to what it stands for, so no judgement meets one, and a row a
-// type stands on is always a record's. The spellings ride along for a refusal
-// and for a record's name. A class, so a judgement that recurses passes one
+// type stands on is always a struct's. The spellings ride along for a refusal
+// and for a struct's name. A class, so a judgement that recurses passes one
 // reference down rather than a copy of every array the table holds.
 final class LoweredTypeTable: Sendable {
     // What a reading standing where a contract is asked comes to. What the
@@ -108,36 +108,36 @@ final class LoweredTypeTable: Sendable {
 
     // MARK: - Public
     // The row a spelling declares, or nil where nothing declares it. For
-    // lowering a document's type and for a record that arrived under an
+    // lowering a document's type and for a struct that arrived under an
     // alias; the run reads rows by number otherwise.
     func row(named name: Name) -> Int? {
         rows[name]
     }
 
-    // The record a value under this name is a value of: the record it
-    // declares, or the one an alias of a record stands for. Nil where the
-    // name declares no record.
-    func record(named name: Name) -> Int? {
-        guard let row = row(named: name), case let .named(record) = mention(of: row) else { return nil }
+    // The struct a value under this name is a value of: the struct it
+    // declares, or the one an alias of a struct stands for. Nil where the
+    // name declares no struct.
+    func structRow(named name: Name) -> Int? {
+        guard let row = row(named: name), case let .named(declared) = mention(of: row) else { return nil }
 
-        return record
+        return declared
     }
 
-    // A value from outside with every record it holds, at any depth, held to
-    // the record its name declares: an alias's name is its record's, the
-    // fields its declaration does not name are left out, the record is judged
-    // against its declaration, and a name that declares no record is the name
-    // of no type here. So every record the run holds is a value of the record
+    // A value from outside with every struct it holds, at any depth, held to
+    // the struct its name declares: an alias's name is its struct's, the
+    // fields its declaration does not name are left out, the struct is judged
+    // against its declaration, and a name that declares no struct is the name
+    // of no type here. So every struct the run holds is a value of the struct
     // its name declares, whatever slot it came in at, and this is the one
     // place a value is fitted.
     func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
-        guard value.holdsRecord else { return value }
+        guard value.holdsStruct else { return value }
 
         switch value {
         case let .array(items):
             return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
 
-        // A key is a value like any other, so a record in it is held as one
+        // A key is a value like any other, so a struct in it is held as one
         // in an entry is. That can make two keys one, which refuses as a map
         // written with one key twice does.
         case let .dictionary(entries):
@@ -153,40 +153,40 @@ final class LoweredTypeTable: Sendable {
                 throw ArgumentError("\(path()): \(refused.message)")
             }
 
-        case let .record(record):
-            let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
+        case let .struct(instance):
+            let fields = try instance.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
 
-            guard let row = self.record(named: record.name), case let .record(declared) = loweredTypes[row] else {
-                throw ArgumentError("\(path()): is a \(record.name), which no document declares as a record")
+            guard let row = self.structRow(named: instance.name), case let .struct(declared) = loweredTypes[row] else {
+                throw ArgumentError("\(path()): is a \(instance.name), which no document declares as a struct")
             }
 
             let kept = zip(fields.names, fields.values).filter { name, _ in declared[name] != nil }
-            let named = Record(layout: Layout(name: labels[row], ordered: kept.map(\.0)), values: kept.map(\.1))
+            let named = Struct(layout: Layout(name: labels[row], ordered: kept.map(\.0)), values: kept.map(\.1))
 
-            return try LoweredType.named(row).settling(.record(named), at: path(), in: self)
+            return try LoweredType.named(row).settling(.struct(named), at: path(), in: self)
 
         default:
             return value
         }
     }
 
-    // A record the language declares itself, by its row. Every table a
+    // A struct the language declares itself, by its row. Every table a
     // compile or a link holds stands on the `Prelude`, and one a caller
     // assembled with nothing declared reads it as no value's type.
     func prelude(_ name: Name) -> LoweredType {
         row(named: name).map(LoweredType.named) ?? .never
     }
 
-    // Whether a row is a declared record's.
-    func declaresRecord(_ row: Int) -> Bool {
-        if case .record = loweredTypes[row] { true } else { false }
+    // Whether a row is a declared struct's.
+    func declaresStruct(_ row: Int) -> Bool {
+        if case .struct = loweredTypes[row] { true } else { false }
     }
 
-    // What a mention of a row lowers to: the row, where it is a record's,
+    // What a mention of a row lowers to: the row, where it is a struct's,
     // and what the alias stands for otherwise. A table whose rows are not
     // lowered yet keeps every mention a row.
     func mention(of row: Int) -> LoweredType {
-        guard loweredTypes.indices.contains(row), !declaresRecord(row) else { return .named(row) }
+        guard loweredTypes.indices.contains(row), !declaresStruct(row) else { return .named(row) }
 
         return loweredTypes[row]
     }
@@ -333,8 +333,8 @@ final class LoweredTypeTable: Sendable {
 
         var loweredTypes = labels.map { label in types[label]?.lowered(as: label, in: index) ?? .any }
 
-        let records = Set(loweredTypes.indices.filter { row in
-            if case .record = loweredTypes[row] { true } else { false }
+        let structs = Set(loweredTypes.indices.filter { row in
+            if case .struct = loweredTypes[row] { true } else { false }
         })
 
         // An alias is what it stands for, worked out once each. None comes
@@ -345,7 +345,7 @@ final class LoweredTypeTable: Sendable {
         var expanded: [Int: LoweredType] = [:]
 
         func mention(of row: Int) -> LoweredType {
-            guard !records.contains(row) else { return .named(row) }
+            guard !structs.contains(row) else { return .named(row) }
 
             if let known = expanded[row] { return known }
 

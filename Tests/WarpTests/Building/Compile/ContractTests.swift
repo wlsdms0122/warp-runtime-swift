@@ -28,7 +28,7 @@ struct ContractTests {
                 Statement(
                     binding: .constant("account"),
                     expression: .cast(
-                        .record(["balance": .literal(.int(7))]),
+                        .struct(["balance": .literal(.int(7))]),
                         as: .named("Bank.Account"),
                         optional: false
                     )
@@ -36,7 +36,7 @@ struct ContractTests {
                 Statement(
                     binding: .constant("card"),
                     expression: .cast(
-                        .record(["last": .literal(.string("42"))]),
+                        .struct(["last": .literal(.string("42"))]),
                         as: .named("Bank.Card"),
                         optional: false
                     )
@@ -56,12 +56,12 @@ struct ContractTests {
     func anUnsatisfyingTypeRefuses() async throws {
         // Given. `Bank.Plain` declares no `describe`
         let sut = try describing(
-            types: ["Bank.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .struct(["note": .string])],
             body: [
                 Statement(
                     binding: .constant("plain"),
                     expression: .cast(
-                        .record(["note": .literal(.string("x"))]),
+                        .struct(["note": .literal(.string("x"))]),
                         as: .named("Bank.Plain"),
                         optional: false
                     )
@@ -116,7 +116,7 @@ struct ContractTests {
                 Statement(
                     binding: .constant("account"),
                     expression: .cast(
-                        .record(["balance": .literal(.int(7))]),
+                        .struct(["balance": .literal(.int(7))]),
                         as: .named("Bank.Account"),
                         optional: false
                     )
@@ -144,7 +144,7 @@ struct ContractTests {
         // takes a variable in place
         func sending(_ contract: Name, _ procedure: Name, _ parameter: TypeExpression, _ argument: Warp.Expression) throws -> Module {
             try Module(
-                types: ["Bank.Account": .record(["balance": .int])],
+                types: ["Bank.Account": .struct(["balance": .int])],
                 contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "n", type: parameter)], returns: .int)]],
                 claims: ["Bank.Account": [contract]],
                 procedures: [
@@ -159,7 +159,7 @@ struct ContractTests {
                         body: [
                             Statement(
                                 binding: .constant("account"),
-                                expression: .cast(.record(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
+                                expression: .cast(.struct(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
                             )
                         ],
                         result: .call(
@@ -193,7 +193,7 @@ struct ContractTests {
         // Given. `Bank.Account.describe` answers an int where the contract
         // writes a string
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: leaning(on: "Bank.Account", holding: ["balance": .literal(.int(1))]).merging([
@@ -224,7 +224,7 @@ struct ContractTests {
         // nothing about any contract. Another, which it never names, declares
         // a contract asking `describe` and answering a string
         let held = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "Bank.Account.describe": Procedure(
@@ -256,7 +256,7 @@ struct ContractTests {
         // Given. `Bank.Plain` is said to answer, and nothing declares
         // `Bank.Plain.describe`
         let sut = try Module(
-            types: ["Bank.Plain": .record(["note": .string])],
+            types: ["Bank.Plain": .struct(["note": .string])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Plain": ["App.Describable"]],
             procedures: leaning(on: "Bank.Plain", holding: ["note": .literal(.string("x"))])
@@ -292,7 +292,7 @@ struct ContractTests {
             ]
         )
         let banking = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let adapting = try Module(
@@ -317,7 +317,7 @@ struct ContractTests {
                         Statement(
                             binding: .constant("account"),
                             expression: .cast(
-                                .record(["balance": .literal(.int(7))]),
+                                .struct(["balance": .literal(.int(7))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
@@ -338,7 +338,7 @@ struct ContractTests {
     func twoDocumentsClaimingOnePairIsOneClaim() async throws {
         // Given. Two documents say the same type answers the same contract
         let held = try Module(
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
@@ -369,7 +369,7 @@ struct ContractTests {
     func aClaimNamesWhatItIsAbout() async throws {
         // Given. A type stands where the contract should
         let sut = try Module(
-            types: ["Bank.Account": .record(["balance": .int]), "App.Scalar": .alias(.int)],
+            types: ["Bank.Account": .struct(["balance": .int]), "App.Scalar": .alias(.int)],
             claims: ["Bank.Account": ["App.Scalar"]],
             procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
         )
@@ -502,7 +502,7 @@ struct ContractTests {
     private func operand(asking constness: Constness) throws -> Module {
         try Module(
             imports: ["Standard.Text.uppercased"],
-            types: ["Bank.Account": .record(["balance": .int])],
+            types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string), constness: constness)]],
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: [
@@ -541,7 +541,7 @@ struct ContractTests {
                         Statement(
                             binding: .constant("held"),
                             expression: .cast(
-                                .record(["balance": .literal(.int(1))]),
+                                .struct(["balance": .literal(.int(1))]),
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
@@ -576,7 +576,7 @@ struct ContractTests {
                 body: [
                     Statement(
                         binding: .constant("held"),
-                        expression: .cast(.record(fields), as: .named(type), optional: false)
+                        expression: .cast(.struct(fields), as: .named(type), optional: false)
                     )
                 ],
                 result: .call(Call(selector: "App.tell", arguments: [reference("held")]))
@@ -594,8 +594,8 @@ struct ContractTests {
     ) throws -> Module {
         try Module(
             types: [
-                "Bank.Account": .record(["balance": .int]),
-                "Bank.Card": .record(["last": .string])
+                "Bank.Account": .struct(["balance": .int]),
+                "Bank.Card": .struct(["last": .string])
             ].merging(extra) { _, added in added },
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: [

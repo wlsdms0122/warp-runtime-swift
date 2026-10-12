@@ -47,7 +47,7 @@ enum ObjectLayout {
         case string
         case bytes
         case array
-        case record
+        case `struct`
         case closure
         case dictionary
     }
@@ -69,7 +69,7 @@ enum ObjectLayout {
         case string
         case array
         case dictionary
-        case record
+        case `struct`
         case procedure
         case variable
         case `inout`
@@ -153,7 +153,7 @@ enum ObjectLayout {
         case literal
         case reference
         case array
-        case record
+        case `struct`
         case closure
         case cast
         case block
@@ -217,7 +217,7 @@ enum ObjectLayout {
         case literal
         case local
         case array
-        case record
+        case `struct`
         case closure
         case apply
         case cast

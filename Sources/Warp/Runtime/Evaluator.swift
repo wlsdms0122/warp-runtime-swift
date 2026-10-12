@@ -298,7 +298,7 @@ struct Evaluator: Sendable {
 
             return .array(values)
 
-        case let .record(held):
+        case let .struct(held):
             var values: [Value] = []
             values.reserveCapacity(held.fields.count)
 
@@ -306,7 +306,7 @@ struct Evaluator: Sendable {
                 values.append(try await evaluate(field, in: &activation, at: trace))
             }
 
-            return .record(Record(layout: held.layout, values: values))
+            return .struct(Struct(layout: held.layout, values: values))
 
         // Each entry is made in the order written, the key before its value,
         // so a key written twice holds the later value.
@@ -598,7 +598,7 @@ struct Evaluator: Sendable {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
             if let round {
-                activation.cells[round] = .value(.record(Record(name: TypeSpelling.round, [Prelude.index: .int(index)])))
+                activation.cells[round] = .value(.struct(Struct(name: TypeSpelling.round, [Prelude.index: .int(index)])))
             }
 
             guard try bool(try await evaluate(condition, in: &activation, at: trace)) else {

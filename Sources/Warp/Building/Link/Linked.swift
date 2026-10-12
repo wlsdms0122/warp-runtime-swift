@@ -346,7 +346,7 @@ public final class Linked: Sendable {
     }
 
     // Values from outside, one at each slot, settled together in the door's
-    // one order: every record each value holds held to the record its name
+    // one order: every struct each value holds held to the struct its name
     // declares, fitted to it, the type parameters the slots name filled by
     // what the fitted values read as, and each value judged at its slot so
     // filled.
@@ -451,7 +451,7 @@ public final class Linked: Sendable {
         case let .dispatch(dispatch):
             dispatch.calls.values.forEach { call in rows.append(call.procedure) }
 
-        case .local, .array, .record, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+        case .local, .array, .struct, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
             break
         }
     }

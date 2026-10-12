@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Where a record's fields are: the name of the declared record it is, and
+// Where a struct's fields are: the name of the declared struct it is, and
 // the field names in the order the values stand. The order is the language's,
 // not a maker's (ascending by the names' bytes) so a layout built by a link, a
 // reader or a host is the same layout for the same fields.
@@ -16,8 +16,8 @@ import Foundation
 // one set of fields. What a field holds is not part of it.
 //
 // Inside a link a name is a row of the lowered type table; outside one it is a
-// spelling, which is why a reader and a host may write one. A record from
-// outside is held at the door it comes through to the record its name
+// spelling, which is why a reader and a host may write one. A struct from
+// outside is held at the door it comes through to the struct its name
 // declares, whatever its slot declares.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property

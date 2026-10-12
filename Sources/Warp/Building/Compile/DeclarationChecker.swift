@@ -328,7 +328,7 @@ struct DeclarationChecker {
         resolve table: TypeTable
     ) throws {
         switch declared {
-        case let .record(fields):
+        case let .struct(fields):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
                 try mentioned(in: field, at: place.part(.fields).key(name.spelling), resolve: table)
             }

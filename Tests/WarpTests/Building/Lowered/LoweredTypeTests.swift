@@ -18,8 +18,8 @@ struct LoweredTypeTests {
 
     private let types = TypeTable(
         types: [
-            "Bank.Account": .record(["balance": .int, "owner": .named("Bank.Owner")]),
-            "Bank.Owner": .record(["name": .string]),
+            "Bank.Account": .struct(["balance": .int, "owner": .named("Bank.Owner")]),
+            "Bank.Owner": .struct(["name": .string]),
             "Bank.Acct": .alias(.named("Bank.Account")),
             "App.Whole": .alias(.int),
             "App.Maybe": .alias(.nullable(.int))
@@ -30,7 +30,7 @@ struct LoweredTypeTests {
         of: Linkage()
     )
 
-    // Every declared type as a document writes it where it is read: a record
+    // Every declared type as a document writes it where it is read: a struct
     // by its name, and an alias as what it stands for.
     private var declaredTypes: [TypeExpression] {
         types.types.map { name, declared in
@@ -117,7 +117,7 @@ struct LoweredTypeTests {
         #expect(!ordered.accepts(unbounded, in: table))
     }
 
-    @Test("a record's name lowers to its row, and an alias to what it stands for")
+    @Test("a struct's name lowers to its row, and an alias to what it stands for")
     func aNameLowersToARow() throws {
         // Given
         let table = types.loweredTypes
@@ -125,13 +125,13 @@ struct LoweredTypeTests {
         // When
         let account = try #require(table.row(named: "Bank.Account"))
 
-        // Then. The alias is the account's record, and a name for a type the
+        // Then. The alias is the account's struct, and a name for a type the
         // language names names none
         #expect(TypeExpression.named("Bank.Acct").lowered(in: table) == .named(account))
         #expect(TypeExpression.named("App.Whole").lowered(in: table) == .int)
-        #expect(table.record(named: "Bank.Acct") == account)
-        #expect(table.record(named: "Bank.Account") == account)
-        #expect(table.record(named: "App.Whole") == nil)
+        #expect(table.structRow(named: "Bank.Acct") == account)
+        #expect(table.structRow(named: "Bank.Account") == account)
+        #expect(table.structRow(named: "App.Whole") == nil)
     }
 
     @Test("a projection lowers to itself, and every judgement answers it as Any")
@@ -150,17 +150,17 @@ struct LoweredTypeTests {
         #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
     }
 
-    @Test("a record handed in under an alias's name takes its record's name, settles again by comparison, and a map is refused")
-    func aRecordSettlesUnderTheCanonicalName() throws {
-        // Given. A slot spelled with the alias, and a record a door is handed
+    @Test("a struct handed in under an alias's name takes its struct's name, settles again by comparison, and a map is refused")
+    func aStructSettlesUnderTheCanonicalName() throws {
+        // Given. A slot spelled with the alias, and a struct a door is handed
         // under the alias's name
         let table = types.loweredTypes
         let slot = TypeExpression.named("Bank.Acct").lowered(in: table)
-        let owner = Value.record(Record(name: "Bank.Owner", ["name": .string("a")]))
+        let owner = Value.struct(Struct(name: "Bank.Owner", ["name": .string("a")]))
 
         // When
         let settled = try slot.settling(
-            outside: .record(Record(name: "Bank.Acct", ["balance": .int(1), "owner": owner])),
+            outside: .struct(Struct(name: "Bank.Acct", ["balance": .int(1), "owner": owner])),
             at: "input",
             in: table
         )
@@ -168,13 +168,13 @@ struct LoweredTypeTests {
 
         // Then
         #expect(
-            settled == .record(
-                Record(name: "Bank.Account", ["balance": .int(1), "owner": .record(Record(name: "Bank.Owner", ["name": .string("a")]))])
+            settled == .struct(
+                Struct(name: "Bank.Account", ["balance": .int(1), "owner": .struct(Struct(name: "Bank.Owner", ["name": .string("a")]))])
             )
         )
         #expect(again == settled)
         #expect {
-            try slot.settling(.record(Record(name: "Bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
+            try slot.settling(.struct(Struct(name: "Bank.Owner", ["balance": .int(1), "owner": owner])), at: "input", in: table)
         } throws: { error in
             "\(error)".contains("is a Bank.Owner, and the slot declares Bank.Account")
         }
@@ -212,12 +212,12 @@ struct LoweredTypeTests {
 
     @Test("a procedure type declared beside the types it names reads what they declare")
     func aProcedureTypeAmongDeclaredTypes() async throws {
-        // Given. A declared record holding a procedure type whose parameter
+        // Given. A declared struct holding a procedure type whose parameter
         // names a declared nullable type.
         let module = try Module(
             types: [
                 "App.Maybe": .alias(.nullable(.int)),
-                "App.Kinds": .record([
+                "App.Kinds": .struct([
                     "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")]), .unstated, .unstated)
                 ])
             ],
@@ -236,10 +236,10 @@ struct LoweredTypeTests {
         let table = try #require(compiled.first { one in one.declared.contains("App.entry") }).types
 
         // Then. The parameter naming the nullable type need not be given.
-        guard case let .record(fields)? = table["App.Kinds"],
+        guard case let .struct(fields)? = table["App.Kinds"],
             case let .procedure(soft?, _, _)? = fields["soft"]
         else {
-            Issue.record("the declared record holds its procedure type")
+            Issue.record("the declared struct holds its procedure type")
 
             return
         }

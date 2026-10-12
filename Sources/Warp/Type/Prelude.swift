@@ -10,18 +10,18 @@ import Foundation
 // What the language declares itself, which every link holds ahead of its
 // documents: the contract a map's key answers, which asks no procedures,
 // its claims about the types the language names that answer it, and the two
-// records the run builds, the failure a rescue binds and the round a loop
+// structs the run builds, the failure a rescue binds and the round a loop
 // binds. No document declares one of these names, and a mention of one is
 // that declaration wherever it is written.
 enum Prelude {
-    // The records, each a name beside its fields.
+    // The structs, each a name beside its fields.
     static let types: [Name: TypeDeclaration] = [
-        TypeSpelling.failure: .record([
+        TypeSpelling.failure: .struct([
             FailurePayload.type: .string,
             FailurePayload.message: .string,
             FailurePayload.details: .dictionary(key: .string, value: .any)
         ]),
-        TypeSpelling.round: .record([Prelude.index: .int])
+        TypeSpelling.round: .struct([Prelude.index: .int])
     ]
 
     static let contracts: [Name: [Name: ContractProcedure]] = [TypeSpelling.hashable: [:]]

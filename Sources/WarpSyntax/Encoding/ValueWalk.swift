@@ -18,7 +18,7 @@ struct ValueWalk {
     // One step of the walk. A container that holds something is followed by
     // what it holds and then its close; an empty one is closed where it opens.
     // A map's entry is `key`, the key's own steps, then the value's; a
-    // record's field is `field` and then the value's steps.
+    // struct's field is `field` and then the value's steps.
     enum Step {
         case null
         case bool(Bool)
@@ -28,12 +28,12 @@ struct ValueWalk {
         case bytes([UInt8])
         case array(count: Int)
         case map(count: Int)
-        case record(name: Name, count: Int)
+        case `struct`(name: Name, count: Int)
         case key
         case field(Name)
         case arrayClose
         case mapClose
-        case recordClose
+        case structClose
     }
 
     // What is still to go: what a container holds, or the value of an entry
@@ -90,7 +90,7 @@ struct ValueWalk {
             return .key
 
         case var .fields(rest):
-            guard let field = rest.popFirst() else { return closing(.recordClose) }
+            guard let field = rest.popFirst() else { return closing(.structClose) }
 
             opened.append(.fields(rest))
             pending = field.value
@@ -142,12 +142,12 @@ struct ValueWalk {
             return .map(count: held.count)
 
         // In the order the layout holds the names in, which is their bytes'.
-        case let .record(record):
-            let fields = zip(record.names, record.values).map { name, value in (name: name, value: value) }
+        case let .struct(instance):
+            let fields = zip(instance.names, instance.values).map { name, value in (name: name, value: value) }
 
             try opening(fields.isEmpty ? nil : .fields(fields[...]))
 
-            return .record(name: record.name, count: fields.count)
+            return .struct(name: instance.name, count: fields.count)
 
         case .procedure:
             throw EncodingRefused("a procedure is code, and data is what a document spells")
