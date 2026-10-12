@@ -86,6 +86,15 @@ struct Substitution: Sendable {
         return "'\(parameter)' is read as \(first.rendered(in: table)) and as \(second.rendered(in: table))"
     }
 
+    // Why a call has no answer, each parameter read two ways named in name
+    // order, or nil where every one was read one way.
+    func disagreements(in table: LoweredTypeTable) -> String? {
+        guard !disagreeing.isEmpty else { return nil }
+
+        return disagreeing.keys.sorted().compactMap { parameter in disagreement(of: parameter, in: table) }
+            .joined(separator: ", ")
+    }
+
     // Why a reading of a parameter does not answer a contract its bounds
     // name, or nil where every reading answers each or leans on a claim,
     // which goes to `leaning` for the asker to write down.
