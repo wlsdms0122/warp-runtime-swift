@@ -1356,11 +1356,7 @@ indirect enum LoweredType: Sendable, Equatable {
                 // the author expecting a kind of data the build could not
                 // type, and being wrong about that is what the world does. An
                 // `attempt` catches it.
-                throw CastRefused(
-                    mismatch.message,
-                    expected: rendered(in: table),
-                    actual: "\(value.nominal)"
-                )
+                throw CastRefused(mismatch.message, expected: self, actual: value, in: table)
             }
 
             return .null
@@ -1491,6 +1487,28 @@ indirect enum LoweredType: Sendable, Equatable {
 
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"
+        }
+    }
+
+    // The type's string spelling, as a value a program reads holds it. A
+    // procedure type's signature has none, so a procedure type is spelled
+    // by what stands in front of it and `Procedure`.
+    func spelling(in table: LoweredTypeTable) -> String {
+        switch self {
+        case let .procedure(_, constness, isolation):
+            return LoweredType.procedure(nil, constness: constness, isolation: isolation).rendered(in: table)
+
+        case let .array(element):
+            return "Array<\(element.spelling(in: table))>"
+
+        case let .dictionary(key, value):
+            return "Dictionary<\(key.spelling(in: table)), \(value.spelling(in: table))>"
+
+        case let .nullable(inner):
+            return "\(inner.spelling(in: table))?"
+
+        default:
+            return rendered(in: table)
         }
     }
 

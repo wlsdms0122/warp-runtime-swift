@@ -129,18 +129,14 @@ struct Validator: Sendable {
         }
 
         // A claim names two types: the one it is about and the contract it
-        // says that type answers. A claim about a type the language names a
-        // value an instance of (`Int`, `Array`) is about no declaration, so
-        // its key is that type's and no name a document writes.
+        // says that type answers.
         for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
             let place = Place.satisfies(type.spelling, in: .of(module))
 
-            if TypeExpression.nominalTypes[type] == nil {
-                try held(type, as: .type, at: place)
-            }
+            try held(type, as: .claimedType, at: place)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .mention, at: place)
+                try held(contract, as: .contractMention, at: place)
             }
         }
 
@@ -531,7 +527,10 @@ struct Validator: Sendable {
 
         case let .dictionary(entries):
             for (position, entry) in entries.enumerated() {
-                for (part, here) in [(entry.key, place.child(.entryKey(position))), (entry.value, place.child(.entryValue(position)))] {
+                for (part, here) in [
+                    (entry.key, place.child(.entryKey(position))),
+                    (entry.value, place.child(.entryValue(position)))
+                ] {
                     try held(part, asValueAt: here)
                     try validate(part, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
                 }
@@ -866,19 +865,23 @@ struct Validator: Sendable {
     }
 
     // What a path's steps are held to wherever it is written: a name it
-    // reads is a value's, the one name a path reads back as one key, and
-    // what stands between the brackets is data, as every literal is.
+    // reads is a value's, and what stands between the brackets is a whole
+    // number, a text or a path, the three a path is written with there.
     private func held(steps path: Path, at place: Place) throws {
         for segment in path.segments {
             switch segment {
             case let .name(name, _):
                 try held(name, as: .value, at: place)
 
-            case let .index(index, _) where index.holdsProcedure:
-                throw ValidationError(Value.procedureIsNotData, at: place)
-
-            case .index, .indexRef:
+            case .index(.int, _), .index(.string, _), .indexRef:
                 continue
+
+            case .index:
+                throw ValidationError(
+                    "'\(path.rendered)' writes \(Path([segment.unmarked]).rendered), and what stands between"
+                        + " a path's brackets is a whole number, a text or a path",
+                    at: place
+                )
             }
         }
     }
@@ -898,7 +901,7 @@ struct Validator: Sendable {
             try held(parameter, as: .typeParameter, at: here)
 
             for contract in contracts.sorted() {
-                try held(contract, as: .mention, at: here)
+                try held(contract, as: .contractMention, at: here)
             }
         }
 
@@ -933,7 +936,9 @@ struct Validator: Sendable {
 
             try held(parameter.name, as: .value, at: here)
 
-            guard !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name }) else {
+            guard
+                !signature.parameters[..<position].contains(where: { earlier in earlier.name == parameter.name })
+            else {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
@@ -972,7 +977,7 @@ struct Validator: Sendable {
             }
 
             for name in names.sorted() {
-                try held(name, as: .mention, at: place)
+                try held(name, as: .contractMention, at: place)
             }
 
         // The build's own note to itself: a type it read out of a body, which
@@ -1016,7 +1021,10 @@ struct Validator: Sendable {
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
             guard inner.takesQuestionMark else {
-                throw ValidationError("writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)", at: place)
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)",
+                    at: place
+                )
             }
 
             guard inner.hasSpelling else {

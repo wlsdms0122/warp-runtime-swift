@@ -28,6 +28,15 @@ public extension RecoverableFailure {
     // Built here and not by a conformer, so every payload is the record
     // `Failure` the language declares.
     var payload: Value {
-        .record(Record(layout: Prelude.failure, values: [.dictionary(details), .string(message), .string(type)]))
+        .record(
+            Record(
+                name: TypeSpelling.failure,
+                [
+                    FailurePayload.type: .string(type),
+                    FailurePayload.message: .string(message),
+                    FailurePayload.details: .dictionary(details)
+                ]
+            )
+        )
     }
 }

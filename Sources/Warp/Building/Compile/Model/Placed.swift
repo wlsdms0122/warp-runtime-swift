@@ -21,7 +21,9 @@ struct Placed<Held> {
     let handed: Int
 
     // What a sentence calls this declaration when it names one among several.
-    var spelled: String { place.document.spelled(at: handed) }
+    var spelled: String {
+        handed == Prelude.handed ? "the language" : place.document.spelled(at: handed)
+    }
 
     // MARK: - Initializer
     init(_ held: Held, at place: Place, of handed: Int) {

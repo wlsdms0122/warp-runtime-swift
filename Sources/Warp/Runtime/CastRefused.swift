@@ -19,8 +19,8 @@ public struct CastRefused: RecoverableFailure {
     // MARK: - Property
     public let message: String
 
-    // The type the cast reads as, rendered the way a refusal renders it, so
-    // a cast to an alias names the type the alias stands for.
+    // The type the cast reads as, so a cast to an alias names the type the
+    // alias stands for, in its string spelling.
     public let expected: String
 
     // The type the value arrived as an instance of. The other half of the
@@ -43,7 +43,14 @@ public struct CastRefused: RecoverableFailure {
     }
 
     // MARK: - Initializer
-    public init(_ message: String, expected: String, actual: String, trace: Trace? = nil) {
+    // A value that did not fit the type a cast reads as. Both halves are
+    // spelled here, as `details` holds them: the type by its string spelling
+    // and the value's type by its name.
+    init(_ message: String, expected: LoweredType, actual: Value, in table: LoweredTypeTable) {
+        self.init(message, expected: expected.spelling(in: table), actual: actual.nominal.spelling, trace: nil)
+    }
+
+    private init(_ message: String, expected: String, actual: String, trace: Trace?) {
         self.message = message
         self.expected = expected
         self.actual = actual

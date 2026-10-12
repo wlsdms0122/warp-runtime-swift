@@ -64,5 +64,15 @@ public struct BuildError: WarpError {
         )
     }
 
+    // One name a link declares as a type and as a contract, which share a
+    // namespace, at the declaration a document wrote second.
+    static func declaredAsBoth(_ name: Name, type: String, contract: String, at place: Place) -> BuildError {
+        BuildError(
+            "'\(name)' is declared as both a type and a contract in this link, as a type by \(type) and as a"
+                + " contract by \(contract). One name cannot stand for a type and a contract at once",
+            at: place
+        )
+    }
+
     // MARK: - Private
 }

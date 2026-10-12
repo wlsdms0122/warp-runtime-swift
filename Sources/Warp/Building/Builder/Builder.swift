@@ -483,9 +483,9 @@ public struct Builder: Sendable {
     private func fingerprinted(_ object: Compiled) throws -> Compiled {
         guard let fingerprinting else { return object }
 
-        // Nothing to work a fingerprint out from, for one of the reasons an
-        // object has none, and none of them is something that went wrong. The
-        // document stands without one.
+        // An object `ObjectWriter` cannot write has nothing to work a
+        // fingerprint out from, and the document stands without one. Why is
+        // `object()`'s to say, to a host that asks for the object.
         guard let written = try? object.object() else { return object }
 
         return object.fingerprinted(try fingerprinting(written))

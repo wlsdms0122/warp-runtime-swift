@@ -25,6 +25,25 @@ struct NameGrammarTests {
         #expect(((try? Name(name)).map(NameGrammar.type.holds) ?? false) == holds)
     }
 
+    @Test("a contract a bound or a claim names is a type's name or the contract the language declares", arguments: [
+        ("Describable", true), ("Bank.Describable", true), ("Hashable", true),
+        ("Failure", false), ("Round", false), ("Int", false), ("Any", false), ("some", false)
+    ])
+    func aContractMentionIsATypeNameOrHashable(name: String, holds: Bool) {
+        // When / Then
+        #expect(((try? Name(name)).map(NameGrammar.contractMention.holds) ?? false) == holds)
+    }
+
+    @Test("the type a claim is about is a mention or a type the language names a value an instance of", arguments: [
+        ("Bank.Account", true), ("Failure", true), ("Round", true), ("Hashable", true), ("Int", true),
+        ("Null", true), ("Array", true), ("Dictionary", true),
+        ("Any", false), ("Never", false), ("Procedure", false), ("Self", false), ("Array<Int>", false)
+    ])
+    func aClaimedTypeIsAMentionOrANominalType(name: String, holds: Bool) {
+        // When / Then
+        #expect(((try? Name(name)).map(NameGrammar.claimedType.holds) ?? false) == holds)
+    }
+
     @Test("a type parameter's name is one identifier, and no word the language writes", arguments: [
         ("T", true), ("Element", true), ("_x1", true),
         ("A.B", false), ("a b", false), ("Self", false), ("Int", false), ("Any", false), ("some", false),

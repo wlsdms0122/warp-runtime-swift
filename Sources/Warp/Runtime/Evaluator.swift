@@ -598,9 +598,7 @@ struct Evaluator: Sendable {
             // The condition reads the state before the round it would start,
             // and the result reads it as it stands when the loop ends.
             if let round {
-                activation.cells[round] = .value(
-                    .record(Record(layout: Prelude.round, values: [.int(index)]))
-                )
+                activation.cells[round] = .value(.record(Record(name: TypeSpelling.round, [Prelude.index: .int(index)])))
             }
 
             guard try bool(try await evaluate(condition, in: &activation, at: trace)) else {

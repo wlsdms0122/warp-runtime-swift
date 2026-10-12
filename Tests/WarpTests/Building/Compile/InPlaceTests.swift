@@ -649,7 +649,7 @@ struct InPlaceTests {
 
         // Then
         #expect(listRefusal?.message == "writes 'xs' as [some T, Any], and it holds Array<some T>")
-        #expect(mapsRefusal?.message == "writes 'ds' as [[String: []], [String: Array<Any>]], and it holds Array<Dictionary<String, Array<some T>>>")
+        #expect(mapsRefusal?.message == "writes 'ds' as [{ dictionary: [[String, []]] }, { dictionary: [[String, Array<Any>]] }], and it holds Array<Dictionary<String, Array<some T>>>")
     }
 
     // MARK: - Public

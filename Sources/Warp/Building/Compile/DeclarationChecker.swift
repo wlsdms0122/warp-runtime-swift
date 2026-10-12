@@ -66,7 +66,11 @@ struct DeclarationChecker {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
                 if procedure.implementation.native != nil {
-                    try judge(hostAnswered: procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
+                    try judge(
+                        hostAnswered: procedure.signature,
+                        at: .procedure(name.spelling, in: .of(module)),
+                        in: table
+                    )
                 }
 
                 // A closure literal carries a signature the way a declaration
@@ -291,7 +295,7 @@ struct DeclarationChecker {
         case let .dictionary(key, value):
             try mentioned(in: key, at: place, bounds: bounds, resolve: table)
             try mentioned(in: value, at: place, bounds: bounds, resolve: table)
-            try keyed(type, by: key, at: place, bounds: bounds, in: table)
+            try keyed(by: key, at: place, bounds: bounds, in: table)
 
         // The load held a `?` to saying something new on what it wraps as
         // written. A name may stand for what it says nothing on, and that is
@@ -334,34 +338,22 @@ struct DeclarationChecker {
         }
     }
 
-    // A map's key answers `Hashable`, by what a document claims about the
-    // key's type, and a type parameter through its bounds. Where the table
-    // cannot say, the pair is written down where the map is mentioned, for
-    // the link that holds every claim.
+    // A map's key answers `Hashable`. Where the table cannot say, the pair
+    // is written down where the map is mentioned, for the link that holds
+    // every claim.
     private func keyed(
-        _ map: TypeExpression,
         by key: TypeExpression,
         at place: Place,
         bounds: [Name: Set<Name>],
         in table: TypeTable
     ) throws {
         let types = table.loweredTypes
-        let reading = key.lowered(in: types, bounds: bounds)
-        let refusal = types.refusal(
-            of: reading,
-            answering: TypeSpelling.hashable,
-            orNull: false,
-            as: "keys a map by",
-            leaning: { claim in types.fulfillment?.require(claim, at: place) }
-        )
 
-        guard refusal == nil else {
-            throw BuildError(
-                "writes `\(map.rendered)`, keyed by \(reading.rendered(in: types)), which does not answer"
-                    + " `\(TypeSpelling.hashable)`. A map's key is of a type that answers `\(TypeSpelling.hashable)`,"
-                    + " and a type parameter answers what its bounds name",
-                at: place
-            )
+        if let refusal = types.keyRefusal(
+            of: key.lowered(in: types, bounds: bounds),
+            leaning: { claim in types.fulfillment?.require(claim, at: place) }
+        ) {
+            throw BuildError(refusal, at: place)
         }
     }
 
