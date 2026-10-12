@@ -125,10 +125,11 @@ final class LoweredTypeTable: Sendable {
 
     // A value from outside with every record it holds, at any depth, held to
     // the record its name declares: an alias's name is its record's, the
-    // record is fitted to its declaration and judged against it, and a name
-    // that declares no record is the name of no type here. So every record
-    // the run holds is a value of the record its name declares, whatever
-    // slot it came in at.
+    // fields its declaration does not name are left out, the record is judged
+    // against its declaration, and a name that declares no record is the name
+    // of no type here. So every record the run holds is a value of the record
+    // its name declares, whatever slot it came in at, and this is the one
+    // place a value is fitted.
     func resolvingNames(in value: Value, at path: @autoclosure () -> String) throws -> Value {
         guard value.holdsRecord else { return value }
 
@@ -136,22 +137,33 @@ final class LoweredTypeTable: Sendable {
         case let .array(items):
             return .array(try items.enumerated().map { index, item in try resolvingNames(in: item, at: "\(path())[\(index)]") })
 
+        // A key is a value like any other, so a record in it is held as one
+        // in an entry is. That can make two keys one, which refuses as a map
+        // written with one key twice does.
         case let .dictionary(entries):
-            return .dictionary(try entries.mapValues { key, item in
-                try resolvingNames(in: item, at: "\(path())\(Path([.index(key)]).rendered)")
-            })
+            let resolved = try entries.entries.map { key, item in
+                let at = "\(path())\(Path([.index(key)]).rendered)"
+
+                return (key: try resolvingNames(in: key, at: at), value: try resolvingNames(in: item, at: at))
+            }
+
+            do {
+                return .dictionary(try Value.Dictionary(resolved))
+            } catch let refused as ValueRefused {
+                throw ArgumentError("\(path()): \(refused.message)")
+            }
 
         case let .record(record):
             let fields = try record.mapValues { field, held in try resolvingNames(in: held, at: "\(path()).\(field)") }
 
-            guard let row = self.record(named: record.name) else {
+            guard let row = self.record(named: record.name), case let .record(declared) = loweredTypes[row] else {
                 throw ArgumentError("\(path()): is a \(record.name), which no document declares as a record")
             }
 
-            let declared = LoweredType.named(row)
-            let named = Record(layout: Layout(name: labels[row], ordered: fields.names), values: fields.values)
+            let kept = zip(fields.names, fields.values).filter { name, _ in declared[name] != nil }
+            let named = Record(layout: Layout(name: labels[row], ordered: kept.map(\.0)), values: kept.map(\.1))
 
-            return try declared.settling(declared.fitted(.record(named), in: self), at: path(), in: self)
+            return try LoweredType.named(row).settling(.record(named), at: path(), in: self)
 
         default:
             return value

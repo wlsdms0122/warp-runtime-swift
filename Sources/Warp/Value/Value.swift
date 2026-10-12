@@ -87,11 +87,12 @@ public indirect enum Value: Sendable, Equatable {
                 .sorted { one, other in Self.order(one.key, other.key) == .orderedAscending }
         }
 
-        // The inner door: entries in the key order, under keys none of which
-        // is the same as another. An object's list of entries carries both
-        // facts once its reading judged the order, so what stands on it comes
-        // through here rather than being sorted again. A value born outside a
-        // link has neither behind it and comes through the door above.
+        // Entries already in the key order, under keys none of which is the
+        // same as another, where the maker holds both facts itself. An
+        // object's list of entries carries both once its reading judged the
+        // order, so what stands on it comes through here rather than being
+        // sorted again. Entries with neither behind them come through the
+        // initializer above.
         init(ordered entries: [(key: Value, value: Value)]) {
             self.entries = entries
         }
@@ -554,10 +555,9 @@ public indirect enum Value: Sendable, Equatable {
     // what has no elements to take, the way `elements` answers nil.
     //
     // This is for the procedures that only put a collection's own elements in
-    // another order or take fewer of them, and so never have to look at one.
-    // Saying which by position lets bytes be rearranged as the bytes they are:
-    // reading them out as values and writing them back would cost the boxing
-    // twice over, which is the cost being compact exists to avoid.
+    // another order or take fewer of them, and so never have to look at one:
+    // bytes are rearranged as the bytes they are, never read out as values
+    // and written back.
     //
     // A position this value does not have is answered the way a value with no
     // elements at all is: with nil. A caller's own arithmetic decides the
@@ -674,35 +674,6 @@ public indirect enum Value: Sendable, Equatable {
         }
     }
 
-    // How two values of one kind stand to each other, for the kinds that
-    // order: whole numbers, fractions and strings. Nil is a pair with no
-    // order: two of different kinds, a kind that does not order, and a
-    // fraction that is not a number, which orders with nothing. `lessThan`
-    // answers the language's own types by this.
-    public static func order(_ left: Value, _ right: Value) -> ComparisonResult? {
-        switch (left, right) {
-        case let (.int(first), .int(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.double(first), .double(second)):
-            guard !first.isNaN, !second.isNaN else { return nil }
-
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        case let (.string(first), .string(second)):
-            return first == second
-                ? .orderedSame
-                : first < second ? .orderedAscending : .orderedDescending
-
-        default:
-            return nil
-        }
-    }
-
     // Sameness as `equal` answers it. Strict except that worth unifies a
     // whole number with the fraction of the same worth, and bytes, being an
     // array, equal the array of the same elements, applied recursively
@@ -743,7 +714,8 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // The part a path names, in a record by the place the build put the field
-    // at, in a map by key and in an array by position. Every index was read
+    // at, in a map by key and in a list by position, bytes read through the
+    // one projection that owns their equation. Every index was read
     // to a value before this, and the build judged the path against the
     // value's declared type, so a part not held is refused as what it is: an
     // entry not written yet, or a type with no such part.
@@ -751,6 +723,16 @@ public indirect enum Value: Sendable, Equatable {
         guard let step = path.first else { return self }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' reads element \(index) of an array holding \(elements.count)")
+            }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.reading(at: rest, under: rendered)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -776,15 +758,6 @@ public indirect enum Value: Sendable, Equatable {
 
             return try entry.reading(at: rest, under: rendered)
 
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' reads element \(index) of an array holding \(elements.count)"
-                )
-            }
-
-            return try elements[index].reading(at: rest, under: rendered)
-
         default:
             throw ExecutionError(
                 "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
@@ -799,6 +772,14 @@ public indirect enum Value: Sendable, Equatable {
         guard let step = path.first else { return self }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else { return nil }
+
+            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
+
+            return try element.written(at: rest, under: rendered)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -818,11 +799,6 @@ public indirect enum Value: Sendable, Equatable {
         case let (.dictionary(map), .index(key)):
             return try map[key: key]?.written(at: rest, under: rendered)
 
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else { return nil }
-
-            return try elements[index].written(at: rest, under: rendered)
-
         default:
             throw ExecutionError(
                 "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
@@ -831,15 +807,28 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // This value with one part replaced: the part the path names, in a record
-    // by the place the build put the field at, in a map by key and in an
-    // array by position. The rest is kept as it was. The build judged the
+    // by the place the build put the field at, in a map by key and in a list
+    // by position, a list answering in the spelling it was in where that
+    // still holds. The rest is kept as it was. The build judged the
     // path against the value's declared type, and every index was read to a
     // value before this. A map's keys are its own, so an entry under one not
-    // held yet is made.
+    // held yet is made where the write lands on it, and holds nothing for a
+    // write to pass through.
     func writing(_ value: Value, at path: [Projection], under rendered: String) throws -> Value {
         guard let step = path.first else { return value }
 
         let rest = Array(path.dropFirst())
+
+        if case let .index(.int(index)) = step, let elements {
+            guard index >= 0, index < elements.count else {
+                throw ExecutionError("'\(rendered)' writes element \(index) of an array holding \(elements.count)")
+            }
+
+            var written = Array(elements)
+            written[index] = try written[index].writing(value, at: rest, under: rendered)
+
+            return respelled(written)
+        }
 
         switch (self, step) {
         case let (.record(record), .field(position, name)):
@@ -860,26 +849,18 @@ public indirect enum Value: Sendable, Equatable {
             return .record(try record.writing(name, with: try field.writing(value, at: rest, under: rendered)))
 
         case let (.dictionary(map), .index(key)):
-            let entry = try (map[key: key] ?? .null).writing(value, at: rest, under: rendered)
+            guard let held = map[key: key] else {
+                guard rest.isEmpty else {
+                    throw ExecutionError(
+                        "'\(rendered)' writes through \(Path([step.spelled]).rendered),"
+                            + " an entry the map does not hold. Write the whole entry first"
+                    )
+                }
 
-            return .dictionary(map.writing(key: key, with: entry))
-
-        case let (.array(elements), .index(.int(index))):
-            guard elements.indices.contains(index) else {
-                throw ExecutionError(
-                    "'\(rendered)' writes element \(index) of an array holding \(elements.count)"
-                )
+                return .dictionary(map.writing(key: key, with: value))
             }
 
-            var written = elements
-            written[index] = try elements[index].writing(value, at: rest, under: rendered)
-            return .array(written)
-
-        case (.null, _):
-            throw ExecutionError(
-                "'\(rendered)' writes through \(Path([step.spelled]).rendered), which holds nothing yet."
-                    + " Write the whole entry first"
-            )
+            return .dictionary(map.writing(key: key, with: try held.writing(value, at: rest, under: rendered)))
 
         default:
             throw ExecutionError(

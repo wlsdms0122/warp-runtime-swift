@@ -13,14 +13,13 @@ import Foundation
 // reader or a host is the same layout for the same fields.
 //
 // A name is part of the layout, so `Account` and `Vault` are two layouts over
-// one set of fields. What a field holds is not: `{ title: String }` and
-// `{ title: Int }` are one layout under two types.
+// one set of fields. What a field holds is not.
 //
 // Inside a link a name is a row of the lowered type table; outside one it is a
-// spelling, which is why a reader and a host may write one. A slot that
-// declares a type proves it: a value arriving there under another name is
-// refused. A slot that declares nothing proves nothing, so a name travelling
-// through `Any` is the spelling it was written as.
+// spelling, which is why a reader and a host may write one. The door a value
+// from outside comes through holds every name it carries to the record the
+// name declares, whatever the slot declares, so a layout a run holds names a
+// declared record.
 public struct Layout: Sendable, Hashable {
     // MARK: - Property
     public let name: Name
@@ -40,8 +39,8 @@ public struct Layout: Sendable, Hashable {
         self.init(name: name, ordered: fields)
     }
 
-    // The inner door: names already in order, none repeating, where the maker
-    // sorted them itself.
+    // Names already in order, none repeating, where the maker sorted them
+    // itself.
     init(name: Name, ordered fields: [Name]) {
         assert(fields.ordered, "a layout's fields are ordered by name")
 

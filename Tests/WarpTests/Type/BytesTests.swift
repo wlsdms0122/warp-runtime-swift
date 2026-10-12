@@ -35,7 +35,6 @@ struct BytesTests {
 
         // …and the spellings stay two values, the way 1 and 1.0 do.
         #expect(bytes != ints)
-        #expect(Value.order(bytes, ints) == nil)
     }
 
     @Test("an array slot that asks nothing of a byte takes the compact spelling whole")
@@ -140,7 +139,7 @@ struct BytesTests {
         await #expect {
             try await run(sut, arguments: ["data": .bytes([104])])
         } throws: { error in
-            "\(error)".contains("past the end")
+            "\(error)".contains("a position it does not hold")
         }
     }
 

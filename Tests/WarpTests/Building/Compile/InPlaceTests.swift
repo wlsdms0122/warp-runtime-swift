@@ -183,8 +183,8 @@ struct InPlaceTests {
         }
     }
 
-    @Test("a module variable's start is settled into the type it declares")
-    func moduleVariableStartIsSettledIntoItsDeclaredType() async throws {
+    @Test("a module variable's start is held to the type it declares")
+    func moduleVariableStartIsHeldToItsDeclaredType() async throws {
         // Given. A start the declared type does not take.
         let sut = try Module(
             variables: ["total": ModuleVariable(.literal(.string("many")), declared: .int)],
@@ -197,7 +197,7 @@ struct InPlaceTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("starts as String, and declares Int")
+            error is BuildError && "\(error)".contains("holds Int, and what it was given is String")
         }
     }
 
