@@ -399,7 +399,7 @@ struct ObjectReader {
     }
 
     // Each reading beside the contract it was handed where and the place,
-    // in the order of what the first two are written as, none twice.
+    // in the key order of what the first two are written as, none twice.
     private func leaned(_ value: Value) throws -> [Leaning: Place] {
         let entries = try Field(value, of: "leaned").list { entry in
             var cursor = try FieldCursor(entry, of: "leaned")
@@ -409,13 +409,15 @@ struct ObjectReader {
             try cursor.end()
 
             return (
-                order: WrittenOrder(value: .array([reading, contract])),
+                key: Value.array([reading, contract]),
                 leaning: Leaning(reading: try lowered(reading), contract: try name(contract)),
                 place: place
             )
         }
 
-        guard zip(entries, entries.dropFirst()).allSatisfy({ one, other in one.order < other.order }) else {
+        guard zip(entries, entries.dropFirst()).allSatisfy({ one, other in
+            Value.Dictionary.order(one.key, other.key) == .orderedAscending
+        }) else {
             throw ObjectRefused("'leaned' writes its readings out of order, or one of them twice")
         }
 

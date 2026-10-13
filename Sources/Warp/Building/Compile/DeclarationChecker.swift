@@ -158,15 +158,9 @@ struct DeclarationChecker {
 
             try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table)
 
-            for (parameter, names) in head.bounds.sorted(by: { $0.key < $1.key }) {
-                for bound in names.sorted() where table.contracts[bound] == nil {
-                    throw BuildError(
-                        "`\(TypeExpression.parameter(name: parameter).rendered)` names '\(bound)',"
-                            + " which no module in this link declares as a contract",
-                        at: place
-                    )
-                }
-            }
+            // A head writes its bounds beside the names, so a bound stands where
+            // the head is written.
+            try judge(bounds: head.bounds, at: { _ in place }, in: table)
         }
     }
 
@@ -217,7 +211,7 @@ struct DeclarationChecker {
 
         try mentioned(in: signature.returns ?? .any, at: place.part(.returns), bounds: signature.bounds, resolve: table)
 
-        try judge(bounds: signature.bounds, at: place, in: table)
+        try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
     }
 
     // A procedure the host answers calls a procedure it was handed with
@@ -369,7 +363,7 @@ struct DeclarationChecker {
                 try mentioned(in: field, at: place.part(.fields).key(name.spelling), bounds: bounds, resolve: table)
             }
 
-            try judge(bounds: bounds, at: place, in: table)
+            try judge(bounds: bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
 
         case let .alias(type):
             try mentioned(in: type, at: place, resolve: table)
@@ -473,10 +467,11 @@ struct DeclarationChecker {
     }
 
     // Whether a signature's bounded parameters could ever be judged: every
-    // name a bound names has to be a contract somebody declared.
+    // name a bound names has to be a contract somebody declared. `place`
+    // says where each parameter's bounds are written.
     private func judge(
         bounds: [Name: Set<Name>],
-        at place: Place,
+        at place: (Name) -> Place,
         in table: TypeTable
     ) throws {
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
@@ -484,7 +479,7 @@ struct DeclarationChecker {
                 throw BuildError(
                     "`\(TypeExpression.parameter(name: parameter).rendered)` names '\(bound)',"
                         + " which no module in this link declares as a contract",
-                    at: place.part(.bounds).key(parameter.spelling)
+                    at: place(parameter)
                 )
             }
         }

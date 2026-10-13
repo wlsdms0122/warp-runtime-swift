@@ -81,8 +81,7 @@ public struct Draft: Sendable {
     // them under: a struct it declares holds what it gives every value of
     // it, and a type takes the rest where the document extends it. A member
     // stands among `procedures` under its type's name and its own, which is
-    // the spelling a call writes, and its signature holds the type
-    // parameters its head names to the head's bounds.
+    // the spelling a call writes, and it takes a value its head takes first.
     public let members: [Head: Set<Name>]
 
     // The same members by the spelling a call writes.
@@ -140,7 +139,7 @@ public struct Draft: Sendable {
         self.spelledMembers = Member.spelled(members)
         self.constants = constants
         self.variables = variables
-        self.procedures = Self.placing(procedures, under: spelledMembers)
+        self.procedures = procedures
     }
 
     // MARK: - Public
@@ -152,7 +151,7 @@ public struct Draft: Sendable {
     // The same document declaring these procedures instead.
     public func declaring(_ procedures: [Name: Procedure]) -> Draft {
         var held = self
-        held.procedures = Self.placing(procedures, under: spelledMembers)
+        held.procedures = procedures
 
         return held
     }
@@ -267,13 +266,13 @@ public struct Draft: Sendable {
         )
     }
 
-    // MARK: - Private
-    // The procedures with each member's signature read under its head.
-    private static func placing(_ procedures: [Name: Procedure], under members: [Name: Member]) -> [Name: Procedure] {
+    // The procedures as the program reads them: each member's signature
+    // read under its head, as written otherwise.
+    func placed() -> [Name: Procedure] {
         procedures.reduce(into: [:]) { placed, entry in
             let (spelling, procedure) = entry
 
-            guard let head = members[spelling]?.head, !head.bounds.isEmpty else {
+            guard let head = spelledMembers[spelling]?.head, !head.bounds.isEmpty else {
                 placed[spelling] = procedure
 
                 return
@@ -282,4 +281,6 @@ public struct Draft: Sendable {
             placed[spelling] = procedure.with(signature: procedure.signature.under(head))
         }
     }
+
+    // MARK: - Private
 }

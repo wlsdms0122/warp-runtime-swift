@@ -134,18 +134,6 @@ public struct Signature: Sendable, Equatable {
         )
     }
 
-    // The same signature as the member writes it, the head's bounds left to
-    // the head.
-    package func written(under head: Head) -> Signature {
-        Signature(
-            parameters: parameters,
-            returns: returns,
-            bounds: bounds.reduce(into: [:]) { written, entry in
-                written[entry.key] = entry.value.subtracting(head.bounds[entry.key] ?? [])
-            }
-        )
-    }
-
     // A contract's procedure as a call through the contract reads it: `Self`
     // as one type parameter the contract bounds, which every position
     // writing it shares.

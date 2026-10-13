@@ -2033,7 +2033,7 @@ indirect enum LoweredType: Sendable, Hashable {
         in table: LoweredTypeTable
     ) throws -> Value {
         let refusal = table.refusal(
-            of: LoweredType(of: value, in: table),
+            of: table.reading(of: value, answering: name),
             answering: name,
             orNull: false,
             as: "is",

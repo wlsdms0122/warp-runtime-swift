@@ -183,8 +183,8 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // Every name this document reaches outside itself: its module's
-    // `references`. What it needs, and the names its claims and the pairs it
-    // leaned on write. An object keeps no list of what its document named, so
+    // `references`. What it needs, and the names its claims and members
+    // write and the contracts it leaned on. An object keeps no list of what its document named, so
     // this is that list worked out again from the facts the object does keep.
     var references: Set<Reference> {
         var reached = needs

@@ -79,7 +79,10 @@ public struct Module: Sendable {
     // declared beside it.
     public var variables: [Name: ModuleVariable] { source.variables }
 
-    public var procedures: [Name: Procedure] { source.procedures }
+    // What it declares as the program reads it: a member's signature holds
+    // the type parameters its head names to the head's bounds. The draft
+    // keeps each as written.
+    public let procedures: [Name: Procedure]
 
     // Which document this was read out of, where it was read out of one.
     //
@@ -206,6 +209,7 @@ public struct Module: Sendable {
 
     private init(reading draft: Draft, identity: Identity?, builtin: Bool) {
         self.source = draft
+        self.procedures = draft.placed()
         self.identity = identity
         self.document = Place.Document(identity: identity, types: draft.types, members: draft.members)
         self.builtin = builtin

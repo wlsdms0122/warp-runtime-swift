@@ -168,16 +168,18 @@ struct ObjectWriter {
         case .members:
             return try headed(compiled.members) { members in .array(members.sorted().map(name)) }
 
-        // In the order of what each reading and contract is written as, which
-        // is the one order a list of types has.
+        // In the key order of what each reading and its contract are written
+        // as, the order the language puts values in.
         case .leaned:
-            let written = try compiled.leaned.map { (entry) throws(ObjectUnwritable) -> (order: WrittenOrder, row: Value) in
+            let written = try compiled.leaned.map { (entry) throws(ObjectUnwritable) -> (key: Value, row: Value) in
                 let (reading, contract) = (try lowered(entry.key.reading), name(entry.key.contract))
 
-                return (WrittenOrder(value: .array([reading, contract])), .array([reading, contract, place(entry.value)]))
+                return (.array([reading, contract]), .array([reading, contract, place(entry.value)]))
             }
 
-            return .array(written.sorted { one, other in one.order < other.order }.map(\.row))
+            return .array(
+                written.sorted { one, other in Value.Dictionary.order(one.key, other.key) == .orderedAscending }.map(\.row)
+            )
 
         // The rows the document declares stand under their spellings; the
         // rows its bodies lifted stand apart, and what wrote each is the

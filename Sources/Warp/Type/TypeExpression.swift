@@ -139,10 +139,6 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     case projection(of: Name, path: Path)
 
     // MARK: - Property
-    // What a claim about a type the language names holds that type's own
-    // parameters to: a map's key answers `Hashable`.
-    static let nominalBounds: [Name: Set<Name>] = [TypeSpelling.selfKey: [TypeSpelling.hashable]]
-
     // The types the language names, by the spelling a document writes each
     // under. A spelling here is never a declaration's: what a document
     // declares stands beside these, and a reader answers one of these before

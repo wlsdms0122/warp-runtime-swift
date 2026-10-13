@@ -142,6 +142,15 @@ struct Validator: Sendable {
 
             for argument in head.arguments {
                 try written(argument, in: .head, at: place)
+
+                // A head is a key, so what it applies its type to is spelled.
+                guard argument.hasSpelling else {
+                    throw ValidationError(
+                        "applies '\(head.type)' to \(argument.rendered), which has no spelling, and an extension is"
+                            + " keyed by its head. A procedure type is declared and written by its name",
+                        at: place
+                    )
+                }
             }
 
             let named = head.parameterNames
@@ -202,17 +211,34 @@ struct Validator: Sendable {
         }
 
         // A member is named by one identifier, since a call spells it after
-        // its type's name and a dot.
+        // its type's name and a dot. Under a head applying its type, a member
+        // is there for the values the head takes, and a call says which by
+        // the value it hands first, so the member takes that value first,
+        // written as the head is.
         for (head, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
             for member in members.sorted() {
                 let spelling = member.spelled(under: head.type)
+                let place = Place.procedure(spelling.spelling, in: .of(module))
 
-                try held(member, as: .member, at: .procedure(spelling.spelling, in: .of(module)))
+                try held(member, as: .member, at: place)
 
-                guard module.procedures[spelling] != nil else {
+                guard let procedure = module.procedures[spelling] else {
                     throw ValidationError(
                         "gives '\(head.spelling)' the member '\(member)', and declares no procedure '\(spelling)'",
-                        at: .procedure(spelling.spelling, in: .of(module))
+                        at: place
+                    )
+                }
+
+                guard let mention = head.mention else { continue }
+
+                let first = procedure.signature.parameters.first?.type.slotUnwrapped
+
+                guard first == mention else {
+                    throw ValidationError(
+                        "gives '\(head.spelling)' the member '\(member)', which takes \(first?.rendered ?? "nothing") first."
+                            + " A member under a head applying its type takes a value the head takes first,"
+                            + " written as the head: `\(mention.rendered)`",
+                        at: place.part(.parameters)
                     )
                 }
             }

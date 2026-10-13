@@ -24,8 +24,8 @@ struct TypeNamespace {
     // answers. A list, since a claim declares no name for a table to be keyed
     // by. A claim two documents write under one head is one claim: it holds
     // nothing but the head and the contract, so the second says what the
-    // first said. A type answers a contract one way, so two heads for one
-    // pair are refused.
+    // first said. Whether two heads take the same values is the build's,
+    // where their names resolve.
     let claims: [Placed<Claim>]
 
     // Every procedure a document gave a type, by the spelling a call writes:
@@ -125,9 +125,7 @@ struct TypeNamespace {
                 )
             }
         }
-        var claimed = claims.reduce(into: [Name: [Name: Placed<Claim>]]()) { claimed, placed in
-            claimed[placed.held.type, default: [:]][placed.held.contract] = placed
-        }
+        var claimed = Set(claims.map(\.held))
 
         for (handed, held) in documents.enumerated() {
             for (head, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
@@ -138,18 +136,8 @@ struct TypeNamespace {
                         of: handed
                     )
 
-                    if let first = claimed[head.type]?[contract] {
-                        guard first.held.head != head else { continue }
+                    guard claimed.insert(claim.held).inserted else { continue }
 
-                        throw BuildError(
-                            "says '\(head.spelling)' answers '\(contract)', and \(first.spelled) says"
-                                + " '\(first.held.head.spelling)' answers it. A type answers a contract one way,"
-                                + " under one head",
-                            at: claim.place
-                        )
-                    }
-
-                    claimed[head.type, default: [:]][contract] = claim
                     claims.append(claim)
                 }
             }

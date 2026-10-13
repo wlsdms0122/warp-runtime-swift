@@ -314,13 +314,12 @@ public struct Writer: Sendable {
             )
         }
 
-        // A member's signature writes what its head does not.
         if let members = draft.members[head], !members.isEmpty {
             written[ExtensionReader.CodingKeys.procedures.name] = .dictionary(
                 try members.reduce(into: [Name: Value]()) { procedures, member in
                     guard let procedure = draft.procedures[member.spelled(under: head.type)] else { return }
 
-                    procedures[member] = try value(of: procedure.with(signature: procedure.signature.written(under: head)))
+                    procedures[member] = try value(of: procedure)
                 }
             )
         }

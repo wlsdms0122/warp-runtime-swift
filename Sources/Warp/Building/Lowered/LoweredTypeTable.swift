@@ -289,6 +289,28 @@ final class LoweredTypeTable: Sendable {
         return refusal(of: reading, under: head) == nil
     }
 
+    // What a value reads as where a contract is asked of it. A value carries
+    // no type's arguments, so where the claim about its type stands under a
+    // head applying the type, the value is held to the head the way a door
+    // holds one to a slot writing the struct: the head's own type parameters
+    // filled by what its parts read as, and the value settling into what that
+    // fills. A value that does not settle reads as its parts, which the head
+    // does not take.
+    func reading(of value: Value, answering contract: Name) -> LoweredType {
+        let read = LoweredType(of: value, in: self)
+
+        guard
+            let type = read.nominal(in: self),
+            case let head?? = satisfying[contract]?[type]
+        else {
+            return read
+        }
+
+        let filled = head.filling(Substitution(filling: [head], against: [read], in: self).readings)
+
+        return filled.settles(value, in: self) ? filled : read
+    }
+
     // Why a parameter written as `head` does not take a value read as
     // `reading`, or nil where it does: what the reading puts in the head's
     // type parameters, each read one way and held to its bounds, and the
