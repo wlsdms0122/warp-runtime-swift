@@ -48,7 +48,8 @@ public extension Place {
         case .variables: [.key(ModuleReader.CodingKeys.variables.stringValue)]
         case .types: [.key(ModuleReader.CodingKeys.types.stringValue)]
         case .contracts: [.key(ModuleReader.CodingKeys.contracts.stringValue)]
-        case .satisfies: [.key(ModuleReader.CodingKeys.satisfies.stringValue)]
+        case .satisfies: [.key(ExtensionReader.CodingKeys.satisfies.stringValue)]
+        case .extensions: [.key(ModuleReader.CodingKeys.extensions.stringValue)]
         case .imports: [.key(ModuleReader.CodingKeys.imports.stringValue)]
 
         case .parameters: [.key(SignatureFieldsReader.CodingKeys.parameters.stringValue)]

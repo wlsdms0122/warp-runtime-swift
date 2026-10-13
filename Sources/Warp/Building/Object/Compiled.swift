@@ -52,6 +52,12 @@ public struct Compiled: Sendable, Declaring {
     // those are is a fact of the link rather than of this document.
     let claims: [Name: Set<Name>]
 
+    // The procedures it gave each type, by the name of the type. Each is a
+    // declaration of this document under its type's name and its own, and
+    // what answers a contract's procedure for that type is the member of
+    // that name.
+    let members: [Name: Set<Name>]
+
     // The pairs its bodies lean on: a type handed where a contract is asked.
     // Unresolved here, the way a procedure this document sends and does not declare
     // is unresolved. Which types answer a contract is read off the claims of
@@ -139,7 +145,7 @@ public struct Compiled: Sendable, Declaring {
             declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
                 + contracts.flatMap { contract, procedures in
                     procedures.keys.map { procedure in
-                        Reference.procedure(ContractProcedure.spelling(of: contract, procedure: procedure))
+                        Reference.procedure(procedure.spelled(under: contract))
                     }
                 }
                 + types.keys.map(Reference.type)
@@ -186,6 +192,10 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion(claimed.map(Reference.type))
         }
 
+        for type in members.keys {
+            reached.insert(.type(type))
+        }
+
         for claim in leaned.keys {
             reached.formUnion([.type(claim.type), .type(claim.contract)])
         }
@@ -208,6 +218,7 @@ public struct Compiled: Sendable, Declaring {
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
+        members: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],
         constants: [Name],
@@ -226,6 +237,7 @@ public struct Compiled: Sendable, Declaring {
         self.types = types
         self.contracts = contracts
         self.claims = claims
+        self.members = members
         self.leaned = leaned
         self.declared = declared
         self.table = table
@@ -254,6 +266,7 @@ public struct Compiled: Sendable, Declaring {
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Name: Set<Name>],
+        members: [Name: Set<Name>],
         leaned: [Claim: Place],
         declared: [Name],
         constants: [Name],
@@ -276,6 +289,7 @@ public struct Compiled: Sendable, Declaring {
             types: types,
             contracts: contracts,
             claims: claims,
+            members: members,
             leaned: leaned,
             declared: declared,
             constants: constants,
@@ -359,6 +373,7 @@ public struct Compiled: Sendable, Declaring {
             types: types,
             contracts: contracts,
             claims: claims,
+            members: members,
             leaned: leaned,
             declared: declared,
             constants: constants,

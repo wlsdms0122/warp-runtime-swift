@@ -52,16 +52,53 @@ public struct Writer: Sendable {
             )
         ]
 
-        if !draft.procedures.isEmpty {
-            written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try draft.procedures.mapValues(value(of:)))
+        // A member is written where its type is given it, so what stands at the
+        // top is the rest.
+        let procedures = draft.procedures.filter { spelling, _ in draft.member(spelling) == nil }
+
+        if !procedures.isEmpty {
+            written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try procedures.mapValues(value(of:)))
         }
 
         if let description = draft.description {
             written[ModuleReader.CodingKeys.description.name] = .string(description)
         }
 
+        // What the document gives a type stands in the struct's declaration
+        // where the document declares the struct, and in an extension of the
+        // type otherwise.
+        let receiving = Set(draft.claims.keys).union(draft.members.keys)
+
         if !draft.types.isEmpty {
-            written[ModuleReader.CodingKeys.types.name] = .dictionary(try draft.types.mapValues(value(of:)))
+            written[ModuleReader.CodingKeys.types.name] = .dictionary(
+                try draft.types.reduce(into: [Name: Value]()) { types, entry in
+                    let (type, declared) = entry
+
+                    let written = try value(of: declared)
+
+                    guard case .struct = declared, case let .dictionary(fields) = written else {
+                        types[type] = written
+
+                        return
+                    }
+
+                    types[type] = .dictionary(
+                        try given(type, in: draft).reduce(fields) { fields, entry in fields.writing(entry.key, with: entry.value) }
+                    )
+                }
+            )
+        }
+
+        let extended = receiving.filter { type in
+            if case .struct? = draft.types[type] { false } else { true }
+        }
+
+        if !extended.isEmpty {
+            written[ModuleReader.CodingKeys.extensions.name] = .dictionary(
+                try extended.reduce(into: [Name: Value]()) { extensions, type in
+                    extensions[type] = .dictionary(try given(type, in: draft))
+                }
+            )
         }
 
         if !draft.contracts.isEmpty {
@@ -88,14 +125,6 @@ public struct Writer: Sendable {
                             return .dictionary(written)
                         }
                     )
-                }
-            )
-        }
-
-        if !draft.claims.isEmpty {
-            written[ModuleReader.CodingKeys.satisfies.name] = .dictionary(
-                draft.claims.mapValues { contracts in
-                    .array(contracts.sorted().map { name in .string(name.spelling) })
                 }
             )
         }
@@ -270,6 +299,29 @@ public struct Writer: Sendable {
     }
 
     // MARK: - Private
+    // What a document gives a type: the contracts it says the type answers,
+    // and its members, each under the name it has there.
+    private func given(_ type: Name, in draft: Draft) throws -> [Name: Value] {
+        var written: [Name: Value] = [:]
+
+        if let contracts = draft.claims[type], !contracts.isEmpty {
+            written[ExtensionReader.CodingKeys.satisfies.name] = .array(
+                contracts.sorted().map { name in .string(name.spelling) }
+            )
+        }
+
+        if let members = draft.members[type], !members.isEmpty {
+            written[ExtensionReader.CodingKeys.procedures.name] = .dictionary(
+                try members.reduce(into: [Name: Value]()) { procedures, member in
+                    guard let procedure = draft.procedures[member.spelled(under: type)] else { return }
+
+                    procedures[member] = try value(of: procedure)
+                }
+            )
+        }
+
+        return written
+    }
     // The keys a block writes, with whoever reads it asked whether an empty
     // `body` is written or dropped. A rescue and a procedure are read by their
     // own readers, which take `body` as a key that may be absent, and say

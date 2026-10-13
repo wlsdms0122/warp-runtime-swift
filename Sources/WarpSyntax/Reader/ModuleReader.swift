@@ -16,7 +16,7 @@ public struct ModuleReader: Decodable {
         case description
         case types
         case contracts
-        case satisfies
+        case extensions
         case const
         case variables = "var"
         case procedures
@@ -46,36 +46,74 @@ public struct ModuleReader: Decodable {
         )
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let notation = decoder.notation
+        let types = try Self.mapping(TypeDeclarationReader.self, in: container, forKey: .types)
+        let extensions = try Self.mapping(ExtensionReader.self, in: container, forKey: .extensions)
+        var procedures = try Self.mapping(ProcedureReader.self, in: container, forKey: .procedures)
+            .mapValues(\.procedure)
+        var claims: [Name: Set<Name>] = [:]
+        var members: [Name: Set<Name>] = [:]
+
+        // A struct this document declares is given things where it is
+        // declared, so an extension of it would be a second way to write one
+        // document.
+        if let type = extensions.keys.sorted().first(where: { type in
+            if case .struct? = types[type]?.declared { true } else { false }
+        }) {
+            throw ReadingError(
+                "extends '\(type)', a struct this document declares. A document gives a struct it"
+                    + " declares what it gives it in the declaration",
+                at: [.key(CodingKeys.extensions.rawValue), .key(type.spelling)]
+            )
+        }
+
+        // What the document gives each type, from where it gave it: a struct
+        // it declares in its declaration, and every other type in an
+        // extension, an alias it declares included, which the load refuses
+        // for what it is. A member joins the procedures under its type's name
+        // and its own, so a procedure the document declares under that
+        // spelling is a second declaration of it.
+        let given = types.mapValues { declared in (declared.satisfies, declared.procedures, CodingKeys.types) }
+            .merging(extensions.mapValues { extended in (extended.satisfies, extended.procedures, CodingKeys.extensions) }) { _, extended in extended }
+
+        for (type, (satisfies, memberProcedures, key)) in given.sorted(by: { $0.key < $1.key }) {
+            if !satisfies.isEmpty {
+                claims[type] = satisfies
+            }
+
+            for (member, procedure) in memberProcedures.sorted(by: { $0.key < $1.key }) {
+                let spelling = member.spelled(under: type)
+
+                guard procedures[spelling] == nil else {
+                    throw ReadingError(
+                        "gives '\(type)' the member '\(member)', and '\(spelling)' is declared"
+                            + " once already in this document",
+                        at: [
+                            .key(key.rawValue),
+                            .key(type.spelling),
+                            .key(ExtensionReader.CodingKeys.procedures.rawValue),
+                            .key(member.spelling)
+                        ]
+                    )
+                }
+
+                procedures[spelling] = procedure
+                members[type, default: []].insert(member)
+            }
+        }
 
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: try Self.imports(in: container),
-            types: try Self.mapping(TypeDeclarationReader.self, in: container, forKey: .types)
-                .mapValues(\.declared),
+            types: types.mapValues(\.declared),
             contracts: try Self.mapping(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
-            // In key order, so that the same refusal comes first every run.
-            claims: try Self.mapping([String].self, in: container, forKey: .satisfies)
-                .sorted { one, other in one.key < other.key }
-                .reduce(into: [Name: Set<Name>]()) { claims, entry in
-                    // The key is the type claiming, written as the document
-                    // spells it; the contracts it claims are a set of names,
-                    // and order and repeats are the one spelling's to hold.
-                    let steps: [Place.Step] = [.key(CodingKeys.satisfies.rawValue), .key(entry.key.spelling)]
-
-                    claims[entry.key] = Set(
-                        try entry.value.map { spelled in
-                            notation.qualified(try Name.read(spelled, at: steps), as: .type)
-                        }
-                    )
-                },
+            claims: claims,
+            members: members,
             constants: try Self.mapping(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.mapping(VariableReader.self, in: container, forKey: .variables)
                 .mapValues(\.variable),
-            procedures: try Self.mapping(ProcedureReader.self, in: container, forKey: .procedures)
-                .mapValues(\.procedure)
+            procedures: procedures
         )
     }
 

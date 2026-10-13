@@ -10,11 +10,17 @@ import Warp
 
 // A type a module declares, as a document writes it under `types`: a struct,
 // its fields under `struct`, each beside its type, the type parameters it
-// takes under `typeParameters` and their bounds under `bounds`, or any type,
-// which the declared name is then a second spelling of.
+// takes under `typeParameters` and their bounds under `bounds`, and what the
+// document gives it the way an extension does, or any type, which the
+// declared name is then a second spelling of.
 struct TypeDeclarationReader: Decodable {
     // MARK: - Property
     let declared: TypeDeclaration
+
+    // The contracts the struct answers and its members, which an alias has
+    // none of.
+    let satisfies: Set<Name>
+    let procedures: [Name: Procedure]
 
     // The key a struct is declared under.
     static let structKey: Name = "struct"
@@ -27,6 +33,8 @@ struct TypeDeclarationReader: Decodable {
     init(from decoder: Decoder) throws {
         guard let keyed = try? decoder.container(keyedBy: AnyCodingKey.self) else {
             self.declared = .alias(try TypeReader(from: decoder).type)
+            self.satisfies = []
+            self.procedures = [:]
 
             return
         }
@@ -35,19 +43,24 @@ struct TypeDeclarationReader: Decodable {
 
         guard keys.contains(Self.structKey) else {
             self.declared = .alias(try TypeReader(from: decoder).type)
+            self.satisfies = []
+            self.procedures = [:]
 
             return
         }
 
         let boundsKey = SignatureFieldsReader.CodingKeys.bounds.name
+        let given = ExtensionReader.CodingKeys.allCases.map(\.name)
 
-        if let unknown = keys.subtracting([Self.structKey, Self.typeParametersKey, boundsKey]).min() {
+        if let unknown = keys.subtracting([Self.structKey, Self.typeParametersKey, boundsKey] + given).min() {
             throw ReadingError(
                 "a struct writes '\(unknown)', and is written with `\(Self.structKey)`,"
-                    + " `\(Self.typeParametersKey)` and `\(boundsKey)` alone",
+                    + " `\(Self.typeParametersKey)`, `\(boundsKey)`, \(given.map { key in "`\(key)`" }.joined(separator: " and ")) alone",
                 at: decoder.steps
             )
         }
+
+        (self.satisfies, self.procedures) = try ExtensionReader.given(from: decoder)
 
         let fields = try Self.fields(from: keyed.superDecoder(forKey: AnyCodingKey(stringValue: Self.structKey.spelling)))
         let typeParameters = try Self.typeParameters(from: decoder.descendingIfPresent(to: AnyCodingKey(stringValue: Self.typeParametersKey.spelling)))

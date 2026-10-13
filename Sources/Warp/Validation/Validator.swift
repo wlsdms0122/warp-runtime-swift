@@ -128,15 +128,57 @@ struct Validator: Sendable {
             }
         }
 
+        // What a document gives a type, the contracts it answers and its
+        // members, is given to the type a value is an instance of, so a name
+        // this document declares as another name for a type is given nothing.
+        // A type it gives nothing stands nowhere among them: one that did would
+        // be written as no extension, and read back as none.
+        for type in Set(module.claims.keys).union(module.members.keys).sorted() {
+            let place = Place(module.document.home(of: type), in: module.document)
+
+            try held(type, as: .claimedType, at: place)
+
+            if module.claims[type]?.isEmpty == true {
+                throw ValidationError("claims no contract for '\(type)', which is no claim", at: place.part(.satisfies))
+            }
+
+            if module.members[type]?.isEmpty == true {
+                throw ValidationError("gives '\(type)' no member, which gives it nothing", at: place.part(.procedures))
+            }
+
+            if case .alias? = module.types[type] {
+                throw ValidationError(
+                    "gives '\(type)' contracts or members, and this document declares it as another name"
+                        + " for a type. What a type is given is given to the struct a value is an instance of",
+                    at: place
+                )
+            }
+        }
+
         // A claim names two types: the one it is about and the contract it
         // says that type answers.
         for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
             let place = Place.satisfies(type.spelling, in: .of(module))
 
-            try held(type, as: .claimedType, at: place)
-
             for contract in contracts.sorted() {
                 try held(contract, as: .contractMention, at: place)
+            }
+        }
+
+        // A member is named by one identifier, since a call spells it after
+        // its type's name and a dot.
+        for (type, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
+            for member in members.sorted() {
+                let spelling = member.spelled(under: type)
+
+                try held(member, as: .member, at: .procedure(spelling.spelling, in: .of(module)))
+
+                guard module.procedures[spelling] != nil else {
+                    throw ValidationError(
+                        "gives '\(type)' the member '\(member)', and declares no procedure '\(spelling)'",
+                        at: .procedure(spelling.spelling, in: .of(module))
+                    )
+                }
             }
         }
 

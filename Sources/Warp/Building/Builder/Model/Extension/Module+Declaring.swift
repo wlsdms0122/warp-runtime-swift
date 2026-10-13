@@ -8,5 +8,4 @@
 import Foundation
 
 extension Module: Declaring {
-    var document: Place.Document { .of(self) }
 }

@@ -48,9 +48,8 @@ struct LoweredContractProcedure: Sendable {
     //
     // Which declaration answers one is read off the tables rather than carried
     // from where the answers were gathered. A type answering a contract
-    // answers every one of its procedures by a declaration named for the type
-    // and the procedure, so the table saying which types answer says the whole
-    // of it.
+    // answers every one of its procedures by its member of that name, so the
+    // table saying which types answer says the whole of it.
     static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
             let answering = types.loweredTypes.satisfying[entry.key] ?? []
@@ -58,7 +57,7 @@ struct LoweredContractProcedure: Sendable {
             for (procedure, asked) in entry.value {
                 let signature = asked.signature.read(of: entry.key)
 
-                table[ContractProcedure.spelling(of: entry.key, procedure: procedure)] = LoweredContractProcedure(
+                table[procedure.spelled(under: entry.key)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
                     signature: signature,
@@ -68,7 +67,7 @@ struct LoweredContractProcedure: Sendable {
                     slots: signature.lowered(in: types.loweredTypes),
                     answers: signature.returns?.lowered(in: types.loweredTypes, bounds: signature.bounds),
                     answering: answering.reduce(into: [Name: Name]()) { held, type in
-                        held[type] = ContractProcedure.spelling(of: type, procedure: procedure)
+                        held[type] = procedure.spelled(under: type)
                     }
                 )
             }

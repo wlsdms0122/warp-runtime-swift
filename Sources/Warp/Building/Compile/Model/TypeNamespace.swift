@@ -26,6 +26,15 @@ struct TypeNamespace {
     // the pair, so the second says what the first said.
     let claims: [Placed<Claim>]
 
+    // Every procedure a document gave a type, by the spelling a call writes:
+    // what may answer a contract's procedure for that type.
+    let members: Set<Name>
+
+    // Each type a document gave members to, where the document gave them. The
+    // name is held the way the type a claim is about is held, whatever the
+    // document gave it.
+    let extended: [Placed<Name>]
+
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
         // The language's own stand as no document's, ahead of every one.
@@ -137,6 +146,16 @@ struct TypeNamespace {
         self.types = types
         self.contracts = contracts
         self.claims = claims
+        self.members = documents.reduce(into: []) { members, held in
+            for (type, names) in held.members {
+                members.formUnion(names.map { member in member.spelled(under: type) })
+            }
+        }
+        self.extended = documents.enumerated().flatMap { handed, held in
+            held.members.keys.sorted().map { type in
+                Placed(type, at: Place(held.document.home(of: type), in: held.document), of: handed)
+            }
+        }
     }
 
     // MARK: - Public

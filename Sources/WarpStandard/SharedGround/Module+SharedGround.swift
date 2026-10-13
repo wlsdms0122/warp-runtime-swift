@@ -9,24 +9,24 @@ import Foundation
 import Warp
 
 public extension Module {
-    // One declaration answering a contract's procedure for a type the
-    // language names, under the spelling a claim holds it to: the type's
-    // name and the procedure's, with a dot between them.
+    // One member answering a contract's procedure for a type the language
+    // names: the member of the procedure's name, under the spelling a call
+    // writes, the type's name and the member's with a dot between them.
     private struct Witness {
         // MARK: - Property
         let type: Name
         let contract: Name
-        let name: Name
+        let member: Name
         let procedure: Procedure
+
+        var name: Name { member.spelled(under: type) }
 
         // MARK: - Initializer
         init(_ type: Name, answering contract: Name, _ asked: String, by declaring: (String) -> Procedure) {
-            let spelling = "\(type.spelling).\(asked)"
-
             self.type = type
             self.contract = contract
-            self.name = Name(normal: spelling)
-            self.procedure = declaring(spelling)
+            self.member = Name(normal: asked)
+            self.procedure = declaring(member.spelled(under: type).spelling)
         }
 
         // MARK: - Public
@@ -75,6 +75,9 @@ public extension Module {
                 ],
                 claims: witnesses.reduce(into: [Name: Set<Name>]()) { claims, witness in
                     claims[witness.type, default: []].insert(witness.contract)
+                },
+                members: witnesses.reduce(into: [Name: Set<Name>]()) { members, witness in
+                    members[witness.type, default: []].insert(witness.member)
                 },
                 procedures: Dictionary(uniqueKeysWithValues: witnesses.map { witness in (witness.name, witness.procedure) })
             ),

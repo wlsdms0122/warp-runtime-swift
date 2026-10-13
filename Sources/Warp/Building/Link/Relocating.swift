@@ -303,10 +303,7 @@ final class Relocating {
     // A call through a contract with the calls the rows answering it stand
     // for, one per type that answers.
     private func relocated(_ dispatch: DispatchOperation, in context: Context) throws -> DispatchOperation {
-        let spelling = ContractProcedure.spelling(
-            of: dispatch.contract,
-            procedure: dispatch.procedure
-        )
+        let spelling = dispatch.procedure.spelled(under: dispatch.contract)
 
         guard let asked = contractProcedures[spelling] else {
             throw BuildError(

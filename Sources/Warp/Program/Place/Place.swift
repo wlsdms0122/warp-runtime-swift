@@ -34,6 +34,13 @@ public struct Place: Sendable, Hashable {
         // means here: there is no file for a reader to be pointed back into.
         public let identity: Identity?
 
+        // Where the document wrote what it gives a type: under the struct's
+        // declaration for a struct it declares, and under an extension of the
+        // type otherwise. A document built from an identity alone gives no type
+        // anything, and so is another document than the one its text reads as.
+        let structs: Set<Name>
+        let members: [Name: Member]
+
         // A program nobody wrote down, which is what a caller holding a body it
         // assembled has. Spelled out rather than left to a default, so that a
         // place meaning to say which text it is in cannot get this one by
@@ -49,11 +56,29 @@ public struct Place: Sendable, Hashable {
         // MARK: - Initializer
         public init(identity: Identity?) {
             self.identity = identity
+            self.structs = []
+            self.members = [:]
+        }
+
+        // A document, with the types it declares and the procedures it gives
+        // each type it names, by the name of the type.
+        init(identity: Identity?, types: [Name: TypeDeclaration], members: [Name: Set<Name>]) {
+            self.identity = identity
+            self.structs = Set(types.compactMap { name, declared in
+                if case .struct = declared { name } else { nil }
+            })
+            self.members = Member.spelled(members)
         }
 
         // MARK: - Public
         public static func of(_ module: Module) -> Document {
-            Document(identity: module.identity)
+            module.document
+        }
+
+        // Where this document wrote what it gives a type: the struct's
+        // declaration, or an extension of the type.
+        func home(of type: Name) -> [Step] {
+            [.part(structs.contains(type) ? .types : .extensions), .key(type.spelling)]
         }
 
         // What a sentence calls this document when it names one among several.
@@ -83,6 +108,7 @@ public struct Place: Sendable, Hashable {
         case types
         case contracts
         case satisfies
+        case extensions
         case imports
 
         case parameters
@@ -132,6 +158,7 @@ public struct Place: Sendable, Hashable {
             case .types: "types"
             case .contracts: "contracts"
             case .satisfies: "satisfies"
+            case .extensions: "extensions"
             case .imports: "imports"
             case .parameters: "parameters"
             case .returns: "returns"
@@ -293,8 +320,17 @@ public struct Place: Sendable, Hashable {
     // the name the author gave it. Which document is stated and
     // never defaulted, so that a caller meaning to say which text it was in
     // cannot get "none" by saying nothing.
+    // A member stands under the type it is given to, where the document gave
+    // it, and under the name it has there.
     public static func procedure(_ name: String, in document: Document) -> Place {
-        Place([.part(.procedures), .key(name)], in: document)
+        guard let member = document.members[Name(normal: name)] else {
+            return Place([.part(.procedures), .key(name)], in: document)
+        }
+
+        return Place(
+            document.home(of: member.type) + [.part(.procedures), .key(member.name.spelling)],
+            in: document
+        )
     }
 
     public static func constant(_ name: String, in document: Document) -> Place {
@@ -313,11 +349,11 @@ public struct Place: Sendable, Hashable {
         Place([.part(.contracts), .key(name)], in: document)
     }
 
-    // A claim that one type answers some contracts, under the name of the
-    // type. What is refused about one is refused about the type it is about,
-    // which is the key an author wrote it under.
+    // A claim that one type answers some contracts, written where the
+    // document gives the type what it gives it. What is refused about one is
+    // refused about the type it is about.
     public static func satisfies(_ name: String, in document: Document) -> Place {
-        Place([.part(.satisfies), .key(name)], in: document)
+        Place(document.home(of: Name(normal: name)) + [.part(.satisfies)], in: document)
     }
 
     // A caller holding a program it assembled itself, with no document under

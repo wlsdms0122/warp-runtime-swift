@@ -73,10 +73,18 @@ public struct Draft: Sendable {
 
     // Which contracts each type this document names answers, by the name of
     // the type. A type answers a contract because a document says it does: the
-    // link holds the claim to the declarations that back it, and a declaration
-    // named for a type and a procedure nobody claimed is that document's procedure and
-    // nothing more. The type may be another document's.
+    // link holds the claim to the type's members. The type may be another
+    // document's, and a document claims it where it extends it.
     public let claims: [Name: Set<Name>]
+
+    // The procedures this document gives each type, by the name of the type:
+    // a struct it declares holds them, and any other type takes them where
+    // the document extends it. A member stands among `procedures` under
+    // its type's name and its own, which is the spelling a call writes.
+    public let members: [Name: Set<Name>]
+
+    // The same members by the spelling a call writes.
+    let spelledMembers: [Name: Member]
 
     public let constants: [Name: Expression]
 
@@ -98,7 +106,7 @@ public struct Draft: Sendable {
     // one of them, by the spelling a call writes to reach it.
     var declaredProcedures: Set<Name> {
         Set(procedures.keys).union(contracts.flatMap { contract, procedures in
-            procedures.keys.map { procedure in ContractProcedure.spelling(of: contract, procedure: procedure) }
+            procedures.keys.map { procedure in procedure.spelled(under: contract) }
         })
     }
 
@@ -116,6 +124,7 @@ public struct Draft: Sendable {
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
+        members: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable] = [:],
         procedures: [Name: Procedure] = [:]
@@ -125,12 +134,19 @@ public struct Draft: Sendable {
         self.types = types
         self.contracts = contracts
         self.claims = claims
+        self.members = members
+        self.spelledMembers = Member.spelled(members)
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
     }
 
     // MARK: - Public
+    // The member a procedure this declares is, or nil where it is no member.
+    public func member(_ spelling: Name) -> Member? {
+        spelledMembers[spelling]
+    }
+
     // The same document declaring these procedures instead.
     public func declaring(_ procedures: [Name: Procedure]) -> Draft {
         var held = self
@@ -216,6 +232,11 @@ public struct Draft: Sendable {
             }
 
             named.formUnion(contracts)
+        }
+
+        // A document extending a type names it, the way a claim does.
+        for type in members.keys where TypeExpression.nominalTypes[type] == nil {
+            named.insert(type)
         }
 
         for (name, procedure) in procedures {

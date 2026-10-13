@@ -10,14 +10,13 @@ import Foundation
 // Which types answer which contracts, and whether the documents are good for
 // what they said. A contract is the procedures a value must have, and a document
 // says which types have them: the claim names a type and a contract, and the
-// declaration behind each procedure is the one named for the type and the procedure,
+// declaration behind each procedure is the type's member of that procedure's name,
 // whose signature is the contract's with `Self` read as the type wherever it
 // stands.
 //
-// Read off the claims and not off the whole type table. A spelling that
-// happens to join a type's name to a contract's procedure is that document's procedure
-// until some document says otherwise, so what a link declares does not decide
-// what an unrelated document may call things.
+// Read off the claims and the members, and not off the whole type table: what
+// answers is what a document gave the type, so what a link declares does not
+// decide what an unrelated document may call things.
 //
 // A claim that does not hold puts its type under no contract, and where that
 // is refused turns on whether another document could put it right. A name this
@@ -80,7 +79,6 @@ struct ClaimChecker {
         _ declaring: TypeTable,
         in namespace: TypeNamespace,
         among signatures: [Name: Placed<Declared>],
-        concealed: Set<Name> = [],
         fulfillment: Fulfillment? = nil
     ) throws -> (
         types: TypeTable,
@@ -90,6 +88,16 @@ struct ClaimChecker {
         let claims = namespace.claims
         let contracts = namespace.contracts
         let declaredTypes = namespace.types
+
+        // A type given members is a type a value is an instance of, the way a
+        // type a claim is about is. One declared as something else here is no
+        // such type, and no document arriving later makes it one; one nothing
+        // declares waits with the rest.
+        for extended in namespace.extended {
+            if let reason = Self.refusal(of: extended.held, over: declaredTypes, asking: contracts, in: declaring) {
+                throw BuildError(reason + ". Members are given to a struct, under the name it was declared", at: extended.place)
+            }
+        }
 
         // The witnesses are judged against a table that says which types
         // answer which contracts, so a contract named in a contract's own
@@ -114,7 +122,7 @@ struct ClaimChecker {
                 asking: contracts,
                 over: declaredTypes,
                 among: signatures,
-                concealed: concealed,
+                members: namespace.members,
                 in: table
             )
 
@@ -161,6 +169,31 @@ struct ClaimChecker {
     }
 
     // MARK: - Private
+    // Why a name is no type a value is an instance of, where this list says
+    // what it is: a contract, or a declared name that is not itself a struct.
+    // Nil for a type the language names, a struct, and a name nothing here
+    // declares.
+    private static func refusal(
+        of type: Name,
+        over types: [Name: Placed<TypeDeclaration>],
+        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
+        in table: TypeTable
+    ) -> String? {
+        guard TypeExpression.nominalTypes[type] == nil else { return nil }
+
+        if contracts[type] != nil {
+            return "'\(type)' is a contract this link declares, and not a type"
+        }
+
+        guard types[type] != nil else { return nil }
+
+        guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresStruct(row) else {
+            return "'\(type)' is not itself a struct, and no value is an instance of it under that name"
+        }
+
+        return nil
+    }
+
     // For each contract, which declaration answers each of its procedures, keyed by
     // the type that satisfies it, and beside it the reason each claim that did
     // not hold does not.
@@ -172,7 +205,7 @@ struct ClaimChecker {
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
         over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
-        concealed: Set<Name>,
+        members: Set<Name>,
         in table: TypeTable
     ) throws -> (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String]) {
         // Every contract, answered or not. The entry is what says a name is a
@@ -186,7 +219,14 @@ struct ClaimChecker {
         for claim in claims {
             let (type, contract) = (claim.held.type, claim.held.contract)
 
-            switch try holding(claim, asking: contracts, over: types, among: space, concealed: concealed, in: table) {
+            switch try holding(
+                claim,
+                asking: contracts,
+                over: types,
+                among: space,
+                members: members,
+                in: table
+            ) {
             case let .holds(answering):
                 gathered[contract]?[type] = answering
 
@@ -199,34 +239,31 @@ struct ClaimChecker {
     }
 
     // One claim held to what stands behind it: the two names declared, every
-    // procedure the contract asks answered by a declaration named for the type and
-    // the procedure, and every one of those signatures the contract's with
-    // `Self` read as the type wherever it stands.
+    // procedure the contract asks answered by the type's member of that name,
+    // and every one of those signatures the contract's with `Self` read as the
+    // type wherever it stands.
     private func holding(
         _ claim: Placed<Claim>,
         asking contracts: [Name: Placed<[Name: ContractProcedure]>],
         over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
-        concealed: Set<Name>,
+        members: Set<Name>,
         in table: TypeTable
     ) throws -> Holding {
         let (type, contract) = (claim.held.type, claim.held.contract)
 
         // A type the language names stands for itself, and one a document
-        // declares for the struct behind it.
+        // declares for the struct behind it. A name declared here as
+        // something else is no type, which no document arriving later undoes:
+        // one name has one declarer.
         let languageType = TypeExpression.nominalTypes[type]
 
+        if let reason = Self.refusal(of: type, over: types, asking: contracts, in: table) {
+            throw BuildError(reason + ". A claim is about a struct, under the name it was declared", at: claim.place)
+        }
+
         guard languageType != nil || types[type] != nil else {
-            let reason = "'\(type)' is not a type this link declares, and only a"
-                + " type answers a contract"
-
-            // Declared as something else here, which no document arriving
-            // later undoes: one name has one declarer.
-            guard contracts[type] == nil else {
-                throw BuildError(reason, at: claim.place)
-            }
-
-            return .waits("\(claim.spelled) says " + reason)
+            return .waits("\(claim.spelled) says '\(type)' is not a type this link declares, and only a type answers a contract")
         }
 
         guard let asked = contracts[contract] else {
@@ -238,19 +275,6 @@ struct ClaimChecker {
             }
 
             return .waits("\(claim.spelled) says " + reason)
-        }
-
-        // A value of a declared type is an instance of the struct it is and of
-        // no other name, so a claim about a declared name that is not itself
-        // a struct, an alias included, is about no type a value is.
-        if languageType == nil {
-            guard let row = table.loweredTypes.row(named: type), table.loweredTypes.declaresStruct(row) else {
-                throw BuildError(
-                    "'\(type)' is not itself a struct, and no value is an instance of it under that name."
-                        + " A claim about a declared type is about a struct, under the name it was declared",
-                    at: claim.place
-                )
-            }
         }
 
         // A claim about a struct taking type parameters is about every value
@@ -275,26 +299,28 @@ struct ClaimChecker {
         var answering: [Name: Name] = [:]
 
         for (procedure, wanted) in asked.held.sorted(by: { $0.key < $1.key }) {
-            let spelling = ContractProcedure.spelling(of: type, procedure: procedure)
+            let spelling = procedure.spelled(under: type)
 
-            // A private declaration is in no space another document resolves
-            // in, and a contract is how a document that never names a
-            // declaration calls it, so a private one backs no claim.
-            guard let witness = space[spelling] else {
-                guard !concealed.contains(spelling) else {
-                    return .waits(
-                        "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
-                            + " '\(procedure)', and '\(spelling)' is private to the document that"
-                            + " declares it. A contract's procedure is called from any document,"
-                            + " so a private declaration answers none"
-                    )
-                }
-
+            // What answers is what a document gave the type, so a procedure
+            // declared under the same spelling and given to no type is not
+            // asked about.
+            guard members.contains(spelling) else {
                 return .waits(
                     "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
-                        + " '\(procedure)', and nothing in this link declares '\(spelling)'."
-                        + " A contract's procedure is answered by a declaration named"
-                        + " for the type and the procedure"
+                        + " '\(procedure)', and nothing in this link gives '\(type)' the member"
+                        + " '\(procedure)'. A contract's procedure is answered by the type's member of that name"
+                )
+            }
+
+            // A private member is in no space another document resolves in,
+            // and a contract is how a document that never names a declaration
+            // calls it, so a private one backs no claim.
+            guard let witness = space[spelling] else {
+                return .waits(
+                    "\(claim.spelled) says '\(type)' answers '\(contract)', which asks"
+                        + " '\(procedure)', and the member '\(procedure)' is private to the document that"
+                        + " gives it. A contract's procedure is called from any document,"
+                        + " so a private member answers none"
                 )
             }
 
@@ -381,7 +407,7 @@ struct ClaimChecker {
         let loweredTypes = table.loweredTypes
 
         guard given.parameters.count == asked.parameters.count else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that"
+            return "is the member '\(procedure)' of '\(type)', the procedure"
                     + " '\(contract)' asks, and takes \(given.parameters.count)"
                     + " parameters where the contract asks \(asked.parameters.count)"
         }
@@ -421,7 +447,7 @@ struct ClaimChecker {
                     reading.rendered(in: loweredTypes)
                 }
 
-                return "is named for '\(type)' and the procedure '\(procedure)' that"
+                return "is the member '\(procedure)' of '\(type)', the procedure"
                         + " '\(contract)' asks, and reads '\(parameter)' as \(read)"
                         + " where its bounds \(bounds.map(\.spelling).joined(separator: " & ")) do not take it"
             }
@@ -430,12 +456,12 @@ struct ClaimChecker {
         for (position, (taken, handed)) in zip(takes, asks).enumerated()
             where !taken.filling(substitution.readings).takes(handed, in: loweredTypes) {
             guard position > 0 else {
-                return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+                return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)'"
                         + " asks, and takes \(taken.rendered(in: loweredTypes)) first, where a call"
                         + " through the contract hands it any value of '\(type)'"
             }
 
-            return "is named for '\(type)' and the procedure '\(procedure)' that"
+            return "is the member '\(procedure)' of '\(type)', the procedure"
                     + " '\(contract)' asks, and takes \(taken.rendered(in: loweredTypes))"
                     + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
@@ -454,7 +480,7 @@ struct ClaimChecker {
             .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes) else {
-            return "is named for '\(type)' and the procedure '\(procedure)' that '\(contract)'"
+            return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)'"
                     + " asks, and answers \((declared ?? answered).rendered(in: loweredTypes))"
                     + " where the contract writes \(answer.rendered)"
         }

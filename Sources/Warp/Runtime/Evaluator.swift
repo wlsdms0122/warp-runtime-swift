@@ -719,7 +719,7 @@ struct Evaluator: Sendable {
         at trace: Trace
     ) async throws -> (call: CallOperation, row: Int, first: Value) {
         let first = try await evaluate(dispatch.first, in: &activation, at: trace)
-        let spelling = ContractProcedure.spelling(of: dispatch.contract, procedure: dispatch.procedure)
+        let spelling = dispatch.procedure.spelled(under: dispatch.contract)
 
         if let call = dispatch.calls[first.nominal] {
             return (call, try row(call.procedure, from: activation.origin), first)

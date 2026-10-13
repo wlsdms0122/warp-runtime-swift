@@ -24,4 +24,9 @@ protocol Declaring {
     // about a type, declared elsewhere or named by the language, and a
     // contract declared elsewhere.
     var claims: [Name: Set<Name>] { get }
+
+    // The procedures this document gives each type, by the name of the type.
+    // What answers a contract's procedure for a type is the type's member of
+    // that name, whichever document gave it.
+    var members: [Name: Set<Name>] { get }
 }

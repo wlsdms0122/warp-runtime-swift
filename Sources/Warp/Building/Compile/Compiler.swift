@@ -359,6 +359,7 @@ struct Compiler {
             types: module.types,
             contracts: module.contracts,
             claims: module.claims,
+            members: module.members,
             leaned: fulfillment.claims(of: origin),
             declared: declared,
             constants: module.constants.keys.sorted(),

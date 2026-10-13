@@ -21,6 +21,7 @@ enum ObjectLayout {
         case types
         case contracts
         case claims
+        case members
         case leaned
         case rows
         case lifted
@@ -143,6 +144,7 @@ enum ObjectLayout {
         case bounds
         case entries
         case typeParameters
+        case extensions
     }
 
     enum ConditionHolderTag: Int {

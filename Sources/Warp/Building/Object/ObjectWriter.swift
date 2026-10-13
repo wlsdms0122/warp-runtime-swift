@@ -165,6 +165,9 @@ struct ObjectWriter {
         case .claims:
             return keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) }
 
+        case .members:
+            return keyed(compiled.members) { members in .array(members.sorted().map(name)) }
+
         case .leaned:
             return .array(compiled.leaned.sorted { one, other in one.key < other.key }.map { claim, place in
                 .array([name(claim.type), name(claim.contract), self.place(place)])
@@ -482,6 +485,7 @@ struct ObjectWriter {
         case .bounds: return tagged(Tag.bounds)
         case .entries: return tagged(Tag.entries)
         case .typeParameters: return tagged(Tag.typeParameters)
+        case .extensions: return tagged(Tag.extensions)
         }
     }
 
