@@ -75,7 +75,7 @@ struct ContractTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".contains("procedures.entry.result")
-                && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
+                && "\(error)".contains("no claim within reach says 'Bank.Plain' answers")
         }
     }
 
@@ -214,7 +214,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".hasPrefix("procedures.entry.result: the module at 0")
+            "\(error)".hasPrefix("types.Bank.Account.satisfies: says 'Bank.Account' answers 'App.Describable', and the module at 0")
                 && "\(error)".contains("declares 'Bank.Account.describe', which is the member 'describe' of 'Bank.Account'")
                 && "\(error)".contains("answers Int where the contract writes String")
         }
@@ -268,15 +268,15 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("nothing in this link gives 'Bank.Plain' the member 'describe'")
+            "\(error)".contains("nothing it stands on gives 'Bank.Plain' the member 'describe'")
         }
     }
 
     @Test("a document declaring neither the type nor the contract may claim the pair")
     func aThirdDocumentMayClaimThePair() async throws {
-        // Given. Two libraries that know nothing of each other, and a third
+        // Given. Two libraries that know nothing of each other, a third
         // that says one's type answers the other's contract and writes the
-        // procedure that answers it.
+        // procedure that answers it, and a program importing that claim.
         let charting = try Module(
             contracts: ["Chart.Plottable": ["height": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
             procedures: [
@@ -312,6 +312,7 @@ struct ContractTests {
             ]
         )
         let program = try Module(
+            importedClaims: [ClaimPair("Bank.Account", "Chart.Plottable")],
             procedures: [
                 entryName: Procedure(
                     access: .public,
@@ -453,7 +454,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([try module(.literal(.string("x")))] + Module.standard)
         } throws: { error in
-            "\(error)".contains("no document in this link says 'String' answers it")
+            "\(error)".contains("which holds String where App.Marked is declared")
         }
     }
 

@@ -43,7 +43,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Bool' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Bool' answers")
         }
     }
 
@@ -69,7 +69,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'String' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'String' answers")
         }
     }
 
@@ -165,7 +165,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Double' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Double' answers")
         }
     }
 
@@ -234,7 +234,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Int' answers it")
+            error is BuildError && "\(error)".contains("which holds Array<Int> where Array<A & B> is declared")
         }
     }
 
@@ -259,7 +259,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("hands 'Int' where 'B' is asked")
+            error is BuildError && "\(error)".contains("answers Int, and its declaration promises A & B")
         }
     }
 
@@ -288,7 +288,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("hands 'Int' where 'B' is asked")
+            error is BuildError && "\(error)".contains("holds A & B, and what it was given is Int")
         }
     }
 
@@ -341,7 +341,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Null' answers it")
+            error is BuildError && "\(error)".contains("which holds Null where App.Describable is declared")
         }
     }
 
@@ -382,8 +382,8 @@ struct BoundTests {
         }
     }
 
-    @Test("a claim leaning on a claim that fell falls with it")
-    func aClaimLeaningOnAFallenClaimFalls() async throws {
+    @Test("a claim that does not hold refuses at itself, though another claim's member answers through it")
+    func aClaimThatDoesNotHoldRefusesAtItself() async throws {
         // Given. `Box` answers `Printable` by showing a `Card`, `Card` claims
         // `Describable` and answers nothing it asks
         let sut = try Module(
@@ -398,7 +398,7 @@ struct BoundTests {
                 "App.Box.show": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Box"))], returns: .named("Bank.Card")),
                     body: [],
-                    result: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
+                    result: .struct(["last": .literal(.string("x"))])
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -423,7 +423,8 @@ struct BoundTests {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("answers Bank.Card where the contract writes App.Describable")
+                && "\(error)".contains("types.Bank.Card.satisfies")
+                && "\(error)".contains("nothing it stands on gives 'Bank.Card' the member 'describe'")
         }
     }
 
@@ -517,7 +518,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([try module(handing: .int(1))] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Int' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Int' answers")
         }
     }
 
@@ -553,7 +554,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Double' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Double' answers")
         }
     }
 
@@ -615,7 +616,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Bool' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Bool' answers")
         }
     }
 

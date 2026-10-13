@@ -309,7 +309,7 @@ struct FoldingReachTests {
         await #expect {
             try await builder.build(Module.standard + [contract, answering, thing, program])
         } throws: { error in
-            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+            "\(error)".contains("no claim within reach says 'Int' answers 'App.Joinable'")
         }
 
         await #expect {
@@ -317,7 +317,7 @@ struct FoldingReachTests {
 
             _ = try await builder.compile([program], against: laid, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("no document this one stands on declares what answers 'App.Joinable'")
+            "\(error)".contains("no claim within reach says 'Int' answers 'App.Joinable'")
         }
     }
 

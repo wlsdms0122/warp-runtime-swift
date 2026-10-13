@@ -259,15 +259,15 @@ struct SeparateCompilationTests {
         #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
     }
 
-    @Test("a claim answers a document that never names the one making it")
-    func aClaimAnswersADocumentThatDoesNotNameIt() async throws {
+    @Test("a claim a document imports answers it, however the documents were compiled")
+    func anImportedClaimAnswersTheDocument() async throws {
         // Given
-        let (typed, asking, claims, program) = try leaning()
+        let (typed, asking, claims, unpointing) = try leaning()
+        let program = try Module(importedClaims: [ClaimPair("Bank.Account", "App.Describable")], procedures: unpointing.procedures)
 
-        // When / Then. The whole graph, and each document on its own with the
-        // claim standing before the program and after it. Nothing in the
-        // program points at the claim, so the order the host listed them in
-        // is what decides which side it lands on, and it decides nothing.
+        // When / Then. The whole graph, and each document on its own however
+        // the host listed them. The import puts the claim's document among
+        // what the program stands on, so it stands before the program.
         await #expect(throws: Never.self) {
             try await builder.build([typed, asking, claims, program] + Module.standard)
         }
@@ -279,35 +279,31 @@ struct SeparateCompilationTests {
         }
     }
 
-    @Test("a pair no claim answers is refused by the list and not by a compile")
-    func aPairNoClaimAnswersIsRefusedByTheList() async throws {
-        // Given. The same, with nobody making the claim.
-        let (typed, asking, _, program) = try leaning()
-        let modules = [typed, asking, program] + Module.standard
+    @Test("a pair no claim within reach answers is refused where the document is compiled")
+    func aPairNoClaimWithinReachAnswersIsRefusedByTheCompile() async throws {
+        // Given. The same, with the claim standing beside the program and not
+        // imported by it.
+        let (typed, asking, claims, program) = try leaning()
+        let modules = [typed, asking, claims, program] + Module.standard
 
-        // When. Compiled one at a time, which decides nothing about a claim.
+        // When / Then. Compiled one at a time, the program refuses where it
+        // is compiled, naming the pair, though the claim stands in the list.
         var compiled: [Compiled] = []
 
-        await #expect(throws: Never.self) {
+        await #expect {
             for origin in try ModuleGraph(modules).standing {
                 compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
-        }
-
-        // Then. The list refuses, naming the pair the program leaned on.
-        #expect {
-            try builder.link(compiled, supplying: Supplying(Module.standard))
         } throws: { error in
-            "\(error)".contains("no document in this link says 'Bank.Account' answers it")
+            "\(error)".contains("no claim within reach says 'Bank.Account' answers")
         }
     }
 
-    @Test("a claim is answered by the whole list, not by what a document was compiled against")
-    func aClaimIsBackedWhereTheListIsWhole() async throws {
-        // Given. The claim and the declaration that answers it in two
-        // documents. Neither names the other, so the standing may put the
-        // claim first, and a document compiled against what stands before it
-        // would then be asked for an answer that has not arrived.
+    @Test("a claim whose member a document standing on it gives refuses at the claim")
+    func aClaimIsBackedWithinItsReach() async throws {
+        // Given. The claim and the member that would answer it in two
+        // documents, the member's naming the claim's type and so standing on
+        // the claim's document, which stands on nothing of the member's.
         let holding = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
             claims: ["Bank.Account": ["App.Describable"]],
@@ -351,14 +347,20 @@ struct SeparateCompilationTests {
         // the order the graph says they stand.
         var compiled: [Compiled] = []
 
-        for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        // Then. The claim is held to the members within its own document's
+        // reach, compiled one at a time or as a whole.
+        await #expect {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            }
+        } throws: { error in
+            "\(error)".contains("nothing it stands on gives 'Bank.Account' the member 'describe'")
         }
-
-        // Then. It links, and refusing a claim as unanswered is the whole
-        // list's to do rather than a compile's.
-        #expect(throws: Never.self) { try builder.link(compiled, supplying: Supplying(Module.standard)) }
-        await #expect(throws: Never.self) { try await builder.build(modules) }
+        await #expect {
+            try await builder.build(modules)
+        } throws: { error in
+            "\(error)".contains("nothing it stands on gives 'Bank.Account' the member 'describe'")
+        }
     }
 
     @Test("a document numbers its calls from itself, and the link answers with rows")
@@ -801,11 +803,11 @@ struct SeparateCompilationTests {
         }
     }
 
-    @Test("an object claiming a contract a document after it declares stands before that document")
-    func aClaimNeedsNothingStandBeforeIt() async throws {
+    @Test("a claim naming a contract nothing its document stands on declares refuses where it is compiled")
+    func aClaimIsJudgedAgainstWhatItsDocumentStandsOn() async throws {
         // Given. A document declaring a type and claiming it answers a
-        // contract the program declares, compiled first, and the program,
-        // which names the type, compiled against it.
+        // contract a program declares, which names the type and so stands
+        // after it.
         let card = try Module(
             imports: ["App.P"],
             types: ["Bank.Card": .struct(["last": .string])],
@@ -820,34 +822,16 @@ struct SeparateCompilationTests {
                 )
             ]
         )
-        let program = try Module(
-            imports: ["Bank.Card"],
-            contracts: ["App.P": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(
-                        Call(
-                            selector: "App.P.show",
-                            arguments: [.cast(.struct(["last": .literal(.string("1"))]), as: .named("Bank.Card"), optional: false)]
-                        )
-                    )
-                )
-            ]
-        )
         let standard = try await builder.compile(Module.standard)
-        let first = try await builder.compile([card], against: standard, supplying: Supplying(Module.standard))
-        let second = try await builder.compile([program], against: standard + first, supplying: Supplying(Module.standard))
 
-        // When. The claim names the program's contract, and the program
-        // names the card: a claim is held by the link, so the card needs
-        // nothing of the program.
-        let image = try builder.link(standard + first + second, supplying: Supplying(Module.standard))
-
-        // Then
-        #expect(try await Executor().run(image) == .string("card"))
+        // When / Then. The claim is held where its document is compiled, and
+        // the contract it names is declared in nothing that document stands
+        // on yet.
+        await #expect {
+            try await builder.compile([card], against: standard, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("'App.P' is not a contract this link declares")
+        }
     }
 
     @Test("an object's signature naming a type nothing in the link declares is refused at the build")

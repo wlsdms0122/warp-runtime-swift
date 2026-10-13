@@ -210,7 +210,7 @@ struct SharedGroundTests {
         await #expect {
             try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'Array' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Array' answers")
         }
     }
 

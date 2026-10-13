@@ -472,7 +472,7 @@ struct HostDoorTests {
             sends: [],
             in: .empty
         )
-        let settled = try entry.settle(given)
+        let settled = try entry.settle(given, in: .empty)
 
         return settled.enumerated().reduce(into: [Name: Value]()) { named, value in
             named[entry.slots[value.offset].name] = value.element

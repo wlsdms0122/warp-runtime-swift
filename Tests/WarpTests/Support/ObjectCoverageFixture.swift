@@ -30,7 +30,7 @@ enum ObjectCoverageFixture {
             // A member is a row the document declares, under its type's name
             // and its own.
             members: ["a": ["ten"]],
-            leaned: everyPlace,
+            importedClaims: [ClaimPair("b.one", "b.two"), ClaimPair("b.one", "b.three")],
             declared: ["a.eleven", "a.ten"],
             constants: ["a.sixteen"],
             // Two declarations and the two closures their bodies lifted, which
@@ -155,37 +155,6 @@ enum ObjectCoverageFixture {
         .parameter(label: "V", bounds: []),
         .projection(of: "a.sixteen", path: [.index(1, optional: true)]),
         .composition(["a.five", "a.four"])
-    ]
-
-    // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and
-    // `Construct`, reached through the one field of an object that holds a
-    // place.
-    static let everyPlace: [Leaning: Place] = {
-        let steps: [Place.Step] = [
-            .key("written"),
-            .index(4),
-            .statement(name: "named", at: 2),
-            .statement(name: nil, at: 3),
-            .landmark("here")
-        ]
-        + Self.everyPart.map(Place.Step.part)
-        + Self.everyConstruct.map(Place.Step.construct)
-
-        return [
-            Leaning(reading: .named(0, arguments: [.int]), contract: "a.five"): Place(steps, in: Place.Document(identity: Identity([1, 2, 3]))),
-            Leaning(reading: .array(.parameter(label: "T", bounds: ["a.five"])), contract: "a.five"): Place([], in: .assembled)
-        ]
-    }()
-
-    static let everyPart: [Place.Part] = [
-        .procedures, .constants, .variables, .types, .contracts, .satisfies, .extensions,
-        .imports, .parameters, .returns, .bounds, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
-        .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
-    ]
-
-    static let everyConstruct: [Construct] = [
-        .literal, .reference, .array, .struct, .closure, .cast, .block,
-        .conditional, .loop, .attempt, .call, .leave(.procedure), .leave(.construct), .leave(.round)
     ]
 
     // Every case of `Operation`, `Instruction.Binding`, `Step` and `Argument`.
