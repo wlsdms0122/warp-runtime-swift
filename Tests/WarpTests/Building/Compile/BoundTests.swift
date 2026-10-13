@@ -197,7 +197,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("names 'Sortable', which no module in this link declares")
+            error is BuildError && "\(error)".contains("by 'Sortable', which no module in this link declares")
         }
     }
 

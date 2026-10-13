@@ -16,7 +16,15 @@ enum ObjectCoverageFixture {
         try! Compiled(
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": structOfEveryTypeExpression],
-            contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
+            // A contract asking a type it bounds and one it does not, and a
+            // procedure.
+            contracts: [
+                "a.five": Contract(
+                    procedures: ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])],
+                    types: ["Item", "Key"],
+                    bounds: ["Key": ["a.four"]]
+                )
+            ],
             // A bare head and one applying its type, with a type parameter
             // bounded and one not.
             claims: [
@@ -30,6 +38,7 @@ enum ObjectCoverageFixture {
             // A member is a row the document declares, under its type's name
             // and its own.
             members: ["a": ["ten"]],
+            typeMembers: ["a.seven": ["Item": .int, "Key": .string]],
             importedClaims: [ClaimPair("b.one", "b.two"), ClaimPair("b.one", "b.three")],
             declared: ["a.eleven", "a.ten"],
             constants: ["a.sixteen"],
@@ -113,6 +122,7 @@ enum ObjectCoverageFixture {
         "nullable": .nullable(.int),
         "named": .named("a.one"),
         "parameter": .parameter(name: "T"),
+        "associatedType": .associatedType(of: "T", name: "Item"),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",
@@ -275,7 +285,7 @@ enum ObjectCoverageFixture {
     static func row(label: Name, body: Bool) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(parameters: [parameter], returns: .int),
+            signature: Signature(parameters: [parameter], returns: .int, sameTypes: body ? ["T.Item": .string] : [:]),
             access: .internal,
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,

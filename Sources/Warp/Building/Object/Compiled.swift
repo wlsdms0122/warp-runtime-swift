@@ -45,7 +45,7 @@ public struct Compiled: Sendable, Declaring {
     // make the table its rows are numbered against, and reads no type of
     // this document anywhere else.
     let types: [Name: TypeDeclaration]
-    let contracts: [Name: [Name: ContractProcedure]]
+    let contracts: [Name: Contract]
 
     // Which contracts it said each type answers, by the head it said so
     // under, as it wrote them. Each was held to the type's members within
@@ -57,6 +57,10 @@ public struct Compiled: Sendable, Declaring {
     // and what answers a contract's procedure for that type is the member of
     // that name.
     let members: [Head: Set<Name>]
+
+    // The types it gave each type, by the head it gave them under and the
+    // name each was given, as it wrote them.
+    let typeMembers: [Head: [Name: TypeExpression]]
 
     // The claims other documents make that this one stands on, by the pair
     // each is about, as its imports wrote them. What it was compiled against
@@ -139,19 +143,18 @@ public struct Compiled: Sendable, Declaring {
     // Every name this document declares to the other documents of a link,
     // read off its tables: its module's `supplies`.
     var supplies: Set<Reference> {
-        Set(
-            declared.filter { name in !hidden.contains(name) }.map(Reference.procedure)
-                + contracts.flatMap { contract, procedures in
-                    procedures.keys.map { procedure in
-                        Reference.procedure(procedure.spelled(under: contract))
-                    }
-                }
-                + types.keys.map(Reference.type)
-                + contracts.keys.map(Reference.type)
-                + claims.flatMap { head, contracts in
-                    contracts.map { contract in Reference.claim(ClaimPair(head.type, contract)) }
-                }
-        )
+        let asked: [Reference] = contracts.flatMap { name, contract in
+            contract.procedures.keys.map { procedure in Reference.procedure(procedure.spelled(under: name)) }
+        }
+        let claimed: [Reference] = claims.flatMap { head, contracts in
+            contracts.map { contract in Reference.claim(ClaimPair(head.type, contract)) }
+        }
+
+        return Set(declared.filter { name in !hidden.contains(name) }.map(Reference.procedure))
+            .union(asked)
+            .union(types.keys.map(Reference.type))
+            .union(contracts.keys.map(Reference.type))
+            .union(claimed)
     }
 
     // What this document needs of the documents a link lays before it, read
@@ -170,9 +173,13 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion(row.signature.mentions.map(Reference.type))
         }
 
-        for procedures in contracts.values {
-            for asked in procedures.values {
-                reached.formUnion(asked.signature.mentions.map(Reference.type))
+        for contract in contracts.values {
+            reached.formUnion(contract.mentions.map(Reference.type))
+        }
+
+        for types in typeMembers.values {
+            for type in types.values {
+                reached.formUnion(type.mentions.map(Reference.type))
             }
         }
 
@@ -193,7 +200,7 @@ public struct Compiled: Sendable, Declaring {
             reached.formUnion(claimed.map(Reference.type))
         }
 
-        for head in members.keys {
+        for head in Set(members.keys).union(typeMembers.keys) {
             reached.formUnion(head.mentions.map(Reference.type))
         }
 
@@ -213,9 +220,10 @@ public struct Compiled: Sendable, Declaring {
     init(
         document: Place.Document,
         types: [Name: TypeDeclaration],
-        contracts: [Name: [Name: ContractProcedure]],
+        contracts: [Name: Contract],
         claims: [Head: Set<Name>],
         members: [Head: Set<Name>],
+        typeMembers: [Head: [Name: TypeExpression]],
         importedClaims: Set<ClaimPair>,
         declared: [Name],
         constants: [Name],
@@ -235,6 +243,7 @@ public struct Compiled: Sendable, Declaring {
         self.contracts = contracts
         self.claims = claims
         self.members = members
+        self.typeMembers = typeMembers
         self.importedClaims = importedClaims
         self.declared = declared
         self.table = table
@@ -261,9 +270,10 @@ public struct Compiled: Sendable, Declaring {
     init(
         document: Place.Document,
         types: [Name: TypeDeclaration],
-        contracts: [Name: [Name: ContractProcedure]],
+        contracts: [Name: Contract],
         claims: [Head: Set<Name>],
         members: [Head: Set<Name>],
+        typeMembers: [Head: [Name: TypeExpression]],
         importedClaims: Set<ClaimPair>,
         declared: [Name],
         constants: [Name],
@@ -287,6 +297,7 @@ public struct Compiled: Sendable, Declaring {
             contracts: contracts,
             claims: claims,
             members: members,
+            typeMembers: typeMembers,
             importedClaims: importedClaims,
             declared: declared,
             constants: constants,
@@ -371,6 +382,7 @@ public struct Compiled: Sendable, Declaring {
             contracts: contracts,
             claims: claims,
             members: members,
+            typeMembers: typeMembers,
             importedClaims: importedClaims,
             declared: declared,
             constants: constants,

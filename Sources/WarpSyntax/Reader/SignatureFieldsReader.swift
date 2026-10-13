@@ -9,13 +9,15 @@ import Foundation
 import Warp
 
 // What a signature is written as beside the keys a procedure and a
-// contract's procedure each write of their own: `parameters`, `returns` and
-// `bounds`. Absent `parameters` is an empty signature, not an absent one.
+// contract's procedure each write of their own: `parameters`, `returns`,
+// `bounds` and `sameTypes`. Absent `parameters` is an empty signature, not an
+// absent one.
 struct SignatureFieldsReader {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns
         case bounds
+        case sameTypes
     }
 
     // MARK: - Property
@@ -35,7 +37,9 @@ struct SignatureFieldsReader {
                 try bounds?.read([Name: String].self),
                 in: decoder.notation,
                 at: bounds?.steps ?? decoder.steps
-            )
+            ),
+            sameTypes: try decoder.descendingIfPresent(to: CodingKeys.sameTypes)?
+                .read([Name: TypeReader].self).mapValues(\.type) ?? [:]
         )
     }
 

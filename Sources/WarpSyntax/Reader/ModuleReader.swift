@@ -52,6 +52,7 @@ public struct ModuleReader: Decodable {
             .mapValues(\.procedure)
         var claims: [Head: Set<Name>] = [:]
         var members: [Head: Set<Name>] = [:]
+        var typeMembers: [Head: [Name: TypeExpression]] = [:]
 
         // An extension's key is a head: the type, and what it is applied to
         // where what it gives holds for some of the type's values. A struct
@@ -91,19 +92,30 @@ public struct ModuleReader: Decodable {
         // a procedure the document declares under that spelling is a second
         // declaration of it.
         let given = types.map { name, declared in
-            (Head(name), declared.satisfies, declared.procedures, [Place.Step.key(CodingKeys.types.rawValue), .key(name.spelling)])
+            (
+                Head(name),
+                declared.satisfies,
+                declared.types,
+                declared.procedures,
+                [Place.Step.key(CodingKeys.types.rawValue), .key(name.spelling)]
+            )
         } + extensions.map { head, written in
             (
                 head,
                 written.extended.satisfies,
+                written.extended.types,
                 written.extended.procedures,
                 [Place.Step.key(CodingKeys.extensions.rawValue), .key(written.key.spelling)]
             )
         }
 
-        for (head, satisfies, memberProcedures, steps) in given.sorted(by: { $0.0 < $1.0 }) {
+        for (head, satisfies, memberTypes, memberProcedures, steps) in given.sorted(by: { $0.0 < $1.0 }) {
             if !satisfies.isEmpty {
                 claims[head] = satisfies
+            }
+
+            if !memberTypes.isEmpty {
+                typeMembers[head] = memberTypes
             }
 
             for (member, procedure) in memberProcedures.sorted(by: { $0.key < $1.key }) {
@@ -133,9 +145,10 @@ public struct ModuleReader: Decodable {
             importedClaims: imports?.claims ?? [],
             types: types.mapValues(\.declared),
             contracts: try Self.mapping(ContractReader.self, in: container, forKey: .contracts)
-                .mapValues(\.procedures),
+                .mapValues(\.contract),
             claims: claims,
             members: members,
+            typeMembers: typeMembers,
             constants: try Self.mapping(ExpressionReader.self, in: container, forKey: .const)
                 .mapValues(\.expression),
             variables: try Self.mapping(VariableReader.self, in: container, forKey: .variables)

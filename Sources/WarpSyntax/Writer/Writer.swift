@@ -69,7 +69,7 @@ public struct Writer: Sendable {
         // What the document gives a type stands in the struct's declaration
         // where the document declares the struct, and in an extension of the
         // type otherwise.
-        let receiving = Set(draft.claims.keys).union(draft.members.keys)
+        let receiving = Set(draft.claims.keys).union(draft.members.keys).union(draft.typeMembers.keys)
 
         if !draft.types.isEmpty {
             written[ModuleReader.CodingKeys.types.name] = .dictionary(
@@ -109,9 +109,23 @@ public struct Writer: Sendable {
 
         if !draft.contracts.isEmpty {
             written[ModuleReader.CodingKeys.contracts.name] = .dictionary(
-                try draft.contracts.mapValues { procedures in
-                    .dictionary(
-                        try procedures.mapValues { asked in
+                try draft.contracts.mapValues { contract in
+                    var asking: [Name: Value] = [:]
+
+                    if !contract.types.isEmpty {
+                        asking[ContractReader.CodingKeys.types.name] = .array(
+                            contract.types.sorted().map { name in .string(name.spelling) }
+                        )
+                    }
+
+                    if let bounds = TypeWriter(readBy: readBy).bounds(contract.bounds) {
+                        asking[ContractReader.CodingKeys.bounds.name] = bounds
+                    }
+
+                    guard !contract.procedures.isEmpty else { return .dictionary(asking) }
+
+                    asking[ContractReader.CodingKeys.procedures.name] = .dictionary(
+                        try contract.procedures.mapValues { asked in
                             var written = try fields(of: asked.signature)
 
                             if asked.constness == .const {
@@ -131,6 +145,8 @@ public struct Writer: Sendable {
                             return .dictionary(written)
                         }
                     )
+
+                    return .dictionary(asking)
                 }
             )
         }
@@ -316,6 +332,10 @@ public struct Writer: Sendable {
             )
         }
 
+        if let types = draft.typeMembers[head], !types.isEmpty {
+            written[ExtensionReader.CodingKeys.types.name] = .dictionary(try types.mapValues(value(of:)))
+        }
+
         if let members = draft.members[head], !members.isEmpty {
             written[ExtensionReader.CodingKeys.procedures.name] = .dictionary(
                 try members.reduce(into: [Name: Value]()) { procedures, member in
@@ -387,6 +407,12 @@ public struct Writer: Sendable {
 
         if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
             written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
+        }
+
+        if !signature.sameTypes.isEmpty {
+            written[SignatureFieldsReader.CodingKeys.sameTypes.name] = .dictionary(
+                try signature.sameTypes.mapValues(value(of:))
+            )
         }
 
         return written

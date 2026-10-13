@@ -18,7 +18,11 @@ public struct TypeTable: Sendable {
     // Contracts declared in this link: a name bound to the procedures a value's
     // type must answer. A contract is an open set of types, and a claim puts a
     // type in it.
-    public let contracts: [Name: [Name: ContractProcedure]]
+    public let contracts: [Name: Contract]
+
+    // What the documents give each type under each name, by the type's name
+    // and the member's: one member each, whichever document gave it.
+    public let typeMembers: [Name: [Name: TypeMember]]
 
     // The same declarations as the run reads them, lowered once here. Every
     // judgement this table answers is asked of the lowered one.
@@ -46,7 +50,7 @@ public struct TypeTable: Sendable {
     // refused here, in the words a document is refused in.
     init(
         types: [Name: TypeDeclaration] = [:],
-        contracts: [Name: [Name: ContractProcedure]] = [:]
+        contracts: [Name: Contract] = [:]
     ) throws {
         let declaring = try Module(types: types, contracts: contracts)
         let table = try DeclarationChecker().types(
@@ -64,13 +68,17 @@ public struct TypeTable: Sendable {
     // are numbered against.
     init(
         types: [Name: TypeDeclaration],
-        contracts: [Name: [Name: ContractProcedure]] = [:],
+        contracts: [Name: Contract] = [:],
+        typeMembers: [TypeMember] = [],
         satisfying: [Name: [Name: Head]] = [:],
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
         self.types = types
         self.contracts = contracts
+        self.typeMembers = typeMembers.reduce(into: [:]) { given, member in
+            given[member.head.type, default: [:]][member.name] = member
+        }
         self.standing = standing
         self.linkage = linkage
         // Every declared contract has an entry, so a contract's name stands
@@ -78,9 +86,11 @@ public struct TypeTable: Sendable {
         // have been gathered yet.
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
+            contracts: contracts,
             satisfying: satisfying.merging(
                 contracts.keys.map { contract in (contract, [Name: Head]()) }
             ) { held, _ in held },
+            typeMembers: typeMembers,
             standing: standing,
             of: linkage
         )
@@ -96,6 +106,7 @@ public struct TypeTable: Sendable {
         TypeTable(
             types: types,
             contracts: contracts,
+            typeMembers: typeMembers,
             loweredTypes: loweredTypes.satisfying(
                 satisfying.merging(contracts.keys.map { contract in (contract, [Name: Head]()) }) { held, _ in held },
                 holdsEveryClaim: holdsEveryClaim
@@ -108,13 +119,15 @@ public struct TypeTable: Sendable {
     // MARK: - Private
     private init(
         types: [Name: TypeDeclaration],
-        contracts: [Name: [Name: ContractProcedure]],
+        contracts: [Name: Contract],
+        typeMembers: [Name: [Name: TypeMember]],
         loweredTypes: LoweredTypeTable,
         standing: [Name]?,
         of linkage: Linkage
     ) {
         self.types = types
         self.contracts = contracts
+        self.typeMembers = typeMembers
         self.loweredTypes = loweredTypes
         self.standing = standing
         self.linkage = linkage

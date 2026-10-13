@@ -1286,43 +1286,32 @@ indirect enum LoweredType: Sendable, Hashable {
     // `Never`, and one read off literal whole numbers alone is filled with
     // the Int they are.
     func filling(_ filled: [Name: LoweredType]) -> LoweredType {
-        switch self {
-        case let .parameter(name, _):
-            return (filled[name] ?? .any).asHeld
+        replacing { part in
+            switch part {
+            case let .parameter(name, _):
+                return (filled[name] ?? .any).asHeld
 
-        // Nothing fills a walk through a parameter. It is named for a path only
-        // the body that wrote it can read, and no call site says anything about
-        // that. So the caller reads what a declaration saying nothing says.
-        case .projection:
-            return .any
+            // Nothing fills a walk through a parameter. It is named for a path
+            // only the body that wrote it can read, and no call site says
+            // anything about that. So the caller reads what a declaration
+            // saying nothing says.
+            case .projection:
+                return .any
 
-        case let .array(element):
-            return .array(element.filling(filled))
+            default:
+                return nil
+            }
+        }
+    }
 
-        case let .dictionary(key, value):
-            return LoweredType(keyedBy: key.filling(filled), holding: value.filling(filled))
+    // This type with each parameter `given` names read as what it gives, and
+    // every other left standing: a declaration's own parameters, some of
+    // which a reading says and the rest of which stay the declaration's.
+    func replacingParameters(_ given: [Name: LoweredType]) -> LoweredType {
+        replacing { part in
+            guard case let .parameter(label, _) = part else { return nil }
 
-        case let .procedure(signature, constness, isolation):
-            return .procedure(
-                signature?.map { part in part.filling(filled) },
-                constness: constness,
-                isolation: isolation
-            )
-
-        case let .variable(inner):
-            return .variable(inner.filling(filled))
-
-        case let .inout(inner):
-            return .inout(inner.filling(filled))
-
-        case let .nullable(inner):
-            return inner.filling(filled).admittingNull
-
-        case let .named(row, arguments):
-            return .named(row, arguments: arguments.map { argument in argument.filling(filled) })
-
-        default:
-            return self
+            return given[label]
         }
     }
 
@@ -1886,8 +1875,11 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .named(row, arguments):
             return .named(table.labels[row], arguments: arguments.map { argument in argument.spelled(in: table) })
 
+        // An associated type's label is the parameter's name and its own.
         case let .parameter(label, _):
-            return .parameter(name: label)
+            guard let member = label.associated else { return .parameter(name: label) }
+
+            return .associatedType(of: member.of, name: member.name)
 
         case let .composition(names):
             return .composition(Set(names))
@@ -1985,6 +1977,46 @@ indirect enum LoweredType: Sendable, Hashable {
     }
 
     // MARK: - Private
+    // This type with each part `replaced` answers for read as its answer, and
+    // every other part walked into: what is held, keyed, taken and answered,
+    // and what a struct is applied to.
+    private func replacing(_ replaced: (LoweredType) -> LoweredType?) -> LoweredType {
+        if let replacement = replaced(self) {
+            return replacement
+        }
+
+        switch self {
+        case let .array(element):
+            return .array(element.replacing(replaced))
+
+        case let .dictionary(key, value):
+            return LoweredType(keyedBy: key.replacing(replaced), holding: value.replacing(replaced))
+
+        case let .procedure(signature, constness, isolation):
+            return .procedure(
+                signature?.map { part in part.replacing(replaced) },
+                constness: constness,
+                isolation: isolation
+            )
+
+        case let .variable(inner):
+            return .variable(inner.replacing(replaced))
+
+        case let .inout(inner):
+            return .inout(inner.replacing(replaced))
+
+        case let .nullable(inner):
+            return inner.replacing(replaced).admittingNull
+
+        case let .named(row, arguments):
+            return .named(row, arguments: arguments.map { argument in argument.replacing(replaced) })
+
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .parameter,
+            .projection:
+            return self
+        }
+    }
+
     // Which case this is, as a number to hash.
     private var caseRank: Int {
         switch self {

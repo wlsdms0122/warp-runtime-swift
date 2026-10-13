@@ -135,7 +135,7 @@ public final class Linked: Sendable {
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
-        let returns = signature.returns?.lowered(in: table, bounds: signature.bounds)
+        let returns = signature.loweredReturns(in: table)
 
         self.label = label
         self.origin = origin
@@ -388,11 +388,44 @@ public final class Linked: Sendable {
 
         guard closure == nil, !parameters.isEmpty else { return [:] }
 
-        let substitution = Substitution(
+        var substitution = Substitution(
             filling: types,
             against: values.map { value in LoweredType(of: value, in: table) },
             in: table
         )
+        let associated = signature.associatedTypes
+
+        // The inputs standing on a label, or on what it stands on.
+        let standing = { (label: Name) in
+            self.slots
+                .filter { slot in slot.type.typeParameters[label] != nil || slot.type.typeParameters[label.root] != nil }
+                .map { slot in "input '\(slot.name)'" }
+                .joined(separator: ", ")
+        }
+
+        // An associated type is what the type of the value at its parameter
+        // gives, so a value at one is held to that type, and the type to what
+        // bounds the associated type.
+        if !associated.isEmpty {
+            substitution.derive(
+                associated,
+                bounds: signature.bounds,
+                said: signature.loweredSameTypes(in: table),
+                in: table
+            )
+
+            if let refused = substitution.associatedTypeRefusal(in: table) {
+                throw ArgumentError("\(standing(refused.label)): \(refused.reason)")
+            }
+
+            for label in substitution.derived.sorted() {
+                let bounds = table.contracts(bounding: label, under: signature.bounds)
+
+                if let refusal = substitution.unanswered(label, bounds: bounds, in: table) {
+                    throw ArgumentError("\(standing(label)): \(refusal)")
+                }
+            }
+        }
 
         // A bounded parameter is one type, and a value says of its type the
         // struct it is and not what that struct is applied to.
@@ -402,7 +435,7 @@ public final class Linked: Sendable {
             in: table
         )
 
-        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
+        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) where !substitution.derived.contains(parameter) {
             let read = bounds.isEmpty ? substitution : unapplied
             let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
             let refusal = read.disagreement(of: parameter, in: table)
@@ -410,12 +443,7 @@ public final class Linked: Sendable {
                 ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table))
 
             if let refusal {
-                let standing = slots
-                    .filter { slot in slot.type.typeParameters[parameter] != nil }
-                    .map { slot in "input '\(slot.name)'" }
-                    .joined(separator: ", ")
-
-                throw ArgumentError("\(standing): \(refusal)")
+                throw ArgumentError("\(standing(parameter)): \(refusal)")
             }
         }
 
@@ -423,6 +451,12 @@ public final class Linked: Sendable {
             let (name, bounds) = parameter
 
             let standing = LoweredType.parameter(label: name, bounds: bounds)
+
+            guard !substitution.derived.contains(name) else {
+                filled[name] = substitution.readings[name] ?? standing
+
+                return
+            }
 
             filled[name] = bounds.isEmpty ? substitution.readings[name] ?? standing : standing
         }

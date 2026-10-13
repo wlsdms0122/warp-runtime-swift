@@ -427,7 +427,7 @@ struct ContractTests {
         // Given. `Int` is claimed for a contract asking nothing, and `String` is not.
         let module = { (handed: Warp.Expression) in
             try Module(
-                contracts: ["App.Marked": [:] as [Name: ContractProcedure]],
+                contracts: ["App.Marked": Contract(procedures: [:])],
                 claims: ["Int": ["App.Marked"]],
                 procedures: [
                     "App.take": Procedure(

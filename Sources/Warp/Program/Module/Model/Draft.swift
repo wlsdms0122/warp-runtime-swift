@@ -75,7 +75,7 @@ public struct Draft: Sendable {
     // implementing declaration is held to, taking `Self`, the type answering
     // the contract, first, where the implementing declaration takes its own
     // type.
-    public let contracts: [Name: [Name: ContractProcedure]]
+    public let contracts: [Name: Contract]
 
     // Which contracts each type this document names answers, by the head it
     // says so under. A type answers a contract because a document says it
@@ -93,6 +93,12 @@ public struct Draft: Sendable {
 
     // The same members by the spelling a call writes.
     let spelledMembers: [Name: Member]
+
+    // The types this document gives each type, by the head it gives them
+    // under and the name each is given: what a contract asking a type under
+    // that name is answered by, and what a type parameter the type fills
+    // reads as its associated type.
+    public let typeMembers: [Head: [Name: TypeExpression]]
 
     public let constants: [Name: Expression]
 
@@ -113,8 +119,8 @@ public struct Draft: Sendable {
     // What this declares in the procedure namespace. A contract's procedure is
     // one of them, by the spelling a call writes to reach it.
     var declaredProcedures: Set<Name> {
-        Set(procedures.keys).union(contracts.flatMap { contract, procedures in
-            procedures.keys.map { procedure in procedure.spelled(under: contract) }
+        Set(procedures.keys).union(contracts.flatMap { name, contract in
+            contract.procedures.keys.map { procedure in procedure.spelled(under: name) }
         })
     }
 
@@ -138,9 +144,10 @@ public struct Draft: Sendable {
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
-        contracts: [Name: [Name: ContractProcedure]] = [:],
+        contracts: [Name: Contract] = [:],
         claims: [Head: Set<Name>] = [:],
         members: [Head: Set<Name>] = [:],
+        typeMembers: [Head: [Name: TypeExpression]] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable] = [:],
         procedures: [Name: Procedure] = [:]
@@ -153,6 +160,7 @@ public struct Draft: Sendable {
         self.claims = claims
         self.members = members
         self.spelledMembers = Member.spelled(members)
+        self.typeMembers = typeMembers
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
@@ -232,10 +240,8 @@ public struct Draft: Sendable {
             named.formUnion(type.mentions)
         }
 
-        for procedures in contracts.values {
-            for asked in procedures.values {
-                named.formUnion(asked.signature.mentions)
-            }
+        for contract in contracts.values {
+            named.formUnion(contract.mentions)
         }
 
         // A claim names two types, and both are mentions like any other: the
@@ -250,9 +256,16 @@ public struct Draft: Sendable {
             named.formUnion(contracts)
         }
 
-        // A document extending a type names it, the way a claim does.
-        for head in members.keys {
+        // A document extending a type names it, the way a claim does, and
+        // a type it gives names what that type names.
+        for head in Set(members.keys).union(typeMembers.keys) {
             named.formUnion(head.mentions.filter { name in TypeExpression.nominalTypes[name] == nil })
+        }
+
+        for types in typeMembers.values {
+            for type in types.values {
+                named.formUnion(type.mentions)
+            }
         }
 
         for (name, procedure) in procedures {

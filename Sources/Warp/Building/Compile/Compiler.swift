@@ -131,7 +131,7 @@ struct Compiler {
                     in: opening(declaration.signature),
                     declaring: symbol.declared,
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature.bounds),
+                    with: context().reading(declaration.signature),
                     folding: folding
                 )
 
@@ -148,7 +148,9 @@ struct Compiler {
 
             resolvedBodies[symbol.declared] = answer.procedure
 
-            try TypeChecker().checked(answer.calls, in: context())
+            // Judged as the declaration reads its own type parameters, since an
+            // associated type a call fills from one is the declaration's.
+            try TypeChecker().checked(answer.calls, in: context().reading(answer.procedure.signature))
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
@@ -352,6 +354,7 @@ struct Compiler {
             contracts: module.contracts,
             claims: module.claims,
             members: module.members,
+            typeMembers: module.typeMembers,
             importedClaims: module.importedClaims,
             declared: declared,
             constants: module.constants.keys.sorted(),

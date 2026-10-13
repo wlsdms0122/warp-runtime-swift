@@ -60,7 +60,7 @@ public struct Module: Sendable {
     // Contracts this module declares: a name bound to the procedures a value's
     // type must answer to stand under it. A contract is an open set of types,
     // and a claim puts a type in it.
-    public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
+    public var contracts: [Name: Contract] { source.contracts }
 
     // Which contracts each type this document names answers, by the head it
     // says so under. A type answers a contract because a document says it
@@ -71,6 +71,11 @@ public struct Module: Sendable {
     // The procedures this module gives each type, by the head it gives them
     // under. A contract's procedure is answered by the member of that name.
     public var members: [Head: Set<Name>] { source.members }
+
+    // The types this module gives each type, by the head it gives them under
+    // and the name each is given. A contract's type is answered by the type
+    // member of that name.
+    public var typeMembers: [Head: [Name: TypeExpression]] { source.typeMembers }
 
     // Names bound to values, settled at the build and gone by run time,
     // private to the module: a constant is read by writing its name, and a
@@ -139,9 +144,10 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
-        contracts: [Name: [Name: ContractProcedure]] = [:],
+        contracts: [Name: Contract] = [:],
         claims: [Head: Set<Name>] = [:],
         members: [Head: Set<Name>] = [:],
+        typeMembers: [Head: [Name: TypeExpression]] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure] = [:],
@@ -156,6 +162,7 @@ public struct Module: Sendable {
             contracts: contracts,
             claims: claims,
             members: members,
+            typeMembers: typeMembers,
             constants: constants,
             variables: variables.mapValues { start in ModuleVariable(start) },
             procedures: procedures,
@@ -170,9 +177,10 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
-        contracts: [Name: [Name: ContractProcedure]] = [:],
+        contracts: [Name: Contract] = [:],
         claims: [Head: Set<Name>] = [:],
         members: [Head: Set<Name>] = [:],
+        typeMembers: [Head: [Name: TypeExpression]] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable],
         procedures: [Name: Procedure] = [:],
@@ -188,6 +196,7 @@ public struct Module: Sendable {
                 contracts: contracts,
                 claims: claims,
                 members: members,
+                typeMembers: typeMembers,
                 constants: constants,
                 variables: variables,
                 procedures: procedures

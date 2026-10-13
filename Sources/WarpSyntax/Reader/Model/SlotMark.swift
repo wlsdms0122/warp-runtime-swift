@@ -49,7 +49,7 @@ enum SlotMark: CaseIterable, Sendable {
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .array, .dictionary, .procedure, .nullable, .named, .parameter,
-            .projection, .composition, .selfType:
+            .projection, .associatedType, .composition, .selfType:
             return nil
         }
     }

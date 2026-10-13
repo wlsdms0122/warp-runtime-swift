@@ -24,7 +24,7 @@ enum Prelude {
         TypeSpelling.round: .struct([Prelude.index: .int])
     ]
 
-    static let contracts: [Name: [Name: ContractProcedure]] = [TypeSpelling.hashable: [:]]
+    static let contracts: [Name: Contract] = [TypeSpelling.hashable: Contract(procedures: [:])]
 
     // Every type the language names a value an instance of answers
     // `Hashable`. A procedure, which is the same as no value, is none of

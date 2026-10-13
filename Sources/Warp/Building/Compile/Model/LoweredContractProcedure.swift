@@ -55,7 +55,7 @@ struct LoweredContractProcedure: Sendable {
     // where a call is answered.
     static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
-            for (procedure, asked) in entry.value {
+            for (procedure, asked) in entry.value.procedures {
                 let signature = asked.signature.read(of: entry.key)
 
                 table[procedure.spelled(under: entry.key)] = LoweredContractProcedure(
@@ -66,7 +66,7 @@ struct LoweredContractProcedure: Sendable {
                     isolation: asked.isolation,
                     failing: asked.failing,
                     slots: signature.lowered(in: types.loweredTypes),
-                    answers: signature.returns?.lowered(in: types.loweredTypes, bounds: signature.bounds)
+                    answers: signature.loweredReturns(in: types.loweredTypes)
                 )
             }
         }

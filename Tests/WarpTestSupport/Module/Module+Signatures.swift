@@ -28,7 +28,9 @@ public extension Module {
             description: description,
             imports: imports,
             types: types,
-            contracts: contracts.mapValues { procedures in procedures.mapValues { signature in ContractProcedure(signature: signature) } },
+            contracts: contracts.mapValues { procedures in
+                Contract(procedures: procedures.mapValues { signature in ContractProcedure(signature: signature) })
+            },
             claims: claims,
             members: members,
             constants: constants,

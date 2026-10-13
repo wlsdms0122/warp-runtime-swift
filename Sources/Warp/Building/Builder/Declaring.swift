@@ -17,7 +17,7 @@ import Foundation
 protocol Declaring {
     var document: Place.Document { get }
     var types: [Name: TypeDeclaration] { get }
-    var contracts: [Name: [Name: ContractProcedure]] { get }
+    var contracts: [Name: Contract] { get }
 
     // Which contracts this document says each type answers, by the head it
     // says so under. Not a type table
@@ -31,6 +31,10 @@ protocol Declaring {
     // type's member of that name, given within what the claim's document
     // stands on.
     var members: [Head: Set<Name>] { get }
+
+    // The types this document gives each type, by the head it gives them
+    // under and the name each is given.
+    var typeMembers: [Head: [Name: TypeExpression]] { get }
 
     // The claims other documents make that this one stands on.
     var importedClaims: Set<ClaimPair> { get }

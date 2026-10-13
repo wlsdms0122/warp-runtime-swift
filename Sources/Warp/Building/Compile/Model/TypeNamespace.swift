@@ -18,7 +18,7 @@ import Foundation
 struct TypeNamespace {
     // MARK: - Property
     let types: [Name: Placed<TypeDeclaration>]
-    let contracts: [Name: Placed<[Name: ContractProcedure]>]
+    let contracts: [Name: Placed<Contract>]
 
     // What each document said one of its types, or another document's,
     // answers, each where it was written. A list, since a claim declares no
@@ -32,6 +32,12 @@ struct TypeNamespace {
     // contract's procedure for that type, for a claim standing on that
     // document.
     let members: [Name: Int]
+
+    // Every type a document gave a type under a name, by the spelling the
+    // member takes, `App.Box.Item`, where the document gave it: one each,
+    // whichever document gave it. What answers a contract's type for the
+    // type, for a claim standing on that document.
+    let typeMembers: [Name: Placed<TypeMember>]
 
     // Each head a document gave members under, where the document gave them.
     // Its type is held the way the type a claim is about is held, whatever
@@ -49,7 +55,7 @@ struct TypeNamespace {
             )
         }
         var contracts = Prelude.contracts.reduce(
-            into: [Name: Placed<[Name: ContractProcedure]>]()
+            into: [Name: Placed<Contract>]()
         ) { contracts, declared in
             contracts[declared.key] = Placed(
                 declared.value,
@@ -158,8 +164,31 @@ struct TypeNamespace {
                 }
             }
         }
+        // A type member is one name with one declarer, as a member is: two
+        // documents giving one type a type under one name say two things
+        // where a type gives one.
+        var typeMembers: [Name: Placed<TypeMember>] = [:]
+
+        for (handed, held) in documents.enumerated() {
+            for member in TypeMember.listed(held.typeMembers) {
+                let given = Placed(member, at: .typeMember(member, in: held.document), of: handed)
+
+                if let first = typeMembers[member.spelling] {
+                    throw BuildError.declaredTwice(
+                        member.spelling,
+                        by: first.spelled,
+                        and: given.spelled,
+                        at: given.place
+                    )
+                }
+
+                typeMembers[member.spelling] = given
+            }
+        }
+
+        self.typeMembers = typeMembers
         self.extended = documents.enumerated().flatMap { handed, held in
-            held.members.keys.sorted().map { head in
+            Set(held.members.keys).union(held.typeMembers.keys).sorted().map { head in
                 Placed(head, at: Place(held.document.home(of: head), in: held.document), of: handed)
             }
         }

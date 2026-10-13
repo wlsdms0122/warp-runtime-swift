@@ -92,6 +92,28 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         Name(normal: "\(owner.spelling).\(spelling)")
     }
 
+    // What an associated type's label, `T.Item`, is the associated type of
+    // and the name it takes there, read at its last dot, so `T.Item.Key` is
+    // `T.Item`'s `Key`, or nil where it writes none. A type parameter's name
+    // is one identifier, so an associated type's label is the one key of
+    // `bounds` and `sameTypes` with a dot.
+    package var associated: (of: Name, name: Name)? {
+        guard let dot = spelling.lastIndex(of: ".") else { return nil }
+
+        return (
+            Name(normal: String(spelling[..<dot])),
+            Name(normal: String(spelling[spelling.index(after: dot)...]))
+        )
+    }
+
+    // The type parameter an associated type's label stands on, read at its
+    // first dot, and the name itself where it writes none.
+    package var root: Name {
+        guard let dot = spelling.firstIndex(of: ".") else { return self }
+
+        return Name(normal: String(spelling[..<dot]))
+    }
+
     // Ordered as bytes. Every place that puts names in order reads this: a
     // struct's fields and a signature's parameter positions. Swift's `<`
     // orders under canonical equivalence and would put two spellings of one

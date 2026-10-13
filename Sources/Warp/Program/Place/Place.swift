@@ -119,6 +119,7 @@ public struct Place: Sendable, Hashable {
         case parameters
         case returns
         case bounds
+        case sameTypes
         case body
         case result
 
@@ -168,6 +169,7 @@ public struct Place: Sendable, Hashable {
             case .parameters: "parameters"
             case .returns: "returns"
             case .bounds: "bounds"
+            case .sameTypes: "sameTypes"
             case .body: "body"
             case .result: "result"
             case .subject: "subject"
@@ -336,6 +338,12 @@ public struct Place: Sendable, Hashable {
             document.home(of: member.head) + [.part(.procedures), .key(member.name.spelling)],
             in: document
         )
+    }
+
+    // A type member stands under the type it is given to, where the
+    // document gave it, and under the name it has there.
+    public static func typeMember(_ member: TypeMember, in document: Document) -> Place {
+        Place(document.home(of: member.head) + [.part(.types), .key(member.name.spelling)], in: document)
     }
 
     public static func constant(_ name: String, in document: Document) -> Place {

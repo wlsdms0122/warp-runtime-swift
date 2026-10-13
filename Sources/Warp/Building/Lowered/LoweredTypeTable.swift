@@ -41,6 +41,19 @@ final class LoweredTypeTable: Sendable {
     // run's are every claim in the link.
     let satisfying: [Name: [Name: LoweredType?]]
 
+    // The types each declared contract asks, by the contract's spelling and
+    // then the type's name, beside the contracts the contract holds each to,
+    // in name order. What an associated type of a type parameter the contract bounds
+    // is held to.
+    let asking: [Name: [Name: [Name]]]
+
+    // What each type gives under each name, by the type's name and the
+    // member's: what an associated type of a type parameter the type fills reads as,
+    // where a claim within reach says the type answers a contract asking it.
+    // Every type member of the link, since a type gives one member under a
+    // name whichever document gave it.
+    let typeMembers: [Name: [Name: LoweredTypeMember]]
+
     // Whether the claims above are every claim the link holds: the link's
     // and the run's are, and a compile's are those within the reach of the
     // document it judges, which a fold runs against too.
@@ -66,11 +79,15 @@ final class LoweredTypeTable: Sendable {
         loweredTypes: [LoweredType],
         labels: [Name],
         satisfying: [Name: [Name: LoweredType?]] = [:],
+        asking: [Name: [Name: [Name]]] = [:],
+        typeMembers: [Name: [Name: LoweredTypeMember]] = [:],
         of linkage: Linkage
     ) {
         self.loweredTypes = loweredTypes
         self.labels = labels
         self.satisfying = satisfying
+        self.asking = asking
+        self.typeMembers = typeMembers
         self.holdsEveryClaim = true
         self.assumesUnseenClaims = false
         self.linkage = linkage
@@ -87,6 +104,8 @@ final class LoweredTypeTable: Sendable {
         self.loweredTypes = table.loweredTypes
         self.labels = table.labels
         self.satisfying = satisfying
+        self.asking = table.asking
+        self.typeMembers = table.typeMembers
         self.holdsEveryClaim = holdsEveryClaim
         self.assumesUnseenClaims = assumesUnseenClaims
         self.linkage = table.linkage
@@ -320,6 +339,74 @@ final class LoweredTypeTable: Sendable {
         return nil
     }
 
+    // The contracts bounding what a label stands for under `bounds`, a
+    // signature's or a head's: a type parameter's bounds, and an associated
+    // type's what the contracts bounding what it stands on hold it to beside
+    // its own.
+    func contracts(bounding label: Name, under bounds: [Name: Set<Name>]) -> Set<Name> {
+        let own = bounds[label] ?? []
+
+        guard
+            let standing = label.associated,
+            let asked = self.bounds(of: standing.name, askedBy: contracts(bounding: standing.of, under: bounds))
+        else {
+            return own
+        }
+
+        return asked.union(own)
+    }
+
+    // What an associated type `name` of a type parameter bounded by `contracts`
+    // is held to: what each of them asking a type under the name holds it to,
+    // or nil where none asks one.
+    func bounds(of name: Name, askedBy contracts: some Collection<Name>) -> Set<Name>? {
+        let asking = contracts.compactMap { contract in self.asking[contract]?[name] }
+
+        guard !asking.isEmpty else { return nil }
+
+        return Set(asking.joined())
+    }
+
+    // What an associated type `name` of a type parameter bounded by `contracts`
+    // reads as where `base` fills the parameter, or nil where nothing says.
+    // A type parameter's associated type is its own, held to what those contracts
+    // hold it to; a reading of a type a value is an instance of gives the
+    // type member under the name, where a claim within reach says the type
+    // answers one of them asking it, filled by what the reading puts in the
+    // head the member was given under. A value of a contract, of what may be
+    // null, or of `Any`, is of no one type, and gives none; what holds no
+    // value gives what holds none.
+    func associatedType(_ name: Name, of base: LoweredType, among contracts: [Name]) -> LoweredType? {
+        switch base {
+        case .never:
+            return .never
+
+        case let .parameter(label, bounds):
+            return self.bounds(of: name, askedBy: bounds).map { held in
+                .parameter(label: name.spelled(under: label), bounds: held.sorted())
+            }
+
+        default:
+            guard
+                let type = base.nominal(in: self),
+                contracts.contains(where: { contract in
+                    asking[contract]?[name] != nil && answers(contract: contract, reading: base, of: type) == true
+                }),
+                let given = typeMembers[type]?[name]
+            else {
+                return nil
+            }
+
+            guard let head = given.head else { return given.type }
+
+            var substitution = Substitution(filling: [head], against: [base], in: self)
+
+            substitution.derive(given.associatedTypes, bounds: given.bounds, in: self)
+
+            return given.type.filling(substitution.readings)
+        }
+    }
+
     // Whether a name is a declared contract, which is the one thing a bound
     // names.
     func declaresContract(_ name: Name) -> Bool {
@@ -435,7 +522,9 @@ final class LoweredTypeTable: Sendable {
     // nothing a link concludes reads one to decide what to say.
     static func lowering(
         _ types: [Name: TypeDeclaration],
+        contracts: [Name: Contract] = [:],
         satisfying: [Name: [Name: Head]] = [:],
+        typeMembers: [TypeMember] = [],
         standing: [Name]? = nil,
         of linkage: Linkage
     ) -> LoweredTypeTable {
@@ -475,13 +564,34 @@ final class LoweredTypeTable: Sendable {
 
         loweredTypes = loweredTypes.map { type in type.replacingRows(by: mention) }
 
-        // A head lowers against the rows, as a parameter written as it would.
-        let rows = LoweredTypeTable(loweredTypes: loweredTypes, labels: labels, satisfying: declaring, of: linkage)
+        // A head lowers against the rows, as a parameter written as it would,
+        // and a type member against what the contracts ask, since it may
+        // name an associated type of one of its head's parameters.
+        let asking = contracts.mapValues { contract in
+            contract.types.reduce(into: [Name: [Name]]()) { asked, name in
+                asked[name] = (contract.bounds[name] ?? []).sorted()
+            }
+        }
+        let rows = LoweredTypeTable(
+            loweredTypes: loweredTypes,
+            labels: labels,
+            satisfying: declaring,
+            asking: asking,
+            of: linkage
+        )
 
         return LoweredTypeTable(
             loweredTypes: loweredTypes,
             labels: labels,
             satisfying: satisfying.mapValues { heads in heads.mapValues { head in head.lowered(in: rows) } },
+            asking: asking,
+            typeMembers: typeMembers.reduce(into: [:]) { given, member in
+                given[member.head.type, default: [:]][member.name] = LoweredTypeMember(
+                    member.type,
+                    under: member.head.applying(types[member.head.type]),
+                    in: rows
+                )
+            },
             of: linkage
         )
     }

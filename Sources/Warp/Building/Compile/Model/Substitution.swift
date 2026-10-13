@@ -52,6 +52,17 @@ struct Substitution: Sendable {
     // beside a fraction is held as the fraction the call hands on.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
+    // For an associated type whose base was read as something giving it no
+    // type, what the base was read as, by its label.
+    private(set) var ungiven: [Name: (of: Name, name: Name, base: LoweredType)] = [:]
+
+    // For an associated type a declaration says is a type, where what fills
+    // its base gives another, the two, by its label.
+    private(set) var unsame: [Name: (said: LoweredType, given: LoweredType)] = [:]
+
+    // The associated types read as what fills their bases gives, by label.
+    private(set) var derived: Set<Name> = []
+
     // MARK: - Initializer
     init() {}
 
@@ -71,6 +82,80 @@ struct Substitution: Sendable {
     }
 
     // MARK: - Public
+    // Each associated type whose base this reads, read as what fills the
+    // base gives under its name, which is what decides it: the type member of
+    // the type filling it, or a type parameter's own. What the arguments read
+    // at one is held to that type rather than joined with it, so the reading
+    // is that type exactly. Shallow ones first, since what one stands on may
+    // be another. `bounds` are the declaration's, which say what bounds each
+    // base. `said` is what the declaration says some are, which what fills
+    // their bases has to give. `reading` is what the procedure being read
+    // reads an associated type of one of its own parameters as, where it says
+    // more of one than the contracts do.
+    mutating func derive(
+        _ associated: [Name: (of: Name, name: Name)],
+        bounds: [Name: Set<Name>],
+        said: [Name: LoweredType] = [:],
+        reading: [Name: LoweredType] = [:],
+        in table: LoweredTypeTable
+    ) {
+        let depth = { (label: Name) in label.spelling.filter { character in character == "." }.count }
+        let ordered = associated.sorted { one, other in
+            depth(one.key) == depth(other.key) ? one.key < other.key : depth(one.key) < depth(other.key)
+        }
+
+        for (label, standing) in ordered {
+            guard let base = readings[standing.of] else { continue }
+
+            let contracts = table.contracts(bounding: standing.of, under: bounds).sorted()
+
+            guard
+                let found = table.associatedType(standing.name, of: base, among: contracts)?.replacingParameters(reading)
+            else {
+                ungiven[label] = (standing.of, standing.name, base)
+
+                continue
+            }
+
+            readings[label] = found
+            disagreeing[label] = nil
+            apart[label] = nil
+            derived.insert(label)
+        }
+
+        for (label, same) in said.sorted(by: { $0.key < $1.key }) {
+            guard let found = derived.contains(label) ? readings[label] : nil else { continue }
+
+            let filled = same.filling(readings)
+
+            if !found.reads(as: filled) {
+                unsame[label] = (filled, found)
+            }
+        }
+    }
+
+    // Why an associated type has no answer, or nil where each one read has one:
+    // its base read as what gives it no type, or what fills its base giving
+    // another type than the declaration says. Named in label order.
+    func associatedTypeRefusal(in table: LoweredTypeTable) -> (label: Name, reason: String)? {
+        if let (label, ungiven) = ungiven.sorted(by: { $0.key < $1.key }).first {
+            return (label, "'\(ungiven.of)' is read as \(ungiven.base.rendered(in: table)), which gives no type"
+                + " '\(ungiven.name)' for `\(TypeExpression.associatedType(of: ungiven.of, name: ungiven.name).rendered)`."
+                + " An associated type is what one type gives, where a claim within reach says it answers a"
+                + " contract asking it")
+        }
+
+        if let (label, unsame) = unsame.sorted(by: { $0.key < $1.key }).first {
+            return (
+                label,
+                "'\(label)' is \(unsame.given.rendered(in: table)), and the declaration says it is"
+                    + " \(unsame.said.rendered(in: table))"
+            )
+        }
+
+        return nil
+    }
+
     // What a parameter is held to its bounds as: what it is read as, and each
     // reading that does not say.
     func everyReading(of parameter: Name) -> [LoweredType] {

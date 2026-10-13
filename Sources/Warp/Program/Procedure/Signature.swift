@@ -26,6 +26,11 @@ public struct Signature: Sendable, Equatable {
     // slots mention it, and a name absent here is bounded by nothing.
     public let bounds: [Name: Set<Name>]
 
+    // The associated types of its type parameters it says are a type, by
+    // the label one is written under, `T.Item`. What fills `T` must give that
+    // type there, and inside the declaration the associated type is that type.
+    public let sameTypes: [Name: TypeExpression]
+
     // The declared names in position order.
     public var names: [Name] {
         parameters.map(\.name)
@@ -62,18 +67,42 @@ public struct Signature: Sendable, Equatable {
     // Every declared name this signature reaches, through what it takes, what
     // it answers and the contracts its bounds name.
     var mentions: Set<Name> {
-        parameters.reduce(into: (returns?.mentions ?? []).union(bounds.values.joined())) { mentioned, parameter in
+        let said = sameTypes.values.reduce(into: Set(bounds.values.joined())) { mentioned, type in
+            mentioned.formUnion(type.mentions)
+        }
+
+        return parameters.reduce(into: (returns?.mentions ?? []).union(said)) { mentioned, parameter in
             mentioned.formUnion(parameter.type.mentions)
+        }
+    }
+
+    // Every associated type of a type parameter this names, by its label, beside the
+    // parameter and the name: in what it takes and answers, what its same
+    // types say and the ones its bounds and same types are written under.
+    var associatedTypes: [Name: (of: Name, name: Name)] {
+        let written = ([returns].compactMap { $0 } + parameters.map(\.type) + Array(sameTypes.values))
+            .reduce(into: [Name: (of: Name, name: Name)]()) { found, type in
+                found.merge(type.associatedTypes) { first, _ in first }
+            }
+
+        return Set(bounds.keys).union(sameTypes.keys).reduce(into: written) { found, key in
+            found.merge(TypeExpression.associatedTypes(of: key)) { first, _ in first }
         }
     }
 
     // MARK: - Initializer
     // A name bounded by no contract is a name bounded by nothing, so it
     // stands nowhere in `bounds`.
-    public init(parameters: [Parameter] = [], returns: TypeExpression? = nil, bounds: [Name: Set<Name>] = [:]) {
+    public init(
+        parameters: [Parameter] = [],
+        returns: TypeExpression? = nil,
+        bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:]
+    ) {
         self.parameters = parameters
         self.returns = returns
         self.bounds = bounds.filter { _, contracts in !contracts.isEmpty }
+        self.sameTypes = sameTypes
     }
 
     // A native procedure's declaration, read off the procedure itself. What it takes is
@@ -83,9 +112,15 @@ public struct Signature: Sendable, Equatable {
     public init<P: NativeProcedure>(
         of procedure: P.Type,
         returns: TypeExpression? = nil,
-        bounds: [Name: Set<Name>] = [:]
+        bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:]
     ) {
-        self.init(parameters: P.Parameters.allCases.map(\.declared), returns: returns, bounds: bounds)
+        self.init(
+            parameters: P.Parameters.allCases.map(\.declared),
+            returns: returns,
+            bounds: bounds,
+            sameTypes: sameTypes
+        )
     }
 
     // MARK: - Public
@@ -103,19 +138,42 @@ public struct Signature: Sendable, Equatable {
     // This declaration as the run reads it: its parameters as slots, in
     // position order, each type parameter held to its bounds.
     func lowered(in table: LoweredTypeTable) -> [Slot] {
-        parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) }
+        parameters.map { parameter in parameter.lowered(in: table, bounds: bounds, sameTypes: sameTypes) }
+    }
+
+    // What this declaration answers as the run reads it, or nil where it
+    // writes no `returns`.
+    func loweredReturns(in table: LoweredTypeTable) -> LoweredType? {
+        returns?.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+    }
+
+    // Each associated type this says is a type, as the declaration reads that type.
+    func loweredSameTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        loweredAssociatedTypes(in: table).filter { label, _ in sameTypes[label] != nil }
+    }
+
+    // Each associated type this names as the declaration reads it, by its label: the
+    // type its same types say, or one type the declaration does not know,
+    // held to what bounds it.
+    func loweredAssociatedTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        associatedTypes.reduce(into: [:]) { lowered, entry in
+            lowered[entry.key] = TypeExpression.associatedType(of: entry.value.of, name: entry.value.name)
+                .lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+        }
     }
 
     // A closure's signature as the procedure it is written in reads it: each
-    // type parameter it names held to the bounds `declared` gives that name,
-    // since the procedure around it owns the name.
-    func bounded(by declared: [Name: Set<Name>]) -> Signature {
-        let named = parameterNames
+    // type parameter it names, and each associated type of one, held to the bounds
+    // `declared` gives that name and said to be what `said` says, since the
+    // procedure around it owns the name.
+    func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
+        let named = parameterNames.union(associatedTypes.keys.map(\.root))
 
         return Signature(
             parameters: parameters,
             returns: returns,
-            bounds: declared.filter { name, _ in named.contains(name) }
+            bounds: declared.filter { name, _ in named.contains(name.root) },
+            sameTypes: said.filter { label, _ in named.contains(label.root) }
         )
     }
 
@@ -130,7 +188,8 @@ public struct Signature: Sendable, Equatable {
             returns: returns,
             bounds: head.bounds.filter { name, _ in named.contains(name) }.merging(bounds) { theirs, mine in
                 theirs.union(mine)
-            }
+            },
+            sameTypes: sameTypes
         )
     }
 
@@ -143,7 +202,8 @@ public struct Signature: Sendable, Equatable {
         return Signature(
             parameters: read.parameters,
             returns: read.returns,
-            bounds: read.bounds.merging([TypeSpelling.selfType: [contract]]) { _, contract in contract }
+            bounds: read.bounds.merging([TypeSpelling.selfType: [contract]]) { _, contract in contract },
+            sameTypes: read.sameTypes
         )
     }
 
@@ -158,7 +218,8 @@ public struct Signature: Sendable, Equatable {
                 )
             },
             returns: returns?.replacingSelf(with: type),
-            bounds: bounds
+            bounds: bounds,
+            sameTypes: sameTypes.mapValues { same in same.replacingSelf(with: type) }
         )
     }
 

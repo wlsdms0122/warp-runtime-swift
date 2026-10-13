@@ -70,10 +70,10 @@ struct TypeWriter {
         bounds(signature.bounds)
     }
 
-    // MARK: - Private
-    // Each type parameter beside the contracts it is bounded by, joined with
-    // `&`, or nothing where none is bounded.
-    private func bounds(_ bounds: [Name: Set<Name>]) -> Value? {
+    // Each type parameter, or each type a contract asks, beside the
+    // contracts it is bounded by, joined with `&`, or nothing where none is
+    // bounded.
+    func bounds(_ bounds: [Name: Set<Name>]) -> Value? {
         guard !bounds.isEmpty else { return nil }
 
         return .dictionary(
@@ -83,6 +83,7 @@ struct TypeWriter {
         )
     }
 
+    // MARK: - Private
     // What a type is written as, before the reading is asked about it.
     private func form(of type: TypeExpression) throws -> Value {
         switch type {
@@ -121,6 +122,9 @@ struct TypeWriter {
         // Bare: a slot names the parameter, and its bound is the signature's.
         case let .parameter(name):
             return .string("\(TypeSpelling.some) \(name)")
+
+        case .associatedType:
+            return .string(type.rendered)
 
         case let .composition(names):
             return .string(names.sorted().map(\.spelling).joined(separator: " & "))

@@ -31,6 +31,9 @@ import Foundation
 //   it would make one spelling two contracts' procedures.
 // - a member's name: the key a type is given a procedure under. One
 //   identifier, for the same reason after the type's name.
+// - a type member's name: the name a contract asks a type under and a type
+//   gives one under. One identifier, since `some T.Item` writes it after
+//   the type parameter's name and a dot.
 //
 // No type's name and no type parameter's name is a word the language writes
 // itself: the names it gives its own types, the words a type's spelling
@@ -44,6 +47,7 @@ public enum NameGrammar: Sendable {
     case value
     case contractProcedure
     case member
+    case typeMember
 
     // MARK: - Property
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
@@ -67,8 +71,11 @@ public enum NameGrammar: Sendable {
     // Whether a name written here is one this grammar takes.
     public func holds(_ name: Name) -> Bool {
         switch self {
+        // `Self.Item` is an associated type of `Self`, so no type's name
+        // begins there.
         case .type:
             return !NameGrammar.reserved.contains(name) && NameGrammar.joinsIdentifiers(name)
+                && !name.spelling.hasPrefix("\(TypeSpelling.selfType.spelling).")
 
         case .mention:
             return Prelude.names.contains(name) || NameGrammar.type.holds(name)
@@ -95,7 +102,7 @@ public enum NameGrammar: Sendable {
                 && !Path.whiteSpace.contains(first)
                 && !Path.whiteSpace.contains(last)
 
-        case .contractProcedure, .member:
+        case .contractProcedure, .member, .typeMember:
             return name.isIdentifier
         }
     }
@@ -117,8 +124,8 @@ public enum NameGrammar: Sendable {
         switch self {
         case .type, .mention, .contractMention, .claimedType:
             return "'\(name)' is no name a module gives a type or a contract: such a name is identifiers"
-                + " joined by dots, and a word the language writes itself (`Int`, `some`, `null` and the rest)"
-                + " is the language's"
+                + " joined by dots, not beginning `Self.`, which writes an associated type of `Self`, and a word the"
+                + " language writes itself (`Int`, `some`, `null` and the rest) is the language's"
 
         case .typeParameter:
             return "'\(name)' is no type parameter's name. A type parameter is named by one identifier,"
@@ -135,6 +142,10 @@ public enum NameGrammar: Sendable {
         case .member:
             return "'\(name)' is no member's name. A call writes the type's name, a dot and the member's,"
                 + " so a member is named by one identifier"
+
+        case .typeMember:
+            return "'\(name)' is no type member's name. A type writes a type parameter's name, a dot and"
+                + " the member's, `some T.Item`, so a type member is named by one identifier"
         }
     }
 
