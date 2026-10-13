@@ -30,6 +30,17 @@ public struct ExtensionReader: Decodable {
     }
 
     // MARK: - Public
+    // The head an extension's key spells, a declared name written short
+    // standing for what the notation reads it as. Refused at `steps`, where
+    // the key is written.
+    public static func head(of key: Name, in notation: Notation, at steps: [Place.Step]) throws -> Head {
+        do {
+            return try TypeReader.head(key.spelling, in: notation)
+        } catch let refusal as TypeFormError {
+            throw ReadingError(refusal.message, at: steps)
+        }
+    }
+
     // The two keys, read off a mapping that may write others beside them.
     // The contracts are a set of names: order and repeats are the one
     // spelling's to hold.

@@ -182,6 +182,50 @@ struct TypeReader: Decodable {
         try parse(written) { name in notation.qualified(name, as: .type) }
     }
 
+    // What a document gives something to, from the key it writes it under:
+    // a type's name, or the type applied to what its brackets hold, where a
+    // `some T` may stand beside its bounds, `some T: Hashable & Equatable`.
+    // A type parameter is bounded where the head first names it, and the
+    // head is a type a value is an instance of.
+    static func head(_ written: String, in notation: Notation = .canonical) throws -> Head {
+        var bounds: [Name: Set<Name>] = [:]
+        var named: Set<Name> = []
+        let type = try parse(written, qualifying: { name in notation.qualified(name, as: .type) }) { name, written in
+            let first = named.insert(name).inserted
+
+            guard let written else { return }
+
+            guard first else {
+                throw TypeFormError(
+                    "bounds '\(name)' where it is named again. A head bounds a type parameter where it first names it"
+                )
+            }
+
+            bounds[name] = written
+        }
+
+        switch type {
+        case let .named(name, arguments):
+            return Head(name, arguments: arguments, bounds: bounds)
+
+        case let .array(element):
+            return Head(TypeSpelling.array, arguments: [element], bounds: bounds)
+
+        case let .dictionary(key, value):
+            return Head(TypeSpelling.dictionary, arguments: [key, value], bounds: bounds)
+
+        default:
+            guard let name = TypeExpression.keywords.first(where: { _, keyword in keyword == type })?.key else {
+                throw TypeFormError(
+                    "'\(written)' is no type a value is an instance of, and an extension is of one: a type,"
+                        + " or a type applied to what its brackets hold"
+                )
+            }
+
+            return Head(name)
+        }
+    }
+
     // Whether the reading takes this key as a procedure form's. Asked of the
     // reading itself rather than of a list beside it, because a list and a
     // parser drift and what they disagree about is a document one of them
@@ -273,7 +317,8 @@ struct TypeReader: Decodable {
     // the spelling's parts.
     private static func parse(
         _ written: String,
-        qualifying: (Name) -> Name
+        qualifying: (Name) -> Name,
+        bounding: ((Name, Set<Name>?) throws -> Void)? = nil
     ) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: Path.whiteSpace)
 
@@ -284,7 +329,7 @@ struct TypeReader: Decodable {
         // `inout` and `var` stand in front of the whole type, including a
         // trailing `?`, so they are read before anything else is.
         if let (mark, bare) = SlotMark.leading(of: text) {
-            return mark.marking(try parse(bare, qualifying: qualifying))
+            return mark.marking(try parse(bare, qualifying: qualifying, bounding: bounding))
         }
 
         // A trailing `?` reads next because it wraps the whole spelling under
@@ -292,7 +337,7 @@ struct TypeReader: Decodable {
         // nullable procedure and `A & B?` a nullable composition, and what may
         // be inside the brackets never carries one.
         if text.hasSuffix("?") {
-            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying))
+            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying, bounding: bounding))
         }
 
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
@@ -300,11 +345,22 @@ struct TypeReader: Decodable {
         }
 
         if constness == .const || isolation == .isolated {
-            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying) else {
+            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying, bounding: bounding) else {
                 throw TypeFormError("only a procedure is written const or isolated")
             }
 
             return .procedure(signature, constness, isolation)
+        }
+
+        // A head's own type parameter, beside the contracts it is bounded by.
+        // Read before `&`, which joins the bounds here.
+        if let bounding, let parameter = dropPrefixed("\(TypeSpelling.some) ", from: text) {
+            let parts = parameter.split(separator: ":", maxSplits: 1)
+            let name = try named(parts[0].trimmingCharacters(in: Path.whiteSpace))
+
+            try bounding(name, parts.count > 1 ? try contracts(String(parts[1]), qualifying: qualifying) : nil)
+
+            return .parameter(name: name)
         }
 
         // `A & B`: the names a value answers, and nothing else. Names joining
@@ -364,11 +420,11 @@ struct TypeReader: Decodable {
 
             return .named(
                 qualifying(name),
-                arguments: try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }
+                arguments: try arguments(inner).map { argument in try parse(argument, qualifying: qualifying, bounding: bounding) }
             )
         }
 
-        let parts = try arguments(inner).map { argument in try parse(argument, qualifying: qualifying) }
+        let parts = try arguments(inner).map { argument in try parse(argument, qualifying: qualifying, bounding: bounding) }
 
         guard let held = holding.holding(parts) else {
             throw TypeFormError(

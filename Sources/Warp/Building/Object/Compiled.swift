@@ -47,23 +47,25 @@ public struct Compiled: Sendable, Declaring {
     let types: [Name: TypeDeclaration]
     let contracts: [Name: [Name: ContractProcedure]]
 
-    // Which contracts it said each type answers, as it wrote them. The link
-    // holds the claim to the declarations behind it, and which declarations
-    // those are is a fact of the link rather than of this document.
-    let claims: [Name: Set<Name>]
+    // Which contracts it said each type answers, by the head it said so
+    // under, as it wrote them. The link holds the claim to the declarations
+    // behind it, and which declarations those are is a fact of the link
+    // rather than of this document.
+    let claims: [Head: Set<Name>]
 
-    // The procedures it gave each type, by the name of the type. Each is a
-    // declaration of this document under its type's name and its own, and
-    // what answers a contract's procedure for that type is the member of
+    // The procedures it gave each type, by the head it gave them under. Each
+    // is a declaration of this document under its type's name and its own,
+    // and what answers a contract's procedure for that type is the member of
     // that name.
-    let members: [Name: Set<Name>]
+    let members: [Head: Set<Name>]
 
-    // The pairs its bodies lean on: a type handed where a contract is asked.
-    // Unresolved here, the way a procedure this document sends and does not declare
-    // is unresolved. Which types answer a contract is read off the claims of
-    // the whole list, and a claim may be written in a document this one never
+    // The readings its bodies lean on: a value of a type handed where a
+    // contract is asked, in this document's own type numbers. Unresolved
+    // here, the way a procedure this document sends and does not declare is
+    // unresolved. Which types answer a contract is read off the claims of the
+    // whole list, and a claim may be written in a document this one never
     // names.
-    let leaned: [Claim: Place]
+    let leaned: [Leaning: Place]
 
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.
@@ -181,23 +183,25 @@ public struct Compiled: Sendable, Declaring {
     }
 
     // Every name this document reaches outside itself: its module's
-    // `references`. What it needs, and the names its claims and the pairs it
-    // leaned on write. An object keeps no list of what its document named, so
-    // this is that list worked out again from the facts the object does keep.
+    // `references`. What it needs, and the names its claims and members
+    // write and the contracts it leaned on. An object keeps no list of what
+    // its document named, so this is that list worked out again from the
+    // facts the object does keep.
     var references: Set<Reference> {
         var reached = needs
 
-        for (type, claimed) in claims {
-            reached.insert(.type(type))
+        for (head, claimed) in claims {
+            reached.formUnion(head.mentions.map(Reference.type))
             reached.formUnion(claimed.map(Reference.type))
         }
 
-        for type in members.keys {
-            reached.insert(.type(type))
+        for head in members.keys {
+            reached.formUnion(head.mentions.map(Reference.type))
         }
 
-        for claim in leaned.keys {
-            reached.formUnion([.type(claim.type), .type(claim.contract)])
+        // A reading's types are numbered, and the numbering is read above.
+        for leaning in leaned.keys {
+            reached.insert(.type(leaning.contract))
         }
 
         return outside(reached)
@@ -217,9 +221,9 @@ public struct Compiled: Sendable, Declaring {
         document: Place.Document,
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
-        claims: [Name: Set<Name>],
-        members: [Name: Set<Name>],
-        leaned: [Claim: Place],
+        claims: [Head: Set<Name>],
+        members: [Head: Set<Name>],
+        leaned: [Leaning: Place],
         declared: [Name],
         constants: [Name],
         table: [Judged],
@@ -265,9 +269,9 @@ public struct Compiled: Sendable, Declaring {
         document: Place.Document,
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]],
-        claims: [Name: Set<Name>],
-        members: [Name: Set<Name>],
-        leaned: [Claim: Place],
+        claims: [Head: Set<Name>],
+        members: [Head: Set<Name>],
+        leaned: [Leaning: Place],
         declared: [Name],
         constants: [Name],
         table: [Judged],

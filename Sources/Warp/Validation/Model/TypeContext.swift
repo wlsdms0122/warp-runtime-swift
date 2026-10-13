@@ -25,6 +25,10 @@ enum TypeContext: Sendable {
     // mention of the struct fills.
     case `struct`(declaring: Set<Name>)
 
+    // What a document gives something to: a type, and what it is applied to,
+    // whose `some T` is the head's own.
+    case head
+
     // The type a value is said to have: what a name, a module variable
     // included, says it holds, what a cast reads a value as, and what a
     // declared type's field holds or an alias stands for.
@@ -35,7 +39,7 @@ enum TypeContext: Sendable {
     var takesSelf: Bool {
         switch self {
         case .contract: true
-        case .signature, .closure, .struct, .value: false
+        case .signature, .closure, .struct, .head, .value: false
         }
     }
 
@@ -45,7 +49,7 @@ enum TypeContext: Sendable {
     var declaresTypeParameters: Bool {
         switch self {
         case .signature, .contract: true
-        case .closure, .struct, .value: false
+        case .closure, .struct, .head, .value: false
         }
     }
 
@@ -54,7 +58,7 @@ enum TypeContext: Sendable {
     // Whether `some T` may stand here: a call or a mention fills it.
     func takes(typeParameter name: Name) -> Bool {
         switch self {
-        case .signature, .contract: true
+        case .signature, .contract, .head: true
         case let .closure(declared), let .struct(declared): declared.contains(name)
         case .value: false
         }

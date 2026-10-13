@@ -163,15 +163,23 @@ struct ObjectWriter {
             }
 
         case .claims:
-            return keyed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) }
+            return try headed(compiled.claims) { contracts in .array(contracts.sorted().map(name)) }
 
         case .members:
-            return keyed(compiled.members) { members in .array(members.sorted().map(name)) }
+            return try headed(compiled.members) { members in .array(members.sorted().map(name)) }
 
+        // In the key order of what each reading and its contract are written
+        // as, the order the language puts values in.
         case .leaned:
-            return .array(compiled.leaned.sorted { one, other in one.key < other.key }.map { claim, place in
-                .array([name(claim.type), name(claim.contract), self.place(place)])
-            })
+            let written = try compiled.leaned.map { (entry) throws(ObjectUnwritable) -> (key: Value, row: Value) in
+                let (reading, contract) = (try lowered(entry.key.reading), name(entry.key.contract))
+
+                return (.array([reading, contract]), .array([reading, contract, place(entry.value)]))
+            }
+
+            return .array(
+                written.sorted { one, other in Value.Dictionary.order(one.key, other.key) == .orderedAscending }.map(\.row)
+            )
 
         // The rows the document declares stand under their spellings; the
         // rows its bodies lifted stand apart, and what wrote each is the
@@ -229,6 +237,33 @@ struct ObjectWriter {
         }
 
         return .array(written)
+    }
+
+    // A list a head keys, in the order of the heads' spellings.
+    private func headed<T>(
+        _ entries: [Head: T],
+        _ write: (T) -> Value
+    ) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for (head, entry) in entries.sorted(by: { one, other in one.key < other.key }) {
+            written.append(.array([try self.head(head), write(entry)]))
+        }
+
+        return .array(written)
+    }
+
+    // A head is written as its type's name where it is bare, and otherwise
+    // `[name, arguments, bounds]`: the types it applies its type to in order,
+    // and each of its type parameters beside the contracts it is bounded by.
+    private func head(_ head: Head) throws(ObjectUnwritable) -> Value {
+        guard !head.isBare else { return name(head.type) }
+
+        return .array([
+            name(head.type),
+            .array(try head.arguments.map(type)),
+            keyed(head.bounds) { contracts in .array(contracts.sorted().map(name)) }
+        ])
     }
 
     private func name(_ name: Name) -> Value {

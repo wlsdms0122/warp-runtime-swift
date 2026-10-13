@@ -342,16 +342,17 @@ struct Compiler {
             }
         }
 
-        // The types its bodies and the answers read off them stand on,
-        // written as this document's own numbers. Lowering read the link's
-        // table to judge, so what it wrote is that link's rows; what leaves
-        // here is the document's.
+        // The types its bodies, the answers read off them and the readings it
+        // leaned on stand on, written as this document's own numbers.
+        // Lowering read the link's table to judge, so what it wrote is that
+        // link's rows; what leaves here is the document's.
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
             Array(block) + compiling.lowering.documents[origin].closureRows,
-            answering: read
+            answering: read,
+            leaning: fulfillment.leanings(of: origin)
         )
 
         return Compiled(
@@ -360,7 +361,7 @@ struct Compiler {
             contracts: module.contracts,
             claims: module.claims,
             members: module.members,
-            leaned: fulfillment.claims(of: origin),
+            leaned: lowered.leaned,
             declared: declared,
             constants: module.constants.keys.sorted(),
             table: lowered.table.map(Judged.init),

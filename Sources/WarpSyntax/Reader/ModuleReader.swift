@@ -47,49 +47,73 @@ public struct ModuleReader: Decodable {
 
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let types = try Self.mapping(TypeDeclarationReader.self, in: container, forKey: .types)
-        let extensions = try Self.mapping(ExtensionReader.self, in: container, forKey: .extensions)
+        let written = try Self.mapping(ExtensionReader.self, in: container, forKey: .extensions)
         var procedures = try Self.mapping(ProcedureReader.self, in: container, forKey: .procedures)
             .mapValues(\.procedure)
-        var claims: [Name: Set<Name>] = [:]
-        var members: [Name: Set<Name>] = [:]
+        var claims: [Head: Set<Name>] = [:]
+        var members: [Head: Set<Name>] = [:]
 
-        // A struct this document declares is given things where it is
-        // declared, so an extension of it would be a second way to write one
-        // document.
-        if let type = extensions.keys.sorted().first(where: { type in
-            if case .struct? = types[type]?.declared { true } else { false }
-        }) {
-            throw ReadingError(
-                "extends '\(type)', a struct this document declares. A document gives a struct it"
-                    + " declares what it gives it in the declaration",
-                at: [.key(CodingKeys.extensions.rawValue), .key(type.spelling)]
+        // An extension's key is a head: the type, and what it is applied to
+        // where what it gives holds for some of the type's values. A struct
+        // this document declares is given what every value of it has where
+        // it is declared, so a bare extension of it would be a second way to
+        // write one document, and two keys reading as one head are two ways
+        // to write one extension.
+        var extensions: [Head: (key: Name, extended: ExtensionReader)] = [:]
+
+        for (key, extended) in written.sorted(by: { $0.key < $1.key }) {
+            let steps: [Place.Step] = [.key(CodingKeys.extensions.rawValue), .key(key.spelling)]
+            let head = try ExtensionReader.head(of: key, in: decoder.notation, at: steps)
+
+            if let first = extensions[head] {
+                throw ReadingError(
+                    "reads as '\(head.spelling)', and so does '\(first.key)'. A document writes one extension"
+                        + " under one head",
+                    at: steps
+                )
+            }
+
+            if head.isBare, case .struct? = types[head.type]?.declared {
+                throw ReadingError(
+                    "extends '\(head.type)', a struct this document declares. A document gives every value of"
+                        + " a struct it declares what it gives it in the declaration",
+                    at: steps
+                )
+            }
+
+            extensions[head] = (key, extended)
+        }
+
+        // What the document gives each head, from where it gave it: a struct
+        // it declares in its declaration, and the rest in an extension, an
+        // alias it declares included, which the load refuses for what it is.
+        // A member joins the procedures under its type's name and its own, so
+        // a procedure the document declares under that spelling is a second
+        // declaration of it.
+        let given = types.map { name, declared in
+            (Head(name), declared.satisfies, declared.procedures, [Place.Step.key(CodingKeys.types.rawValue), .key(name.spelling)])
+        } + extensions.map { head, written in
+            (
+                head,
+                written.extended.satisfies,
+                written.extended.procedures,
+                [Place.Step.key(CodingKeys.extensions.rawValue), .key(written.key.spelling)]
             )
         }
 
-        // What the document gives each type, from where it gave it: a struct
-        // it declares in its declaration, and every other type in an
-        // extension, an alias it declares included, which the load refuses
-        // for what it is. A member joins the procedures under its type's name
-        // and its own, so a procedure the document declares under that
-        // spelling is a second declaration of it.
-        let given = types.mapValues { declared in (declared.satisfies, declared.procedures, CodingKeys.types) }
-            .merging(extensions.mapValues { extended in (extended.satisfies, extended.procedures, CodingKeys.extensions) }) { _, extended in extended }
-
-        for (type, (satisfies, memberProcedures, key)) in given.sorted(by: { $0.key < $1.key }) {
+        for (head, satisfies, memberProcedures, steps) in given.sorted(by: { $0.0 < $1.0 }) {
             if !satisfies.isEmpty {
-                claims[type] = satisfies
+                claims[head] = satisfies
             }
 
             for (member, procedure) in memberProcedures.sorted(by: { $0.key < $1.key }) {
-                let spelling = member.spelled(under: type)
+                let spelling = member.spelled(under: head.type)
 
                 guard procedures[spelling] == nil else {
                     throw ReadingError(
-                        "gives '\(type)' the member '\(member)', and '\(spelling)' is declared"
+                        "gives '\(head.spelling)' the member '\(member)', and '\(spelling)' is declared"
                             + " once already in this document",
-                        at: [
-                            .key(key.rawValue),
-                            .key(type.spelling),
+                        at: steps + [
                             .key(ExtensionReader.CodingKeys.procedures.rawValue),
                             .key(member.spelling)
                         ]
@@ -97,7 +121,7 @@ public struct ModuleReader: Decodable {
                 }
 
                 procedures[spelling] = procedure
-                members[type, default: []].insert(member)
+                members[head, default: []].insert(member)
             }
         }
 

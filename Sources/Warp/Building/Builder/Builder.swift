@@ -399,10 +399,20 @@ public struct Builder: Sendable {
         let types = lowered.types
 
         // What each document leaned on, answered by every claim in the list.
+        // A reading stands in its document's numbers, read as this link's
+        // rows.
         for document in compiled {
+            let numbered = document.typeNumbering.rows(in: types.loweredTypes)
+            let leaned = try document.leaned.reduce(into: [Leaning: Place]()) { leaned, entry in
+                let reading = try numbered.read(entry.key.reading, at: entry.value)
+
+                leaned[Leaning(reading: reading, contract: entry.key.contract)] = entry.value
+            }
+
             try ClaimChecker().leaning(
-                document.leaned,
-                on: types.loweredTypes.satisfying,
+                leaned,
+                in: types.loweredTypes,
+                heads: lowered.heads,
                 unheld: lowered.unheld
             )
         }

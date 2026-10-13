@@ -25,7 +25,7 @@ struct LoweredTypeTests {
             "App.Maybe": .alias(.nullable(.int))
         ],
         contracts: ["App.Ordered": [:]],
-        satisfying: ["App.Ordered": ["Int", "Double", "String"]],
+        satisfying: ["App.Ordered": ["Int": "Int", "Double": "Double", "String": "String"]],
         holdsEveryClaim: true,
         of: Linkage()
     )

@@ -71,17 +71,18 @@ public struct Draft: Sendable {
     // type.
     public let contracts: [Name: [Name: ContractProcedure]]
 
-    // Which contracts each type this document names answers, by the name of
-    // the type. A type answers a contract because a document says it does: the
-    // link holds the claim to the type's members. The type may be another
-    // document's, and a document claims it where it extends it.
-    public let claims: [Name: Set<Name>]
+    // Which contracts each type this document names answers, by the head it
+    // says so under. A type answers a contract because a document says it
+    // does: the link holds the claim to the type's members. The type may be
+    // another document's, and a document claims it where it extends it.
+    public let claims: [Head: Set<Name>]
 
-    // The procedures this document gives each type, by the name of the type:
-    // a struct it declares holds them, and any other type takes them where
-    // the document extends it. A member stands among `procedures` under
-    // its type's name and its own, which is the spelling a call writes.
-    public let members: [Name: Set<Name>]
+    // The procedures this document gives each type, by the head it gives
+    // them under: a struct it declares holds what it gives every value of
+    // it, and a type takes the rest where the document extends it. A member
+    // stands among `procedures` under its type's name and its own, which is
+    // the spelling a call writes, and it takes a value its head takes first.
+    public let members: [Head: Set<Name>]
 
     // The same members by the spelling a call writes.
     let spelledMembers: [Name: Member]
@@ -123,8 +124,8 @@ public struct Draft: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
-        claims: [Name: Set<Name>] = [:],
-        members: [Name: Set<Name>] = [:],
+        claims: [Head: Set<Name>] = [:],
+        members: [Head: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable] = [:],
         procedures: [Name: Procedure] = [:]
@@ -226,17 +227,16 @@ public struct Draft: Sendable {
         // link reads the contract's procedures to hold the claim to them, so a
         // document making one stands behind the document that wrote it. A type
         // the language names is no document's to stand behind.
-        for (type, contracts) in claims {
-            if TypeExpression.nominalTypes[type] == nil {
-                named.insert(type)
-            }
-
+        // A head names what it is applied to and the contracts its bounds
+        // name besides.
+        for (head, contracts) in claims {
+            named.formUnion(head.mentions.filter { name in TypeExpression.nominalTypes[name] == nil })
             named.formUnion(contracts)
         }
 
         // A document extending a type names it, the way a claim does.
-        for type in members.keys where TypeExpression.nominalTypes[type] == nil {
-            named.insert(type)
+        for head in members.keys {
+            named.formUnion(head.mentions.filter { name in TypeExpression.nominalTypes[name] == nil })
         }
 
         for (name, procedure) in procedures {
@@ -264,6 +264,22 @@ public struct Draft: Sendable {
             mentions: named.subtracting(declaredTypes).subtracting(Prelude.names),
             closures: counts
         )
+    }
+
+    // The procedures as the program reads them: each member's signature
+    // read under its head, as written otherwise.
+    func placed() -> [Name: Procedure] {
+        procedures.reduce(into: [:]) { placed, entry in
+            let (spelling, procedure) = entry
+
+            guard let head = spelledMembers[spelling]?.head, !head.bounds.isEmpty else {
+                placed[spelling] = procedure
+
+                return
+            }
+
+            placed[spelling] = procedure.with(signature: procedure.signature.under(head))
+        }
     }
 
     // MARK: - Private

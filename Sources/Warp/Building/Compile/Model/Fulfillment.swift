@@ -7,7 +7,7 @@
 
 import Foundation
 
-// The pairs a compile's calls lean on: a type handed where a contract is
+// The pairs a compile's calls lean on: a reading handed where a contract is
 // asked, and the place it was handed. The first place a pair is seen at is the
 // one kept, so a document handing the same pair in a dozen bodies points at
 // one of them.
@@ -25,7 +25,7 @@ final class Fulfillment: @unchecked Sendable {
     // MARK: - Property
     // A `TypingContext` is `Sendable` and this rides one.
     private let lock = NSLock()
-    private var held: [Int: [Claim: Place]] = [:]
+    private var held: [Int: [Leaning: Place]] = [:]
     private var origin = 0
 
     // Where a pair turned up by a fold stands. A call read in text says its
@@ -65,23 +65,23 @@ final class Fulfillment: @unchecked Sendable {
         return try await body()
     }
 
-    func claims(of origin: Int) -> [Claim: Place] {
+    func leanings(of origin: Int) -> [Leaning: Place] {
         lock.withLock { held[origin] ?? [:] }
     }
 
-    func require(_ claim: Claim, at place: Place) {
-        lock.withLock { write(claim, at: place) }
+    func require(_ leaning: Leaning, at place: Place) {
+        lock.withLock { write(leaning, at: place) }
     }
 
     // A pair a fold could not decide, which stands where the document does.
-    func require(folded claim: Claim) {
-        lock.withLock { write(claim, at: folding) }
+    func require(folded leaning: Leaning) {
+        lock.withLock { write(leaning, at: folding) }
     }
 
     // MARK: - Private
-    private func write(_ claim: Claim, at place: Place) {
-        guard held[origin, default: [:]][claim] == nil else { return }
+    private func write(_ leaning: Leaning, at place: Place) {
+        guard held[origin, default: [:]][leaning] == nil else { return }
 
-        held[origin, default: [:]][claim] = place
+        held[origin, default: [:]][leaning] = place
     }
 }

@@ -456,14 +456,17 @@ struct Lowering {
     // document's last body is lowered and not while one is.
     func numbered(
         _ rows: [Int],
-        answering answers: [Name: LoweredType]
+        answering answers: [Name: LoweredType],
+        leaning leaned: [Leaning: Place]
     ) throws -> (
         table: [Linked],
         numbering: LoweredTypeNumbering,
-        answers: [Name: LoweredType]
+        answers: [Name: LoweredType],
+        leaned: [Leaning: Place]
     ) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies and the answers read off them. Read through the walks
+        // rows' bodies, the answers read off them and the readings it leaned
+        // on. Read through the walks
         // that rewrite them, so which cases hold a type is answered in one
         // place; what those walks rebuild is dropped.
         var types: Set<Int> = []
@@ -482,6 +485,10 @@ struct Lowering {
 
         for answer in answers.values {
             _ = stand(answer)
+        }
+
+        for leaning in leaned.keys {
+            _ = stand(leaning.reading)
         }
 
         let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
@@ -509,7 +516,13 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        return (numbered, numbering, read)
+        let leaning = try leaned.reduce(into: [Leaning: Place]()) { leaning, entry in
+            let reading = try renumbered(entry.key.reading, in: place, of: entry.key.contract)
+
+            leaning[Leaning(reading: reading, contract: entry.key.contract)] = entry.value
+        }
+
+        return (numbered, numbering, read, leaning)
     }
 
     // MARK: - Private

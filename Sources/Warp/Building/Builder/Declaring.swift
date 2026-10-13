@@ -19,14 +19,16 @@ protocol Declaring {
     var types: [Name: TypeDeclaration] { get }
     var contracts: [Name: [Name: ContractProcedure]] { get }
 
-    // Which contracts this document says each type answers. Not a type table
+    // Which contracts this document says each type answers, by the head it
+    // says so under. Not a type table
     // and gathered apart from the two: it declares no name, it says something
     // about a type, declared elsewhere or named by the language, and a
     // contract declared elsewhere.
-    var claims: [Name: Set<Name>] { get }
+    var claims: [Head: Set<Name>] { get }
 
-    // The procedures this document gives each type, by the name of the type.
+    // The procedures this document gives each type, by the head it gives
+    // them under.
     // What answers a contract's procedure for a type is the type's member of
     // that name, whichever document gave it.
-    var members: [Name: Set<Name>] { get }
+    var members: [Head: Set<Name>] { get }
 }

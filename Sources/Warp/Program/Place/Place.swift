@@ -61,8 +61,8 @@ public struct Place: Sendable, Hashable {
         }
 
         // A document, with the types it declares and the procedures it gives
-        // each type it names, by the name of the type.
-        init(identity: Identity?, types: [Name: TypeDeclaration], members: [Name: Set<Name>]) {
+        // each type it names, by the head it gives them under.
+        init(identity: Identity?, types: [Name: TypeDeclaration], members: [Head: Set<Name>]) {
             self.identity = identity
             self.structs = Set(types.compactMap { name, declared in
                 if case .struct = declared { name } else { nil }
@@ -75,10 +75,15 @@ public struct Place: Sendable, Hashable {
             module.document
         }
 
-        // Where this document wrote what it gives a type: the struct's
-        // declaration, or an extension of the type.
-        func home(of type: Name) -> [Step] {
-            [.part(structs.contains(type) ? .types : .extensions), .key(type.spelling)]
+        // Where this document wrote what it gives a head: the struct's
+        // declaration for every value of a struct it declares, and an
+        // extension under the head's spelling otherwise.
+        func home(of head: Head) -> [Step] {
+            guard head.isBare, structs.contains(head.type) else {
+                return [.part(.extensions), .key(head.spelling.spelling)]
+            }
+
+            return [.part(.types), .key(head.type.spelling)]
         }
 
         // What a sentence calls this document when it names one among several.
@@ -328,7 +333,7 @@ public struct Place: Sendable, Hashable {
         }
 
         return Place(
-            document.home(of: member.type) + [.part(.procedures), .key(member.name.spelling)],
+            document.home(of: member.head) + [.part(.procedures), .key(member.name.spelling)],
             in: document
         )
     }
@@ -352,8 +357,8 @@ public struct Place: Sendable, Hashable {
     // A claim that one type answers some contracts, written where the
     // document gives the type what it gives it. What is refused about one is
     // refused about the type it is about.
-    public static func satisfies(_ name: String, in document: Document) -> Place {
-        Place(document.home(of: Name(normal: name)) + [.part(.satisfies)], in: document)
+    public static func satisfies(_ head: Head, in document: Document) -> Place {
+        Place(document.home(of: head) + [.part(.satisfies)], in: document)
     }
 
     // A caller holding a program it assembled itself, with no document under

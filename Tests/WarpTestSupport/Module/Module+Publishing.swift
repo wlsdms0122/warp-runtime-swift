@@ -13,10 +13,10 @@ public extension Module {
     // names the entry outside the text, so the text is not where its access
     // is written.
     func publishing(_ entry: Name) throws -> Module {
-        guard let procedure = procedures[entry] else { return self }
+        guard let procedure = draft.procedures[entry] else { return self }
 
         return try Module(
-            draft.declaring(procedures.merging([entry: procedure.with(access: .public)]) { _, new in new }),
+            draft.declaring(draft.procedures.merging([entry: procedure.with(access: .public)]) { _, new in new }),
             identity: identity,
             builtin: builtin
         )

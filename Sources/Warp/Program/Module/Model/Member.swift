@@ -7,29 +7,31 @@
 
 import Foundation
 
-// A procedure a document gives a type: the type, and the name it has there.
-// A call reaches it by the type's name and its own with a dot between them,
-// and a contract's procedure is answered for the type by the member of that
-// name.
+// A procedure a document gives a type: the head it gives it under, and the
+// name it has there. A call reaches it by the type's name and its own with a
+// dot between them, and a contract's procedure is answered for the type by
+// the member of that name.
 public struct Member: Sendable, Hashable {
     // MARK: - Property
-    public let type: Name
+    public let head: Head
     public let name: Name
 
-    public var spelling: Name { name.spelled(under: type) }
+    public var type: Name { head.type }
+
+    public var spelling: Name { name.spelled(under: head.type) }
 
     // MARK: - Initializer
-    public init(type: Name, name: Name) {
-        self.type = type
+    public init(head: Head, name: Name) {
+        self.head = head
         self.name = name
     }
 
     // MARK: - Public
-    // The members a table gives each type, by the spelling a call writes.
-    static func spelled(_ members: [Name: Set<Name>]) -> [Name: Member] {
+    // The members a table gives each head, by the spelling a call writes.
+    static func spelled(_ members: [Head: Set<Name>]) -> [Name: Member] {
         members.reduce(into: [:]) { spelled, entry in
             for name in entry.value {
-                let member = Member(type: entry.key, name: name)
+                let member = Member(head: entry.key, name: name)
 
                 spelled[member.spelling] = member
             }

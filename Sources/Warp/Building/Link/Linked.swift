@@ -367,10 +367,13 @@ public final class Linked: Sendable {
     // declaration's, so the door judges a value as the build judges a
     // reading there, in the build's words. A type parameter is one type: one filled by two types
     // refuses, and so does a bounded one filled by a value of more than one
-    // type. What fills a bounded one is then held to its bounds, and `Any`,
-    // what values of several types join to, answers none. A parameter only a
-    // procedure's own signature reaches is left standing, for the judgement
-    // of that procedure to fill.
+    // type. A bounded one read as no type a value is an instance of, `Any`,
+    // what values of several types join to, answers none. One read as such
+    // a type is left standing, so each value at it is held to its bounds by
+    // what the value is, the way a cast holds one: a value carries no type's
+    // arguments, and what it reads as is not what a head of a claim takes.
+    // A parameter only a procedure's own signature reaches is left standing
+    // too, for the judgement of that procedure to fill.
     //
     // A closure's type parameters are its writer's, filled by the call that
     // made it, which no value at this door says, so they stand as they are
@@ -389,12 +392,22 @@ public final class Linked: Sendable {
             in: table
         )
 
+        // A bounded parameter is one type, and a value says of its type the
+        // struct it is and not what that struct is applied to.
+        let unapplied = Substitution(
+            filling: types,
+            against: values.map { value in LoweredType(unapplied: value, in: table) },
+            in: table
+        )
+
         for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
-            let refusal = substitution.disagreement(of: parameter, in: table)
-                ?? substitution.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
-                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: table) { claim in
-                    table.fulfillment?.require(folded: claim)
-                }
+            let read = bounds.isEmpty ? substitution : unapplied
+            let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
+            let refusal = read.disagreement(of: parameter, in: table)
+                ?? read.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
+                ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table) { leaning in
+                    table.fulfillment?.require(folded: leaning)
+                })
 
             if let refusal {
                 let standing = slots
@@ -409,7 +422,9 @@ public final class Linked: Sendable {
         return parameters.reduce(into: [:]) { filled, parameter in
             let (name, bounds) = parameter
 
-            filled[name] = substitution.readings[name] ?? .parameter(label: name, bounds: bounds)
+            let standing = LoweredType.parameter(label: name, bounds: bounds)
+
+            filled[name] = bounds.isEmpty ? substitution.readings[name] ?? standing : standing
         }
     }
 
