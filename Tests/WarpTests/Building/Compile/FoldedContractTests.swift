@@ -50,7 +50,7 @@ struct FoldedContractTests {
             try await Builder().build(asking + [answering])
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("no claim within reach says 'Null' answers")
+                && "\(error)".contains("asks whether 'Null' answers 'App.Describable', and no claim within reach says so")
         }
     }
 
@@ -69,12 +69,12 @@ struct FoldedContractTests {
                 compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
-            "\(error)".contains("no claim within reach says 'String' answers")
+            "\(error)".contains("asks whether 'String' answers 'App.Describable', and no claim within reach says so")
         }
         await #expect {
             try await Builder().build(modules)
         } throws: { error in
-            "\(error)".contains("no claim within reach says 'String' answers")
+            "\(error)".contains("asks whether 'String' answers 'App.Describable', and no claim within reach says so")
         }
     }
 
@@ -133,7 +133,7 @@ struct FoldedContractTests {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
             "\(error)".contains("constants.aaa:")
-                && "\(error)".contains("no claim within reach says 'Zed.Plain' answers")
+                && "\(error)".contains("asks whether 'Zed.Plain' answers 'App.Describable', and no claim within reach says so")
         }
     }
 
@@ -162,13 +162,13 @@ struct FoldedContractTests {
             }
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("no claim within reach says 'Bank.Plain' answers")
+                && "\(error)".contains("asks whether 'Bank.Plain' answers 'App.Describable', and no claim within reach says so")
         }
         await #expect {
             try await Builder().compile(modules)
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("no claim within reach says 'Bank.Plain' answers")
+                && "\(error)".contains("asks whether 'Bank.Plain' answers 'App.Describable', and no claim within reach says so")
         }
     }
 
