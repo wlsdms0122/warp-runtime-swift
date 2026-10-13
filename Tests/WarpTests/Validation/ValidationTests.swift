@@ -732,7 +732,27 @@ struct ValidationTests {
             )
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("satisfies.Any: 'Any' is no name a module gives a type or a contract")
+                && "\(error)".contains("extensions.Any: 'Any' is no name a module gives a type or a contract")
+        }
+    }
+
+    @Test("a module giving a type an empty set of contracts or members is refused where it is made", arguments: [
+        ("extensions.Int.satisfies", ["Int": []], [:]),
+        ("extensions.Int.procedures", [:], ["Int": []])
+    ] as [(String, [Name: Set<Name>], [Name: Set<Name>])])
+    func anEmptyGivingIsRefused(place: String, claims: [Name: Set<Name>], members: [Name: Set<Name>]) throws {
+        // When / Then. A type given nothing is written as no extension, so a
+        // module saying it gives one an empty set would write a document that
+        // reads back as another.
+        #expect {
+            try Module(
+                imports: [],
+                claims: claims,
+                members: members,
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains(place)
         }
     }
 
@@ -744,6 +764,7 @@ struct ValidationTests {
             imports: [],
             contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Int": ["App.Described"]],
+            members: ["Int": ["describe"]],
             procedures: [
                 "Int.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),

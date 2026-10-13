@@ -29,6 +29,8 @@ import Foundation
 // - a contract's procedure's name: the key it is asked under. One identifier,
 //   since a call spells it after the contract's name and a dot, and a dot in
 //   it would make one spelling two contracts' procedures.
+// - a member's name: the key a type is given a procedure under. One
+//   identifier, for the same reason after the type's name.
 //
 // No type's name and no type parameter's name is a word the language writes
 // itself: the names it gives its own types, the words a type's spelling
@@ -41,6 +43,7 @@ public enum NameGrammar: Sendable {
     case typeParameter
     case value
     case contractProcedure
+    case member
 
     // MARK: - Property
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
@@ -92,7 +95,7 @@ public enum NameGrammar: Sendable {
                 && !Path.whiteSpace.contains(first)
                 && !Path.whiteSpace.contains(last)
 
-        case .contractProcedure:
+        case .contractProcedure, .member:
             return name.isIdentifier
         }
     }
@@ -128,6 +131,10 @@ public enum NameGrammar: Sendable {
         case .contractProcedure:
             return "'\(name)' is no name of a contract's procedure. A call writes the contract's name, a dot"
                 + " and the procedure's, so the procedure is named by one identifier"
+
+        case .member:
+            return "'\(name)' is no member's name. A call writes the type's name, a dot and the member's,"
+                + " so a member is named by one identifier"
         }
     }
 

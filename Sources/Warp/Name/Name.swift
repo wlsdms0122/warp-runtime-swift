@@ -86,6 +86,12 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
     }
 
     // MARK: - Public
+    // This name as a call writes it under the name it belongs to, a
+    // contract's or a type's: the owner's spelling, a dot and this one.
+    package func spelled(under owner: Name) -> Name {
+        Name(normal: "\(owner.spelling).\(spelling)")
+    }
+
     // Ordered as bytes. Every place that puts names in order reads this: a
     // struct's fields and a signature's parameter positions. Swift's `<`
     // orders under canonical equivalence and would put two spellings of one

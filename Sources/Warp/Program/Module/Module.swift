@@ -64,6 +64,10 @@ public struct Module: Sendable {
     // claim to.
     public var claims: [Name: Set<Name>] { source.claims }
 
+    // The procedures this module gives each type, by the name of the type.
+    // A contract's procedure is answered by the member of that name.
+    public var members: [Name: Set<Name>] { source.members }
+
     // Names bound to values, settled at the build and gone by run time,
     // private to the module: a constant is read by writing its name, and a
     // name is the module's scope.
@@ -85,6 +89,11 @@ public struct Module: Sendable {
     // document back to its canonical bytes, which is not what reading a
     // document is for.
     public let identity: Identity?
+
+    // Which document this is as a place reads it: the identity, and where the
+    // text gave each type what it gave it. Worked out once, since every
+    // refusal about this module stands in it.
+    let document: Place.Document
 
     // Whether these are the procedures the specification names rather than
     // ones a host brought. A constant settles from a body in the link and
@@ -124,6 +133,7 @@ public struct Module: Sendable {
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
+        members: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure] = [:],
@@ -136,6 +146,7 @@ public struct Module: Sendable {
             types: types,
             contracts: contracts,
             claims: claims,
+            members: members,
             constants: constants,
             variables: variables.mapValues { start in ModuleVariable(start) },
             procedures: procedures,
@@ -151,6 +162,7 @@ public struct Module: Sendable {
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Name: Set<Name>] = [:],
+        members: [Name: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable],
         procedures: [Name: Procedure] = [:],
@@ -164,6 +176,7 @@ public struct Module: Sendable {
                 types: types,
                 contracts: contracts,
                 claims: claims,
+                members: members,
                 constants: constants,
                 variables: variables,
                 procedures: procedures
@@ -194,6 +207,7 @@ public struct Module: Sendable {
     private init(reading draft: Draft, identity: Identity?, builtin: Bool) {
         self.source = draft
         self.identity = identity
+        self.document = Place.Document(identity: identity, types: draft.types, members: draft.members)
         self.builtin = builtin
         let reading = draft.read()
 

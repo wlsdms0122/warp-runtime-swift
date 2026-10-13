@@ -62,6 +62,7 @@ struct ObjectReader {
         var types: [Name: TypeDeclaration] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Name: Set<Name>] = [:]
+        var members: [Name: Set<Name>] = [:]
         var leaned: [Claim: Place] = [:]
         var declaredRows: [Judged] = []
         var liftedRows: [Value] = []
@@ -99,9 +100,31 @@ struct ObjectReader {
                     try keyed(written, of: "contract", contractProcedure)
                 }
 
+            // A type stands here because the document claimed a contract
+            // for it, at least one.
             case .claims:
                 claims = try keyed(part, of: "claims") { written in
-                    Set(try Field(written, of: "claims").ordered(name))
+                    let contracts = try Field(written, of: "claims").ordered(name)
+
+                    guard !contracts.isEmpty else {
+                        throw ObjectRefused("'claims' claims no contract for a type")
+                    }
+
+                    return Set(contracts)
+                }
+
+            // A type is given at least one member where it stands here, and
+            // each is one of the rows the document declares, which is asked
+            // once every part is in.
+            case .members:
+                members = try keyed(part, of: "members") { written in
+                    let names = try Field(written, of: "members").ordered(name)
+
+                    guard !names.isEmpty else {
+                        throw ObjectRefused("'members' gives a type no member")
+                    }
+
+                    return Set(names)
                 }
 
             case .leaned:
@@ -154,11 +177,20 @@ struct ObjectReader {
             return try judged(written, spelled: writer.by.name)
         })
 
+        let spelled = Set(declared)
+
+        if let (type, member) = members.sorted(by: { $0.key < $1.key }).lazy.flatMap({ type, names in
+            names.sorted().map { member in (type, member) }
+        }).first(where: { type, member in !spelled.contains(member.spelled(under: type)) }) {
+            throw ObjectRefused("'members' gives '\(type)' the member '\(member)', and no row stands under its spelling")
+        }
+
         return try Compiled(
-            document: Place.Document(identity: identity),
+            document: Place.Document(identity: identity, types: types, members: members),
             types: types,
             contracts: contracts,
             claims: claims,
+            members: members,
             leaned: leaned,
             declared: declared,
             constants: constants,
@@ -655,6 +687,7 @@ struct ObjectReader {
         case .bounds: read = .bounds
         case .entries: read = .entries
         case .typeParameters: read = .typeParameters
+        case .extensions: read = .extensions
         case nil: throw ObjectRefused("'part' names a part this reads none of")
         }
 

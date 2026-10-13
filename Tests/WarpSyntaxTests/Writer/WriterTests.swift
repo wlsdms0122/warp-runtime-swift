@@ -124,9 +124,21 @@ struct WriterTests {
         "warp": 1,
         "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
         "description": "one of every type",
-        "types": ["Task": ["struct": ["done": "Bool", "id": "String"]]],
+        "types": [
+            "Task": [
+                "struct": ["done": "Bool", "id": "String"],
+                "satisfies": ["Scalar"],
+                "procedures": ["label": ["parameters": [["name": "of", "type": "Task"]], "returns": "String", "result": ["ref": "of.id"]]]
+            ]
+        ],
         "contracts": ["Scalar": [:]],
-        "satisfies": ["Int": ["Scalar"], "String": ["Scalar"]],
+        "extensions": [
+            "Int": [
+                "satisfies": ["Scalar"],
+                "procedures": ["same": ["parameters": [["name": "of", "type": "Int"]], "returns": "Int", "result": ["ref": "of"]]]
+            ],
+            "String": ["satisfies": ["Scalar"]]
+        ],
         "const": ["limit": 10],
         "procedures": [
             "entry": [

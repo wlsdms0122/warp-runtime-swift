@@ -289,6 +289,7 @@ struct FoldingReachTests {
         let answering = try Module(
             imports: ["App.Joinable"],
             claims: ["Int": ["App.Joinable"]],
+            members: ["Int": ["join"]],
             procedures: [
                 "Int.join": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int), Parameter(name: "other", type: .int)], returns: .int),

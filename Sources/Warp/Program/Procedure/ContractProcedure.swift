@@ -38,13 +38,6 @@ public struct ContractProcedure: Sendable, Equatable {
     }
 
     // MARK: - Public
-    // The spelling a call writes to reach one: the name it is asked of and the
-    // procedure's, with a dot between them. A contract's procedure and the
-    // declaration answering it are spelled the same way, by the contract and
-    // by the type.
-    static func spelling(of name: Name, procedure: Name) -> Name {
-        Name(normal: "\(name.spelling).\(procedure.spelling)")
-    }
 
     // MARK: - Private
 }

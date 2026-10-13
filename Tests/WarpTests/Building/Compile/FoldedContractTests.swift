@@ -22,6 +22,7 @@ struct FoldedContractTests {
         // where the contract is asked, and a document claims it for `Null`.
         let answering = try Module(
             claims: ["Null": ["App.Describable"]],
+            members: ["Null": ["describe"]],
             procedures: [
                 "Null.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .null)], returns: .string),

@@ -318,6 +318,7 @@ struct SeparateCompilationTests {
             procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
         )
         let answering = try Module(
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
@@ -624,6 +625,7 @@ struct SeparateCompilationTests {
             imports: ["App.Describable", "App.Describable.describe"],
             types: ["Bank.Account": .struct(["balance": .int])],
             claims: ["Bank.Account": ["App.Describable"]],
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
@@ -808,6 +810,7 @@ struct SeparateCompilationTests {
             imports: ["App.P"],
             types: ["Bank.Card": .struct(["last": .string])],
             claims: ["Bank.Card": ["App.P"]],
+            members: ["Bank.Card": ["show"]],
             procedures: [
                 "Bank.Card.show": Procedure(
                     access: .public,
@@ -942,6 +945,7 @@ struct SeparateCompilationTests {
         (
             typed: try Module(
                 types: ["Bank.Account": .struct(["balance": .int])],
+                members: ["Bank.Account": ["describe"]],
                 procedures: [
                     "Bank.Account.describe": Procedure(
                         signature: Signature(
@@ -1125,6 +1129,10 @@ struct SeparateCompilationTests {
                 claims: [
                     "Bank.Account": ["App.Describable"],
                     "Bank.Card": ["App.Describable"]
+                ],
+                members: [
+                    "Bank.Account": ["describe"],
+                    "Bank.Card": ["describe"]
                 ],
                 procedures: [
                     entryName: Procedure(

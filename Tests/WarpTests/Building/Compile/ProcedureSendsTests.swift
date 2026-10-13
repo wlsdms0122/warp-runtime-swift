@@ -465,6 +465,7 @@ struct ProcedureSendsTests {
             ]
         ],
         claims: ["Bank.Account": ["App.Describable"]],
+        members: ["Bank.Account": ["describe"]],
         procedures: [
             "Bank.Account.describe": Procedure(
                 access: .public,

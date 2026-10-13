@@ -353,6 +353,7 @@ struct BoundTests {
             types: ["Bank.Card": .struct(["last": .string])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .array(.named("App.Describable")))]],
             claims: ["Bank.Card": ["App.Describable"]],
+            members: ["Bank.Card": ["describe"]],
             procedures: [
                 "Bank.Card.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Card"))], returns: .array(.int)),
@@ -392,6 +393,7 @@ struct BoundTests {
                 "App.Printable": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .named("App.Describable"))]
             ],
             claims: ["Bank.Card": ["App.Describable"], "App.Box": ["App.Printable"]],
+            members: ["App.Box": ["show"]],
             procedures: [
                 "App.Box.show": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Box"))], returns: .named("Bank.Card")),
@@ -669,6 +671,7 @@ struct BoundTests {
                 ]
             ]) { held, _ in held },
             claims: ["Bank.Card": ["App.Kept"], "String": ["App.Marked"]],
+            members: ["Bank.Card": ["keep"]],
             procedures: [
                 "Bank.Card.keep": Procedure(
                     signature: Signature(

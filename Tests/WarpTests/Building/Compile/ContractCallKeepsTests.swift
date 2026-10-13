@@ -54,6 +54,7 @@ struct ContractCallKeepsTests {
             types: ["Bank.Box": .struct(["v": .int])],
             contracts: ["App.Show": ["show": Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .nullable(.int))], returns: .nullable(.int))]],
             claims: ["Bank.Box": ["App.Show"]],
+            members: ["Bank.Box": ["show"]],
             procedures: [
                 "App.entry": Procedure(
                     access: .public,

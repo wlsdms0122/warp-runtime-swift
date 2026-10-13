@@ -297,7 +297,6 @@ public struct Builder: Sendable {
             declaring,
             in: namespace,
             among: signatures,
-            concealed: concealed,
             fulfillment: fulfillment
         )
 
@@ -395,8 +394,7 @@ public struct Builder: Sendable {
         let lowered = try ClaimChecker().lowered(
             declaring,
             in: namespace,
-            among: signatures,
-            concealed: assembled.concealed
+            among: signatures
         )
         let types = lowered.types
 
