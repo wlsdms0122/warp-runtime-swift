@@ -156,7 +156,7 @@ struct DeclarationChecker {
         for (contract, declared) in contracts.sorted(by: { $0.key < $1.key }) {
             let home = Place.contract(contract.spelling, in: document)
 
-            try judge(bounds: declared.bounds, at: { _ in home.part(.bounds) }, in: table)
+            try judge(bounds: declared.bounds, at: { name in home.part(.bounds).key(name.spelling) }, in: table)
 
             for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
                 let place = home.part(.procedures).key(name.spelling)
@@ -297,11 +297,10 @@ struct DeclarationChecker {
                 answering: answering
             )
 
-            guard answering, let member = label.associated else { continue }
+            guard answering, label.associated != nil else { continue }
 
             let types = table.loweredTypes
-            let held = types.bounds(of: member.name, askedBy: signature.bounds[member.of] ?? [])?
-                .union(signature.bounds[label] ?? []) ?? []
+            let held = types.contracts(bounding: label, under: signature.bounds)
             let lowered = same.lowered(in: types, bounds: signature.bounds, sameTypes: signature.sameTypes)
 
             for bound in held.sorted() {
@@ -386,16 +385,24 @@ struct DeclarationChecker {
         case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
             return
 
-        // An associated type is one a contract bounding its parameter asks,
-        // `Self` in a contract's procedures being bounded by that contract.
+        // An associated type is one a contract bounding what it stands on
+        // asks, `Self` in a contract's procedures being bounded by that
+        // contract, and what it stands on is one too where it is written on
+        // another.
         case let .associatedType(of, name):
-            guard table.loweredTypes.bounds(of: name, askedBy: bounds[of] ?? []) != nil else {
-                let bounding = (bounds[of] ?? []).sorted().map(\.spelling).joined(separator: " & ")
+            if let standing = of.associated {
+                try part(.associatedType(of: standing.of, name: standing.name), at: place)
+            }
+
+            let contracts = table.loweredTypes.contracts(bounding: of, under: bounds)
+
+            guard table.loweredTypes.bounds(of: name, askedBy: contracts) != nil else {
+                let bounding = contracts.sorted().map(\.spelling).joined(separator: " & ")
 
                 throw BuildError(
                     "writes `\(type.rendered)`, and "
                         + (bounding.isEmpty ? "no contract bounds '\(of)'" : "'\(of)' is bounded by \(bounding)")
-                        + ", which asks no type '\(name)'. An associated type is one a contract bounding its parameter asks",
+                        + ", which asks no type '\(name)'. An associated type is one a contract bounding what it stands on asks",
                     at: place
                 )
             }
@@ -614,8 +621,7 @@ struct DeclarationChecker {
         for (parameter, names) in bounds.sorted(by: { $0.key < $1.key }) {
             for bound in names.sorted() where table.contracts[bound] == nil {
                 throw BuildError(
-                    "`\(TypeExpression.parameter(name: parameter).rendered)` names '\(bound)',"
-                        + " which no module in this link declares as a contract",
+                    "bounds '\(parameter)' by '\(bound)', which no module in this link declares as a contract",
                     at: place(parameter)
                 )
             }

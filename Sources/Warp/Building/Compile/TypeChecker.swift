@@ -292,7 +292,7 @@ struct TypeChecker {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: context().bounding(only.symbol.procedure.signature)
+                with: context().reading(only.symbol.procedure.signature)
             )
 
             // A reading naming a type parameter is handed on as it is. What a
@@ -540,8 +540,8 @@ struct TypeChecker {
             return .refusal(disagreement)
         }
 
-        if let refusal = substitution.associatedTypeRefusal(in: loweredTypes) {
-            return .refusal(refusal)
+        if let refused = substitution.associatedTypeRefusal(in: loweredTypes) {
+            return .refusal(refused.reason)
         }
 
         let bounds = declared.bounds.sorted(by: { $0.key < $1.key })
@@ -1087,10 +1087,6 @@ struct TypeChecker {
         )
     }
 
-    // What a call answers: the declaration's returns, filled from the operands
-    // where the declaration is generic. One statement of the rule, whichever
-    // ask gathered the readings, and the filling is asked for lazily, so a
-    // non-generic call never pays for it.
     // What a call puts in the type parameters a declaration names: what the
     // arguments read each as, and each associated type of one as what fills
     // its parameter gives under its name, one of a parameter of the
@@ -1107,7 +1103,7 @@ struct TypeChecker {
 
         substitution.derive(
             signature.associatedTypes,
-            over: slots.map(\.type),
+            bounds: signature.bounds,
             said: signature.loweredSameTypes(in: context.loweredTypes),
             reading: context.associatedTypes,
             in: context.loweredTypes
@@ -1116,6 +1112,10 @@ struct TypeChecker {
         return substitution
     }
 
+    // What a call answers: the declaration's returns, filled from the operands
+    // where the declaration is generic. One statement of the rule, whichever
+    // ask gathered the readings, and the filling is asked for lazily, so a
+    // non-generic call never pays for it.
     private func answered(
         by signature: Signature?,
         answering: LoweredType?,

@@ -65,7 +65,7 @@ struct TypingContext: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // The same context, reading the body of a procedure declared this way.
-    func bounding(_ signature: Signature) -> TypingContext {
+    func reading(_ signature: Signature) -> TypingContext {
         var held = self
         held.bounds = signature.bounds
         held.sameTypes = signature.sameTypes

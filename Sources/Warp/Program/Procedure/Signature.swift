@@ -86,7 +86,7 @@ public struct Signature: Sendable, Equatable {
             }
 
         return Set(bounds.keys).union(sameTypes.keys).reduce(into: written) { found, key in
-            if let member = key.associated { found[key] = member }
+            found.merge(TypeExpression.associatedTypes(of: key)) { first, _ in first }
         }
     }
 
@@ -167,13 +167,13 @@ public struct Signature: Sendable, Equatable {
     // `declared` gives that name and said to be what `said` says, since the
     // procedure around it owns the name.
     func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
-        let named = parameterNames.union(associatedTypes.values.map(\.of))
+        let named = parameterNames.union(associatedTypes.keys.map(\.root))
 
         return Signature(
             parameters: parameters,
             returns: returns,
-            bounds: declared.filter { name, _ in named.contains(name.associated?.of ?? name) },
-            sameTypes: said.filter { label, _ in named.contains(label.associated?.of ?? label) }
+            bounds: declared.filter { name, _ in named.contains(name.root) },
+            sameTypes: said.filter { label, _ in named.contains(label.root) }
         )
     }
 

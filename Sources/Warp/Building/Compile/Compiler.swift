@@ -131,7 +131,7 @@ struct Compiler {
                     in: opening(declaration.signature),
                     declaring: symbol.declared,
                     answering: declaration.signature.returns,
-                    with: context().bounding(declaration.signature),
+                    with: context().reading(declaration.signature),
                     folding: folding
                 )
 
@@ -150,7 +150,7 @@ struct Compiler {
 
             // Judged as the declaration reads its own type parameters, since an
             // associated type a call fills from one is the declaration's.
-            try TypeChecker().checked(answer.calls, in: context().bounding(answer.procedure.signature))
+            try TypeChecker().checked(answer.calls, in: context().reading(answer.procedure.signature))
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.

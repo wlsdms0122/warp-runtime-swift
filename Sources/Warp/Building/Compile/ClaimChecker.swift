@@ -280,7 +280,7 @@ struct ClaimChecker {
                 )
             }
 
-            if let under = member.head.applying(types[type]?.held).lowered(in: loweredTypes),
+            if let under = loweredTypes.typeMembers[type]?[name]?.head,
                 loweredTypes.refusal(of: values, under: under) != nil {
                 throw BuildError(
                     says + ", and '\(type)' is given the type member '\(name)' under '\(member.head.spelling)',"
@@ -433,10 +433,15 @@ struct ClaimChecker {
         let asks = read.lowered(in: loweredTypes).map { slot in slot.type.replacingParameters(readingSelf) }
         var substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
-        substitution.derive(given.associatedTypes, over: takes, said: given.loweredAssociatedTypes(in: loweredTypes), in: loweredTypes)
+        substitution.derive(
+            given.associatedTypes,
+            bounds: given.bounds,
+            said: given.loweredSameTypes(in: loweredTypes),
+            in: loweredTypes
+        )
 
-        if let refusal = substitution.associatedTypeRefusal(in: loweredTypes) {
-            return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)' asks, and \(refusal)"
+        if let refused = substitution.associatedTypeRefusal(in: loweredTypes) {
+            return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)' asks, and \(refused.reason)"
         }
 
         // What fills the declaration's own parameters is held to their bounds

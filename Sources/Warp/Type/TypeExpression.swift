@@ -228,7 +228,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .projection(of, path):
             return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
-        case let .associatedType(of, name) where of == TypeSpelling.selfType:
+        case let .associatedType(of, name) where of.root == TypeSpelling.selfType:
             return name.spelled(under: of).spelling
 
         case let .associatedType(of, name):
@@ -310,11 +310,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // Every associated type named in here, by the label its lowering takes,
-    // beside what it is an associated type of and the name it is asked under.
+    // beside what it is an associated type of and the name it is asked under:
+    // each one written, and each one written stands on.
     var associatedTypes: [Name: (of: Name, name: Name)] {
         switch self {
         case let .associatedType(of, name):
-            return [name.spelled(under: of): (of, name)]
+            return Self.associatedTypes(of: name.spelled(under: of))
 
         case let .array(element), let .nullable(element), let .variable(element), let .inout(element):
             return element.associatedTypes
@@ -333,6 +334,19 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case .any, .never, .null, .bool, .int, .double, .string, .parameter, .projection, .composition, .selfType:
             return [:]
         }
+    }
+
+    // The associated type under a label and each one it stands on, by label.
+    static func associatedTypes(of label: Name) -> [Name: (of: Name, name: Name)] {
+        var found: [Name: (of: Name, name: Name)] = [:]
+        var next = label
+
+        while let standing = next.associated {
+            found[next] = standing
+            next = standing.of
+        }
+
+        return found
     }
 
     // Every type parameter named in here.
@@ -478,9 +492,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // MARK: - Initializer
     // MARK: - Public
     // The same type with `Self` written as `type` wherever it stands: what a
-    // contract's procedure says once a claim names the type answering it, or
-    // once a call through the contract reads `Self` as one of its type
-    // parameters.
+    // contract's procedure says once a call through the contract reads `Self`
+    // as one of its type parameters.
     func replacingSelf(with type: TypeExpression) -> TypeExpression {
         switch self {
         case .selfType:

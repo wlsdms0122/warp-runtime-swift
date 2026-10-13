@@ -393,19 +393,37 @@ public final class Linked: Sendable {
             against: values.map { value in LoweredType(of: value, in: table) },
             in: table
         )
-        let members = signature.associatedTypes
+        let associated = signature.associatedTypes
 
-        // A member is what the type of the value at its parameter gives, so
-        // a value at one is held to that type.
-        if !members.isEmpty {
-            substitution.derive(members, over: types, said: signature.loweredSameTypes(in: table), in: table)
+        // The inputs standing on a label, or on what it stands on.
+        let standing = { (label: Name) in
+            self.slots
+                .filter { slot in slot.type.typeParameters[label] != nil || slot.type.typeParameters[label.root] != nil }
+                .map { slot in "input '\(slot.name)'" }
+                .joined(separator: ", ")
+        }
 
-            let disagreeing = members.keys.sorted().lazy.compactMap { label in
-                substitution.disagreement(of: label, in: table)
+        // An associated type is what the type of the value at its parameter
+        // gives, so a value at one is held to that type, and the type to what
+        // bounds the associated type.
+        if !associated.isEmpty {
+            substitution.derive(
+                associated,
+                bounds: signature.bounds,
+                said: signature.loweredSameTypes(in: table),
+                in: table
+            )
+
+            if let refused = substitution.associatedTypeRefusal(in: table) {
+                throw ArgumentError("\(standing(refused.label)): \(refused.reason)")
             }
 
-            if let refusal = substitution.associatedTypeRefusal(in: table) ?? disagreeing.first {
-                throw ArgumentError(refusal)
+            for label in substitution.derived.sorted() {
+                let bounds = table.contracts(bounding: label, under: signature.bounds)
+
+                if let refusal = substitution.unanswered(label, bounds: bounds, in: table) {
+                    throw ArgumentError("\(standing(label)): \(refusal)")
+                }
             }
         }
 
@@ -417,7 +435,7 @@ public final class Linked: Sendable {
             in: table
         )
 
-        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) where members[parameter] == nil {
+        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) where !substitution.derived.contains(parameter) {
             let read = bounds.isEmpty ? substitution : unapplied
             let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
             let refusal = read.disagreement(of: parameter, in: table)
@@ -425,12 +443,7 @@ public final class Linked: Sendable {
                 ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table))
 
             if let refusal {
-                let standing = slots
-                    .filter { slot in slot.type.typeParameters[parameter] != nil }
-                    .map { slot in "input '\(slot.name)'" }
-                    .joined(separator: ", ")
-
-                throw ArgumentError("\(standing): \(refusal)")
+                throw ArgumentError("\(standing(parameter)): \(refusal)")
             }
         }
 
@@ -439,7 +452,7 @@ public final class Linked: Sendable {
 
             let standing = LoweredType.parameter(label: name, bounds: bounds)
 
-            guard members[name] == nil else {
+            guard !substitution.derived.contains(name) else {
                 filled[name] = substitution.readings[name] ?? standing
 
                 return

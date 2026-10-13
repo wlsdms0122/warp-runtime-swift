@@ -20,6 +20,10 @@ struct LoweredTypeMember: Sendable {
     // which what fills those parameters decides.
     let associatedTypes: [Name: (of: Name, name: Name)]
 
+    // What the head holds its type parameters to, which is what bounds what
+    // those associated types stand on.
+    let bounds: [Name: Set<Name>]
+
     // MARK: - Initializer
     // `head` is what the member was given under, applied to its type's own
     // parameters where it is bare.
@@ -27,6 +31,7 @@ struct LoweredTypeMember: Sendable {
         self.head = head.lowered(in: table)
         self.type = member.lowered(in: table, bounds: head.bounds)
         self.associatedTypes = member.associatedTypes
+        self.bounds = head.bounds
     }
 
     // MARK: - Public

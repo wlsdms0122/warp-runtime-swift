@@ -102,11 +102,11 @@ extension TypeExpression {
             return .projection(of: of, path: path)
 
         // An associated type is a type parameter of its own, labelled as it is
-        // written, which what fills its base decides. The contracts bounding
-        // the base say what holds it, the signature may say more, and where
-        // the signature says it is a type it is that type. One no contract
-        // bounding the base asks stands for no type, which the build refuses
-        // where it is written.
+        // written, which what fills what it stands on decides. The contracts
+        // bounding that say what holds it, the signature may say more, and
+        // where the signature says it is a type it is that type. One no
+        // contract bounding it asks stands for no type, which the build
+        // refuses where it is written.
         case let .associatedType(of, name):
             let label = name.spelled(under: of)
 
@@ -114,7 +114,9 @@ extension TypeExpression {
                 return same.lowered(in: table, bounds: bounds, sameTypes: sameTypes.filter { key, _ in key != label })
             }
 
-            guard let asked = table.bounds(of: name, askedBy: bounds[of] ?? []) else { return .never }
+            guard let asked = table.bounds(of: name, askedBy: table.contracts(bounding: of, under: bounds)) else {
+                return .never
+            }
 
             return lowered(bounds: asked.union(bounds[label] ?? []), in: table) { bounds in
                 .parameter(label: label, bounds: bounds)

@@ -458,7 +458,7 @@ struct TypeReader: Decodable {
     // own name with a dot between them, or nil where the spelling writes no
     // dot. Read at the last dot, so `T.Item.Key` is `T.Item`'s `Key`.
     private static func associatedType(_ text: String) throws -> TypeExpression? {
-        guard let dot = text.firstIndex(of: ".") else { return nil }
+        guard let dot = text.lastIndex(of: ".") else { return nil }
 
         return .associatedType(
             of: try named(String(text[..<dot]).trimmingCharacters(in: Path.whiteSpace)),

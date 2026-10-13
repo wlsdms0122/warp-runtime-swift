@@ -339,6 +339,23 @@ final class LoweredTypeTable: Sendable {
         return nil
     }
 
+    // The contracts bounding what a label stands for under `bounds`, a
+    // signature's or a head's: a type parameter's bounds, and an associated
+    // type's what the contracts bounding what it stands on hold it to beside
+    // its own.
+    func contracts(bounding label: Name, under bounds: [Name: Set<Name>]) -> Set<Name> {
+        let own = bounds[label] ?? []
+
+        guard
+            let standing = label.associated,
+            let asked = self.bounds(of: standing.name, askedBy: contracts(bounding: standing.of, under: bounds))
+        else {
+            return own
+        }
+
+        return asked.union(own)
+    }
+
     // What an associated type `name` of a type parameter bounded by `contracts`
     // is held to: what each of them asking a type under the name holds it to,
     // or nil where none asks one.
@@ -384,7 +401,7 @@ final class LoweredTypeTable: Sendable {
 
             var substitution = Substitution(filling: [head], against: [base], in: self)
 
-            substitution.derive(given.associatedTypes, over: [head], in: self)
+            substitution.derive(given.associatedTypes, bounds: given.bounds, in: self)
 
             return given.type.filling(substitution.readings)
         }

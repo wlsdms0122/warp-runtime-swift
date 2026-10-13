@@ -97,7 +97,7 @@ public struct Draft: Sendable {
     // The types this document gives each type, by the head it gives them
     // under and the name each is given: what a contract asking a type under
     // that name is answered by, and what a type parameter the type fills
-    // reads as its member.
+    // reads as its associated type.
     public let typeMembers: [Head: [Name: TypeExpression]]
 
     public let constants: [Name: Expression]
@@ -160,7 +160,7 @@ public struct Draft: Sendable {
         self.claims = claims
         self.members = members
         self.spelledMembers = Member.spelled(members)
-        self.typeMembers = typeMembers.filter { _, types in !types.isEmpty }
+        self.typeMembers = typeMembers
         self.constants = constants
         self.variables = variables
         self.procedures = procedures
