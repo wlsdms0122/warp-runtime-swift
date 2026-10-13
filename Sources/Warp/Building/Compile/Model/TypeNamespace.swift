@@ -21,11 +21,10 @@ struct TypeNamespace {
     let contracts: [Name: Placed<[Name: ContractProcedure]>]
 
     // What each document said one of its types, or another document's,
-    // answers. A list, since a claim declares no name for a table to be keyed
-    // by. A claim two documents write under one head is one claim: it holds
-    // nothing but the head and the contract, so the second says what the
-    // first said. Whether two heads take the same values is the build's,
-    // where their names resolve.
+    // answers, each where it was written. A list, since a claim declares no
+    // name for a table to be keyed by. A claim two documents write about one
+    // pair is one claim where the heads take the same values, which the
+    // build holds where the claims a document stands on are gathered.
     let claims: [Placed<Claim>]
 
     // Every procedure a document gave a type, by the spelling a call writes,
@@ -127,8 +126,12 @@ struct TypeNamespace {
                 )
             }
         }
-        var claimed = Set(claims.map(\.held))
+        let language = Set(claims.map(\.held))
 
+        // Every document's claims, the same claim made by two documents
+        // standing twice: each is judged where it is written, and which of
+        // them a document stands on is its reach. One type answering a
+        // contract one way is held where the claims are gathered for asking.
         for (handed, held) in documents.enumerated() {
             for (head, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
@@ -138,7 +141,7 @@ struct TypeNamespace {
                         of: handed
                     )
 
-                    guard claimed.insert(claim.held).inserted else { continue }
+                    guard !language.contains(claim.held) else { continue }
 
                     claims.append(claim)
                 }

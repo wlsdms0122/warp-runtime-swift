@@ -115,6 +115,7 @@ public struct Builder: Sendable {
 
         try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
+        try refuseImportedTwice(compiled)
 
         // Laid end to end through the door a link lays documents through, so a
         // name two of them declare is refused here as it is there.
@@ -234,6 +235,8 @@ public struct Builder: Sendable {
 
         let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
 
+        try refuseImportedTwice(documents)
+
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
         // their rows, and what they wrote themselves. No spelling is in it
@@ -281,7 +284,13 @@ public struct Builder: Sendable {
         // The table no claim answers yet, which every document's own is made
         // from. What a contract asks and which spellings it takes are the
         // declarations' alone.
-        let unclaimed = try ClaimChecker().lowered(declaring, holding: [], in: namespace, among: signatures)
+        let unclaimed = try ClaimChecker().lowered(
+            declaring,
+            holding: [],
+            in: namespace,
+            among: signatures,
+            holdsEveryClaim: false
+        )
 
         // A document never written down is told from another by this compile
         // of it, so each is given that here and carries it out.
@@ -350,7 +359,8 @@ public struct Builder: Sendable {
             let answering = try tables[claimed] ?? ClaimChecker().satisfying(
                 declaring,
                 holding: claimed.map { index in namespace.claims[index] },
-                in: namespace
+                in: namespace,
+                holdsEveryClaim: false
             )
 
             tables[claimed] = answering
@@ -419,6 +429,7 @@ public struct Builder: Sendable {
     ) throws -> Image {
         try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
+        try refuseImportedTwice(compiled)
 
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
@@ -551,6 +562,36 @@ public struct Builder: Sendable {
                     + " (\(missing)) that is not laid beside it as it was then",
                 at: Place(in: compiled[origin].document)
             )
+        }
+    }
+
+    // A claim a document imports is made by one document of the link, the
+    // way a name it uses is declared by one: what it stands on is then the
+    // same whichever documents the host compiled it beside. Two documents
+    // making one claim stay one claim for every document reaching both by
+    // what they name.
+    private func refuseImportedTwice(_ documents: [any Declaring]) throws {
+        var makers: [ClaimPair: [Int]] = [:]
+
+        for (position, document) in documents.enumerated() {
+            for (head, contracts) in document.claims {
+                for contract in contracts {
+                    makers[ClaimPair(head.type, contract), default: []].append(position)
+                }
+            }
+        }
+
+        for (position, document) in documents.enumerated() {
+            for pair in document.importedClaims.sorted() {
+                guard let making = makers[pair], making.count > 1 else { continue }
+
+                throw BuildError(
+                    "imports the claim '\(pair.spelling)', which "
+                        + making.map { maker in documents[maker].document.spelled(at: maker) }.joined(separator: " and ")
+                        + " make. A claim a document imports is made by one document of the link",
+                    at: Place([.part(.imports)], in: documents[position].document)
+                )
+            }
         }
     }
 

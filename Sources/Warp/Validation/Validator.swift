@@ -305,13 +305,29 @@ struct Validator: Sendable {
             }
         })
         let made = module.draft.claimedPairs
+        let imports = Place([.part(.imports)], in: .of(module))
 
-        if let own = module.importedClaims.sorted().first(where: made.contains) {
-            throw ValidationError(
-                "imports the claim '\(own.spelling)', which it makes itself."
-                    + " A document stands on its own claims",
-                at: Place([.part(.imports)], in: .of(module))
-            )
+        for pair in module.importedClaims.sorted() {
+            try held(pair.type, as: .claimedType, at: imports)
+            try held(pair.contract, as: .contractMention, at: imports)
+
+            if made.contains(pair) {
+                throw ValidationError(
+                    "imports the claim '\(pair.spelling)', which it makes itself."
+                        + " A document stands on its own claims",
+                    at: imports
+                )
+            }
+
+            // What the language claims stands within every document's reach,
+            // the way a name the language declares is used without an import.
+            if Prelude.claims[pair.type]?.contains(pair.contract) == true {
+                throw ValidationError(
+                    "imports the claim '\(pair.spelling)', which the language makes."
+                        + " What the language claims is within every document's reach",
+                    at: imports
+                )
+            }
         }
 
         let undisclosed = used.subtracting(module.imports).sorted().map(\.spelling)

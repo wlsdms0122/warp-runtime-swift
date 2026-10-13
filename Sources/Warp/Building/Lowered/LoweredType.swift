@@ -2042,17 +2042,17 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // A type parameter the call site filled, or a composition, holding what
     // arrived to a contract by what the value reads as, in the sentence the
-    // build refuses such a reading in: what the link found to answer it is
-    // what a value may arrive as, and a table that cannot say yet writes the
-    // claim down. Neither settles: a value stands as it arrived.
+    // build refuses such a reading in: what the claims the table holds answer
+    // is what a value may arrive as. It does not settle: a value stands as it
+    // arrived.
     private func standing(
         _ value: Value,
         answering name: Name,
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        let refusal = table.refusal(
-            of: table.reading(of: value, answering: name),
+        let refusal = try table.refusal(
+            ofValue: table.reading(of: value, answering: name),
             answering: name,
             orNull: false,
             as: "is"

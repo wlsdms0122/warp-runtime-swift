@@ -92,12 +92,13 @@ public struct TypeTable: Sendable {
     // and a compile asks it of the claims within each document's reach, so
     // the table is remade per asker rather than holding an answer it did not
     // have. The rows are the first table's: only what answers changes.
-    func satisfying(_ satisfying: [Name: [Name: Head]]) -> TypeTable {
+    func satisfying(_ satisfying: [Name: [Name: Head]], holdsEveryClaim: Bool) -> TypeTable {
         TypeTable(
             types: types,
             contracts: contracts,
             loweredTypes: loweredTypes.satisfying(
-                satisfying.merging(contracts.keys.map { contract in (contract, [Name: Head]()) }) { held, _ in held }
+                satisfying.merging(contracts.keys.map { contract in (contract, [Name: Head]()) }) { held, _ in held },
+                holdsEveryClaim: holdsEveryClaim
             ),
             standing: standing,
             of: linkage

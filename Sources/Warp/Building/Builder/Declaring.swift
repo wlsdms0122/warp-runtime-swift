@@ -27,8 +27,11 @@ protocol Declaring {
     var claims: [Head: Set<Name>] { get }
 
     // The procedures this document gives each type, by the head it gives
-    // them under.
-    // What answers a contract's procedure for a type is the type's member of
-    // that name, whichever document gave it.
+    // them under. What answers a contract's procedure for a type is the
+    // type's member of that name, given within what the claim's document
+    // stands on.
     var members: [Head: Set<Name>] { get }
+
+    // The claims other documents make that this one stands on.
+    var importedClaims: Set<ClaimPair> { get }
 }

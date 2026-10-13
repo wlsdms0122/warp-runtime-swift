@@ -171,19 +171,22 @@ public struct ModuleReader: Decodable {
 
         for (position, spelled) in try written.read([String].self).enumerated() {
             let steps = written.steps + [.index(position)]
-            let parts = spelled.components(separatedBy: Self.claimSeparator)
+            let parts = spelled.split(separator: ":", omittingEmptySubsequences: false)
+                .map { part in part.trimmingCharacters(in: .whitespaces) }
 
             switch parts.count {
             case 1:
                 names.insert(try Name.read(spelled, at: steps))
 
+            // Written the one way where a document is loaded, which the
+            // write-back holds a text to.
             case 2:
                 claims.insert(ClaimPair(try Name.read(parts[0], at: steps), try Name.read(parts[1], at: steps)))
 
             default:
                 throw ReadingError(
                     "imports '\(spelled)', which is neither a name nor a claim: a claim is written"
-                        + " as the type and the contract it is about, `T.Card\(Self.claimSeparator)App.Describable`",
+                        + " as the type and the contract it is about, `T.Card: App.Describable`",
                     at: steps
                 )
             }
@@ -192,8 +195,6 @@ public struct ModuleReader: Decodable {
         return (names.isEmpty && !claims.isEmpty ? nil : names, claims)
     }
 
-    // What stands between a claim's type and its contract among the imports.
-    static let claimSeparator = ": "
 
     // One of the slots a module declares a mapping of things under, read
     // standing on the slot so that what is refused inside it is addressed

@@ -38,9 +38,10 @@ struct ClaimChecker {
         _ declaring: TypeTable,
         holding claims: [Placed<Claim>],
         in namespace: TypeNamespace,
-        among signatures: [Name: Placed<Declared>]
+        among signatures: [Name: Placed<Declared>],
+        holdsEveryClaim: Bool = true
     ) throws -> (types: TypeTable, contractProcedures: [Name: LoweredContractProcedure]) {
-        let table = try satisfying(declaring, holding: claims, in: namespace)
+        let table = try satisfying(declaring, holding: claims, in: namespace, holdsEveryClaim: holdsEveryClaim)
 
         // The procedures the contracts ask, under the spellings a call writes to
         // reach them. Read off the table the satisfaction was just written
@@ -73,13 +74,15 @@ struct ClaimChecker {
         return (types: table, contractProcedures: contractProcedures)
     }
 
-    // The table answering with `claims`, one claim each. What a contract
-    // asks and which spellings it takes are the declarations', so a table
-    // answering with other claims asks the same procedures.
+    // The table answering with `claims`, one claim each, every claim the link
+    // holds or those within one document's reach. What a contract asks and
+    // which spellings it takes are the declarations', so a table answering
+    // with other claims asks the same procedures.
     func satisfying(
         _ declaring: TypeTable,
         holding claims: [Placed<Claim>],
-        in namespace: TypeNamespace
+        in namespace: TypeNamespace,
+        holdsEveryClaim: Bool
     ) throws -> TypeTable {
         let kept = try Self.oneHeadEach(claims, over: namespace.types, in: declaring)
         let held = kept.reduce(
@@ -88,7 +91,7 @@ struct ClaimChecker {
             table[placed.held.contract]?[placed.held.type] = placed.held.head
         }
 
-        return declaring.satisfying(held)
+        return declaring.satisfying(held, holdsEveryClaim: holdsEveryClaim)
     }
 
     // What one document gives types, held to what stands behind it within
