@@ -388,6 +388,22 @@ public struct Place: Sendable, Hashable {
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 
+    // Where a signature standing here writes a bound: beside the first
+    // `some T` its slots write, the parameters in order and then the answer,
+    // and under `bounds` for what it does not introduce, an associated type's
+    // label.
+    public func bound(_ name: Name, of signature: Signature) -> Place {
+        if let position = signature.parameters.firstIndex(where: { parameter in parameter.type.parameterNames.contains(name) }) {
+            return part(.parameters).index(position)
+        }
+
+        if signature.returns?.parameterNames.contains(name) == true {
+            return part(.returns)
+        }
+
+        return part(.bounds).key(name.spelling)
+    }
+
     // A name with nothing in it is no name. The position is what is left to
     // call the statement by, and a step that rendered an empty name would put a
     // dot in front of nothing.

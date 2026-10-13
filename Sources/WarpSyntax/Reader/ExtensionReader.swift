@@ -64,7 +64,7 @@ public struct ExtensionReader: Decodable {
                     )
                 }
             ),
-            try types?.read([Name: TypeReader].self).mapValues(\.type) ?? [:],
+            try types?.read([Name: TypeReader].self).mapValues { member in try member.unbounded() } ?? [:],
             try procedures?.read([Name: ProcedureReader].self).mapValues(\.procedure) ?? [:]
         )
     }

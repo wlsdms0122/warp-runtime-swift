@@ -39,6 +39,10 @@ struct TypeReader: Decodable {
         // MARK: - Property
         let type: ProcedureType
 
+        // The type parameters its types name, the parameters' in order and
+        // then the answer's.
+        let namings: [Naming]
+
         // MARK: - Initializer
         init(from decoder: Decoder) throws {
             try KeyGate().rejectUnknownKeys(
@@ -48,18 +52,17 @@ struct TypeReader: Decodable {
             )
 
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let parameters = try container.decodeIfPresent([TypeReader].self, forKey: .parameters) ?? []
+            let returns = try container.decodeIfPresent(TypeReader.self, forKey: .returns)
 
             self.type = ProcedureType(
-                parameters: try container
-                    .decodeIfPresent([TypeReader].self, forKey: .parameters)?
-                    .map(\.type) ?? [],
-                returns: try container
-                    .decodeIfPresent(TypeReader.self, forKey: .returns)?
-                    .type,
+                parameters: parameters.map(\.written),
+                returns: returns?.written,
                 failing: try container
                     .decodeIfPresent([String].self, forKey: .failing)
                     .map { failures in .these(Set(failures)) } ?? .unstated
             )
+            self.namings = (parameters + [returns].compactMap { returns in returns }).flatMap(\.namings)
         }
 
         // MARK: - Public
@@ -77,6 +80,9 @@ struct TypeReader: Decodable {
         // MARK: - Property
         let type: TypeExpression
 
+        // The type parameters its types name, the key's and then the value's.
+        let namings: [Naming]
+
         // MARK: - Initializer
         init(from decoder: Decoder) throws {
             try KeyGate().rejectUnknownKeys(
@@ -86,11 +92,11 @@ struct TypeReader: Decodable {
             )
 
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            let key = try container.decode(TypeReader.self, forKey: .key)
+            let value = try container.decode(TypeReader.self, forKey: .value)
 
-            self.type = .dictionary(
-                key: try container.decode(TypeReader.self, forKey: .key).type,
-                value: try container.decode(TypeReader.self, forKey: .value).type
-            )
+            self.type = .dictionary(key: key.written, value: value.written)
+            self.namings = key.namings + value.namings
         }
 
         // MARK: - Public
@@ -151,8 +157,25 @@ struct TypeReader: Decodable {
         case key
     }
 
+    // A type parameter a type names, `some T`, beside the contracts a bound
+    // written there holds it to and where it was written.
+    struct Naming {
+        let name: Name
+        let bound: Set<Name>?
+        let steps: [Place.Step]
+    }
+
     // MARK: - Property
-    let type: TypeExpression
+    // What is written. Taken through `unbounded()` where no bound may stand,
+    // and with `namings` in a slot, which a bound may stand beside.
+    private let written: TypeExpression
+
+    // The type parameters the type names, in the order the reading meets
+    // them, a procedure type's and a map type's included.
+    let namings: [Naming]
+
+    // What a slot reads: the type, and the type parameters it names.
+    var bounded: (type: TypeExpression, namings: [Naming]) { (written, namings) }
 
     // The key a procedure type is written under.
     static let procedureKey: Name = "procedure"
@@ -169,17 +192,53 @@ struct TypeReader: Decodable {
     // statement rather than in whichever branch threw.
     init(from decoder: Decoder) throws {
         do {
-            self.type = try Self.read(from: decoder)
+            (self.written, self.namings) = try Self.read(from: decoder)
         } catch let error as TypeFormError {
             throw ReadingError(error.message, at: decoder.steps)
         }
     }
 
+    private init(_ written: TypeExpression, namings: [Naming]) {
+        self.written = written
+        self.namings = namings
+    }
+
     // MARK: - Public
+    // The type, where nothing it names is bounded here. A type parameter is
+    // bounded where it is introduced, and a type read through this is not
+    // where one is.
+    func unbounded() throws -> TypeExpression {
+        if let bounded = namings.first(where: { naming in naming.bound != nil }) {
+            throw ReadingError(Self.unintroduced(bounded.name), at: bounded.steps)
+        }
+
+        return written
+    }
+
     // A type from its spelling, a declared name written short standing for
-    // what the notation reads it as.
+    // what the notation reads it as. `steps` are where it is written.
+    static func reading(
+        _ written: String,
+        in notation: Notation = .canonical,
+        at steps: [Place.Step] = []
+    ) throws -> TypeReader {
+        var namings: [Naming] = []
+        let type = try parse(written, qualifying: { name in notation.qualified(name, as: .type) }) { name, bound in
+            namings.append(Naming(name: name, bound: bound, steps: steps))
+        }
+
+        return TypeReader(type, namings: namings)
+    }
+
+    // The same, where no bound may stand.
     static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
-        try parse(written) { name in notation.qualified(name, as: .type) }
+        let read = try reading(written, in: notation)
+
+        if let bounded = read.namings.first(where: { naming in naming.bound != nil }) {
+            throw TypeFormError(unintroduced(bounded.name))
+        }
+
+        return read.written
     }
 
     // What a document gives something to, from the key it writes it under:
@@ -318,7 +377,7 @@ struct TypeReader: Decodable {
     private static func parse(
         _ written: String,
         qualifying: (Name) -> Name,
-        bounding: ((Name, Set<Name>?) throws -> Void)? = nil
+        bounding: (Name, Set<Name>?) throws -> Void
     ) throws -> TypeExpression {
         let text = written.trimmingCharacters(in: Path.whiteSpace)
 
@@ -352,20 +411,42 @@ struct TypeReader: Decodable {
             return .procedure(signature, constness, isolation)
         }
 
-        // A head's own type parameter, beside the contracts it is bounded by.
-        // Read before `&`, which joins the bounds here.
-        if let bounding, let parameter = dropPrefixed("\(TypeSpelling.some) ", from: text) {
-            let parts = parameter.split(separator: ":", maxSplits: 1)
+        // A type parameter rather than a name: `some T` is worked out from the
+        // call, where `T` alone would be looked up in the table of declared
+        // types. Where it is introduced, the contracts it is bounded by stand
+        // beside it, `some T: Hashable & Equatable`, read before `&`, which
+        // joins the bounds here.
+        //
+        // `some T.Item` is the type the type filling `T` gives under `Item`,
+        // and `Self.Item` the type the type answering a contract does.
+        if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
+            let parameter = text.dropFirst(TypeSpelling.some.spelling.count)
+            let parts = parameter.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            let label = parts[0].trimmingCharacters(in: Path.whiteSpace)
 
-            // An associated type read as one, for the load to say a head
-            // writes none.
-            if parts.count == 1, let associated = try associatedType(String(parameter)) {
-                return associated
+            guard parts.count > 1 else {
+                if let associated = try associatedType(label) {
+                    return associated
+                }
+
+                let name = try named(label)
+
+                try bounding(name, nil)
+
+                return .parameter(name: name)
             }
 
-            let name = try named(parts[0].trimmingCharacters(in: Path.whiteSpace))
+            guard !label.contains(".") else {
+                throw TypeFormError(
+                    "writes a bound beside '\(label)', an associated type, and a bound stands beside a type"
+                        + " parameter where it is introduced. A signature holds an associated type to a contract"
+                        + " under `bounds`, keyed by '\(label)'"
+                )
+            }
 
-            try bounding(name, parts.count > 1 ? try contracts(String(parts[1]), qualifying: qualifying) : nil)
+            let name = try named(label)
+
+            try bounding(name, try contracts(String(parts[1]), qualifying: qualifying))
 
             return .parameter(name: name)
         }
@@ -380,23 +461,6 @@ struct TypeReader: Decodable {
             }
 
             return .composition(names)
-        }
-
-        // A type parameter rather than a name: `some T` is worked out from the
-        // call, where `T` alone would be looked up in the table of declared
-        // types. A slot only names the parameter; its bound is the
-        // signature's, under `BoundsReader`.
-        //
-        // `some T.Item` is the type the type filling `T` gives under `Item`,
-        // and `Self.Item` the type the type answering a contract does.
-        if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
-            let written = text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)
-
-            if let associated = try associatedType(written) {
-                return associated
-            }
-
-            return .parameter(name: try named(written))
         }
 
         if text.hasPrefix("\(TypeSpelling.selfType.spelling)."), let associated = try associatedType(text) {
@@ -522,11 +586,13 @@ struct TypeReader: Decodable {
         return parts
     }
 
-    private static func read(from decoder: Decoder) throws -> TypeExpression {
+    private static func read(from decoder: Decoder) throws -> (TypeExpression, [Naming]) {
         let notation = decoder.notation
 
         if let written = try? decoder.singleValueContainer().decode(String.self) {
-            return try parse(written, in: notation)
+            let read = try reading(written, in: notation, at: decoder.steps)
+
+            return (read.written, read.namings)
         }
 
         guard case .dictionary = try ValueReader(from: decoder).value else {
@@ -543,15 +609,19 @@ struct TypeReader: Decodable {
             let form = try keyed.decode(ProcedureTypeReader.self, forKey: key)
             let written = TypeExpression.procedure(form.type, constness, isolation)
 
-            return mark?.marking(written) ?? written
+            return (mark?.marking(written) ?? written, form.namings)
 
         // An array or a dictionary of something with no spelling of its own:
         // an array of procedures has no name, so it is written here.
         case let .one(.holding(.array), key):
-            return .array(try keyed.decode(TypeReader.self, forKey: key).type)
+            let element = try keyed.decode(TypeReader.self, forKey: key)
+
+            return (.array(element.written), element.namings)
 
         case let .one(.holding(.dictionary), key):
-            return try keyed.decode(DictionaryTypeReader.self, forKey: key).type
+            let form = try keyed.decode(DictionaryTypeReader.self, forKey: key)
+
+            return (form.type, form.namings)
 
         case let .among(tags):
             throw ReadingError(
@@ -563,6 +633,13 @@ struct TypeReader: Decodable {
         case .none:
             throw ReadingError(Self.unread, at: decoder.steps)
         }
+    }
+
+    // Why a bound stands nowhere but where a type parameter is introduced.
+    private static func unintroduced(_ name: Name) -> String {
+        "bounds '\(name)' where no bound is written. A type parameter is bounded where it is introduced:"
+            + " at the first `some \(name)` a procedure's slots write, in a struct's `typeParameters`"
+            + " and in an extension's head"
     }
 
     // The rest of the text where it begins with this, and nothing where it does

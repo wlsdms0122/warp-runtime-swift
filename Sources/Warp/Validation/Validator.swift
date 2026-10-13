@@ -109,12 +109,12 @@ struct Validator: Sendable {
                     throw ValidationError(
                         "bounds '\(name)', and the contract asks no type '\(name)'. A contract's bound holds"
                             + " a type it asks",
-                        at: home.part(.bounds).key(name.spelling)
+                        at: home.part(.types)
                     )
                 }
 
                 for bound in contracts.sorted() {
-                    try held(bound, as: .contractMention, at: home.part(.bounds).key(name.spelling))
+                    try held(bound, as: .contractMention, at: home.part(.types))
                 }
             }
 
@@ -126,11 +126,11 @@ struct Validator: Sendable {
                 // A bound is declared by the procedure whose call fills the
                 // name, and a contract's procedure is answered by declarations
                 // that each declare their own.
-                guard asked.signature.bounds.isEmpty else {
+                if let bounded = asked.signature.bounds.keys.min() {
                     throw ValidationError(
-                        "a contract's procedure writes no bounds. A bound is declared in the `bounds`"
-                            + " of a procedure's own signature",
-                        at: place.part(.bounds)
+                        "a contract's procedure writes no bounds. A type parameter is bounded by the signature"
+                            + " of the procedure that declares it",
+                        at: place.bound(bounded, of: asked.signature)
                     )
                 }
 
@@ -809,11 +809,11 @@ struct Validator: Sendable {
 
             // Its `some T` is the `T` of the procedure it is written in, and
             // the signature that declares a type parameter owns its bound.
-            guard procedure.signature.bounds.isEmpty else {
+            if let bounded = procedure.signature.bounds.keys.min() {
                 throw ValidationError(
                     "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
                         + " held to the bounds that procedure declares",
-                    at: inside
+                    at: inside.bound(bounded, of: procedure.signature)
                 )
             }
 
@@ -1121,7 +1121,7 @@ struct Validator: Sendable {
     // it.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
         for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
-            let here = place.part(.bounds).key(parameter.spelling)
+            let here = place.bound(parameter, of: signature)
 
             try held(key: parameter, at: here)
 
@@ -1196,7 +1196,7 @@ struct Validator: Sendable {
         if let first = unwritten.first {
             throw ValidationError(
                 "bounds name \(unwritten.map(\.spelling).joined(separator: ", ")), and no slot writes"
-                    + " `some \(first.spelling)`. A bound rides on a parameter some slot mentions",
+                    + " `some \(first.root.spelling)`. A bound rides on a parameter some slot mentions",
                 at: place.part(.bounds)
             )
         }
@@ -1432,15 +1432,15 @@ struct Validator: Sendable {
             }
 
             for (parameter, contracts) in bounds.sorted(by: { one, other in one.key < other.key }) {
-                let here = place.part(.bounds).key(parameter.spelling)
-
-                guard typeParameters.contains(parameter) else {
+                guard let position = typeParameters.firstIndex(of: parameter) else {
                     throw ValidationError(
                         "bounds '\(parameter)', which `typeParameters` does not list."
                             + " A bound rides on a parameter the struct takes",
-                        at: here
+                        at: place.part(.typeParameters)
                     )
                 }
+
+                let here = place.part(.typeParameters).index(position)
 
                 for contract in contracts.sorted() {
                     try held(contract, as: .contractMention, at: here)

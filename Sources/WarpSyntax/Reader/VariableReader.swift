@@ -33,7 +33,7 @@ struct VariableReader: Decodable {
         let declared = try container.decode(TypeReader.self, forKey: typeKey)
         let start = try container.decode(ExpressionReader.self, forKey: valueKey)
 
-        self.variable = ModuleVariable(start.expression, declared: declared.type)
+        self.variable = ModuleVariable(start.expression, declared: try declared.unbounded())
     }
 
     // MARK: - Public

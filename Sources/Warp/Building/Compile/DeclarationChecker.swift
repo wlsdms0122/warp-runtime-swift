@@ -156,7 +156,7 @@ struct DeclarationChecker {
         for (contract, declared) in contracts.sorted(by: { $0.key < $1.key }) {
             let home = Place.contract(contract.spelling, in: document)
 
-            try judge(bounds: declared.bounds, at: { name in home.part(.bounds).key(name.spelling) }, in: table)
+            try judge(bounds: declared.bounds, at: { _ in home.part(.types) }, in: table)
 
             for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
                 let place = home.part(.procedures).key(name.spelling)
@@ -266,7 +266,7 @@ struct DeclarationChecker {
             answering: answering
         )
 
-        try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
+        try judge(bounds: signature.bounds, at: { parameter in place.bound(parameter, of: signature) }, in: table)
 
         // An associated type the signature bounds or says is a type is one a
         // contract bounding its parameter asks, and the type it is said to be
@@ -496,7 +496,7 @@ struct DeclarationChecker {
         answering: Bool = true
     ) throws {
         switch declared {
-        case let .struct(fields, _, bounds):
+        case let .struct(fields, typeParameters, bounds):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
                 try mentioned(
                     in: field,
@@ -507,7 +507,14 @@ struct DeclarationChecker {
                 )
             }
 
-            try judge(bounds: bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
+            try judge(
+                bounds: bounds,
+                at: { parameter in
+                    typeParameters.firstIndex(of: parameter).map { position in place.part(.typeParameters).index(position) }
+                        ?? place.part(.typeParameters)
+                },
+                in: table
+            )
 
         case let .alias(type):
             try mentioned(in: type, at: place, resolve: table, answering: answering)

@@ -244,7 +244,7 @@ public struct ExpressionReader: Decodable {
             } else {
                 let below = ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside)
 
-                type = try TypeReader(from: below).type
+                type = try TypeReader(from: below).unbounded()
             }
         } catch let error as TypeFormError {
             throw ExpressionFormError("{ \(key): }: \(error.message)")
