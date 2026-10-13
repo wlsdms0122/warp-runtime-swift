@@ -88,6 +88,7 @@ struct DeclarationChecker {
             }
 
             try judge(contracts: module.contracts, of: .of(module), in: table)
+            try judge(heads: Set(module.claims.keys).union(module.members.keys), of: .of(module), in: table)
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
@@ -119,6 +120,7 @@ struct DeclarationChecker {
             }
 
             try judge(contracts: object.contracts, of: object.document, in: table)
+            try judge(heads: Set(object.claims.keys).union(object.members.keys), of: object.document, in: table)
         }
     }
 
@@ -136,6 +138,34 @@ struct DeclarationChecker {
                 let place = Place.contract(contract.spelling, in: document).key(name.spelling)
 
                 try judge(asked.signature.read(of: contract), at: place, in: table)
+            }
+        }
+    }
+
+    // A head mentions what it applies its type to the way a parameter's type
+    // does, and bounds its own type parameters by contracts somebody
+    // declared. A bare head mentions nothing beyond its type, which is the
+    // claim's to judge.
+    private func judge(
+        heads: Set<Head>,
+        of document: Place.Document,
+        in table: TypeTable
+    ) throws {
+        for head in heads.sorted() {
+            guard let mention = head.mention else { continue }
+
+            let place = Place(document.home(of: head), in: document)
+
+            try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table)
+
+            for (parameter, names) in head.bounds.sorted(by: { $0.key < $1.key }) {
+                for bound in names.sorted() where table.contracts[bound] == nil {
+                    throw BuildError(
+                        "`\(TypeExpression.parameter(name: parameter).rendered)` names '\(bound)',"
+                            + " which no module in this link declares as a contract",
+                        at: place
+                    )
+                }
             }
         }
     }
@@ -389,7 +419,7 @@ struct DeclarationChecker {
                     answering: contract,
                     orNull: false,
                     as: "applies '\(name)' at '\(parameter)' to",
-                    leaning: { claim in types.fulfillment?.require(claim, at: place) }
+                    leaning: { leaning in types.fulfillment?.require(leaning, at: place) }
                 ) {
                     throw BuildError(refusal, at: place)
                 }
@@ -410,7 +440,7 @@ struct DeclarationChecker {
 
         if let refusal = types.keyRefusal(
             of: key.lowered(in: types, bounds: bounds),
-            leaning: { claim in types.fulfillment?.require(claim, at: place) }
+            leaning: { leaning in types.fulfillment?.require(leaning, at: place) }
         ) {
             throw BuildError(refusal, at: place)
         }

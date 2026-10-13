@@ -51,19 +51,43 @@ struct ClaimChecker {
     //
     // A claim that was made and did not hold answers with its own reason. The
     // pair is written down and something behind it is wrong, which is a
-    // different thing to fix from nobody having written it.
+    // different thing to fix from nobody having written it. A claim that
+    // holds and whose head does not take the reading says what it takes.
+    //
+    // The readings stand in this link's rows.
     func leaning(
-        _ leaned: [Claim: Place],
-        on satisfying: [Name: Set<Name>],
+        _ leaned: [Leaning: Place],
+        in table: LoweredTypeTable,
+        heads: [Name: [Name: Head]],
         unheld: [Claim: String]
     ) throws {
-        for (claim, place) in leaned.sorted(by: { $0.key < $1.key }) {
-            guard satisfying[claim.contract]?.contains(claim.type) != true else { continue }
+        let ordered = leaned.sorted { one, other in
+            (one.key.contract, one.key.reading.rendered(in: table)) < (other.key.contract, other.key.reading.rendered(in: table))
+        }
+
+        for (leaning, place) in ordered {
+            let (reading, contract) = (leaning.reading, leaning.contract)
+
+            guard
+                let type = reading.nominal(in: table),
+                table.answers(contract: contract, reading: reading, of: type) == false
+            else {
+                continue
+            }
+
+            if let head = heads[contract]?[type], let pattern = head.lowered(in: table),
+               let reason = table.refusal(of: reading, under: pattern) {
+                throw BuildError(
+                    "hands \(reading.rendered(in: table)) where '\(contract)' is asked, and '\(type)'"
+                        + " answers it as '\(head.spelling)', which does not take it: \(reason)",
+                    at: place
+                )
+            }
 
             throw BuildError(
-                unheld[claim]
-                    ?? "hands '\(claim.type)' where '\(claim.contract)' is asked, and no"
-                        + " document in this link says '\(claim.type)' answers it."
+                unheld.first { claim, _ in claim.type == type && claim.contract == contract }?.value
+                    ?? "hands '\(type)' where '\(contract)' is asked, and no"
+                        + " document in this link says '\(type)' answers it."
                         + " A type answers a contract because a document says so",
                 at: place
             )
@@ -83,6 +107,7 @@ struct ClaimChecker {
     ) throws -> (
         types: TypeTable,
         contractProcedures: [Name: LoweredContractProcedure],
+        heads: [Name: [Name: Head]],
         unheld: [Claim: String]
     ) {
         let claims = namespace.claims
@@ -94,7 +119,7 @@ struct ClaimChecker {
         // such type, and no document arriving later makes it one; one nothing
         // declares waits with the rest.
         for extended in namespace.extended {
-            if let reason = Self.refusal(of: extended.held, over: declaredTypes, asking: contracts, in: declaring) {
+            if let reason = Self.refusal(of: extended.held.type, over: declaredTypes, asking: contracts, in: declaring) {
                 throw BuildError(reason + ". Members are given to a struct, under the name it was declared", at: extended.place)
             }
         }
@@ -104,11 +129,12 @@ struct ClaimChecker {
         // signature stands as one, and an answer that leans on a claim is
         // held to what holds. What holds is read off the claims and cut down
         // to what the witnesses hold up, until nothing more falls: a claim
-        // that leans on one that fell falls with it.
+        // that leans on one that fell falls with it. Each type stands under a
+        // contract beside the head its claim was written under.
         var held = claims.reduce(
-            into: contracts.keys.reduce(into: [Name: Set<Name>]()) { table, contract in table[contract] = [] }
+            into: contracts.keys.reduce(into: [Name: [Name: Head]]()) { table, contract in table[contract] = [:] }
         ) { table, placed in
-            table[placed.held.contract]?.insert(placed.held.type)
+            table[placed.held.contract]?[placed.held.type] = placed.held.head
         }
         var table: TypeTable
         var witnessed: (answering: [Name: [Name: [Name: Name]]], unheld: [Claim: String])
@@ -126,7 +152,9 @@ struct ClaimChecker {
                 in: table
             )
 
-            let answering = witnessed.answering.mapValues { answering in Set(answering.keys) }
+            let answering = held.reduce(into: [Name: [Name: Head]]()) { kept, entry in
+                kept[entry.key] = entry.value.filter { type, _ in witnessed.answering[entry.key]?[type] != nil }
+            }
 
             guard answering != held else { break }
 
@@ -164,6 +192,7 @@ struct ClaimChecker {
         return (
             types: table,
             contractProcedures: contractProcedures,
+            heads: held,
             unheld: witnessed.unheld
         )
     }
@@ -277,15 +306,22 @@ struct ClaimChecker {
             return .waits("\(claim.spelled) says " + reason)
         }
 
-        // A claim about a struct taking type parameters is about every value
-        // of it, whatever it is applied to, as one about `Array` is about
-        // every list: each parameter is one no call fills, held to the
-        // bounds the struct declares.
+        // A bare claim about a struct taking type parameters is about every
+        // value of it, whatever it is applied to, as one about `Array` is
+        // about every list: each parameter is one no call fills, held to the
+        // bounds the struct declares. A head applying the type is about the
+        // values it takes: what it is applied to, each of its own type
+        // parameters one no call fills, held to the bounds the head writes,
+        // which its mention was held to cover the struct's.
         var claimed = languageType ?? .named(type)
         var held = TypeExpression.nominalBounds
         var standing: [Name: Name] = [:]
 
-        if languageType == nil, case let .struct(_, typeParameters, bounds)? = types[type]?.held {
+        if let applied = claim.held.head.claimed {
+            claimed = applied.type
+            held = applied.bounds
+            standing = applied.standing
+        } else if languageType == nil, case let .struct(_, typeParameters, bounds)? = types[type]?.held {
             let names = typeParameters.map { parameter in Name(normal: "\(TypeSpelling.selfType).\(parameter)") }
 
             for (parameter, name) in zip(typeParameters, names) {
@@ -331,6 +367,7 @@ struct ClaimChecker {
                 by: witness.held.signature,
                 reading: witness.held.facts?.answer,
                 answering: type,
+                under: claim.held.head,
                 claimed: claimed,
                 holding: held,
                 standing: standing,
@@ -397,6 +434,7 @@ struct ClaimChecker {
         by given: Signature,
         reading read: LoweredType?,
         answering type: Name,
+        under head: Head,
         claimed: TypeExpression,
         holding held: [Name: Set<Name>],
         standing: [Name: Name],
@@ -458,7 +496,8 @@ struct ClaimChecker {
             guard position > 0 else {
                 return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)'"
                         + " asks, and takes \(taken.rendered(in: loweredTypes)) first, where a call"
-                        + " through the contract hands it any value of '\(type)'"
+                        + " through the contract hands it "
+                        + (head.isBare ? "any value of '\(type)'" : "any value '\(head.spelling)' takes")
             }
 
             return "is the member '\(procedure)' of '\(type)', the procedure"

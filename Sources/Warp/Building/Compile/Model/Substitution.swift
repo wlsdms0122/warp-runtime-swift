@@ -102,7 +102,7 @@ struct Substitution: Sendable {
         _ parameter: Name,
         bounds: Set<Name>,
         in table: LoweredTypeTable,
-        leaning: (Claim) -> Void
+        leaning: (Leaning) -> Void
     ) -> String? {
         for reading in everyReading(of: parameter) {
             for name in bounds.sorted() {

@@ -22,18 +22,20 @@ struct TypeNamespace {
 
     // What each document said one of its types, or another document's,
     // answers. A list, since a claim declares no name for a table to be keyed
-    // by. A pair two documents claim is one claim: a claim holds nothing but
-    // the pair, so the second says what the first said.
+    // by. A claim two documents write under one head is one claim: it holds
+    // nothing but the head and the contract, so the second says what the
+    // first said. A type answers a contract one way, so two heads for one
+    // pair are refused.
     let claims: [Placed<Claim>]
 
     // Every procedure a document gave a type, by the spelling a call writes:
     // what may answer a contract's procedure for that type.
     let members: Set<Name>
 
-    // Each type a document gave members to, where the document gave them. The
-    // name is held the way the type a claim is about is held, whatever the
-    // document gave it.
-    let extended: [Placed<Name>]
+    // Each head a document gave members under, where the document gave them.
+    // Its type is held the way the type a claim is about is held, whatever
+    // the document gave it.
+    let extended: [Placed<Head>]
 
     // MARK: - Initializer
     init(_ documents: [any Declaring]) throws {
@@ -117,28 +119,38 @@ struct TypeNamespace {
         var claims: [Placed<Claim>] = Prelude.claims.sorted { $0.key < $1.key }.flatMap { type, contracts in
             contracts.sorted().map { contract in
                 Placed(
-                    Claim(type: type, contract: contract),
-                    at: .satisfies(type.spelling, in: Prelude.document),
+                    Claim(head: Head(type), contract: contract),
+                    at: .satisfies(Head(type), in: Prelude.document),
                     of: Prelude.handed
                 )
             }
         }
-        var claimed = Set(claims.map(\.held))
+        var claimed = claims.reduce(into: [Name: [Name: Placed<Claim>]]()) { claimed, placed in
+            claimed[placed.held.type, default: [:]][placed.held.contract] = placed
+        }
 
         for (handed, held) in documents.enumerated() {
-            for (type, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
+            for (head, contracts) in held.claims.sorted(by: { $0.key < $1.key }) {
                 for contract in contracts.sorted() {
-                    let claim = Claim(type: type, contract: contract)
-
-                    guard claimed.insert(claim).inserted else { continue }
-
-                    claims.append(
-                        Placed(
-                            claim,
-                            at: .satisfies(type.spelling, in: held.document),
-                            of: handed
-                        )
+                    let claim = Placed(
+                        Claim(head: head, contract: contract),
+                        at: .satisfies(head, in: held.document),
+                        of: handed
                     )
+
+                    if let first = claimed[head.type]?[contract] {
+                        guard first.held.head != head else { continue }
+
+                        throw BuildError(
+                            "says '\(head.spelling)' answers '\(contract)', and \(first.spelled) says"
+                                + " '\(first.held.head.spelling)' answers it. A type answers a contract one way,"
+                                + " under one head",
+                            at: claim.place
+                        )
+                    }
+
+                    claimed[head.type, default: [:]][contract] = claim
+                    claims.append(claim)
                 }
             }
         }
@@ -147,13 +159,13 @@ struct TypeNamespace {
         self.contracts = contracts
         self.claims = claims
         self.members = documents.reduce(into: []) { members, held in
-            for (type, names) in held.members {
-                members.formUnion(names.map { member in member.spelled(under: type) })
+            for (head, names) in held.members {
+                members.formUnion(names.map { member in member.spelled(under: head.type) })
             }
         }
         self.extended = documents.enumerated().flatMap { handed, held in
-            held.members.keys.sorted().map { type in
-                Placed(type, at: Place(held.document.home(of: type), in: held.document), of: handed)
+            held.members.keys.sorted().map { head in
+                Placed(head, at: Place(held.document.home(of: head), in: held.document), of: handed)
             }
         }
     }

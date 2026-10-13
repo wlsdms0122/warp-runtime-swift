@@ -12,7 +12,7 @@ import Foundation
 // spells stays `TypeExpression`; this is the build's product, the way `Operation`
 // is the product of an `Expression`, and the document's type reaches it by
 // lowering.
-indirect enum LoweredType: Sendable, Equatable {
+indirect enum LoweredType: Sendable, Hashable {
     case any
     case never
     case null
@@ -1571,7 +1571,7 @@ indirect enum LoweredType: Sendable, Equatable {
                     answering: contract,
                     orNull: false,
                     as: "is",
-                    leaning: { claim in table.fulfillment?.require(folded: claim) }
+                    leaning: { leaning in table.fulfillment?.require(folded: leaning) }
                 ) == nil
             }
 
@@ -1920,7 +1920,64 @@ indirect enum LoweredType: Sendable, Equatable {
         }
     }
 
+    // Hashed by its shape: the case, and the rows, names and readings it holds
+    // where it holds them, which two equal readings share.
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case let .array(inner), let .variable(inner), let .inout(inner), let .nullable(inner):
+            hasher.combine(caseRank)
+            hasher.combine(inner)
+
+        case let .dictionary(key, value):
+            hasher.combine(caseRank)
+            hasher.combine(key)
+            hasher.combine(value)
+
+        case let .named(row, arguments):
+            hasher.combine(caseRank)
+            hasher.combine(row)
+            hasher.combine(arguments)
+
+        case let .parameter(label, bounds):
+            hasher.combine(caseRank)
+            hasher.combine(label)
+            hasher.combine(bounds)
+
+        case let .composition(names):
+            hasher.combine(caseRank)
+            hasher.combine(names)
+
+        default:
+            hasher.combine(caseRank)
+        }
+    }
+
     // MARK: - Private
+    // Which case this is, as a number to hash.
+    private var caseRank: Int {
+        switch self {
+        case .any: 0
+        case .never: 1
+        case .null: 2
+        case .bool: 3
+        case .int: 4
+        case .wholeLiteral: 5
+        case .double: 6
+        case .string: 7
+        case .array: 8
+        case .dictionary: 9
+        case .struct: 10
+        case .procedure: 11
+        case .variable: 12
+        case .inout: 13
+        case .nullable: 14
+        case .named: 15
+        case .parameter: 16
+        case .composition: 17
+        case .projection: 18
+        }
+    }
+
     // The join of two readings where one takes the other, `takingGiven`
     // saying which, walked in step. Each position below is asked the same.
     // A reading of `Any` at a position is `Any` there, as it is for the
@@ -1980,7 +2037,7 @@ indirect enum LoweredType: Sendable, Equatable {
             answering: name,
             orNull: false,
             as: "is",
-            leaning: { claim in table.fulfillment?.require(folded: claim) }
+            leaning: { leaning in table.fulfillment?.require(folded: leaning) }
         )
 
         if let refusal {

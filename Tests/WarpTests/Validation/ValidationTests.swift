@@ -739,8 +739,8 @@ struct ValidationTests {
     @Test("a module giving a type an empty set of contracts or members is refused where it is made", arguments: [
         ("extensions.Int.satisfies", ["Int": []], [:]),
         ("extensions.Int.procedures", [:], ["Int": []])
-    ] as [(String, [Name: Set<Name>], [Name: Set<Name>])])
-    func anEmptyGivingIsRefused(place: String, claims: [Name: Set<Name>], members: [Name: Set<Name>]) throws {
+    ] as [(String, [Head: Set<Name>], [Head: Set<Name>])])
+    func anEmptyGivingIsRefused(place: String, claims: [Head: Set<Name>], members: [Head: Set<Name>]) throws {
         // When / Then. A type given nothing is written as no extension, so a
         // module saying it gives one an empty set would write a document that
         // reads back as another.

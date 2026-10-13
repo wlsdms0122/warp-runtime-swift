@@ -17,7 +17,16 @@ enum ObjectCoverageFixture {
             document: Place.Document(identity: Identity([1, 2, 3])),
             types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": structOfEveryTypeExpression],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
-            claims: ["a.seven": ["a.eight", "a.nine"]],
+            // A bare head and one applying its type, with a type parameter
+            // bounded and one not.
+            claims: [
+                "a.seven": ["a.eight", "a.nine"],
+                Head(
+                    "a.three",
+                    arguments: [.parameter(name: "T"), .array(.parameter(name: "U"))],
+                    bounds: ["T": ["a.five", "a.six"]]
+                ): ["a.five"]
+            ],
             // A member is a row the document declares, under its type's name
             // and its own.
             members: ["a": ["ten"]],
@@ -151,7 +160,7 @@ enum ObjectCoverageFixture {
     // Every case of `Place.Step`, `Place.Part`, `Place.ConditionHolder` and
     // `Construct`, reached through the one field of an object that holds a
     // place.
-    static let everyPlace: [Claim: Place] = {
+    static let everyPlace: [Leaning: Place] = {
         let steps: [Place.Step] = [
             .key("written"),
             .index(4),
@@ -163,8 +172,8 @@ enum ObjectCoverageFixture {
         + Self.everyConstruct.map(Place.Step.construct)
 
         return [
-            Claim(type: "a.seventeen", contract: "a.five"): Place(steps, in: Place.Document(identity: Identity([1, 2, 3]))),
-            Claim(type: "a.eighteen", contract: "a.five"): Place([], in: .assembled)
+            Leaning(reading: .named(0, arguments: [.int]), contract: "a.five"): Place(steps, in: Place.Document(identity: Identity([1, 2, 3]))),
+            Leaning(reading: .array(.parameter(label: "T", bounds: ["a.five"])), contract: "a.five"): Place([], in: .assembled)
         ]
     }()
 

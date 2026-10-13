@@ -132,23 +132,45 @@ struct Validator: Sendable {
         // members, is given to the type a value is an instance of, so a name
         // this document declares as another name for a type is given nothing.
         // A type it gives nothing stands nowhere among them: one that did would
-        // be written as no extension, and read back as none.
-        for type in Set(module.claims.keys).union(module.members.keys).sorted() {
-            let place = Place(module.document.home(of: type), in: module.document)
+        // be written as no extension, and read back as none. A head writes
+        // what the type is applied to as a mention writes it, its own type
+        // parameters each bounded where the head names it.
+        for head in Set(module.claims.keys).union(module.members.keys).sorted() {
+            let place = Place(module.document.home(of: head), in: module.document)
 
-            try held(type, as: .claimedType, at: place)
+            try held(head.type, as: .claimedType, at: place)
 
-            if module.claims[type]?.isEmpty == true {
-                throw ValidationError("claims no contract for '\(type)', which is no claim", at: place.part(.satisfies))
+            for argument in head.arguments {
+                try written(argument, in: .head, at: place)
             }
 
-            if module.members[type]?.isEmpty == true {
-                throw ValidationError("gives '\(type)' no member, which gives it nothing", at: place.part(.procedures))
+            let named = head.parameterNames
+
+            for (parameter, contracts) in head.bounds.sorted(by: { one, other in one.key < other.key }) {
+                guard named.contains(parameter) else {
+                    throw ValidationError(
+                        "bounds '\(parameter)', and the head writes no `some \(parameter)`."
+                            + " A bound rides on a parameter the head names",
+                        at: place
+                    )
+                }
+
+                for contract in contracts.sorted() {
+                    try held(contract, as: .contractMention, at: place)
+                }
             }
 
-            if case .alias? = module.types[type] {
+            if module.claims[head]?.isEmpty == true {
+                throw ValidationError("claims no contract for '\(head.spelling)', which is no claim", at: place.part(.satisfies))
+            }
+
+            if module.members[head]?.isEmpty == true {
+                throw ValidationError("gives '\(head.spelling)' no member, which gives it nothing", at: place.part(.procedures))
+            }
+
+            if case .alias? = module.types[head.type] {
                 throw ValidationError(
-                    "gives '\(type)' contracts or members, and this document declares it as another name"
+                    "gives '\(head.type)' contracts or members, and this document declares it as another name"
                         + " for a type. What a type is given is given to the struct a value is an instance of",
                     at: place
                 )
@@ -156,26 +178,40 @@ struct Validator: Sendable {
         }
 
         // A claim names two types: the one it is about and the contract it
-        // says that type answers.
-        for (type, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
-            let place = Place.satisfies(type.spelling, in: .of(module))
+        // says that type answers. A type answers a contract one way, so the
+        // claims a document writes about one type name each contract under
+        // one head.
+        var claimed: [Name: [Name: Head]] = [:]
+
+        for (head, contracts) in module.claims.sorted(by: { one, other in one.key < other.key }) {
+            let place = Place.satisfies(head, in: .of(module))
 
             for contract in contracts.sorted() {
                 try held(contract, as: .contractMention, at: place)
+
+                if let first = claimed[head.type]?[contract] {
+                    throw ValidationError(
+                        "says '\(head.spelling)' answers '\(contract)', and says '\(first.spelling)' answers it."
+                            + " A type answers a contract one way, under one head",
+                        at: place
+                    )
+                }
+
+                claimed[head.type, default: [:]][contract] = head
             }
         }
 
         // A member is named by one identifier, since a call spells it after
         // its type's name and a dot.
-        for (type, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
+        for (head, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
             for member in members.sorted() {
-                let spelling = member.spelled(under: type)
+                let spelling = member.spelled(under: head.type)
 
                 try held(member, as: .member, at: .procedure(spelling.spelling, in: .of(module)))
 
                 guard module.procedures[spelling] != nil else {
                     throw ValidationError(
-                        "gives '\(type)' the member '\(member)', and declares no procedure '\(spelling)'",
+                        "gives '\(head.spelling)' the member '\(member)', and declares no procedure '\(spelling)'",
                         at: .procedure(spelling.spelling, in: .of(module))
                     )
                 }

@@ -52,7 +52,7 @@ struct LoweredContractProcedure: Sendable {
     // table saying which types answer says the whole of it.
     static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
-            let answering = types.loweredTypes.satisfying[entry.key] ?? []
+            let answering = types.loweredTypes.satisfying[entry.key]?.keys.sorted() ?? []
 
             for (procedure, asked) in entry.value {
                 let signature = asked.signature.read(of: entry.key)

@@ -61,9 +61,9 @@ struct ObjectReader {
         var dependencies: [Fingerprint] = []
         var types: [Name: TypeDeclaration] = [:]
         var contracts: [Name: [Name: ContractProcedure]] = [:]
-        var claims: [Name: Set<Name>] = [:]
-        var members: [Name: Set<Name>] = [:]
-        var leaned: [Claim: Place] = [:]
+        var claims: [Head: Set<Name>] = [:]
+        var members: [Head: Set<Name>] = [:]
+        var leaned: [Leaning: Place] = [:]
         var declaredRows: [Judged] = []
         var liftedRows: [Value] = []
         var answers: [Name: LoweredType] = [:]
@@ -103,7 +103,7 @@ struct ObjectReader {
             // A type stands here because the document claimed a contract
             // for it, at least one.
             case .claims:
-                claims = try keyed(part, of: "claims") { written in
+                claims = try headed(part, of: "claims") { written in
                     let contracts = try Field(written, of: "claims").ordered(name)
 
                     guard !contracts.isEmpty else {
@@ -117,7 +117,7 @@ struct ObjectReader {
             // each is one of the rows the document declares, which is asked
             // once every part is in.
             case .members:
-                members = try keyed(part, of: "members") { written in
+                members = try headed(part, of: "members") { written in
                     let names = try Field(written, of: "members").ordered(name)
 
                     guard !names.isEmpty else {
@@ -179,10 +179,12 @@ struct ObjectReader {
 
         let spelled = Set(declared)
 
-        if let (type, member) = members.sorted(by: { $0.key < $1.key }).lazy.flatMap({ type, names in
-            names.sorted().map { member in (type, member) }
-        }).first(where: { type, member in !spelled.contains(member.spelled(under: type)) }) {
-            throw ObjectRefused("'members' gives '\(type)' the member '\(member)', and no row stands under its spelling")
+        if let (head, member) = members.sorted(by: { $0.key < $1.key }).lazy.flatMap({ head, names in
+            names.sorted().map { member in (head, member) }
+        }).first(where: { head, member in !spelled.contains(member.spelled(under: head.type)) }) {
+            throw ObjectRefused(
+                "'members' gives '\(head.spelling)' the member '\(member)', and no row stands under its spelling"
+            )
         }
 
         return try Compiled(
@@ -291,6 +293,52 @@ struct ObjectReader {
         }
     }
 
+    // A list a head keys, in the order of the heads' spellings, none twice.
+    private func headed<T>(
+        _ value: Value,
+        of part: String,
+        _ read: (Value) throws -> T
+    ) throws -> [Head: T] {
+        try Field(value, of: part).gathered { entry in
+            var cursor = try FieldCursor(entry, of: part)
+            let held = (try head(cursor.next(), of: part), try read(cursor.next()))
+
+            try cursor.end()
+
+            return held
+        }
+    }
+
+    // A head: its type's name where it is bare, and otherwise the name, the
+    // types it is applied to, at least one, and its type parameters' bounds.
+    private func head(_ value: Value, of part: String) throws -> Head {
+        if case .string = value {
+            return Head(try name(value))
+        }
+
+        var cursor = try FieldCursor(value, of: part)
+        let type = try name(cursor.next())
+        let arguments = try Field(cursor.next(), of: part).list(expression)
+
+        guard !arguments.isEmpty else {
+            throw ObjectRefused("'\(part)' applies '\(type)' to nothing, and a bare head is written as the name")
+        }
+
+        let bounds = try keyed(cursor.next(), of: part) { written in
+            let contracts = try Field(written, of: part).ordered(name)
+
+            guard !contracts.isEmpty else {
+                throw ObjectRefused("'\(part)' holds a type parameter to nothing")
+            }
+
+            return Set(contracts)
+        }
+
+        try cursor.end()
+
+        return Head(type, arguments: arguments, bounds: bounds)
+    }
+
     // A reading that goes through a door the value layer judges. A type of
     // that layer knows nothing of objects, so what it refuses is said again
     // in the words this reading answers in. The build's own types say it
@@ -350,16 +398,28 @@ struct ObjectReader {
         )
     }
 
-    private func leaned(_ value: Value) throws -> [Claim: Place] {
-        try Field(value, of: "leaned").gathered { entry in
+    // Each reading beside the contract it was handed where and the place,
+    // in the order of what the first two are written as, none twice.
+    private func leaned(_ value: Value) throws -> [Leaning: Place] {
+        let entries = try Field(value, of: "leaned").list { entry in
             var cursor = try FieldCursor(entry, of: "leaned")
-            let claim = Claim(type: try name(cursor.next()), contract: try name(cursor.next()))
+            let (reading, contract) = (try cursor.next(), try cursor.next())
             let place = try place(cursor.next())
 
             try cursor.end()
 
-            return (claim, place)
+            return (
+                order: WrittenOrder(value: .array([reading, contract])),
+                leaning: Leaning(reading: try lowered(reading), contract: try name(contract)),
+                place: place
+            )
         }
+
+        guard zip(entries, entries.dropFirst()).allSatisfy({ one, other in one.order < other.order }) else {
+            throw ObjectRefused("'leaned' writes its readings out of order, or one of them twice")
+        }
+
+        return entries.reduce(into: [:]) { leaned, entry in leaned[entry.leaning] = entry.place }
     }
 
     private func variable(_ value: Value) throws -> (name: Name, value: Value) {

@@ -392,8 +392,8 @@ public final class Linked: Sendable {
         for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
             let refusal = substitution.disagreement(of: parameter, in: table)
                 ?? substitution.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
-                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: table) { claim in
-                    table.fulfillment?.require(folded: claim)
+                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: table) { leaning in
+                    table.fulfillment?.require(folded: leaning)
                 }
 
             if let refusal {

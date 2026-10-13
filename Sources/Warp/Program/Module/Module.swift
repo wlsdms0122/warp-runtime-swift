@@ -58,15 +58,15 @@ public struct Module: Sendable {
     // and a claim puts a type in it.
     public var contracts: [Name: [Name: ContractProcedure]] { source.contracts }
 
-    // Which contracts each type this document names answers. A type answers a
-    // contract because a document says it does, and this is where one says it.
-    // Which declarations back the claim is the link's to find and to hold the
-    // claim to.
-    public var claims: [Name: Set<Name>] { source.claims }
+    // Which contracts each type this document names answers, by the head it
+    // says so under. A type answers a contract because a document says it
+    // does, and this is where one says it. Which declarations back the claim
+    // is the link's to find and to hold the claim to.
+    public var claims: [Head: Set<Name>] { source.claims }
 
-    // The procedures this module gives each type, by the name of the type.
-    // A contract's procedure is answered by the member of that name.
-    public var members: [Name: Set<Name>] { source.members }
+    // The procedures this module gives each type, by the head it gives them
+    // under. A contract's procedure is answered by the member of that name.
+    public var members: [Head: Set<Name>] { source.members }
 
     // Names bound to values, settled at the build and gone by run time,
     // private to the module: a constant is read by writing its name, and a
@@ -132,8 +132,8 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
-        claims: [Name: Set<Name>] = [:],
-        members: [Name: Set<Name>] = [:],
+        claims: [Head: Set<Name>] = [:],
+        members: [Head: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: Expression] = [:],
         procedures: [Name: Procedure] = [:],
@@ -161,8 +161,8 @@ public struct Module: Sendable {
         imports: Set<Name>? = nil,
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
-        claims: [Name: Set<Name>] = [:],
-        members: [Name: Set<Name>] = [:],
+        claims: [Head: Set<Name>] = [:],
+        members: [Head: Set<Name>] = [:],
         constants: [Name: Expression] = [:],
         variables: [Name: ModuleVariable],
         procedures: [Name: Procedure] = [:],

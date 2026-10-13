@@ -73,11 +73,11 @@ public extension Module {
                         )
                     ]
                 ],
-                claims: witnesses.reduce(into: [Name: Set<Name>]()) { claims, witness in
-                    claims[witness.type, default: []].insert(witness.contract)
+                claims: witnesses.reduce(into: [Head: Set<Name>]()) { claims, witness in
+                    claims[Head(witness.type), default: []].insert(witness.contract)
                 },
-                members: witnesses.reduce(into: [Name: Set<Name>]()) { members, witness in
-                    members[witness.type, default: []].insert(witness.member)
+                members: witnesses.reduce(into: [Head: Set<Name>]()) { members, witness in
+                    members[Head(witness.type), default: []].insert(witness.member)
                 },
                 procedures: Dictionary(uniqueKeysWithValues: witnesses.map { witness in (witness.name, witness.procedure) })
             ),

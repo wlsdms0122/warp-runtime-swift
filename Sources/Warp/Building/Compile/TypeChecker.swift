@@ -516,7 +516,7 @@ struct TypeChecker {
                     answering: contract,
                     orNull: held.orNull,
                     as: label,
-                    leaning: { claim in fulfillment.require(claim, at: place) }
+                    leaning: { leaning in fulfillment.require(leaning, at: place) }
                 ) {
                     return refusal
                 }
@@ -563,7 +563,7 @@ struct TypeChecker {
                 parameter,
                 bounds: names,
                 in: loweredTypes,
-                leaning: { claim in fulfillment.require(claim, at: place) }
+                leaning: { leaning in fulfillment.require(leaning, at: place) }
             ) {
                 return .refusal(refusal)
             }
@@ -1710,9 +1710,9 @@ struct TypeChecker {
                 rewritten.append((key: parts[0].rewritten, value: parts[1].rewritten))
             }
 
-            if declaredParts.key == nil, let refusal = context.loweredTypes.keyRefusal(of: keys, leaning: { claim in
+            if declaredParts.key == nil, let refusal = context.loweredTypes.keyRefusal(of: keys, leaning: { leaning in
                 if case let .judging(_, fulfillment, _) = ask {
-                    fulfillment.require(claim, at: place)
+                    fulfillment.require(leaning, at: place)
                 }
             }) {
                 try refuse(refusal, at: place, when: ask)

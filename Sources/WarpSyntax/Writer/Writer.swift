@@ -83,20 +83,24 @@ public struct Writer: Sendable {
                     }
 
                     types[type] = .dictionary(
-                        try given(type, in: draft).reduce(fields) { fields, entry in fields.writing(entry.key, with: entry.value) }
+                        try given(Head(type), in: draft).reduce(fields) { fields, entry in
+                            fields.writing(entry.key, with: entry.value)
+                        }
                     )
                 }
             )
         }
 
-        let extended = receiving.filter { type in
-            if case .struct? = draft.types[type] { false } else { true }
+        let extended = receiving.filter { head in
+            guard head.isBare, case .struct? = draft.types[head.type] else { return true }
+
+            return false
         }
 
         if !extended.isEmpty {
             written[ModuleReader.CodingKeys.extensions.name] = .dictionary(
-                try extended.reduce(into: [Name: Value]()) { extensions, type in
-                    extensions[type] = .dictionary(try given(type, in: draft))
+                try extended.reduce(into: [Name: Value]()) { extensions, head in
+                    extensions[try key(of: head)] = .dictionary(try given(head, in: draft))
                 }
             )
         }
@@ -301,26 +305,49 @@ public struct Writer: Sendable {
     // MARK: - Private
     // What a document gives a type: the contracts it says the type answers,
     // and its members, each under the name it has there.
-    private func given(_ type: Name, in draft: Draft) throws -> [Name: Value] {
+    private func given(_ head: Head, in draft: Draft) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
-        if let contracts = draft.claims[type], !contracts.isEmpty {
+        if let contracts = draft.claims[head], !contracts.isEmpty {
             written[ExtensionReader.CodingKeys.satisfies.name] = .array(
                 contracts.sorted().map { name in .string(name.spelling) }
             )
         }
 
-        if let members = draft.members[type], !members.isEmpty {
+        // A member's signature writes what its head does not.
+        if let members = draft.members[head], !members.isEmpty {
             written[ExtensionReader.CodingKeys.procedures.name] = .dictionary(
                 try members.reduce(into: [Name: Value]()) { procedures, member in
-                    guard let procedure = draft.procedures[member.spelled(under: type)] else { return }
+                    guard let procedure = draft.procedures[member.spelled(under: head.type)] else { return }
 
-                    procedures[member] = try value(of: procedure)
+                    procedures[member] = try value(of: procedure.with(signature: procedure.signature.written(under: head)))
                 }
             )
         }
 
         return written
+    }
+
+    // The key an extension is written under: the head's spelling, kept only
+    // where the reading takes it back as this head.
+    private func key(of head: Head) throws -> Name {
+        let spelling = head.spelling
+        let read: Head
+
+        do {
+            read = try TypeReader.head(spelling.spelling, in: readBy)
+        } catch {
+            throw WritingError("the extension is written '\(spelling)', which the reading refuses: \(error)")
+        }
+
+        guard read == head else {
+            throw WritingError(
+                "the extension is written '\(spelling)', which the reading takes as '\(read.spelling)',"
+                    + " and a document has no way to tell the two apart"
+            )
+        }
+
+        return spelling
     }
     // The keys a block writes, with whoever reads it asked whether an empty
     // `body` is written or dropped. A rescue and a procedure are read by their

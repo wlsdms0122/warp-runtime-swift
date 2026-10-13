@@ -65,7 +65,7 @@ public struct TypeTable: Sendable {
     init(
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]] = [:],
-        satisfying: [Name: Set<Name>] = [:],
+        satisfying: [Name: [Name: Head]] = [:],
         holdsEveryClaim: Bool = false,
         fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
@@ -81,7 +81,7 @@ public struct TypeTable: Sendable {
         self.loweredTypes = LoweredTypeTable.lowering(
             types,
             satisfying: satisfying.merging(
-                contracts.keys.map { contract in (contract, Set<Name>()) }
+                contracts.keys.map { contract in (contract, [Name: Head]()) }
             ) { held, _ in held },
             holdsEveryClaim: holdsEveryClaim,
             fulfillment: fulfillment,
@@ -99,7 +99,7 @@ public struct TypeTable: Sendable {
     // table holds every claim where every document is in, which is where
     // nothing is left to write down.
     func satisfying(
-        _ satisfying: [Name: Set<Name>],
+        _ satisfying: [Name: [Name: Head]],
         fulfillment: Fulfillment? = nil
     ) -> TypeTable {
         TypeTable(

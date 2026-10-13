@@ -69,7 +69,7 @@ struct BytesTests {
                 "Whole": .alias(.int)
             ],
             contracts: ["Ordered": [:], "Textual": [:]],
-            satisfying: ["Ordered": ["Int", "Double", "String"], "Textual": ["String"]],
+            satisfying: ["Ordered": ["Int": "Int", "Double": "Double", "String": "String"], "Textual": ["String": "String"]],
             holdsEveryClaim: true,
             of: Linkage()
         )
