@@ -507,6 +507,18 @@ struct WriterTests {
         #expect(refused?.place?.rendered == "contracts.App.Kept.procedures.keep.parameters[1]")
     }
 
+    @Test("a draft bounding a name its list does not hold has no document to write", arguments: [
+        Draft(types: ["App.Box": .struct(["item": .parameter(name: "T")], typeParameters: ["T"], bounds: ["U": ["Hashable"]])]),
+        Draft(contracts: ["App.Keyed": Contract(types: ["Item"], bounds: ["Key": ["Hashable"]])])
+    ])
+    func aBoundOutsideItsListIsNotWritten(draft: Draft) {
+        // When / Then. A bound stands beside the name it bounds, and one with
+        // no name to stand beside would be dropped
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: draft)
+        }
+    }
+
     @Test("a call of literal text has no document to write")
     func aCallOfTextIsNotWritten() throws {
         // Given. Text under `procedure` reads back as a declaration's name, so
