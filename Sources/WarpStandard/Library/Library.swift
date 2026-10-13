@@ -1141,14 +1141,11 @@ enum Library {
                       }
                     }
                   ]
-                  bounds {
-                    Element "Standard.Comparable"
-                  }
                   description "The elements in the order lessThan puts them in, for any type that orders."
                   parameters [
                     {
                       name "array"
-                      type "Array<some Element>"
+                      type "Array<some Element: Standard.Comparable>"
                     }
                   ]
                   result {
@@ -1237,14 +1234,11 @@ enum Library {
                       }
                     }
                   ]
-                  bounds {
-                    Key "Hashable"
-                  }
                   description "What a map holds, by its keys in the key order."
                   parameters [
                     {
                       name "dictionary"
-                      type "Dictionary<some Key, some Entry>"
+                      type "Dictionary<some Key: Hashable, some Entry>"
                     }
                   ]
                   result {
@@ -1758,14 +1752,11 @@ enum Library {
                       }
                     }
                   ]
-                  bounds {
-                    N "Standard.Comparable & Standard.Numeric"
-                  }
                   description "The number without its sign."
                   parameters [
                     {
                       name "number"
-                      type "some N"
+                      type "some N: Standard.Comparable & Standard.Numeric"
                     }
                   ]
                   result {
@@ -1784,14 +1775,11 @@ enum Library {
                   returns "some N"
                 }
                 "Standard.Math.greaterThan" {
-                  bounds {
-                    T "Standard.Comparable"
-                  }
                   description "Whether the first is larger, by the one order."
                   parameters [
                     {
                       name "lhs"
-                      type "some T"
+                      type "some T: Standard.Comparable"
                     }
                     {
                       name "rhs"
@@ -1844,14 +1832,11 @@ enum Library {
                       }
                     }
                   ]
-                  bounds {
-                    T "Standard.Comparable"
-                  }
                   description "The larger of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"
-                      type "some T"
+                      type "some T: Standard.Comparable"
                     }
                     {
                       name "rhs"
@@ -1894,14 +1879,11 @@ enum Library {
                       }
                     }
                   ]
-                  bounds {
-                    T "Standard.Comparable"
-                  }
                   description "The smaller of two of one type, by the one order."
                   parameters [
                     {
                       name "lhs"
-                      type "some T"
+                      type "some T: Standard.Comparable"
                     }
                     {
                       name "rhs"

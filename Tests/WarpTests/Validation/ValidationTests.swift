@@ -781,11 +781,11 @@ struct ValidationTests {
     @Test("a name in the types namespace is held to one grammar where a module built in Swift spells it", arguments: [
         ("procedures.App.keep.parameters[0]", [:], TypeExpression.named("a b"), [:]),
         ("types.Int", ["Int": .alias(.string)], .int, [:]),
-        ("procedures.App.keep.bounds.T", [:], .parameter(name: "T"), ["T": ["Array<Int>"]]),
+        ("procedures.App.keep.parameters[0]", [:], .parameter(name: "T"), ["T": ["Array<Int>"]]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Self"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "A.B"), [:]),
         ("procedures.App.keep.parameters[0]", [:], .parameter(name: "Int"), [:]),
-        ("procedures.App.keep.bounds.some", [:], .parameter(name: "some"), ["some": ["App.Shown"]])
+        ("procedures.App.keep.parameters[0]", [:], .parameter(name: "some"), ["some": ["App.Shown"]])
     ] as [(String, [Name: TypeDeclaration], TypeExpression, [Name: Set<Name>])])
     func aTypeNamespaceNameHoldsOneGrammar(
         place: String,
@@ -951,7 +951,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.procedures.keep.bounds: ")
+            error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.procedures.keep.parameters[1]: ")
                 && "\(error)".contains("a contract's procedure writes no bounds")
         }
     }

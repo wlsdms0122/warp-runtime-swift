@@ -12,6 +12,10 @@ import Warp
 // contract's procedure each write of their own: `parameters`, `returns`,
 // `bounds` and `sameTypes`. Absent `parameters` is an empty signature, not an
 // absent one.
+//
+// A type parameter is bounded where its slots first name it, the parameters
+// in order and then the answer, `some N: Standard.Numeric`, the way a head
+// bounds one.
 struct SignatureFieldsReader {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
@@ -27,22 +31,40 @@ struct SignatureFieldsReader {
     // Read beside other keys the caller has already held the mapping to.
     init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let parameters = try container.decodeIfPresent([ParameterReader].self, forKey: .parameters) ?? []
+        let returns = try container.decodeIfPresent(TypeReader.self, forKey: .returns)?.bounded
         let bounds = try decoder.descendingIfPresent(to: CodingKeys.bounds)
+        let labeled = try BoundsReader().bounds(
+            try bounds?.read([Name: String].self),
+            in: decoder.notation,
+            at: bounds?.steps ?? decoder.steps
+        )
 
         self.signature = Signature(
-            parameters: try container.decodeIfPresent([ParameterReader].self, forKey: .parameters)?
-                .map(\.parameter) ?? [],
-            returns: try container.decodeIfPresent(TypeReader.self, forKey: .returns)?.type,
-            bounds: try BoundsReader().bounds(
-                try bounds?.read([Name: String].self),
-                in: decoder.notation,
-                at: bounds?.steps ?? decoder.steps
-            ),
+            parameters: parameters.map(\.parameter),
+            returns: returns?.type,
+            bounds: try Self.bounds(of: parameters.flatMap(\.namings) + (returns?.namings ?? []))
+                .merging(labeled) { introduced, _ in introduced },
             sameTypes: try decoder.descendingIfPresent(to: CodingKeys.sameTypes)?
-                .read([Name: TypeReader].self).mapValues(\.type) ?? [:]
+                .read([Name: TypeReader].self).mapValues { same in try same.unbounded() } ?? [:]
         )
     }
 
     // MARK: - Public
     // MARK: - Private
+    // The bound written beside each type parameter's first naming. One
+    // written at a later naming is refused where it stands.
+    private static func bounds(of namings: [TypeReader.Naming]) throws -> [Name: Set<Name>] {
+        let (bounds, again) = TypeReader.introduced(namings)
+
+        if let again {
+            throw ReadingError(
+                "bounds '\(again.name)' where it is named again. A signature bounds a type parameter where"
+                    + " its slots first name it",
+                at: again.steps
+            )
+        }
+
+        return bounds
+    }
 }

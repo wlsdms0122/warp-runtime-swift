@@ -63,6 +63,15 @@ struct DeclarationChecker {
                 try mentioned(in: declared, at: .type(name.spelling, in: .of(module)), resolve: table)
             }
 
+            // A head before the members under it, whose signatures carry the
+            // head's bounds: a bound is refused where the head writes it.
+            try judge(contracts: module.contracts, of: .of(module), in: table)
+            try judge(
+                heads: Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys),
+                of: .of(module),
+                in: table
+            )
+
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
@@ -89,12 +98,6 @@ struct DeclarationChecker {
                 }
             }
 
-            try judge(contracts: module.contracts, of: .of(module), in: table)
-            try judge(
-                heads: Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys),
-                of: .of(module),
-                in: table
-            )
             try judge(typeMembers: module.typeMembers, of: .of(module), in: table)
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
@@ -123,6 +126,14 @@ struct DeclarationChecker {
     // stand on where their numbers are answered with rows.
     func judge(_ objects: [Compiled], in table: TypeTable) throws {
         for object in objects {
+            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
+            try judge(
+                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
+                of: object.document,
+                in: table,
+                answering: false
+            )
+
             for row in object.table {
                 try judge(
                     row.signature,
@@ -132,13 +143,6 @@ struct DeclarationChecker {
                 )
             }
 
-            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
-            try judge(
-                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
-                of: object.document,
-                in: table,
-                answering: false
-            )
             try judge(typeMembers: object.typeMembers, of: object.document, in: table, answering: false)
         }
     }
@@ -156,7 +160,7 @@ struct DeclarationChecker {
         for (contract, declared) in contracts.sorted(by: { $0.key < $1.key }) {
             let home = Place.contract(contract.spelling, in: document)
 
-            try judge(bounds: declared.bounds, at: { name in home.part(.bounds).key(name.spelling) }, in: table)
+            try judge(bounds: declared.bounds, at: { _ in home.part(.types) }, in: table)
 
             for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
                 let place = home.part(.procedures).key(name.spelling)
@@ -266,7 +270,7 @@ struct DeclarationChecker {
             answering: answering
         )
 
-        try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
+        try judge(bounds: signature.bounds, at: { parameter in place.bound(parameter, of: signature) }, in: table)
 
         // An associated type the signature bounds or says is a type is one a
         // contract bounding its parameter asks, and the type it is said to be
@@ -496,7 +500,7 @@ struct DeclarationChecker {
         answering: Bool = true
     ) throws {
         switch declared {
-        case let .struct(fields, _, bounds):
+        case let .struct(fields, typeParameters, bounds):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
                 try mentioned(
                     in: field,
@@ -507,7 +511,14 @@ struct DeclarationChecker {
                 )
             }
 
-            try judge(bounds: bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
+            try judge(
+                bounds: bounds,
+                at: { parameter in
+                    typeParameters.firstIndex(of: parameter).map { position in place.part(.typeParameters).index(position) }
+                        ?? place.part(.typeParameters)
+                },
+                in: table
+            )
 
         case let .alias(type):
             try mentioned(in: type, at: place, resolve: table, answering: answering)

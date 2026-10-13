@@ -19,6 +19,10 @@ struct ParameterReader: Decodable {
     // MARK: - Property
     let parameter: Parameter
 
+    // The type parameters its type names, where a bound may stand beside the
+    // first.
+    let namings: [TypeReader.Naming]
+
     // MARK: - Initializer
     init(from decoder: Decoder) throws {
         let notation = decoder.notation
@@ -37,10 +41,10 @@ struct ParameterReader: Decodable {
 
             if let spelled = try? keyed.decode(String.self, forKey: key) {
                 do {
-                    self.parameter = Parameter(
-                        name: name,
-                        type: try TypeReader.parse(spelled, in: notation)
-                    )
+                    let type = try TypeReader.reading(spelled, in: notation, at: decoder.steps).bounded
+
+                    self.parameter = Parameter(name: name, type: type.type)
+                    self.namings = type.namings
                 } catch let error as TypeFormError {
                     throw ReadingError(error.message, at: decoder.steps)
                 }
@@ -55,6 +59,7 @@ struct ParameterReader: Decodable {
                 type: rest.type,
                 description: rest.description
             )
+            self.namings = rest.namings
 
             return
         }
@@ -71,6 +76,7 @@ struct ParameterReader: Decodable {
         let fields = try ParameterFieldsReader(reading: decoder)
 
         self.parameter = Parameter(name: name, type: fields.type, description: fields.description)
+        self.namings = fields.namings
     }
 
     // MARK: - Public

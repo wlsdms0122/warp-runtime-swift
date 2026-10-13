@@ -112,14 +112,9 @@ public struct Writer: Sendable {
                 try draft.contracts.mapValues { contract in
                     var asking: [Name: Value] = [:]
 
-                    if !contract.types.isEmpty {
-                        asking[ContractReader.CodingKeys.types.name] = .array(
-                            contract.types.sorted().map { name in .string(name.spelling) }
-                        )
-                    }
-
-                    if let bounds = TypeWriter(readBy: readBy).bounds(contract.bounds) {
-                        asking[ContractReader.CodingKeys.bounds.name] = bounds
+                    if !contract.types.isEmpty || !contract.bounds.isEmpty {
+                        asking[ContractReader.CodingKeys.types.name] = try TypeWriter(readBy: readBy)
+                            .introduced(contract.types.sorted(), bounds: contract.bounds)
                     }
 
                     guard !contract.procedures.isEmpty else { return .dictionary(asking) }
@@ -210,24 +205,7 @@ public struct Writer: Sendable {
     }
 
     public func value(of parameter: Parameter) throws -> Value {
-        var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
-
-        if parameter.type != .any {
-            written[ParameterFieldsReader.CodingKeys.type.name] = try value(of: parameter.type)
-        }
-
-        if let description = parameter.description {
-            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
-        }
-
-        // A struct holding nothing but the name is one pair, which a notation
-        // offering the pair form reads as a name and its type. There it is
-        // written as the pair holding nothing.
-        guard written.count > 1 || !readBy.pairedParameter else {
-            return .dictionary([parameter.name: .dictionary([:])])
-        }
-
-        return .dictionary(written)
+        try value(of: parameter, introducing: nil)
     }
 
     // Where the two positions a document writes an expression in stop being the
@@ -391,21 +369,56 @@ public struct Writer: Sendable {
         return written
     }
 
+    // A parameter, its type written as a slot's, where a bound stands beside
+    // the first naming of a type parameter.
+    private func value(of parameter: Parameter, introducing: TypeWriter.Introducing?) throws -> Value {
+        var written: [Name: Value] = [ParameterReader.CodingKeys.name.name: .string(parameter.name.spelling)]
+
+        if parameter.type != .any {
+            written[ParameterFieldsReader.CodingKeys.type.name] = try TypeWriter(readBy: readBy)
+                .value(of: parameter.type, introducing: introducing)
+        }
+
+        if let description = parameter.description {
+            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
+        }
+
+        // A struct holding nothing but the name is one pair, which a notation
+        // offering the pair form reads as a name and its type. There it is
+        // written as the pair holding nothing.
+        guard written.count > 1 || !readBy.pairedParameter else {
+            return .dictionary([parameter.name: .dictionary([:])])
+        }
+
+        return .dictionary(written)
+    }
+
     // A signature is written flat into whatever declares it. A procedure and a
     // contract's procedure both spell it as their own keys rather than nesting
     // it.
+    //
+    // A type parameter's bound stands beside the first naming of it the
+    // slots write, and an associated type's under `bounds`.
     private func fields(of signature: Signature) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
+        let introducing = TypeWriter.Introducing(signature.bounds.filter { label, _ in label.associated == nil })
 
         if !signature.parameters.isEmpty {
-            written[SignatureFieldsReader.CodingKeys.parameters.name] = .array(try signature.parameters.map(value(of:)))
+            written[SignatureFieldsReader.CodingKeys.parameters.name] = .array(
+                try signature.parameters.map { parameter in try value(of: parameter, introducing: introducing) }
+            )
         }
 
         if let returns = signature.returns {
-            written[SignatureFieldsReader.CodingKeys.returns.name] = try value(of: returns)
+            written[SignatureFieldsReader.CodingKeys.returns.name] = try TypeWriter(readBy: readBy)
+                .value(of: returns, introducing: introducing)
         }
 
-        if let bounds = TypeWriter(readBy: readBy).bounds(of: signature) {
+        if let unwritten = introducing.bounds.keys.sorted().first {
+            throw WritingError("bounds '\(unwritten)', which no slot names, and a bound stands beside its first naming")
+        }
+
+        if let bounds = TypeWriter(readBy: readBy).labeled(signature.bounds.filter { label, _ in label.associated != nil }) {
             written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
         }
 

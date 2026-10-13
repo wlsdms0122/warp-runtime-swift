@@ -230,14 +230,13 @@ struct WriterTests {
             "typed": [
                 "parameters": [
                     ["name": "anything", "type": "Procedure"],
-                    ["name": "bounded", "type": "some T"],
+                    ["name": "bounded", "type": "some T: Scalar"],
                     ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
                     ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
-                "bounds": ["T": "Scalar"],
                 "result": ["ref": "of"]
             ]
         ]
@@ -505,7 +504,19 @@ struct WriterTests {
             try Loader().load(written, identity: nil)
         }
 
-        #expect(refused?.place?.rendered == "contracts.App.Kept.procedures.keep.bounds")
+        #expect(refused?.place?.rendered == "contracts.App.Kept.procedures.keep.parameters[1]")
+    }
+
+    @Test("a draft bounding a name its list does not hold has no document to write", arguments: [
+        Draft(types: ["App.Box": .struct(["item": .parameter(name: "T")], typeParameters: ["T"], bounds: ["U": ["Hashable"]])]),
+        Draft(contracts: ["App.Keyed": Contract(types: ["Item"], bounds: ["Key": ["Hashable"]])])
+    ])
+    func aBoundOutsideItsListIsNotWritten(draft: Draft) {
+        // When / Then. A bound stands beside the name it bounds, and one with
+        // no name to stand beside would be dropped
+        #expect(throws: WritingError.self) {
+            try Writer().value(of: draft)
+        }
     }
 
     @Test("a call of literal text has no document to write")
@@ -815,7 +826,7 @@ struct WriterTests {
         }
     }
 
-    @Test("a bound is written once, in the declaring signature's bounds")
+    @Test("a bound is written once, beside the first naming the declaring signature's slots write")
     func aBoundIsWrittenInTheDeclaringSignature() throws {
         // Given. A slot names the parameter, and the signature holds the bound
         let bounded = Signature(
@@ -850,7 +861,7 @@ struct WriterTests {
             return
         }
 
-        #expect(entry["bounds"] == .dictionary(["T": .string("Scalar")]))
+        #expect(entry["bounds"] == nil)
 
         guard
             case let .array(parameters) = entry["parameters"]
@@ -860,7 +871,7 @@ struct WriterTests {
             return
         }
 
-        #expect(parameters == [.dictionary(["name": .string("item"), "type": .string("some T")])])
+        #expect(parameters == [.dictionary(["name": .string("item"), "type": .string("some T: Scalar")])])
     }
 
     @Test("a procedure backed by native code has no document")

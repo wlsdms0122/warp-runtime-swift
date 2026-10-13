@@ -227,8 +227,7 @@ struct ModuleDeclarationTests {
                     "result": ["dictionary": [["result", ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]]
                 ],
                 "App.tell": [
-                    "parameters": [["name": "it", "type": "some T"]],
-                    "bounds": ["T": "App.Describable"],
+                    "parameters": [["name": "it", "type": "some T: App.Describable"]],
                     "returns": "String",
                     "result": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]
                 ]

@@ -111,13 +111,12 @@ struct TypeNotationTests {
         }
     }
 
-    @Test("a signature bounds its type parameters once, in bounds")
+    @Test("a signature bounds a type parameter beside the first naming its slots write")
     func aBoundIsDeclaredInTheSignature() throws {
-        // Given / When. The slots name the parameter, and the signature says
-        // what the name admits
+        // Given / When. The first slot naming the parameter says what the name
+        // admits, and the others name it
         let sut = try loader.loadProcedure([
-            "bounds": ["T": "Comparable"],
-            "parameters": [["name": "of", "type": "some T"], ["name": "value", "type": "some T"]],
+            "parameters": [["name": "of", "type": "some T: Comparable"], ["name": "value", "type": "some T"]],
             "returns": "some T",
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
@@ -137,16 +136,14 @@ struct TypeNotationTests {
         // When / Then. A bound is a contract's name, never a type.
         #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
-                "bounds": ["T": "Array<Int>"],
-                "parameters": [["name": "of", "type": "some T"]],
+                "parameters": [["name": "of", "type": "some T: Array<Int>"]],
                 "result": ["ref": "of"]
             ])
         }
 
-        // And. A nested procedure type carries no bounds of its own. Its
+        // And. A nested procedure type carries no `bounds` of its own. Its
         // parameters are the declaring signature's slots, and the declaring
-        // signature owns their bounds. Two structs binding one namespace would
-        // be two claims about one thing.
+        // signature owns their bounds.
         #expect(throws: ReadingError.self) {
             try loader.loadProcedure([
                 "parameters": [
@@ -171,12 +168,11 @@ struct TypeNotationTests {
         // procedure type's own slot; both are this signature's mentions of one
         // name
         let sut = try loader.loadProcedure([
-            "bounds": ["Element": "Comparable"],
             "parameters": [
                 ["name": "by",
                     "type": [
                         "procedure": [
-                            "parameters": ["some Element"],
+                            "parameters": ["some Element: Comparable"],
                             "returns": "Bool"
                         ]
                     ]

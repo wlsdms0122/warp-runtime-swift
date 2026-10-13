@@ -11,6 +11,31 @@ import Warp
 // A type written the way `TypeReader` reads it: a spelling where the type has
 // one, and a mapping under the one key its form is read by where it has none.
 struct TypeWriter {
+    // The bounds a signature's slots write, each beside the first naming of
+    // its type parameter, as the reading takes them: the slots in order, at
+    // any depth.
+    final class Introducing {
+        // MARK: - Property
+        // What is left to write.
+        private(set) var bounds: [Name: Set<Name>]
+        private var named: Set<Name> = []
+
+        // MARK: - Initializer
+        init(_ bounds: [Name: Set<Name>]) {
+            self.bounds = bounds
+        }
+
+        // MARK: - Public
+        // The bound written beside this naming, at the first one only.
+        func bound(at name: Name) -> Set<Name>? {
+            guard named.insert(name).inserted else { return nil }
+
+            return bounds.removeValue(forKey: name)
+        }
+
+        // MARK: - Private
+    }
+
     // MARK: - Property
     // Who reads the spelling back, which says what a declared name written
     // short stands for.
@@ -20,14 +45,75 @@ struct TypeWriter {
     // MARK: - Public
     // A spelling is kept only where the reading takes it back as this type.
     func value(of type: TypeExpression) throws -> Value {
-        let written = try form(of: type)
+        try value(of: type, introducing: nil)
+    }
 
+    // The same in a signature's slot, where a bound stands beside the first
+    // naming of its type parameter.
+    func value(of type: TypeExpression, introducing: Introducing?) throws -> Value {
+        try checked(try form(of: type, introducing: introducing), as: type)
+    }
+
+    // A declared type: a struct under `struct`, its fields beside their
+    // types, the type parameters it takes beside their bounds where it takes
+    // any, and an alias as the type it stands for.
+    func value(of declared: TypeDeclaration) throws -> Value {
+        switch declared {
+        case let .struct(fields, typeParameters, bounds):
+            var written: [Name: Value] = [TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))]
+
+            if !typeParameters.isEmpty || !bounds.isEmpty {
+                written[TypeDeclarationReader.typeParametersKey] = try introduced(typeParameters, bounds: bounds)
+            }
+
+            return .dictionary(written)
+
+        case let .alias(type):
+            return try value(of: type)
+        }
+    }
+
+    // Names a list introduces, a struct's type parameters or the types a
+    // contract asks, each beside the contracts it is bounded by, joined with
+    // `&`. A bound on a name the list does not hold has nowhere to stand.
+    func introduced(_ names: [Name], bounds: [Name: Set<Name>]) throws -> Value {
+        if let unwritten = Set(bounds.keys).subtracting(names).min() {
+            throw WritingError("bounds '\(unwritten)', which the list does not hold, and a bound stands beside its name")
+        }
+
+        return .array(
+            names.map { name in
+                guard let contracts = bounds[name] else { return .string(name.spelling) }
+
+                return .string("\(name.spelling): \(Self.joined(contracts))")
+            }
+        )
+    }
+
+    // What a signature bounds that it does not introduce, an associated type
+    // of one of its type parameters, under its label, or nothing where it
+    // bounds none.
+    func labeled(_ bounds: [Name: Set<Name>]) -> Value? {
+        guard !bounds.isEmpty else { return nil }
+
+        return .dictionary(bounds.mapValues { contracts in .string(Self.joined(contracts)) })
+    }
+
+    // MARK: - Private
+    // A bound's contracts, in one order.
+    private static func joined(_ contracts: Set<Name>) -> String {
+        contracts.sorted().map(\.spelling).joined(separator: " & ")
+    }
+
+    // A written type, where a spelling is one the reading takes back as the
+    // type.
+    private func checked(_ written: Value, as type: TypeExpression) throws -> Value {
         guard case let .string(spelling) = written else { return written }
 
         let read: TypeExpression
 
         do {
-            read = try TypeReader.parse(spelling, in: readBy)
+            read = try TypeReader.reading(spelling, in: readBy).bounded.type
         } catch {
             throw WritingError("the type is written '\(spelling)', which the reading refuses: \(error)")
         }
@@ -42,50 +128,8 @@ struct TypeWriter {
         return written
     }
 
-    // A declared type: a struct under `struct`, its fields beside their
-    // types, the type parameters it takes and their bounds where it takes
-    // any, and an alias as the type it stands for.
-    func value(of declared: TypeDeclaration) throws -> Value {
-        switch declared {
-        case let .struct(fields, typeParameters, bounds):
-            var written: [Name: Value] = [TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))]
-
-            if !typeParameters.isEmpty {
-                written[TypeDeclarationReader.typeParametersKey] = .array(typeParameters.map { name in .string(name.spelling) })
-            }
-
-            if let bounds = self.bounds(bounds) {
-                written[SignatureFieldsReader.CodingKeys.bounds.name] = bounds
-            }
-
-            return .dictionary(written)
-
-        case let .alias(type):
-            return try value(of: type)
-        }
-    }
-
-    // The bounds, written once, at the signature that declares the names.
-    func bounds(of signature: Signature) -> Value? {
-        bounds(signature.bounds)
-    }
-
-    // Each type parameter, or each type a contract asks, beside the
-    // contracts it is bounded by, joined with `&`, or nothing where none is
-    // bounded.
-    func bounds(_ bounds: [Name: Set<Name>]) -> Value? {
-        guard !bounds.isEmpty else { return nil }
-
-        return .dictionary(
-            bounds.mapValues { named in
-                Value.string(named.sorted().map(\.spelling).joined(separator: " & "))
-            }
-        )
-    }
-
-    // MARK: - Private
     // What a type is written as, before the reading is asked about it.
-    private func form(of type: TypeExpression) throws -> Value {
+    private func form(of type: TypeExpression, introducing: Introducing?) throws -> Value {
         switch type {
         case .any: return .string(TypeSpelling.any.spelling)
         case .never: return .string(TypeSpelling.never.spelling)
@@ -103,7 +147,11 @@ struct TypeWriter {
             guard !arguments.isEmpty else { return .string(name.spelling) }
 
             let spelled = try arguments.map { argument in
-                try self.named(argument, at: "between a struct's brackets. A procedure type is declared and written by its name")
+                try self.named(
+                    argument,
+                    at: "between a struct's brackets. A procedure type is declared and written by its name",
+                    introducing: introducing
+                )
             }
 
             return .string("\(name.spelling)<\(spelled.joined(separator: ", "))>")
@@ -119,9 +167,13 @@ struct TypeWriter {
                     + " fills"
             )
 
-        // Bare: a slot names the parameter, and its bound is the signature's.
+        // Its bound beside it where the slots first name it.
         case let .parameter(name):
-            return .string("\(TypeSpelling.some) \(name)")
+            guard let contracts = introducing?.bound(at: name) else {
+                return .string("\(TypeSpelling.some) \(name)")
+            }
+
+            return .string("\(TypeSpelling.some) \(name): \(Self.joined(contracts))")
 
         case .associatedType:
             return .string(type.rendered)
@@ -133,21 +185,23 @@ struct TypeWriter {
         // own key where the element has none. An array of procedures is the
         // case with none.
         case let .array(element):
-            guard case let .string(spelling) = try form(of: element) else {
-                return .dictionary([Name(normal: TypeReader.Holding.array.rawValue): try value(of: element)])
+            let inner = try form(of: element, introducing: introducing)
+
+            guard case let .string(spelling) = inner else {
+                return .dictionary([Name(normal: TypeReader.Holding.array.rawValue): try checked(inner, as: element)])
             }
 
             return .string("\(TypeReader.Holding.array.spelling)<\(spelling)>")
 
         case let .dictionary(key, value):
-            guard
-                case let .string(keySpelling) = try form(of: key),
-                case let .string(valueSpelling) = try form(of: value)
-            else {
+            let keyForm = try form(of: key, introducing: introducing)
+            let valueForm = try form(of: value, introducing: introducing)
+
+            guard case let .string(keySpelling) = keyForm, case let .string(valueSpelling) = valueForm else {
                 return .dictionary([
                     Name(normal: TypeReader.Holding.dictionary.rawValue): .dictionary([
-                        TypeReader.DictionaryTypeReader.CodingKeys.key.name: try self.value(of: key),
-                        TypeReader.DictionaryTypeReader.CodingKeys.value.name: try self.value(of: value)
+                        TypeReader.DictionaryTypeReader.CodingKeys.key.name: try checked(keyForm, as: key),
+                        TypeReader.DictionaryTypeReader.CodingKeys.value.name: try checked(valueForm, as: value)
                     ])
                 ])
             }
@@ -158,17 +212,17 @@ struct TypeWriter {
         // declared half has to have a name of its own.
         case let .nullable(inner):
             return .string(
-                "\(try named(inner, at: "before `?`. A struct is declared and written by its name, like `Task?`"))?"
+                "\(try named(inner, at: "before `?`. A struct is declared and written by its name, like `Task?`", introducing: introducing))?"
             )
 
         // Both marks are written the same way, so the writing is said once
         // below. They are matched one to a case because the mark a case carries
         // is what the writing needs and a pattern cannot hand it over.
         case let .variable(inner):
-            return try value(of: inner, under: .variable)
+            return try value(of: inner, under: .variable, introducing: introducing)
 
         case let .inout(inner):
-            return try value(of: inner, under: .inout)
+            return try value(of: inner, under: .inout, introducing: introducing)
 
         case let .procedure(type, constness, isolation):
             guard let type else { return .string(TypeReader.procedureSpelling(constness, isolation, as: .name)) }
@@ -179,12 +233,12 @@ struct TypeWriter {
 
             if !type.parameters.isEmpty {
                 written[TypeReader.ProcedureTypeReader.CodingKeys.parameters.name] = .array(
-                    try type.parameters.map(value(of:))
+                    try type.parameters.map { parameter in try value(of: parameter, introducing: introducing) }
                 )
             }
 
             if let returns = type.returns {
-                written[TypeReader.ProcedureTypeReader.CodingKeys.returns.name] = try value(of: returns)
+                written[TypeReader.ProcedureTypeReader.CodingKeys.returns.name] = try value(of: returns, introducing: introducing)
             }
 
             if case let .these(failures) = type.failing {
@@ -200,8 +254,8 @@ struct TypeWriter {
     // A marked slot is written with the mark in front of the inner type,
     // whichever form that type takes: a bare name, or a procedure form under
     // its one key.
-    private func value(of inner: TypeExpression, under mark: SlotMark) throws -> Value {
-        switch try form(of: inner) {
+    private func value(of inner: TypeExpression, under mark: SlotMark, introducing: Introducing?) throws -> Value {
+        switch try form(of: inner, introducing: introducing) {
         case let .string(written):
             return .string(mark.marking(written))
 
@@ -231,8 +285,8 @@ struct TypeWriter {
 
     // Only a type with a name of its own takes a `?` after it, said with the
     // place the author wrote, so the refusal points at their text.
-    private func named(_ type: TypeExpression, at context: String) throws -> String {
-        guard case let .string(name) = try form(of: type) else {
+    private func named(_ type: TypeExpression, at context: String, introducing: Introducing?) throws -> String {
+        guard case let .string(name) = try form(of: type, introducing: introducing) else {
             throw WritingError("only a type with a name is written \(context)")
         }
 

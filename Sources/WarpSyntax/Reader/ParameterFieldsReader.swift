@@ -22,6 +22,10 @@ struct ParameterFieldsReader: Decodable {
     let type: TypeExpression
     let description: String?
 
+    // The type parameters the type names, where a bound may stand beside the
+    // first.
+    let namings: [TypeReader.Naming]
+
     // MARK: - Initializer
     init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(
@@ -38,7 +42,10 @@ struct ParameterFieldsReader: Decodable {
     init(reading decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.type ?? .any
+        let type = try container.decodeIfPresent(TypeReader.self, forKey: .type)?.bounded
+
+        self.type = type?.type ?? .any
+        self.namings = type?.namings ?? []
         self.description = try container.decodeIfPresent(String.self, forKey: .description)
     }
 

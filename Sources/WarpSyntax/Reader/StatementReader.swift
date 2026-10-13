@@ -109,7 +109,7 @@ public struct StatementReader: Decodable {
             )
         }
 
-        return try container.decode(TypeReader.self, forKey: key).type
+        return try container.decode(TypeReader.self, forKey: key).unbounded()
     }
 
     // What a naming key holds, read the one way it is read.
