@@ -392,11 +392,20 @@ public final class Linked: Sendable {
             in: table
         )
 
+        // A bounded parameter is one type, and a value says of its type the
+        // struct it is and not what that struct is applied to.
+        let unapplied = Substitution(
+            filling: types,
+            against: values.map { value in LoweredType(unapplied: value, in: table) },
+            in: table
+        )
+
         for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
-            let typed = substitution.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
-            let refusal = substitution.disagreement(of: parameter, in: table)
-                ?? substitution.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
-                ?? (typed ? nil : substitution.unanswered(parameter, bounds: Set(bounds), in: table) { leaning in
+            let read = bounds.isEmpty ? substitution : unapplied
+            let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
+            let refusal = read.disagreement(of: parameter, in: table)
+                ?? read.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
+                ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table) { leaning in
                     table.fulfillment?.require(folded: leaning)
                 })
 

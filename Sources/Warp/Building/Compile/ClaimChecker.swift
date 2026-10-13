@@ -29,10 +29,6 @@ import Foundation
 // every declaration. A slot bounded by a contract may be filled by a type no
 // call in this link mentions.
 struct ClaimChecker {
-    // What a bare head of a list or a map stands for applies the type to
-    // these, which a claim reads as `Self.Element` and `Self.Key`.
-    private static let element: Name = "Element"
-    private static let key: Name = "Key"
 
     // What a claim came to: the procedure behind each one the contract asks, or the
     // reason it came to nothing where another document could still supply it.
@@ -214,13 +210,13 @@ struct ClaimChecker {
 
         switch head.type {
         case TypeSpelling.array:
-            return Head(head.type, arguments: [.parameter(name: element)])
+            return Head(head.type, arguments: [.parameter(name: TypeSpelling.element)])
 
         case TypeSpelling.dictionary:
             return Head(
                 head.type,
-                arguments: [.parameter(name: key), .parameter(name: element)],
-                bounds: [key: [TypeSpelling.hashable]]
+                arguments: [.parameter(name: TypeSpelling.key), .parameter(name: TypeSpelling.element)],
+                bounds: [TypeSpelling.key: [TypeSpelling.hashable]]
             )
 
         default:

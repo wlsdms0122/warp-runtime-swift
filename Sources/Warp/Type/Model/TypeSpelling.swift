@@ -48,4 +48,9 @@ public enum TypeSpelling {
     // names.
     static let selfElement: Name = "Self.Element"
     static let selfKey: Name = "Self.Key"
+
+    // The same parameters as a bare head of a list or a map applies the type
+    // to, which a claim reads as the two above.
+    static let element: Name = "Element"
+    static let key: Name = "Key"
 }

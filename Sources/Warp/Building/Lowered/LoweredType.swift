@@ -496,6 +496,28 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
+    // What a value says of its type: what it reads as, every struct in it
+    // as the struct it is and not applied to anything. A value carries no
+    // type's arguments, so two boxes are of one type whatever they hold.
+    init(unapplied value: Value, in table: LoweredTypeTable) {
+        switch value {
+        case let .array(elements):
+            self = .array(LoweredType(joining: elements.map { element in LoweredType(unapplied: element, in: table) }))
+
+        case let .struct(instance):
+            self = table.structRow(named: instance.name).map { row in .named(row) } ?? .any
+
+        case let .dictionary(dictionary):
+            self = .dictionary(
+                key: LoweredType(joining: dictionary.keys.map { key in LoweredType(unapplied: key, in: table) }),
+                value: LoweredType(joining: dictionary.values.map { value in LoweredType(unapplied: value, in: table) })
+            )
+
+        default:
+            self = LoweredType(of: value, in: table)
+        }
+    }
+
     // What a value written as a literal reads as: a whole number as one
     // whose place may read it as a fraction, at whatever depth of a list or
     // a map it stands, and anything else as the value it is.

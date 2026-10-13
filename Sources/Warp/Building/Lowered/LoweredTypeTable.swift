@@ -512,24 +512,34 @@ final class LoweredTypeTable: Sendable {
 
     // MARK: - Private
     // What a struct from outside is applied to where its place does not say:
-    // what the value reads as, each parameter its fields' readings joined,
-    // and a bounded one held to its bounds, which `Any`, what readings of
-    // several types join to, answers none.
+    // what the value reads as, each parameter its fields' readings joined. A
+    // bounded one is one type, and a value says of its type the struct it is
+    // and not what that is applied to, so one whose fields are of no one
+    // type, `Any`, answers none, and one that is stands, each field holding
+    // it held to the bounds by what it is as the struct settles.
     private func arguments(of row: Int, holding instance: Struct, at path: String) throws -> [LoweredType] {
         guard case let .struct(declared) = loweredTypes[row] else { return [] }
 
-        let arguments = self.arguments(
+        let readings = instance.values.map { field in LoweredType(of: field, in: self) }
+        let arguments = self.arguments(of: row, joining: Dictionary(uniqueKeysWithValues: zip(instance.names, readings)))
+        let unapplied = self.arguments(
             of: row,
-            joining: Dictionary(uniqueKeysWithValues: zip(instance.names, instance.values.map { field in LoweredType(of: field, in: self) }))
+            joining: Dictionary(uniqueKeysWithValues: zip(instance.names, instance.values.map { field in
+                LoweredType(unapplied: field, in: self)
+            }))
         )
         let bounds = declared.fields.reduce(into: [Name: [Name]]()) { found, field in
             found.merge(field.typeParameters) { first, _ in first }
         }
 
-        for (parameter, argument) in zip(declared.typeParameters, arguments) {
-            for contract in bounds[parameter] ?? [] {
+        return try zip(declared.typeParameters, zip(arguments, unapplied)).map { parameter, read in
+            guard let held = bounds[parameter], !held.isEmpty else { return read.0 }
+
+            guard read.1.nominal(in: self) == nil else { return .parameter(label: parameter, bounds: held) }
+
+            for contract in held {
                 if let refusal = refusal(
-                    of: argument,
+                    of: read.1,
                     answering: contract,
                     orNull: false,
                     as: "'\(parameter)' is read as",
@@ -538,9 +548,9 @@ final class LoweredTypeTable: Sendable {
                     throw ArgumentError("\(path): \(refusal)")
                 }
             }
-        }
 
-        return arguments
+            return read.1
+        }
     }
 
     // What a slot reads a value as: its own marks off, and where it takes null
