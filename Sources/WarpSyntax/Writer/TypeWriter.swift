@@ -62,8 +62,8 @@ struct TypeWriter {
         case let .struct(fields, typeParameters, bounds):
             var written: [Name: Value] = [TypeDeclarationReader.structKey: .dictionary(try fields.mapValues(value(of:)))]
 
-            if !typeParameters.isEmpty {
-                written[TypeDeclarationReader.typeParametersKey] = introduced(typeParameters, bounds: bounds)
+            if !typeParameters.isEmpty || !bounds.isEmpty {
+                written[TypeDeclarationReader.typeParametersKey] = try introduced(typeParameters, bounds: bounds)
             }
 
             return .dictionary(written)
@@ -75,9 +75,13 @@ struct TypeWriter {
 
     // Names a list introduces, a struct's type parameters or the types a
     // contract asks, each beside the contracts it is bounded by, joined with
-    // `&`.
-    func introduced(_ names: [Name], bounds: [Name: Set<Name>]) -> Value {
-        .array(
+    // `&`. A bound on a name the list does not hold has nowhere to stand.
+    func introduced(_ names: [Name], bounds: [Name: Set<Name>]) throws -> Value {
+        if let unwritten = Set(bounds.keys).subtracting(names).min() {
+            throw WritingError("bounds '\(unwritten)', which the list does not hold, and a bound stands beside its name")
+        }
+
+        return .array(
             names.map { name in
                 guard let contracts = bounds[name] else { return .string(name.spelling) }
 

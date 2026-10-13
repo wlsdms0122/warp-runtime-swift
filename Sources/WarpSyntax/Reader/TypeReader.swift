@@ -230,6 +230,25 @@ struct TypeReader: Decodable {
         return TypeReader(type, namings: namings)
     }
 
+    // The bound written beside each type parameter's first naming, and the
+    // first naming written with a bound after the name was already named,
+    // which the caller refuses in its own words.
+    static func introduced(_ namings: [Naming]) -> (bounds: [Name: Set<Name>], again: Naming?) {
+        var named: Set<Name> = []
+        var bounds: [Name: Set<Name>] = [:]
+
+        for naming in namings {
+            let first = named.insert(naming.name).inserted
+
+            guard let bound = naming.bound else { continue }
+            guard first else { return (bounds, naming) }
+
+            bounds[naming.name] = bound
+        }
+
+        return (bounds, nil)
+    }
+
     // The same, where no bound may stand.
     static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
         let read = try reading(written, in: notation)
@@ -247,20 +266,14 @@ struct TypeReader: Decodable {
     // A type parameter is bounded where the head first names it, and the
     // head is a type a value is an instance of.
     static func head(_ written: String, in notation: Notation = .canonical) throws -> Head {
-        var bounds: [Name: Set<Name>] = [:]
-        var named: Set<Name> = []
-        let type = try parse(written, qualifying: { name in notation.qualified(name, as: .type) }) { name, written in
-            let first = named.insert(name).inserted
+        let read = try reading(written, in: notation)
+        let (bounds, again) = introduced(read.namings)
+        let type = read.written
 
-            guard let written else { return }
-
-            guard first else {
-                throw TypeFormError(
-                    "bounds '\(name)' where it is named again. A head bounds a type parameter where it first names it"
-                )
-            }
-
-            bounds[name] = written
+        if let again {
+            throw TypeFormError(
+                "bounds '\(again.name)' where it is named again. A head bounds a type parameter where it first names it"
+            )
         }
 
         switch type {
@@ -439,8 +452,8 @@ struct TypeReader: Decodable {
             guard !label.contains(".") else {
                 throw TypeFormError(
                     "writes a bound beside '\(label)', an associated type, and a bound stands beside a type"
-                        + " parameter where it is introduced. A signature holds an associated type to a contract"
-                        + " under `bounds`, keyed by '\(label)'"
+                        + " parameter where it is introduced. An associated type is held to what the contract asking"
+                        + " it says, and in a signature also to its `bounds`, keyed by '\(label)'"
                 )
             }
 
@@ -638,8 +651,8 @@ struct TypeReader: Decodable {
     // Why a bound stands nowhere but where a type parameter is introduced.
     private static func unintroduced(_ name: Name) -> String {
         "bounds '\(name)' where no bound is written. A type parameter is bounded where it is introduced:"
-            + " at the first `some \(name)` a procedure's slots write, in a struct's `typeParameters`"
-            + " and in an extension's head"
+            + " at the first `some \(name)` a procedure's slots write, in a struct's `typeParameters`,"
+            + " in a contract's `types` and in an extension's head"
     }
 
     // The rest of the text where it begins with this, and nothing where it does

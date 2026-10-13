@@ -23,19 +23,35 @@ struct IntroducedNamesReader {
         var names: [Name] = []
         var bounds: [Name: Set<Name>] = [:]
 
-        for (position, written) in try decoder.read([String].self).enumerated() {
+        for (position, entry) in try decoder.read([ValueReader].self).map(\.value).enumerated() {
             let steps = decoder.steps + [.index(position)]
+
+            guard case let .string(written) = entry else {
+                throw ReadingError(
+                    "is an entry of a list that introduces names, and one is a name, or a name and what bounds it"
+                        + " written as one string, `\"K: Hashable\"`",
+                    at: steps
+                )
+            }
+
             let parts = written.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
             let name = try Name.read(parts[0].trimmingCharacters(in: Path.whiteSpace), at: steps)
+
+            // One name introduced twice would be one name bounded two ways.
+            guard !names.contains(name) else {
+                throw ReadingError("lists '\(name)' twice", at: steps)
+            }
 
             names.append(name)
 
             guard parts.count > 1 else { continue }
 
+            let bound = parts[1].trimmingCharacters(in: Path.whiteSpace)
+
             do {
-                bounds[name] = try TypeReader.contracts(String(parts[1]), in: decoder.notation)
+                bounds[name] = try TypeReader.contracts(bound, in: decoder.notation)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds '\(name)' by '\(parts[1])': \(refused.message)", at: steps)
+                throw ReadingError("bounds '\(name)' by '\(bound)': \(refused.message)", at: steps)
             }
         }
 

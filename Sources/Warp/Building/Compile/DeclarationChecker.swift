@@ -63,6 +63,15 @@ struct DeclarationChecker {
                 try mentioned(in: declared, at: .type(name.spelling, in: .of(module)), resolve: table)
             }
 
+            // A head before the members under it, whose signatures carry the
+            // head's bounds: a bound is refused where the head writes it.
+            try judge(contracts: module.contracts, of: .of(module), in: table)
+            try judge(
+                heads: Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys),
+                of: .of(module),
+                in: table
+            )
+
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
@@ -89,12 +98,6 @@ struct DeclarationChecker {
                 }
             }
 
-            try judge(contracts: module.contracts, of: .of(module), in: table)
-            try judge(
-                heads: Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys),
-                of: .of(module),
-                in: table
-            )
             try judge(typeMembers: module.typeMembers, of: .of(module), in: table)
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
@@ -123,6 +126,14 @@ struct DeclarationChecker {
     // stand on where their numbers are answered with rows.
     func judge(_ objects: [Compiled], in table: TypeTable) throws {
         for object in objects {
+            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
+            try judge(
+                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
+                of: object.document,
+                in: table,
+                answering: false
+            )
+
             for row in object.table {
                 try judge(
                     row.signature,
@@ -132,13 +143,6 @@ struct DeclarationChecker {
                 )
             }
 
-            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
-            try judge(
-                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
-                of: object.document,
-                in: table,
-                answering: false
-            )
             try judge(typeMembers: object.typeMembers, of: object.document, in: table, answering: false)
         }
     }

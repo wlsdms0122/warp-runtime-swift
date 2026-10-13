@@ -55,23 +55,14 @@ struct SignatureFieldsReader {
     // The bound written beside each type parameter's first naming. One
     // written at a later naming is refused where it stands.
     private static func bounds(of namings: [TypeReader.Naming]) throws -> [Name: Set<Name>] {
-        var named: Set<Name> = []
-        var bounds: [Name: Set<Name>] = [:]
+        let (bounds, again) = TypeReader.introduced(namings)
 
-        for naming in namings {
-            let first = named.insert(naming.name).inserted
-
-            guard let bound = naming.bound else { continue }
-
-            guard first else {
-                throw ReadingError(
-                    "bounds '\(naming.name)' where it is named again. A signature bounds a type parameter where"
-                        + " its slots first name it",
-                    at: naming.steps
-                )
-            }
-
-            bounds[naming.name] = bound
+        if let again {
+            throw ReadingError(
+                "bounds '\(again.name)' where it is named again. A signature bounds a type parameter where"
+                    + " its slots first name it",
+                at: again.steps
+            )
         }
 
         return bounds

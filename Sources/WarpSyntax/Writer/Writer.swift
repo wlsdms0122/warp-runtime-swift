@@ -112,8 +112,8 @@ public struct Writer: Sendable {
                 try draft.contracts.mapValues { contract in
                     var asking: [Name: Value] = [:]
 
-                    if !contract.types.isEmpty {
-                        asking[ContractReader.CodingKeys.types.name] = TypeWriter(readBy: readBy)
+                    if !contract.types.isEmpty || !contract.bounds.isEmpty {
+                        asking[ContractReader.CodingKeys.types.name] = try TypeWriter(readBy: readBy)
                             .introduced(contract.types.sorted(), bounds: contract.bounds)
                     }
 
