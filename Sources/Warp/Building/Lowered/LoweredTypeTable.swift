@@ -15,39 +15,6 @@ import Foundation
 // and for a struct's name. A class, so a judgement that recurses passes one
 // reference down rather than a copy of every array the table holds.
 final class LoweredTypeTable: Sendable {
-    // What a reading standing where a contract is asked comes to. What the
-    // type alone decides is decided here; a reading of a type a value is an
-    // instance of decides nothing until every claim is in, since which types
-    // answer a contract is read off the claims of the whole list and a claim
-    // holds for the values its head takes, so the readings come back and the
-    // asker writes them down.
-    enum Answering {
-        case decided(Bool)
-        case leansOn([LoweredType])
-
-        // MARK: - Property
-        // MARK: - Initializer
-        // MARK: - Public
-        // What a reading comes to where it answers only if both parts do.
-        func and(_ other: Answering) -> Answering {
-            switch (self, other) {
-            case (.decided(false), _), (_, .decided(false)):
-                return .decided(false)
-
-            case (.decided(true), _):
-                return other
-
-            case (_, .decided(true)):
-                return self
-
-            case let (.leansOn(mine), .leansOn(theirs)):
-                return .leansOn(mine + theirs)
-            }
-        }
-
-        // MARK: - Private
-    }
-
     // MARK: - Property
     // The declared types, in the order of their spellings.
     let loweredTypes: [LoweredType]
@@ -68,19 +35,11 @@ final class LoweredTypeTable: Sendable {
     //
     // Every declared contract has an entry, so a name with none is a name no
     // document declared as a contract at all.
+    //
+    // The claims are the ones the asker stands on: a compile's are those made
+    // within the reach of the document it judges, and the link's and the
+    // run's are every claim in the link.
     let satisfying: [Name: [Name: LoweredType?]]
-
-    // Whether the claims above are the whole list's. A table a compile reads
-    // is built from the documents standing so far, and a claim it never saw
-    // may be what answers, so it says nothing about a contract and writes the
-    // pair down instead. A table with nowhere to write is the link's, which
-    // has every claim there is.
-    let holdsEveryClaim: Bool
-
-    // Where a pair this table cannot decide is written down, so it goes to
-    // the list that can answer it. Nothing at the run, where the table is
-    // the whole list's and decides everything it is asked.
-    let fulfillment: Fulfillment?
 
     private let rows: [Name: Int]
 
@@ -97,17 +56,22 @@ final class LoweredTypeTable: Sendable {
         loweredTypes: [LoweredType],
         labels: [Name],
         satisfying: [Name: [Name: LoweredType?]] = [:],
-        holdsEveryClaim: Bool = true,
-        fulfillment: Fulfillment? = nil,
         of linkage: Linkage
     ) {
         self.loweredTypes = loweredTypes
         self.labels = labels
         self.satisfying = satisfying
-        self.holdsEveryClaim = holdsEveryClaim
-        self.fulfillment = fulfillment
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
+    }
+
+    // The same rows answering with other claims, the index carried over.
+    private init(_ table: LoweredTypeTable, satisfying: [Name: [Name: LoweredType?]]) {
+        self.loweredTypes = table.loweredTypes
+        self.labels = table.labels
+        self.satisfying = satisfying
+        self.linkage = table.linkage
+        self.rows = table.rows
     }
 
     // MARK: - Public
@@ -279,10 +243,9 @@ final class LoweredTypeTable: Sendable {
     // documents claim about its type: a claim whose head takes it, the way a
     // parameter written as the head takes an argument. Nil where nothing
     // declares the contract, what an undeclared name means being for whoever
-    // asked to say, and where the table does not hold every claim there is.
+    // asked to say.
     func answers(contract name: Name, reading: LoweredType, of type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
-        guard holdsEveryClaim else { return nil }
         guard let entry = claimed[type] else { return false }
         guard let head = entry else { return true }
 
@@ -322,7 +285,7 @@ final class LoweredTypeTable: Sendable {
         for (parameter, bounds) in head.typeParameters.sorted(by: { $0.key < $1.key }) {
             let refused = substitution.disagreement(of: parameter, in: self)
                 ?? substitution.severalTypes(of: parameter, bounds: Set(bounds), over: [head], in: self)
-                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: self) { _ in }
+                ?? substitution.unanswered(parameter, bounds: Set(bounds), in: self)
 
             if let refused {
                 return refused
@@ -345,25 +308,19 @@ final class LoweredTypeTable: Sendable {
     }
 
     // Whether a reading answers a contract, by what the documents claim
-    // about its type: decided, or leaning on the claims about the types that
-    // come back, for whoever asked to write down. A reading whose type the
-    // build does not know answers none until a cast says what it is.
-    // `orNull` is a slot taking null as well: what arrives is null or
-    // answers.
-    func answering(
-        contract name: Name,
-        reading given: LoweredType,
-        orNull: Bool
-    ) -> Answering {
-        guard let reading = read(given, orNull: orNull) else { return .decided(true) }
+    // about its type. A reading whose type the build does not know answers
+    // none until a cast says what it is. `orNull` is a slot taking null as
+    // well: what arrives is null or answers.
+    func answering(contract name: Name, reading given: LoweredType, orNull: Bool) -> Bool {
+        guard let reading = read(given, orNull: orNull) else { return true }
 
         switch reading {
         case .never:
-            return .decided(true)
+            return true
 
         // A procedure answers no contract: no claim is about one.
         case .any, .projection, .procedure:
-            return .decided(false)
+            return false
 
         // A parameter stands for whatever fills it, and a call fills it with
         // something every bound was asked of, so one bounded by the contract
@@ -371,78 +328,70 @@ final class LoweredTypeTable: Sendable {
         // says what a call may fill it with. A composition is read as the
         // contracts it names, so it answers those alone.
         case let .parameter(_, bounds), let .composition(bounds):
-            return .decided(bounds.contains(name))
+            return bounds.contains(name)
 
         // What may be null is a value of the type or null, so it answers
         // where both do.
         case let .nullable(inner):
             return answering(contract: name, reading: inner, orNull: false)
-                .and(answering(contract: name, reading: .null, orNull: false))
+                && answering(contract: name, reading: .null, orNull: false)
 
         // A reading of a type a value is an instance of answers as that type
-        // does: by what the documents claim about it, so the reading comes
-        // back and the asker writes it down. Where the table holds every
-        // claim there is, it is held to what the documents say.
+        // does: by what the documents claim about it.
         default:
-            guard let type = reading.nominal(in: self) else { return .decided(true) }
-            guard !holdsEveryClaim else {
-                return .decided(answers(contract: name, reading: reading, of: type) != false)
-            }
+            guard let type = reading.nominal(in: self) else { return true }
 
-            return .leansOn([reading])
+            return answers(contract: name, reading: reading, of: type) != false
         }
     }
 
-    // Why a reading provably does not answer a contract, after `label`, which
-    // says what was read, or nil where it answers. What leans on a claim goes
-    // to `leaning`, for the asker to write down where it stands. The one
-    // sentence the build and a door refuse such a reading in.
-    func refusal(
-        of reading: LoweredType,
-        answering name: Name,
-        orNull: Bool,
-        as label: String,
-        leaning: (Leaning) -> Void
-    ) -> String? {
-        switch answering(contract: name, reading: reading, orNull: orNull) {
-        case let .leansOn(readings):
-            for leaned in readings {
-                leaning(Leaning(reading: leaned, contract: name))
-            }
+    // Why a reading does not answer a contract, after `label`, which says
+    // what was read, or nil where it answers. The one sentence the build and
+    // a door refuse such a reading in. A reading of a type a value is an
+    // instance of says which claim it missed: none about the type among the
+    // claims the asker stands on, or one whose head does not take it.
+    func refusal(of reading: LoweredType, answering name: Name, orNull: Bool, as label: String) -> String? {
+        guard !answering(contract: name, reading: reading, orNull: orNull) else { return nil }
 
-            return nil
+        let read = "\(label) \(reading.rendered(in: self))"
 
-        case .decided(true):
-            return nil
-
-        case .decided(false):
-            return "\(label) \(reading.rendered(in: self)),"
-                + " which does not answer every procedure '\(name)' asks"
+        guard
+            let held = self.read(reading, orNull: orNull),
+            case .some = satisfying[name],
+            let type = held.nominal(in: self)
+        else {
+            return read + ", which does not answer every procedure '\(name)' asks"
         }
+
+        guard case let head?? = satisfying[name]?[type], let reason = refusal(of: held, under: head) else {
+            return read + ", and no claim within reach says '\(type)' answers '\(name)'."
+                + " A type answers a contract where a document the asker stands on says so"
+        }
+
+        return read + ", and '\(type)' answers '\(name)' as \(head.rendered(in: self)), which does not take it: \(reason)"
     }
 
     // Why a map keyed by `key` is no map type the language has, or nil
     // where the key answers `Hashable`: by what the documents claim about
-    // its type, and a type parameter through its bounds. What leans on a
-    // claim goes to `leaning`, for the asker to write down where it stands.
-    // The one sentence a map type is refused in, written or read.
-    func keyRefusal(of key: LoweredType, leaning: (Leaning) -> Void) -> String? {
-        switch answering(contract: TypeSpelling.hashable, reading: key, orNull: false) {
-        case let .leansOn(readings):
-            for leaned in readings {
-                leaning(Leaning(reading: leaned, contract: TypeSpelling.hashable))
-            }
+    // its type, and a type parameter through its bounds. The one sentence a
+    // map type is refused in, written or read.
+    func keyRefusal(of key: LoweredType) -> String? {
+        guard !answering(contract: TypeSpelling.hashable, reading: key, orNull: false) else { return nil }
 
-            return nil
+        return "keys a map by \(key.rendered(in: self)), which does not answer `\(TypeSpelling.hashable)`."
+            + " A map's key is of a type that answers `\(TypeSpelling.hashable)`, and a type parameter"
+            + " answers what its bounds name"
+    }
 
-        case .decided(true):
-            return nil
+    // The same rows with these claims answering: each head lowered against
+    // the rows, as a parameter written as it would.
+    func satisfying(_ heads: [Name: [Name: Head]]) -> LoweredTypeTable {
+        let declaring = LoweredTypeTable(self, satisfying: heads.mapValues { _ in [:] })
 
-        case .decided(false):
-            return "keys a map by \(key.rendered(in: self)), which does not answer `\(TypeSpelling.hashable)`."
-                + " A map's key is of a type that answers `\(TypeSpelling.hashable)`, and a type parameter"
-                + " answers what its bounds name"
-        }
+        return LoweredTypeTable(
+            self,
+            satisfying: heads.mapValues { held in held.mapValues { head in head.lowered(in: declaring) } }
+        )
     }
 
     // The declarations as the run reads them. A link says which order its rows
@@ -456,8 +405,6 @@ final class LoweredTypeTable: Sendable {
     static func lowering(
         _ types: [Name: TypeDeclaration],
         satisfying: [Name: [Name: Head]] = [:],
-        holdsEveryClaim: Bool,
-        fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) -> LoweredTypeTable {
@@ -504,8 +451,6 @@ final class LoweredTypeTable: Sendable {
             loweredTypes: loweredTypes,
             labels: labels,
             satisfying: satisfying.mapValues { heads in heads.mapValues { head in head.lowered(in: rows) } },
-            holdsEveryClaim: holdsEveryClaim,
-            fulfillment: fulfillment,
             of: linkage
         )
     }
@@ -538,13 +483,7 @@ final class LoweredTypeTable: Sendable {
             guard read.1.nominal(in: self) == nil else { return .parameter(label: parameter, bounds: held) }
 
             for contract in held {
-                if let refusal = refusal(
-                    of: read.1,
-                    answering: contract,
-                    orNull: false,
-                    as: "'\(parameter)' is read as",
-                    leaning: { leaning in fulfillment?.require(folded: leaning) }
-                ) {
+                if let refusal = refusal(of: read.1, answering: contract, orNull: false, as: "'\(parameter)' is read as") {
                     throw ArgumentError("\(path): \(refusal)")
                 }
             }

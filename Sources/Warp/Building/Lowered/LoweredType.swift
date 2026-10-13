@@ -951,13 +951,12 @@ indirect enum LoweredType: Sendable, Hashable {
         // A composition takes what answers each of its contracts, asked of
         // the table knowing, where the slot takes null as well, that it does.
         // A value read as `Any` or along a path a call decides answers none
-        // until a cast says what it is, and one leaning on a claim passes,
-        // for the link to decide.
+        // until a cast says what it is.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { contract in
-                if case .decided(false) = table.answering(contract: contract, reading: other, orNull: orNull) { false } else { true }
+                table.answering(contract: contract, reading: other, orNull: orNull)
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
@@ -1584,16 +1583,14 @@ indirect enum LoweredType: Sendable, Hashable {
         // A parameter stands for what arrived and does not settle it. A
         // bounded one asks each value whether its type stands where every
         // contract is asked, and every byte is an `Int`, so one answer is the
-        // answer for all of them, a pair the table cannot decide written down
-        // as each byte would write it.
+        // answer for all of them.
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { contract in
                 table.refusal(
                     of: .int,
                     answering: contract,
                     orNull: false,
-                    as: "is",
-                    leaning: { leaning in table.fulfillment?.require(folded: leaning) }
+                    as: "is"
                 ) == nil
             }
 
@@ -2058,8 +2055,7 @@ indirect enum LoweredType: Sendable, Hashable {
             of: table.reading(of: value, answering: name),
             answering: name,
             orNull: false,
-            as: "is",
-            leaning: { leaning in table.fulfillment?.require(folded: leaning) }
+            as: "is"
         )
 
         if let refusal {

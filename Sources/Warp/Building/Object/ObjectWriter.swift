@@ -168,18 +168,10 @@ struct ObjectWriter {
         case .members:
             return try headed(compiled.members) { members in .array(members.sorted().map(name)) }
 
-        // In the key order of what each reading and its contract are written
-        // as, the order the language puts values in.
-        case .leaned:
-            let written = try compiled.leaned.map { (entry) throws(ObjectUnwritable) -> (key: Value, row: Value) in
-                let (reading, contract) = (try lowered(entry.key.reading), name(entry.key.contract))
-
-                return (.array([reading, contract]), .array([reading, contract, place(entry.value)]))
-            }
-
-            return .array(
-                written.sorted { one, other in Value.Dictionary.order(one.key, other.key) == .orderedAscending }.map(\.row)
-            )
+        case .importedClaims:
+            return .array(compiled.importedClaims.sorted().map { pair in
+                .array([name(pair.type), name(pair.contract)])
+            })
 
         // The rows the document declares stand under their spellings; the
         // rows its bodies lifted stand apart, and what wrote each is the
@@ -462,94 +454,6 @@ struct ObjectWriter {
 
         case let .these(types):
             return tagged(Tag.these, .array(types.sorted().map(Value.string)))
-        }
-    }
-
-    private func place(_ place: Place) -> Value {
-        .array([document(place.document), .array(place.steps.map(step))])
-    }
-
-    private func step(_ step: Place.Step) -> Value {
-        typealias Tag = ObjectLayout.PlaceStepTag
-
-        switch step {
-        case let .key(spelling):
-            return tagged(Tag.key, .string(spelling))
-
-        case let .part(part):
-            return tagged(Tag.part, self.part(part))
-
-        case let .construct(construct):
-            return tagged(Tag.construct, self.construct(construct))
-
-        case let .index(index):
-            return tagged(Tag.index, .int(index))
-
-        case let .statement(spelling, at):
-            return tagged(Tag.statement, ObjectWriter.maybe(spelling, Value.string), .int(at))
-
-        case let .landmark(spelling):
-            return tagged(Tag.landmark, .string(spelling))
-        }
-    }
-
-    private func part(_ part: Place.Part) -> Value {
-        typealias Tag = ObjectLayout.PartTag
-
-        switch part {
-        case .procedures: return tagged(Tag.procedures)
-        case .constants: return tagged(Tag.constants)
-        case .variables: return tagged(Tag.variables)
-        case .types: return tagged(Tag.types)
-        case .contracts: return tagged(Tag.contracts)
-        case .satisfies: return tagged(Tag.satisfies)
-        case .imports: return tagged(Tag.imports)
-        case .parameters: return tagged(Tag.parameters)
-        case .returns: return tagged(Tag.returns)
-        case .body: return tagged(Tag.body)
-        case .result: return tagged(Tag.result)
-        case let .subject(optional): return tagged(Tag.subject, .bool(optional))
-        case .callee: return tagged(Tag.callee)
-        case .arguments: return tagged(Tag.arguments)
-        case .closure: return tagged(Tag.closure)
-        case let .condition(of: holder): return tagged(Tag.condition, self.holder(holder))
-        case .then: return tagged(Tag.then)
-        case .otherwise: return tagged(Tag.otherwise)
-        case .rescue: return tagged(Tag.rescue)
-        case .fields: return tagged(Tag.fields)
-        case .bounds: return tagged(Tag.bounds)
-        case .entries: return tagged(Tag.entries)
-        case .typeParameters: return tagged(Tag.typeParameters)
-        case .extensions: return tagged(Tag.extensions)
-        }
-    }
-
-    private func holder(_ holder: Place.ConditionHolder) -> Value {
-        typealias Tag = ObjectLayout.ConditionHolderTag
-
-        switch holder {
-        case .conditional: return tagged(Tag.conditional)
-        case .loop: return tagged(Tag.loop)
-        }
-    }
-
-    private func construct(_ construct: Construct) -> Value {
-        typealias Tag = ObjectLayout.ConstructTag
-
-        switch construct {
-        case .literal: return tagged(Tag.literal)
-        case .reference: return tagged(Tag.reference)
-        case .array: return tagged(Tag.array)
-        case .struct: return tagged(Tag.struct)
-        case .dictionary: return tagged(Tag.dictionary)
-        case .closure: return tagged(Tag.closure)
-        case .cast: return tagged(Tag.cast)
-        case .block: return tagged(Tag.block)
-        case .conditional: return tagged(Tag.conditional)
-        case .loop: return tagged(Tag.loop)
-        case .attempt: return tagged(Tag.attempt)
-        case .call: return tagged(Tag.call)
-        case let .leave(reach): return tagged(Tag.leave, self.reach(reach))
         }
     }
 

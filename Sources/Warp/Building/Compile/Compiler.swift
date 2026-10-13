@@ -31,13 +31,10 @@ struct Compiler {
         _ module: Module,
         at origin: Int,
         declaring holding: [Symbol],
-        leaning dependencies: [Fingerprint]?,
+        against dependencies: [Fingerprint]?,
         as token: Compiled.Token,
-        in compiling: inout Compiling,
-        writing fulfillment: Fulfillment
+        in compiling: inout Compiling
     ) async throws -> Compiled {
-        fulfillment.laying(origin, at: Place(in: .of(module)))
-
         let loweredTypes = compiling.loweredTypes
 
         // What this document declares and what its variables are called, in
@@ -135,8 +132,7 @@ struct Compiler {
                     declaring: symbol.declared,
                     answering: declaration.signature.returns,
                     with: context().bounding(declaration.signature.bounds),
-                    folding: folding,
-                    writing: fulfillment
+                    folding: folding
                 )
 
                 answer = (
@@ -152,7 +148,7 @@ struct Compiler {
 
             resolvedBodies[symbol.declared] = answer.procedure
 
-            try TypeChecker().checked(answer.calls, in: context(), writing: fulfillment)
+            try TypeChecker().checked(answer.calls, in: context())
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
@@ -290,7 +286,6 @@ struct Compiler {
             at: origin,
             folding: compiling.folding(),
             writing: &compiling.lowering,
-            leaning: fulfillment,
             in: context()
         )
 
@@ -304,7 +299,6 @@ struct Compiler {
             beside: typedConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
-            leaning: fulfillment,
             in: context()
         )
 
@@ -337,13 +331,11 @@ struct Compiler {
         // whether or not a run walks that way, so which declarations are
         // judged is not a question any run answers.
         for symbol in holding {
-            try await fulfillment.folding(symbol.place) {
-                _ = try await resolved(symbol)
-            }
+            _ = try await resolved(symbol)
         }
 
-        // The types its bodies, the answers read off them and the readings it
-        // leaned on stand on, written as this document's own numbers.
+        // The types its bodies and the answers read off them stand on, written
+        // as this document's own numbers.
         // Lowering read the link's table to judge, so what it wrote is that
         // link's rows; what leaves here is the document's.
         //
@@ -351,8 +343,7 @@ struct Compiler {
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
             Array(block) + compiling.lowering.documents[origin].closureRows,
-            answering: read,
-            leaning: fulfillment.leanings(of: origin)
+            answering: read
         )
 
         return Compiled(
@@ -361,7 +352,7 @@ struct Compiler {
             contracts: module.contracts,
             claims: module.claims,
             members: module.members,
-            leaned: lowered.leaned,
+            importedClaims: module.importedClaims,
             declared: declared,
             constants: module.constants.keys.sorted(),
             table: lowered.table.map(Judged.init),
@@ -387,7 +378,6 @@ struct Compiler {
         at origin: Int,
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
-        leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> [Name: (value: Value, type: LoweredType)] {
         // Folding runs what it reads, and running reads rows. A lowered body
@@ -408,25 +398,22 @@ struct Compiler {
         for (name, expression) in order(module.constants) {
             let place = Place.constant(name.spelling, in: .of(module))
 
-            try await fulfillment.folding(place) {
-                let (value, written) = try await settled(
-                    expression,
-                    as: name,
-                    into: nil,
-                    at: place,
-                    beside: known,
-                    of: origin,
-                    folding: resolved,
-                    writing: &lowering,
-                    leaning: fulfillment,
-                    in: context
-                )
+            let (value, written) = try await settled(
+                expression,
+                as: name,
+                into: nil,
+                at: place,
+                beside: known,
+                of: origin,
+                folding: resolved,
+                writing: &lowering,
+                in: context
+            )
 
-                known[name] = (
-                    value,
-                    LoweredType(of: value, in: context.loweredTypes).refined(by: written.folded)
-                )
-            }
+            known[name] = (
+                value,
+                LoweredType(of: value, in: context.loweredTypes).refined(by: written.folded)
+            )
         }
 
         return known
@@ -445,7 +432,6 @@ struct Compiler {
         beside known: [Name: (value: Value, type: LoweredType)],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
-        leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> [Name: (value: Value, type: LoweredType)] {
         guard !module.variables.isEmpty else { return [:] }
@@ -465,37 +451,34 @@ struct Compiler {
                 )
             } ?? variable.start
 
-            try await fulfillment.folding(place) {
-                let (settled, written) = try await self.settled(
-                    start,
-                    as: name,
-                    into: declaredType,
-                    at: place,
-                    beside: known,
-                    of: origin,
-                    folding: resolved,
-                    writing: &lowering,
-                    leaning: fulfillment,
-                    in: context
+            let (settled, written) = try await self.settled(
+                start,
+                as: name,
+                into: declaredType,
+                at: place,
+                beside: known,
+                of: origin,
+                folding: resolved,
+                writing: &lowering,
+                in: context
+            )
+
+            // A variable holds what it declares, which the start was held
+            // to as it was read, or else what the start reads. An empty
+            // list or map holds no element, so a start of one says
+            // nothing of what the box will hold.
+            let holding = declaredType ?? written.folded.boxed
+
+            guard declaredType != nil || !holding.holdsNoElement else {
+                throw BuildError(
+                    "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
+                        + " and declares no type, so nothing says what it holds."
+                        + " A variable starting empty declares its type or casts its start",
+                    at: place
                 )
-
-                // A variable holds what it declares, which the start was held
-                // to as it was read, or else what the start reads. An empty
-                // list or map holds no element, so a start of one says
-                // nothing of what the box will hold.
-                let holding = declaredType ?? written.folded.boxed
-
-                guard declaredType != nil || !holding.holdsNoElement else {
-                    throw BuildError(
-                        "starts as \(holding.rendered(in: context.loweredTypes)), which holds nothing,"
-                            + " and declares no type, so nothing says what it holds."
-                            + " A variable starting empty declares its type or casts its start",
-                        at: place
-                    )
-                }
-
-                started[name] = (settled, holding)
             }
+
+            started[name] = (settled, holding)
         }
 
         return started
@@ -520,7 +503,6 @@ struct Compiler {
         of origin: Int,
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
-        leaning fulfillment: Fulfillment,
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
         let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
@@ -529,12 +511,11 @@ struct Compiler {
             at: place,
             in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
             with: context,
-            folding: nil,
-            writing: fulfillment
+            folding: nil
         )
 
-        try TypeChecker().checked(calls, in: context, writing: fulfillment)
-        try TypeChecker().refuseRunning(in: judged, at: place, given: context, writing: fulfillment)
+        try TypeChecker().checked(calls, in: context)
+        try TypeChecker().refuseRunning(in: judged, at: place, given: context)
 
         do {
             let value = try await Folding(

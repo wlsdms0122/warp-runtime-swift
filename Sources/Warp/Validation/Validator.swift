@@ -293,8 +293,26 @@ struct Validator: Sendable {
     // sends and the types and contracts it names. A host reads the list to
     // decide what to grant and what to lay in the link before it links
     // anything.
+    //
+    // A claim a module imports is no name it uses: which claims a document
+    // stands on is what it says, and the load cannot see what its compile
+    // will ask. One the module makes itself is within its reach already.
     private func declared(_ module: Module) throws {
-        let used = Set(module.references.map(\.name))
+        let used = Set(module.references.compactMap { reference -> Name? in
+            switch reference {
+            case let .procedure(name), let .type(name): name
+            case .claim: nil
+            }
+        })
+        let made = module.draft.claimedPairs
+
+        if let own = module.importedClaims.sorted().first(where: made.contains) {
+            throw ValidationError(
+                "imports the claim '\(own.spelling)', which it makes itself."
+                    + " A document stands on its own claims",
+                at: Place([.part(.imports)], in: .of(module))
+            )
+        }
 
         let undisclosed = used.subtracting(module.imports).sorted().map(\.spelling)
         let unspent = module.imports

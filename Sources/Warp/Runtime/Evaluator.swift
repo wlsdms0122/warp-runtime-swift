@@ -85,7 +85,7 @@ struct Evaluator: Sendable {
     // door. What the entry answers the build held to the `returns` it
     // declares, so it reaches the host as it is.
     func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
-        try await answer(entry, arguments: ArgumentList(values: try entry.settle(arguments)), at: Trace())
+        try await answer(entry, arguments: ArgumentList(values: try entry.settle(arguments, in: loweredTypes)), at: Trace())
     }
 
     // Calling a closure a procedure holds. What may be called is what the
@@ -99,7 +99,7 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let linked = try row(of: closure)
 
-        return try await answer(closure, as: linked, given: try linked.settle(outside: arguments), holding: [], at: trace)
+        return try await answer(closure, as: linked, given: try linked.settle(outside: arguments, in: loweredTypes), holding: [], at: trace)
     }
 
     // One code read against one frame, for a caller outside a run: what a
@@ -125,7 +125,7 @@ struct Evaluator: Sendable {
 
         return try await answer(
             callee,
-            arguments: ArgumentList(values: try callee.settle(outside: values)),
+            arguments: ArgumentList(values: try callee.settle(outside: values, in: loweredTypes)),
             at: trace.appending(callee.hop)
         )
     }
@@ -725,16 +725,10 @@ struct Evaluator: Sendable {
             return (call, try row(call.procedure, from: activation.origin), first)
         }
 
-        // A call the link has not laid out reaches the row a claim standing
-        // so far names, placed against it the way the link would place it.
-        // What it ran on is the claim, which the link still holds to the
-        // declarations behind it, so what the value read as where the
-        // contract was asked is written down for the link.
+        // A call the link has not laid out reaches the row a claim within the
+        // folding document's reach names, placed against it the way the link
+        // would place it.
         if dispatch.calls.isEmpty, let row = witnesses[spelling]?[first.nominal] {
-            let reading = loweredTypes.reading(of: first, answering: dispatch.contract)
-
-            loweredTypes.fulfillment?.require(folded: Leaning(reading: reading, contract: dispatch.contract))
-
             let call = try dispatch.call(
                 of: linked[row],
                 at: row,
@@ -844,7 +838,8 @@ struct Evaluator: Sendable {
                     evaluator: self,
                     at: trace
                 )
-            )
+            ),
+            in: loweredTypes
         )
     }
 
@@ -864,7 +859,8 @@ struct Evaluator: Sendable {
                     trace: trace,
                     evaluator: self
                 )
-            )
+            ),
+            in: loweredTypes
         )
     }
 

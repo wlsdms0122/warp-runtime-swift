@@ -103,16 +103,16 @@ public struct ModuleGraph: Sendable {
         // What each document needs of another, and under which name, so a
         // refusal can name the step rather than the cycle.
         let needs = references.enumerated().map { position, used in
-            var reached: [(position: Int, name: Name)] = []
+            var reached: [(position: Int, name: String)] = []
 
-            func need(_ name: Name, of declaring: Int?) {
+            func need(_ name: String, of declaring: Int?) {
                 guard let declaring, declaring != position else { return }
 
                 reached.append((declaring, name))
             }
 
             for reference in used.sorted() {
-                need(reference.name, of: declares[reference])
+                need(reference.spelling, of: declares[reference])
             }
 
             return reached
@@ -126,7 +126,7 @@ public struct ModuleGraph: Sendable {
         var standing: [Int] = []
         var stood = [Bool](repeating: false, count: documents.count)
         var walking = [Bool](repeating: false, count: documents.count)
-        var route: [(position: Int, name: Name)] = []
+        var route: [(position: Int, name: String)] = []
 
         func stand(_ position: Int) throws {
             if stood[position] { return }

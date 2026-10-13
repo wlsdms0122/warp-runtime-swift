@@ -22,7 +22,7 @@ enum ObjectLayout {
         case contracts
         case claims
         case members
-        case leaned
+        case importedClaims
         case rows
         case lifted
         case answers
@@ -107,65 +107,6 @@ enum ObjectLayout {
     enum FailingTag: Int {
         case unstated
         case these
-    }
-
-    // A step of a place.
-    enum PlaceStepTag: Int {
-        case key
-        case part
-        case construct
-        case index
-        case statement
-        case landmark
-    }
-
-    // A part of the program a place steps into.
-    enum PartTag: Int {
-        case procedures
-        case constants
-        case variables
-        case types
-        case contracts
-        case satisfies
-        case imports
-        case parameters
-        case returns
-        case body
-        case result
-        case subject
-        case callee
-        case arguments
-        case closure
-        case condition
-        case then
-        case otherwise
-        case rescue
-        case fields
-        case bounds
-        case entries
-        case typeParameters
-        case extensions
-    }
-
-    enum ConditionHolderTag: Int {
-        case conditional
-        case loop
-    }
-
-    enum ConstructTag: Int {
-        case literal
-        case reference
-        case array
-        case `struct`
-        case closure
-        case cast
-        case block
-        case conditional
-        case loop
-        case attempt
-        case call
-        case leave
-        case dictionary
     }
 
     enum ReachTag: Int {

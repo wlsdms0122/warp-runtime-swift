@@ -82,7 +82,7 @@ public struct Invocation<P: NativeProcedure>: Sendable {
         let slot = callee.slots[key.position]
 
         try hold.write(
-            try slot.type.slotUnwrapped.settling(outside: value, at: "'\(key.name)'", in: callee.table),
+            try slot.type.slotUnwrapped.settling(outside: value, at: "'\(key.name)'", in: evaluator.loweredTypes),
             at: []
         )
     }

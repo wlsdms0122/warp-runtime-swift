@@ -28,9 +28,11 @@ struct TypeNamespace {
     // where their names resolve.
     let claims: [Placed<Claim>]
 
-    // Every procedure a document gave a type, by the spelling a call writes:
-    // what may answer a contract's procedure for that type.
-    let members: Set<Name>
+    // Every procedure a document gave a type, by the spelling a call writes,
+    // beside where the host put the document giving it: what may answer a
+    // contract's procedure for that type, for a claim standing on that
+    // document.
+    let members: [Name: Int]
 
     // Each head a document gave members under, where the document gave them.
     // Its type is held the way the type a claim is about is held, whatever
@@ -146,9 +148,11 @@ struct TypeNamespace {
         self.types = types
         self.contracts = contracts
         self.claims = claims
-        self.members = documents.reduce(into: []) { members, held in
-            for (head, names) in held.members {
-                members.formUnion(names.map { member in member.spelled(under: head.type) })
+        self.members = documents.enumerated().reduce(into: [:]) { members, document in
+            for (head, names) in document.element.members {
+                for member in names {
+                    members[member.spelled(under: head.type)] = document.offset
+                }
             }
         }
         self.extended = documents.enumerated().flatMap { handed, held in

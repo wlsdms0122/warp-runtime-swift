@@ -53,10 +53,9 @@ struct TypeChecker {
     // its writes stop moving, where a refusal would be transient or repeated.
     private enum Ask {
         // Judging carries what folds a constant-headed path, where there is
-        // one, where it writes down the pairs its calls lean on, and what the
-        // body being judged declares it answers, which a literal it answers
-        // with is written into. Probing writes nothing.
-        case judging(folding: Folding?, writing: Fulfillment, answering: LoweredType?)
+        // one, and what the body being judged declares it answers, which a
+        // literal it answers with is written into. Probing writes nothing.
+        case judging(folding: Folding?, answering: LoweredType?)
         case probing
 
         // MARK: - Property
@@ -73,7 +72,7 @@ struct TypeChecker {
 
         // What a `return` in the body being judged hands its answer to.
         var answer: LoweredType? {
-            guard case let .judging(_, _, answering) = self else { return nil }
+            guard case let .judging(_, answering) = self else { return nil }
 
             return answering
         }
@@ -82,9 +81,9 @@ struct TypeChecker {
         // MARK: - Public
         // The same ask for a body that declares it answers `type`.
         func answering(_ type: LoweredType?) -> Ask {
-            guard case let .judging(folding, writing, _) = self else { return self }
+            guard case let .judging(folding, _) = self else { return self }
 
-            return .judging(folding: folding, writing: writing, answering: type)
+            return .judging(folding: folding, answering: type)
         }
 
         // MARK: - Private
@@ -166,8 +165,7 @@ struct TypeChecker {
         declaring selector: Name,
         answering returns: TypeExpression?,
         with context: TypingContext,
-        folding: Folding?,
-        writing fulfillment: Fulfillment
+        folding: Folding?
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
         let promised = returns?.lowered(in: context.loweredTypes, bounds: context.bounds)
 
@@ -179,7 +177,7 @@ struct TypeChecker {
             at: place,
             in: environment,
             with: context,
-            ask: .judging(folding: folding, writing: fulfillment, answering: promised)
+            ask: .judging(folding: folding, answering: promised)
         )
 
         try refuseAnswers(
@@ -188,8 +186,7 @@ struct TypeChecker {
             to: promised,
             result: inner.block.result,
             at: place,
-            in: context.loweredTypes,
-            fulfillment: fulfillment
+            in: context.loweredTypes
         )
 
         let written = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
@@ -206,10 +203,9 @@ struct TypeChecker {
         at place: Place,
         in environment: [Name: Binding],
         with context: TypingContext,
-        folding: Folding?,
-        writing fulfillment: Fulfillment
+        folding: Folding?
     ) async throws -> (Expression, [CallSite], JudgementTable, LiteralShape) {
-        let ask = Ask.judging(folding: folding, writing: fulfillment, answering: nil)
+        let ask = Ask.judging(folding: folding, answering: nil)
         let inner = try await inspected(
             expression,
             naming: nil,
@@ -233,14 +229,13 @@ struct TypeChecker {
     func refuseRunning(
         in expression: Expression,
         at place: Place,
-        given context: TypingContext,
-        writing fulfillment: Fulfillment
+        given context: TypingContext
     ) throws {
         try refuseRunning(
             expression,
             asOperand: place,
             given: context,
-            when: .judging(folding: nil, writing: fulfillment, answering: nil)
+            when: .judging(folding: nil, answering: nil)
         )
     }
 
@@ -324,7 +319,7 @@ struct TypeChecker {
     // The one gate every gathered call passes, wherever its body sits, and
     // whether its selector names a declaration or a contract's procedure. The
     // call is judged against the signature its selector names.
-    func checked(_ calls: [CallSite], in context: TypingContext, writing fulfillment: Fulfillment) throws {
+    func checked(_ calls: [CallSite], in context: TypingContext) throws {
         for call in calls {
             guard let signature = context.signature(of: call.call.selector) else {
                 throw BuildError.unjudged(
@@ -333,7 +328,7 @@ struct TypeChecker {
                 )
             }
 
-            try check(call, against: signature, with: context, writing: fulfillment)
+            try check(call, against: signature, with: context)
         }
     }
 
@@ -369,8 +364,7 @@ struct TypeChecker {
         _ written: LiteralShape,
         to promised: LoweredType?,
         at place: Place,
-        in table: LoweredTypeTable,
-        fulfillment: Fulfillment
+        in table: LoweredTypeTable
     ) throws {
         guard let promised else { return }
 
@@ -390,7 +384,6 @@ struct TypeChecker {
             to: promised,
             as: "the answer holds",
             in: table,
-            fulfillment: fulfillment,
             at: place
         ) {
             throw BuildError(refusal, at: place)
@@ -399,15 +392,13 @@ struct TypeChecker {
 
     // A struct literal held to the declared struct its place reads: exactly
     // the declared fields, each holding what its field takes, and every
-    // composition a field mentions held to its bounds, with what leans on a
-    // claim this table cannot decide written down for the link.
+    // composition a field mentions held to its bounds.
     private func refuseFields(
         _ written: [Name: LiteralShape],
         of declared: LoweredStruct,
         named label: String,
         at place: Place,
-        in table: LoweredTypeTable,
-        fulfillment: Fulfillment
+        in table: LoweredTypeTable
     ) throws {
         let fits = Set(written.keys) == Set(declared.names)
             && declared.named.allSatisfy { name, field in
@@ -435,7 +426,6 @@ struct TypeChecker {
                 to: field.fieldUnwrapped,
                 as: "'\(name)' holds",
                 in: table,
-                fulfillment: fulfillment,
                 at: place
             ) {
                 throw BuildError(refusal, at: place.child(.field(name)))
@@ -477,13 +467,12 @@ struct TypeChecker {
         to declared: LoweredType,
         as label: String,
         in table: LoweredTypeTable,
-        fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
         var found: String?
 
         _ = written.everyPart(along: declared, inPlace: false, in: table) { slot, part, _ in
-            found = refusal(holding: part.folded, to: slot, as: label, in: table, fulfillment: fulfillment, at: place)
+            found = refusal(holding: part.folded, to: slot, as: label, in: table, at: place)
 
             return found == nil
         }
@@ -492,15 +481,12 @@ struct TypeChecker {
     }
 
     // Why what arrived is provably outside what a declaration holds it to,
-    // wherever in the declaration a composition stands, or nothing. What
-    // leans on a claim this table cannot decide is written down for the
-    // link to decide.
+    // wherever in the declaration a composition stands, or nothing.
     private func refusal(
         holding given: LoweredType,
         to declared: LoweredType,
         as label: String,
         in table: LoweredTypeTable,
-        fulfillment: Fulfillment,
         at place: Place
     ) -> String? {
         var unread = Substitution()
@@ -515,8 +501,7 @@ struct TypeChecker {
                     of: held.reading,
                     answering: contract,
                     orNull: held.orNull,
-                    as: label,
-                    leaning: { leaning in fulfillment.require(leaning, at: place) }
+                    as: label
                 ) {
                     return refusal
                 }
@@ -546,7 +531,6 @@ struct TypeChecker {
         substitution: Substitution,
         shaped shapes: [Int: LiteralShape],
         in loweredTypes: LoweredTypeTable,
-        fulfillment: Fulfillment,
         at place: Place
     ) -> Instantiation {
         // A declaration with nothing to fill is read as the build lowered it.
@@ -562,8 +546,7 @@ struct TypeChecker {
             if let refusal = substitution.unanswered(
                 parameter,
                 bounds: names,
-                in: loweredTypes,
-                leaning: { leaning in fulfillment.require(leaning, at: place) }
+                in: loweredTypes
             ) {
                 return .refusal(refusal)
             }
@@ -607,7 +590,6 @@ struct TypeChecker {
                 to: bounded,
                 as: "'\(slot.name)' holds",
                 in: loweredTypes,
-                fulfillment: fulfillment,
                 at: place
             ) {
                 return .refusal(refusal)
@@ -1082,16 +1064,14 @@ struct TypeChecker {
         to promised: LoweredType?,
         result: Expression?,
         at place: Place,
-        in table: LoweredTypeTable,
-        fulfillment: Fulfillment
+        in table: LoweredTypeTable
     ) throws {
         for one in answered {
             try refuseAnswer(
                 LiteralShape(one.literalShape, reading: one.reading),
                 to: promised,
                 at: one.place,
-                in: table,
-                fulfillment: fulfillment
+                in: table
             )
         }
 
@@ -1099,8 +1079,7 @@ struct TypeChecker {
             answer,
             to: promised,
             at: place.part(result != nil ? .result : .returns),
-            in: table,
-            fulfillment: fulfillment
+            in: table
         )
     }
 
@@ -1449,7 +1428,7 @@ struct TypeChecker {
                 return Inspection(rewritten: expression, reading: .any, flow: reached)
 
             case let .reads(read, placed):
-                guard case let .judging(folding, _, _) = ask else {
+                guard case let .judging(folding, _) = ask else {
                     return Inspection(rewritten: expression, reading: read, flow: reached)
                 }
 
@@ -1710,11 +1689,7 @@ struct TypeChecker {
                 rewritten.append((key: parts[0].rewritten, value: parts[1].rewritten))
             }
 
-            if declaredParts.key == nil, let refusal = context.loweredTypes.keyRefusal(of: keys, leaning: { leaning in
-                if case let .judging(_, fulfillment, _) = ask {
-                    fulfillment.require(leaning, at: place)
-                }
-            }) {
+            if declaredParts.key == nil, let refusal = context.loweredTypes.keyRefusal(of: keys) {
                 try refuse(refusal, at: place, when: ask)
             }
 
@@ -1807,14 +1782,13 @@ struct TypeChecker {
                 arguments: zip(applied, read).map { written, read in written.namesParameter ? read : written }
             )
 
-            if case let .judging(_, fulfillment, _) = ask {
+            if case .judging = ask {
                 try refuseFields(
                     shapes,
                     of: held,
                     named: LoweredType.named(row, arguments: applied).rendered(in: context.loweredTypes),
                     at: place,
-                    in: context.loweredTypes,
-                    fulfillment: fulfillment
+                    in: context.loweredTypes
                 )
             }
 
@@ -1913,7 +1887,7 @@ struct TypeChecker {
                 flow.hold(taken, on: name)
             }
 
-            if case let .judging(_, fulfillment, _) = ask {
+            if case .judging = ask {
                 // What the closure writes into a name it captured has to fit
                 // what the name holds: the closure runs when it is called,
                 // and the body that declared the variable reads it as the
@@ -1939,7 +1913,6 @@ struct TypeChecker {
                         to: held,
                         as: "writes '\(name)', which it captured, as",
                         in: context.loweredTypes,
-                        fulfillment: fulfillment,
                         at: place.child(.closure)
                     ) {
                         throw BuildError(refusal, at: place.child(.closure))
@@ -1952,8 +1925,7 @@ struct TypeChecker {
                     to: promised,
                     result: inner.block.result,
                     at: place.child(.closure),
-                    in: context.loweredTypes,
-                    fulfillment: fulfillment
+                    in: context.loweredTypes
                 )
 
                 body = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
@@ -2099,7 +2071,7 @@ struct TypeChecker {
 
             flow = flow.followed(by: called.flow)
 
-            guard case let .judging(_, fulfillment, _) = ask else {
+            guard case .judging = ask else {
                 for (position, argument) in arguments.enumerated() {
                     flow = flow.followed(by: try await inspected(
                         argument,
@@ -2206,7 +2178,6 @@ struct TypeChecker {
                 naming: nil,
                 as: subject,
                 in: context.loweredTypes,
-                writing: fulfillment,
                 at: place
             )
 
@@ -3262,14 +3233,13 @@ struct TypeChecker {
             return declared
         }
 
-        guard case let .judging(_, fulfillment, _) = ask else { return declared }
+        guard case .judging = ask else { return declared }
 
         if let refusal = refusal(
             writing: written,
             to: declared,
             as: "holds",
             in: context.loweredTypes,
-            fulfillment: fulfillment,
             at: place
         ) {
             throw BuildError(refusal, at: place)
@@ -3340,7 +3310,7 @@ struct TypeChecker {
             return nil
 
         case let .reads(reached, placed):
-            guard case let .judging(folding?, _, _) = ask else { return (reached, placed) }
+            guard case let .judging(folding?, _) = ask else { return (reached, placed) }
 
             let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
 
@@ -3378,14 +3348,13 @@ struct TypeChecker {
             return nil
         }
 
-        guard case let .judging(_, fulfillment, _) = ask else { return slot }
+        guard case .judging = ask else { return slot }
 
         if let refusal = refusal(
             writing: written,
             to: slot,
             as: "writes '\(path.rendered)' as",
             in: context.loweredTypes,
-            fulfillment: fulfillment,
             at: place
         ) {
             throw BuildError(refusal, at: place)
@@ -3436,8 +3405,7 @@ struct TypeChecker {
     private func check(
         _ site: CallSite,
         against declared: Signature,
-        with context: TypingContext,
-        writing fulfillment: Fulfillment
+        with context: TypingContext
     ) throws {
         let call = site.call
         let loweredTypes = context.loweredTypes
@@ -3458,7 +3426,6 @@ struct TypeChecker {
             substitution: Substitution(filling: declaredSlots.map(\.type), against: site.readings, in: loweredTypes),
             shaped: site.shapes,
             in: loweredTypes,
-            fulfillment: fulfillment,
             at: site.place
         ) {
         case let .refusal(reason):
@@ -3478,7 +3445,6 @@ struct TypeChecker {
             naming: slots,
             as: subject,
             in: loweredTypes,
-            writing: fulfillment,
             at: site.place
         )
     }
@@ -3497,8 +3463,7 @@ struct TypeChecker {
     // Each argument held to what the callee takes at its position: the one
     // judgement a call to a declaration and a call of a value share, once
     // each has refused another count. What each position takes, then every
-    // composition it mentions held to its bounds, with what leans on a claim
-    // this table cannot decide written down for the link. What an argument
+    // composition it mentions held to its bounds. What an argument
     // holds is read from the body it was written in, so a name bound to a call
     // carries that call's declared answer. A declaration's slots name each
     // position; a value's type writes the positions alone.
@@ -3509,7 +3474,6 @@ struct TypeChecker {
         naming slots: [Slot]?,
         as subject: String,
         in loweredTypes: LoweredTypeTable,
-        writing fulfillment: Fulfillment,
         at place: Place
     ) throws {
         for (position, (type, reading)) in zip(types, readings).enumerated() {
@@ -3534,7 +3498,6 @@ struct TypeChecker {
                 to: type,
                 as: "\(quoted) holds",
                 in: loweredTypes,
-                fulfillment: fulfillment,
                 at: place
             ) {
                 throw BuildError("\(subject): \(refusal)", at: at)

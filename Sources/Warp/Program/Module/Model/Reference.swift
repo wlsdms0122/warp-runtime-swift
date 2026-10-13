@@ -15,36 +15,48 @@ import Foundation
 // two references. Types and contracts are one namespace: a link refuses a
 // name standing for a type and a contract at once, and says nothing about a
 // procedure spelled like a type.
+//
+// A claim declares no name, so a document stands on the one making it by the
+// pair it is about: one document making it supplies it, and one importing it
+// references it. Several may make one claim, and any of them answers.
 enum Reference: Hashable, Sendable, Comparable {
     case procedure(Name)
     case type(Name)
+    case claim(ClaimPair)
 
     // MARK: - Property
-    // The name itself, for the tables and sentences that want it without the
-    // kind.
-    var name: Name {
+    // How a sentence names what is referenced, without the kind.
+    var spelling: String {
         switch self {
-        case let .procedure(name), let .type(name): name
+        case let .procedure(name), let .type(name): name.spelling
+        case let .claim(pair): pair.spelling
         }
     }
 
     // MARK: - Initializer
     // MARK: - Public
-    // Procedures before types, and each in name order. The module graph walks
-    // a module's needs in this order, so which cycle it refuses is a fact of
-    // the modules.
+    // Procedures, then types, then claims, and each in name order. The module
+    // graph walks a module's needs in this order, so which cycle it refuses is
+    // a fact of the modules.
     static func < (lhs: Reference, rhs: Reference) -> Bool {
         switch (lhs, rhs) {
         case let (.procedure(left), .procedure(right)), let (.type(left), .type(right)):
             return left < right
 
-        case (.procedure, .type):
-            return true
+        case let (.claim(left), .claim(right)):
+            return left < right
 
-        case (.type, .procedure):
-            return false
+        default:
+            return lhs.rank < rhs.rank
         }
     }
 
     // MARK: - Private
+    private var rank: Int {
+        switch self {
+        case .procedure: 0
+        case .type: 1
+        case .claim: 2
+        }
+    }
 }

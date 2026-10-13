@@ -68,7 +68,7 @@ public struct Loader: Sendable {
         // to grant before it links. Whether the list is right is the
         // Validator's. Asked after the reading, so a document that does not
         // read is refused for that first.
-        guard draft.imports != nil else {
+        guard draft.imports != nil || !draft.importedClaims.isEmpty else {
             throw ReadingError(
                 "a document says what it imports, and this one does not."
                     + " Write `\(ModuleReader.CodingKeys.imports.name)`, empty where the program uses nothing"

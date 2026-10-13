@@ -39,7 +39,8 @@ import Foundation
 // facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
 // lowering (`Lowering`). It runs the procedures a constant calls, which is
 // what folding is. Linking takes what that answered, judges what only the
-// whole list can answer, and runs nothing.
+// whole list can answer, one claim for each type and contract, and runs
+// nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
@@ -129,10 +130,9 @@ public struct Builder: Sendable {
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
-        // Which types answer which contracts among these documents. A row
-        // whose signature names a contract lowers against that reading, so it
-        // is worked out here rather than left to the compile that asks.
-        let lowered = try ClaimChecker().lowered(declaring, in: namespace, among: signatures)
+        // Which types answer which contracts among these documents, each of
+        // whose claims was held where its document was compiled.
+        let lowered = try ClaimChecker().lowered(declaring, holding: namespace.claims, in: namespace, among: signatures)
 
         var compiling = Compiling(
             concealing: assembled.concealed,
@@ -217,13 +217,11 @@ public struct Builder: Sendable {
     // Documents laid down one at a time, in the order `standing` gives, each
     // against the ones already compiled and the ones laid before it.
     //
-    // What only the whole list answers is read once, here: the type tables of
-    // a link are its documents' together, and documents handed over already
-    // compiled were not in the ones the others were compiled against.
-    //
-    // The ledger is the compile's rather than each document's. A fold runs
-    // bodies of the documents behind it and what it turns up belongs to the
-    // one being laid down, which is what the ledger is told.
+    // The type tables of a link are its documents' together, read once here.
+    // Which types answer a contract is asked of each document with the claims
+    // made within its reach, so what a document compiles to is a fact of it
+    // and of what it stands on, however the host split the documents between
+    // compiles.
     func compile(
         _ modules: [Module],
         at standing: [Int],
@@ -235,19 +233,6 @@ public struct Builder: Sendable {
         let documents: [any Declaring] = compiled + laying
 
         let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
-
-        // The compile's ledger, woven into the table its rows are built from.
-        // A body folded here runs against a table that cannot decide a
-        // contract, and what it hands over is written here rather than passed
-        // over. A map's key the declarations lean on is the first thing
-        // written.
-        let fulfillment = Fulfillment()
-
-        try DeclarationChecker().judge(
-            laying,
-            from: compiled.count,
-            in: declaring.satisfying([:], fulfillment: fulfillment)
-        )
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
@@ -293,12 +278,10 @@ public struct Builder: Sendable {
             symbols.filter { symbol in !symbol.supplies }.map(\.declared)
         })
 
-        let lowered = try ClaimChecker().lowered(
-            declaring,
-            in: namespace,
-            among: signatures,
-            fulfillment: fulfillment
-        )
+        // The table no claim answers yet, which every document's own is made
+        // from. What a contract asks and which spellings it takes are the
+        // declarations' alone.
+        let unclaimed = try ClaimChecker().lowered(declaring, holding: [], in: namespace, among: signatures)
 
         // A document never written down is told from another by this compile
         // of it, so each is given that here and carries it out.
@@ -306,8 +289,8 @@ public struct Builder: Sendable {
         var compiling = Compiling(
             laid.carried,
             concealing: concealed,
-            types: lowered.types,
-            contractProcedures: lowered.contractProcedures,
+            types: unclaimed.types,
+            contractProcedures: unclaimed.contractProcedures,
             naming: documents.map(\.document),
             spelling: laid.naming + zip(laying, tokens).map { module, token in
                 Closure.Document(identity: module.identity, token: token)
@@ -315,33 +298,103 @@ public struct Builder: Sendable {
         )
 
         // What each document turned out to be, as they are laid down. A
-        // document laid here may be what the next one leans on, and what it
-        // leaned on is part of what it is, so the two grow together.
+        // document laid here may be what the next one stands on, and what it
+        // stood on is part of what it is, so the two grow together.
         var declarers = laid.declarers
         var built: [Compiled] = []
 
         // What each document declares to the others and which of them it
         // stands on, by the place it stands at: the ones declaring what it
         // names, read off its object where it is compiled already, so how the
-        // host split the documents between compiles changes nothing.
+        // host split the documents between compiles changes nothing. Where
+        // the host put each, which is what a claim and a member say of the
+        // document making them.
         let supplied = compiled.map(\.supplies) + laying.map(\.supplies)
         let named = compiled.map(\.references) + laying.map(\.references)
         let standingOn = named.map { reaches in
             Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
         }
+        let handed = Array(compiled.indices) + standing.map { position in compiled.count + position }
+
+        // Where each document the host handed over stands here, so what a
+        // claim or a member says of its document is read as a place a reach
+        // holds.
+        let standsAt = Dictionary(uniqueKeysWithValues: handed.enumerated().map { position, handed in (handed, position) })
+        let claimStands = namespace.claims.map { claim in standsAt[claim.handed] }
+
+        // A claim imported is one some document makes, as a name imported is
+        // one some document declares.
+        let made = Set(namespace.claims.map { claim in ClaimPair(claim.held.type, claim.held.contract) })
+
+        // The table each set of claims answers with, by where the claims
+        // stand in the namespace.
+        var tables: [[Int]: TypeTable] = [:]
 
         for offset in laying.indices {
-            let witnesses = Self.witnesses(of: compiled.count + offset, standingOn: standingOn, supplied: supplied)
+            let position = compiled.count + offset
+            let reached = Self.reach(of: position, standingOn: standingOn)
 
-            let object = try await Compiler(foldingThrough: witnesses).compile(
-                laying[offset],
-                at: compiled.count + offset,
-                declaring: holding[offset],
-                leaning: declarers.dependencies(of: laying[offset]),
-                as: tokens[offset],
-                in: &compiling,
-                writing: fulfillment
+            if let unmade = laying[offset].importedClaims.sorted().first(where: { pair in !made.contains(pair) }) {
+                throw BuildError(
+                    "imports the claim '\(unmade.spelling)', and no document in this link makes it",
+                    at: Place([.part(.imports)], in: .of(laying[offset]))
+                )
+            }
+
+            // What the document asks of a contract is answered by the claims
+            // made within its reach, the language's among them. Documents
+            // standing on the same claims ask the same table.
+            let claimed = namespace.claims.indices.filter { index in
+                claimStands[index].map(reached.contains) ?? (namespace.claims[index].handed == Prelude.handed)
+            }
+            let answering = try tables[claimed] ?? ClaimChecker().satisfying(
+                declaring,
+                holding: claimed.map { index in namespace.claims[index] },
+                in: namespace
             )
+
+            tables[claimed] = answering
+
+            try DeclarationChecker().judge([laying[offset]], in: answering)
+
+            compiling.answer(with: answering)
+
+            let object = try await Compiler(foldingThrough: Self.witnesses(of: reached, supplied: supplied)).compile(
+                laying[offset],
+                at: position,
+                declaring: holding[offset],
+                against: declarers.dependencies(of: laying[offset]),
+                as: tokens[offset],
+                in: &compiling
+            )
+
+            // What it claims and extends, held now that its rows stand, so a
+            // claim backed by its own members meets what they were worked out
+            // to be.
+            let own = handed[position]
+
+            for (name, declared) in try Self.declarations(
+                of: object,
+                at: own,
+                in: answering.loweredTypes
+            ) where signatures[name] != nil {
+                signatures[name] = declared
+            }
+
+            let claims = namespace.claims.filter { claim in claim.handed == own }
+            let extended = namespace.extended.filter { extended in extended.handed == own }
+
+            if !claims.isEmpty || !extended.isEmpty {
+                try ClaimChecker().judge(
+                    claims,
+                    extending: extended,
+                    in: namespace,
+                    members: Set(namespace.members.filter { _, giver in standsAt[giver].map(reached.contains) ?? false }.keys),
+                    among: signatures,
+                    in: answering
+                )
+            }
+
             let known = try fingerprinted(object)
 
             declarers.lay(known)
@@ -355,13 +408,11 @@ public struct Builder: Sendable {
     // declaration stands compiled already, and the rows are relocated into
     // this link's numbering.
     //
-    // What is judged here is what no document could answer about itself, and
-    // is the second judgement for that reason: every claimed type answers the
-    // contract it is claimed under, and every claim a document leaned on
-    // is held by some document beside it. `supplying` is the native code the
-    // documents named. An object says which of its procedures are native and
-    // holds none of the code, so the modules that declared them are handed
-    // over beside the objects.
+    // What is judged here is what no document could answer about itself: one
+    // claim for each type and contract across the documents. `supplying` is
+    // the native code the documents named. An object says which of its
+    // procedures are native and holds none of the code, so the modules that
+    // declared them are handed over beside the objects.
     public func link(
         _ compiled: [Compiled],
         supplying natives: Supplying
@@ -391,31 +442,10 @@ public struct Builder: Sendable {
 
         let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
 
-        let lowered = try ClaimChecker().lowered(
-            declaring,
-            in: namespace,
-            among: signatures
-        )
+        // Which types answer which contracts across the documents, one claim
+        // each, every one of them held where its document was compiled.
+        let lowered = try ClaimChecker().lowered(declaring, holding: namespace.claims, in: namespace, among: signatures)
         let types = lowered.types
-
-        // What each document leaned on, answered by every claim in the list.
-        // A reading stands in its document's numbers, read as this link's
-        // rows.
-        for document in compiled {
-            let numbered = document.typeNumbering.rows(in: types.loweredTypes)
-            let leaned = try document.leaned.reduce(into: [Leaning: Place]()) { leaned, entry in
-                let reading = try numbered.read(entry.key.reading, at: entry.value)
-
-                leaned[Leaning(reading: reading, contract: entry.key.contract)] = entry.value
-            }
-
-            try ClaimChecker().leaning(
-                leaned,
-                in: types.loweredTypes,
-                heads: lowered.heads,
-                unheld: lowered.unheld
-            )
-        }
 
         // The documents' own numbers turned into this link's rows, and the
         // calls through a contract filled with the rows that answer them.
@@ -439,10 +469,8 @@ public struct Builder: Sendable {
     }
 
     // MARK: - Private
-    // The declarations a fold of the document at `origin` may run where it
-    // calls through a contract: those of every document it stands on, near
-    // or far, since a body it runs may run one of theirs, and its own.
-    private static func witnesses(of origin: Int, standingOn: [Set<Int>], supplied: [Set<Reference>]) -> Set<Name> {
+    // The documents the one at `origin` stands on, near or far, and itself.
+    private static func reach(of origin: Int, standingOn: [Set<Int>]) -> Set<Int> {
         var reached: Set<Int> = [origin]
         var waiting = [origin]
 
@@ -452,13 +480,53 @@ public struct Builder: Sendable {
             }
         }
 
-        return Set(reached.flatMap { position in
+        return reached
+    }
+
+    // The declarations a fold may run where it calls through a contract:
+    // those of every document within the reach of the one folding, since a
+    // body it runs may run one of theirs.
+    private static func witnesses(of reached: Set<Int>, supplied: [Set<Reference>]) -> Set<Name> {
+        Set(reached.flatMap { position in
             supplied[position].compactMap { reference -> Name? in
                 guard case let .procedure(name) = reference else { return nil }
 
                 return name
             }
         })
+    }
+
+    // What one object's declarations say of themselves, with what the build
+    // worked out of each, under the spelling each was declared by. What the
+    // build read off a body is in the object's own type numbers, so it is read
+    // as the rows of `loweredTypes`.
+    private static func declarations(
+        of object: Compiled,
+        at handed: Int,
+        in loweredTypes: LoweredTypeTable
+    ) throws -> [Name: Placed<Declared>] {
+        let rows = object.typeNumbering.rows(in: loweredTypes)
+
+        return try object.declared.enumerated().reduce(into: [:]) { declarations, entry in
+            let (offset, name) = entry
+            let judged = object.table[offset]
+            let place = Place.procedure(name.spelling, in: object.document)
+
+            declarations[name] = Placed(
+                Declared(
+                    signature: judged.signature,
+                    access: judged.access,
+                    facts: (
+                        judged.constness,
+                        judged.isolation,
+                        judged.failing,
+                        try object.answers[name].map { answer in try rows.read(answer, at: place) }
+                    )
+                ),
+                at: place,
+                of: handed
+            )
+        }
     }
 
     // Every object standing beside what it was compiled against. An object

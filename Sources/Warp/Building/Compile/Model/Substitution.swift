@@ -96,22 +96,15 @@ struct Substitution: Sendable {
     }
 
     // Why a reading of a parameter does not answer a contract its bounds
-    // name, or nil where every reading answers each or leans on a claim,
-    // which goes to `leaning` for the asker to write down.
-    func unanswered(
-        _ parameter: Name,
-        bounds: Set<Name>,
-        in table: LoweredTypeTable,
-        leaning: (Leaning) -> Void
-    ) -> String? {
+    // name, or nil where every reading answers each.
+    func unanswered(_ parameter: Name, bounds: Set<Name>, in table: LoweredTypeTable) -> String? {
         for reading in everyReading(of: parameter) {
             for name in bounds.sorted() {
                 if let refusal = table.refusal(
                     of: reading,
                     answering: name,
                     orNull: false,
-                    as: "'\(parameter)' is read as",
-                    leaning: leaning
+                    as: "'\(parameter)' is read as"
                 ) {
                     return refusal
                 }

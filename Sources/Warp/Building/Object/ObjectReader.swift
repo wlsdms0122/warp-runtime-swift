@@ -63,7 +63,7 @@ struct ObjectReader {
         var contracts: [Name: [Name: ContractProcedure]] = [:]
         var claims: [Head: Set<Name>] = [:]
         var members: [Head: Set<Name>] = [:]
-        var leaned: [Leaning: Place] = [:]
+        var importedClaims: Set<ClaimPair> = []
         var declaredRows: [Judged] = []
         var liftedRows: [Value] = []
         var answers: [Name: LoweredType] = [:]
@@ -127,8 +127,8 @@ struct ObjectReader {
                     return Set(names)
                 }
 
-            case .leaned:
-                leaned = try self.leaned(part)
+            case .importedClaims:
+                importedClaims = try self.importedClaims(part)
 
             // The rows the document declares stand under their spellings.
             case .rows:
@@ -193,7 +193,7 @@ struct ObjectReader {
             contracts: contracts,
             claims: claims,
             members: members,
-            leaned: leaned,
+            importedClaims: importedClaims,
             declared: declared,
             constants: constants,
             table: table,
@@ -389,39 +389,23 @@ struct ObjectReader {
         .written(Identity(try Field(value, of: "writer").bytes()))
     }
 
-    // The document a place inside this object is an address in.
-    private func held(_ value: Value) throws -> Place.Document {
-        Place.Document(
-            identity: try Field(value, of: "place document").maybe { written in
-                Identity(try Field(written, of: "place document").bytes())
-            }
-        )
-    }
-
-    // Each reading beside the contract it was handed where and the place,
-    // in the key order of what the first two are written as, none twice.
-    private func leaned(_ value: Value) throws -> [Leaning: Place] {
-        let entries = try Field(value, of: "leaned").list { entry in
-            var cursor = try FieldCursor(entry, of: "leaned")
-            let (reading, contract) = (try cursor.next(), try cursor.next())
-            let place = try place(cursor.next())
+    // Each pair a claim this document imports is about, the type and the
+    // contract, in name order, none twice.
+    private func importedClaims(_ value: Value) throws -> Set<ClaimPair> {
+        let pairs = try Field(value, of: "importedClaims").list { entry in
+            var cursor = try FieldCursor(entry, of: "importedClaims")
+            let pair = ClaimPair(try name(cursor.next()), try name(cursor.next()))
 
             try cursor.end()
 
-            return (
-                key: Value.array([reading, contract]),
-                leaning: Leaning(reading: try lowered(reading), contract: try name(contract)),
-                place: place
-            )
+            return pair
         }
 
-        guard zip(entries, entries.dropFirst()).allSatisfy({ one, other in
-            Value.Dictionary.order(one.key, other.key) == .orderedAscending
-        }) else {
-            throw ObjectRefused("'leaned' writes its readings out of order, or one of them twice")
+        guard zip(pairs, pairs.dropFirst()).allSatisfy({ one, other in one < other }) else {
+            throw ObjectRefused("'importedClaims' writes its pairs out of order, or one of them twice")
         }
 
-        return entries.reduce(into: [:]) { leaned, entry in leaned[entry.leaning] = entry.place }
+        return Set(pairs)
     }
 
     private func variable(_ value: Value) throws -> (name: Name, value: Value) {
@@ -678,120 +662,6 @@ struct ObjectReader {
         case .these:
             read = .these(Set(try cursor.field().ordered(text)))
         case nil: throw ObjectRefused("'failing' says neither nothing nor which failures")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func place(_ value: Value) throws -> Place {
-        var cursor = try FieldCursor(value, of: "place")
-        let stands = try held(cursor.next())
-        let read = Place(try cursor.field().list(step), in: stands)
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func step(_ value: Value) throws -> Place.Step {
-        var cursor = try FieldCursor(value, of: "place step")
-        let read: Place.Step
-
-        switch ObjectLayout.PlaceStepTag(rawValue: try cursor.field().integer()) {
-        case .key: read = .key(try cursor.field().text())
-        case .part: read = .part(try part(cursor.next()))
-        case .construct: read = .construct(try construct(cursor.next()))
-        case .index: read = .index(try cursor.field().integer())
-        case .statement: read = .statement(name: try cursor.field().maybe(text), at: try cursor.field().integer())
-        case .landmark: read = .landmark(try cursor.field().text())
-        case nil: throw ObjectRefused("'place step' steps in a way this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func part(_ value: Value) throws -> Place.Part {
-        var cursor = try FieldCursor(value, of: "part")
-        let read: Place.Part
-
-        switch ObjectLayout.PartTag(rawValue: try cursor.field().integer()) {
-        case .procedures: read = .procedures
-        case .constants: read = .constants
-        case .variables: read = .variables
-        case .types: read = .types
-        case .contracts: read = .contracts
-        case .satisfies: read = .satisfies
-        case .imports: read = .imports
-        case .parameters: read = .parameters
-        case .returns: read = .returns
-        case .body: read = .body
-        case .result: read = .result
-        case .subject:
-            guard case let .bool(optional) = try cursor.next() else {
-                throw ObjectRefused(
-                    "'part' names a cast's subject without saying whether the cast reads a mismatch as null"
-                )
-            }
-
-            read = .subject(optional: optional)
-        case .callee: read = .callee
-        case .arguments: read = .arguments
-        case .closure: read = .closure
-        case .condition: read = .condition(of: try holder(cursor.next()))
-        case .then: read = .then
-        case .otherwise: read = .otherwise
-        case .rescue: read = .rescue
-        case .fields: read = .fields
-        case .bounds: read = .bounds
-        case .entries: read = .entries
-        case .typeParameters: read = .typeParameters
-        case .extensions: read = .extensions
-        case nil: throw ObjectRefused("'part' names a part this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func holder(_ value: Value) throws -> Place.ConditionHolder {
-        var cursor = try FieldCursor(value, of: "condition holder")
-        let read: Place.ConditionHolder
-
-        switch ObjectLayout.ConditionHolderTag(rawValue: try cursor.field().integer()) {
-        case .conditional: read = .conditional
-        case .loop: read = .loop
-        case nil: throw ObjectRefused("'condition holder' holds a condition in no way this reads")
-        }
-
-        try cursor.end()
-
-        return read
-    }
-
-    private func construct(_ value: Value) throws -> Construct {
-        var cursor = try FieldCursor(value, of: "construct")
-        let read: Construct
-
-        switch ObjectLayout.ConstructTag(rawValue: try cursor.field().integer()) {
-        case .literal: read = .literal
-        case .reference: read = .reference
-        case .array: read = .array
-        case .struct: read = .struct
-        case .dictionary: read = .dictionary
-        case .closure: read = .closure
-        case .cast: read = .cast
-        case .block: read = .block
-        case .conditional: read = .conditional
-        case .loop: read = .loop
-        case .attempt: read = .attempt
-        case .call: read = .call
-        case .leave: read = .leave(try reach(cursor.next()))
-        case nil: throw ObjectRefused("'construct' names a construct this reads none of")
         }
 
         try cursor.end()

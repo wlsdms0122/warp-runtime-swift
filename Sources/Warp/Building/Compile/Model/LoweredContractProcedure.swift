@@ -36,24 +36,25 @@ struct LoweredContractProcedure: Sendable {
     let slots: [Slot]
     let answers: LoweredType?
 
-    // Which declaration answers this procedure, by the name of the type that
-    // answers it. The link filled this in for every type it found, so a call
-    // reads a row out of it rather than resolving anything.
-    let answering: [Name: Name]
-
     // MARK: - Initializer
     // MARK: - Public
+    // Which declaration answers this procedure, by the name of the type that
+    // answers it, among the claims `table` holds: a type answering a contract
+    // answers every one of its procedures by its member of that name.
+    func answering(in table: LoweredTypeTable) -> [Name: Name] {
+        (table.satisfying[contract]?.keys).map { types in
+            types.reduce(into: [Name: Name]()) { held, type in held[type] = procedure.spelled(under: type) }
+        } ?? [:]
+    }
+
     // Every procedure every contract in these tables asks, under the spelling
     // a call writes to reach one.
     //
-    // Which declaration answers one is read off the tables rather than carried
-    // from where the answers were gathered. A type answering a contract
-    // answers every one of its procedures by its member of that name, so the
-    // table saying which types answer says the whole of it.
+    // What a contract asks is its declaration's, so this is the same whichever
+    // claims a table holds, and which declaration answers is asked of a table
+    // where a call is answered.
     static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
-            let answering = types.loweredTypes.satisfying[entry.key]?.keys.sorted() ?? []
-
             for (procedure, asked) in entry.value {
                 let signature = asked.signature.read(of: entry.key)
 
@@ -65,10 +66,7 @@ struct LoweredContractProcedure: Sendable {
                     isolation: asked.isolation,
                     failing: asked.failing,
                     slots: signature.lowered(in: types.loweredTypes),
-                    answers: signature.returns?.lowered(in: types.loweredTypes, bounds: signature.bounds),
-                    answering: answering.reduce(into: [Name: Name]()) { held, type in
-                        held[type] = procedure.spelled(under: type)
-                    }
+                    answers: signature.returns?.lowered(in: types.loweredTypes, bounds: signature.bounds)
                 )
             }
         }

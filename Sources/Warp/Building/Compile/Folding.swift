@@ -48,7 +48,7 @@ struct Folding {
         self.loweredTypes = loweredTypes
         self.resolved = resolved
         self.witnesses = contractProcedures.mapValues { asked in
-            asked.answering
+            asked.answering(in: loweredTypes)
                 .filter { _, witness in allowed.contains(witness) }
                 .compactMapValues { witness in resolved.rows[witness] }
         }

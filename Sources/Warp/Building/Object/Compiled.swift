@@ -48,9 +48,8 @@ public struct Compiled: Sendable, Declaring {
     let contracts: [Name: [Name: ContractProcedure]]
 
     // Which contracts it said each type answers, by the head it said so
-    // under, as it wrote them. The link holds the claim to the declarations
-    // behind it, and which declarations those are is a fact of the link
-    // rather than of this document.
+    // under, as it wrote them. Each was held to the type's members within
+    // what this document stands on where it was compiled.
     let claims: [Head: Set<Name>]
 
     // The procedures it gave each type, by the head it gave them under. Each
@@ -59,13 +58,10 @@ public struct Compiled: Sendable, Declaring {
     // that name.
     let members: [Head: Set<Name>]
 
-    // The readings its bodies lean on: a value of a type handed where a
-    // contract is asked, in this document's own type numbers. Unresolved
-    // here, the way a procedure this document sends and does not declare is
-    // unresolved. Which types answer a contract is read off the claims of the
-    // whole list, and a claim may be written in a document this one never
-    // names.
-    let leaned: [Leaning: Place]
+    // The claims other documents make that this one stands on, by the pair
+    // each is about, as its imports wrote them. What it was compiled against
+    // is read off the object, and a claim declares no name to read it by.
+    let importedClaims: Set<ClaimPair>
 
     // The declared spellings, in the order their rows stand. A row past
     // the end of this is a closure, which no spelling reaches.
@@ -152,14 +148,15 @@ public struct Compiled: Sendable, Declaring {
                 }
                 + types.keys.map(Reference.type)
                 + contracts.keys.map(Reference.type)
+                + claims.flatMap { head, contracts in
+                    contracts.map { contract in Reference.claim(ClaimPair(head.type, contract)) }
+                }
         )
     }
 
     // What this document needs of the documents a link lays before it, read
-    // off what its object holds: what its bodies send, and the types they,
-    // its signatures and its declared types stand on. A claim is not among
-    // them: a document claims a type answers a contract declared anywhere in
-    // its link, and the link holds the claim to it.
+    // off what its object holds: what its bodies send, the types they, its
+    // signatures and its declared types stand on, and the claims it imports.
     var needs: Set<Reference> {
         var reached = Set(numbering.sending.map(Reference.procedure))
 
@@ -179,14 +176,15 @@ public struct Compiled: Sendable, Declaring {
             }
         }
 
+        reached.formUnion(importedClaims.map(Reference.claim))
+
         return outside(reached)
     }
 
     // Every name this document reaches outside itself: its module's
     // `references`. What it needs, and the names its claims and members
-    // write and the contracts it leaned on. An object keeps no list of what
-    // its document named, so this is that list worked out again from the
-    // facts the object does keep.
+    // write. An object keeps no list of what its document named, so this is
+    // that list worked out again from the facts the object does keep.
     var references: Set<Reference> {
         var reached = needs
 
@@ -197,11 +195,6 @@ public struct Compiled: Sendable, Declaring {
 
         for head in members.keys {
             reached.formUnion(head.mentions.map(Reference.type))
-        }
-
-        // A reading's types are numbered, and the numbering is read above.
-        for leaning in leaned.keys {
-            reached.insert(.type(leaning.contract))
         }
 
         return outside(reached)
@@ -223,7 +216,7 @@ public struct Compiled: Sendable, Declaring {
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Head: Set<Name>],
         members: [Head: Set<Name>],
-        leaned: [Leaning: Place],
+        importedClaims: Set<ClaimPair>,
         declared: [Name],
         constants: [Name],
         table: [Judged],
@@ -242,7 +235,7 @@ public struct Compiled: Sendable, Declaring {
         self.contracts = contracts
         self.claims = claims
         self.members = members
-        self.leaned = leaned
+        self.importedClaims = importedClaims
         self.declared = declared
         self.table = table
         self.hidden = Set(
@@ -271,7 +264,7 @@ public struct Compiled: Sendable, Declaring {
         contracts: [Name: [Name: ContractProcedure]],
         claims: [Head: Set<Name>],
         members: [Head: Set<Name>],
-        leaned: [Leaning: Place],
+        importedClaims: Set<ClaimPair>,
         declared: [Name],
         constants: [Name],
         table: [Judged],
@@ -294,7 +287,7 @@ public struct Compiled: Sendable, Declaring {
             contracts: contracts,
             claims: claims,
             members: members,
-            leaned: leaned,
+            importedClaims: importedClaims,
             declared: declared,
             constants: constants,
             table: table,
@@ -378,7 +371,7 @@ public struct Compiled: Sendable, Declaring {
             contracts: contracts,
             claims: claims,
             members: members,
-            leaned: leaned,
+            importedClaims: importedClaims,
             declared: declared,
             constants: constants,
             table: table,
