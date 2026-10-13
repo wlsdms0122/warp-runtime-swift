@@ -195,8 +195,8 @@ final class LoweredTypeTable: Sendable {
             })
 
         // A key is a value like any other, so a struct in it is held as one
-        // in an entry is. That can make two keys one, which refuses as a map
-        // written with one key twice does.
+        // in an entry is. That can make two keys one, which refuses: a map
+        // value holds its keys in the key order, so neither is the later one.
         case let .dictionary(entries):
             let resolved = try entries.entries.map { key, item in
                 let at = "\(path())\(Path([.index(key)]).rendered)"
