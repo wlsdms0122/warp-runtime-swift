@@ -50,7 +50,7 @@ struct FoldedContractTests {
             try await Builder().build(asking + [answering])
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("asks whether 'Null' answers 'App.Describable', and no claim within reach says so")
+                && "\(error)".contains("casts a value of Null to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
@@ -69,12 +69,12 @@ struct FoldedContractTests {
                 compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
         } throws: { error in
-            "\(error)".contains("asks whether 'String' answers 'App.Describable', and no claim within reach says so")
+            "\(error)".contains("casts a value of String to App.Describable, which turns on a claim no document within reach makes")
         }
         await #expect {
             try await Builder().build(modules)
         } throws: { error in
-            "\(error)".contains("asks whether 'String' answers 'App.Describable', and no claim within reach says so")
+            "\(error)".contains("casts a value of String to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
@@ -133,7 +133,7 @@ struct FoldedContractTests {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
             "\(error)".contains("constants.aaa:")
-                && "\(error)".contains("asks whether 'Zed.Plain' answers 'App.Describable', and no claim within reach says so")
+                && "\(error)".contains("casts a value of Zed.Plain to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
@@ -162,13 +162,13 @@ struct FoldedContractTests {
             }
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("asks whether 'Bank.Plain' answers 'App.Describable', and no claim within reach says so")
+                && "\(error)".contains("casts a value of Bank.Plain to App.Describable, which turns on a claim no document within reach makes")
         }
         await #expect {
             try await Builder().compile(modules)
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("asks whether 'Bank.Plain' answers 'App.Describable', and no claim within reach says so")
+                && "\(error)".contains("casts a value of Bank.Plain to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
