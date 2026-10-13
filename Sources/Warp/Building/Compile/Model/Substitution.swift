@@ -52,6 +52,14 @@ struct Substitution: Sendable {
     // beside a fraction is held as the fraction the call hands on.
     private(set) var apart: [Name: [LoweredType]] = [:]
 
+    // For a member whose base was read as something giving it no type, what
+    // the base was read as, by the member's label.
+    private(set) var ungiven: [Name: (of: Name, name: Name, base: LoweredType)] = [:]
+
+    // For a member a declaration says is a type, where what fills its base
+    // gives another, the two, by the member's label.
+    private(set) var unsame: [Name: (said: LoweredType, given: LoweredType)] = [:]
+
     // MARK: - Initializer
     init() {}
 
@@ -71,6 +79,84 @@ struct Substitution: Sendable {
     }
 
     // MARK: - Public
+    // Each member of `members` whose base this reads, read as what fills the
+    // base gives under its name, which is what decides it: the type's member,
+    // or a type parameter's own. The contracts bounding a base are what
+    // `declared` holds that parameter to. `said` is what a declaration says
+    // some of them are, which what fills their bases has to give, and a
+    // member it does not name stands as one more type parameter, read where
+    // its base is. `reading` is what the procedure being read reads a member
+    // of one of its own parameters as, where it says more of one than the
+    // contracts do.
+    mutating func derive(
+        _ members: [Name: (of: Name, name: Name)],
+        over declared: [LoweredType],
+        said: [Name: LoweredType] = [:],
+        reading: [Name: LoweredType] = [:],
+        in table: LoweredTypeTable
+    ) {
+        let bases = declared.reduce(into: [Name: [Name]]()) { bases, type in
+            bases.merge(type.typeParameters) { first, _ in first }
+        }
+        var given: [Name: LoweredType] = [:]
+
+        for (label, member) in members.sorted(by: { $0.key < $1.key }) {
+            guard let base = readings[member.of] else { continue }
+
+            guard
+                let derived = table.member(member.name, of: base, among: bases[member.of] ?? [])?
+                    .replacingParameters(reading)
+            else {
+                ungiven[label] = (member.of, member.name, base)
+
+                continue
+            }
+
+            guard let same = said[label] else {
+                read(label, as: derived, in: table)
+
+                continue
+            }
+
+            var taking = Substitution()
+            var holding: [Held] = []
+
+            same.binding(against: derived, into: &self, taking: &taking, holding: &holding, in: table)
+            given[label] = derived
+        }
+
+        for (label, derived) in given.sorted(by: { $0.key < $1.key }) {
+            guard let same = said[label] else { continue }
+
+            let filled = same.filling(readings)
+
+            if !derived.reads(as: filled) {
+                unsame[label] = (filled, derived)
+            }
+
+            readings[label] = derived
+        }
+    }
+
+    // Why a member has no answer, or nil where every member read has one:
+    // its base read as what gives it no type, or what fills its base giving
+    // another type than the declaration says. Named in label order.
+    func memberRefusal(in table: LoweredTypeTable) -> String? {
+        if let ungiven = ungiven.sorted(by: { $0.key < $1.key }).first?.value {
+            return "'\(ungiven.of)' is read as \(ungiven.base.rendered(in: table)), which gives no type"
+                + " '\(ungiven.name)' for `\(TypeExpression.member(of: ungiven.of, name: ungiven.name).rendered)`."
+                + " A member is what one type gives, where a claim within reach says it answers a contract"
+                + " asking it"
+        }
+
+        if let (label, unsame) = unsame.sorted(by: { $0.key < $1.key }).first {
+            return "'\(label)' is \(unsame.given.rendered(in: table)), and the declaration says it is"
+                + " \(unsame.said.rendered(in: table))"
+        }
+
+        return nil
+    }
+
     // What a parameter is held to its bounds as: what it is read as, and each
     // reading that does not say.
     func everyReading(of parameter: Name) -> [LoweredType] {

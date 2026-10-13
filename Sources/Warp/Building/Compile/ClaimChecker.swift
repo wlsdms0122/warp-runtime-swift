@@ -97,13 +97,15 @@ struct ClaimChecker {
     // What one document gives types, held to what stands behind it within
     // its reach: each head it extends a type under is a type a value is an
     // instance of, and each claim it makes holds. `members` are the members
-    // given within the reach, and `space` the declarations a link resolves
-    // spellings in, their facts standing where their rows do.
+    // given within the reach, `typeMembers` the type members given within it,
+    // by spelling, and `space` the declarations a link resolves spellings in,
+    // their facts standing where their rows do.
     func judge(
         _ claims: [Placed<Claim>],
         extending extended: [Placed<Head>],
         in namespace: TypeNamespace,
         members: Set<Name>,
+        typeMembers: Set<Name>,
         among space: [Name: Placed<Declared>],
         in table: TypeTable
     ) throws {
@@ -129,38 +131,13 @@ struct ClaimChecker {
                 over: namespace.types,
                 among: space,
                 members: members,
+                typeMembers: typeMembers,
                 in: table
             )
         }
     }
 
     // MARK: - Private
-    // The head a bare head stands for: its type applied to the type's own
-    // parameters, held to the bounds the type holds them to. A head applying
-    // its type, and a type taking no parameters, stand for themselves.
-    private static func applying(_ head: Head, over types: [Name: Placed<TypeDeclaration>]) -> Head {
-        guard head.isBare else { return head }
-
-        switch head.type {
-        case TypeSpelling.array:
-            return Head(head.type, arguments: [.parameter(name: TypeSpelling.element)])
-
-        case TypeSpelling.dictionary:
-            return Head(
-                head.type,
-                arguments: [.parameter(name: TypeSpelling.key), .parameter(name: TypeSpelling.element)],
-                bounds: [TypeSpelling.key: [TypeSpelling.hashable]]
-            )
-
-        default:
-            guard case let .struct(_, typeParameters, bounds)? = types[head.type]?.held, !typeParameters.isEmpty else {
-                return head
-            }
-
-            return Head(head.type, arguments: typeParameters.map { name in .parameter(name: name) }, bounds: bounds)
-        }
-    }
-
     // The claims a link holds, one for each type and contract. A type answers
     // a contract one way, so a second claim about the pair is the first where
     // its head takes the same values, each head's own type parameters read as
@@ -184,8 +161,8 @@ struct ClaimChecker {
                 continue
             }
 
-            let one = applying(earlier.held.head, over: types).lowered(in: loweredTypes)
-            let other = applying(claim.held.head, over: types).lowered(in: loweredTypes)
+            let one = earlier.held.head.applying(types[earlier.held.type]?.held).lowered(in: loweredTypes)
+            let other = claim.held.head.applying(types[claim.held.type]?.held).lowered(in: loweredTypes)
             let same: Bool = switch (one, other) {
             case let (one?, other?):
                 loweredTypes.refusal(of: one, under: other) == nil && loweredTypes.refusal(of: other, under: one) == nil
@@ -214,7 +191,7 @@ struct ClaimChecker {
     private static func refusal(
         of type: Name,
         over types: [Name: Placed<TypeDeclaration>],
-        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
+        asking contracts: [Name: Placed<Contract>],
         in table: TypeTable
     ) -> String? {
         guard TypeExpression.nominalTypes[type] == nil else { return nil }
@@ -239,10 +216,11 @@ struct ClaimChecker {
     // stands. Refused at the claim where it does not hold.
     private func holding(
         _ claim: Placed<Claim>,
-        asking contracts: [Name: Placed<[Name: ContractProcedure]>],
+        asking contracts: [Name: Placed<Contract>],
         over types: [Name: Placed<TypeDeclaration>],
         among space: [Name: Placed<Declared>],
         members: Set<Name>,
+        typeMembers: Set<Name>,
         in table: TypeTable
     ) throws {
         let (type, contract) = (claim.held.type, claim.held.contract)
@@ -276,12 +254,67 @@ struct ClaimChecker {
         // fills, held to the bounds the head writes. A bare head stands for
         // the type applied to its own parameters under the bounds the type
         // holds them to, so a claim about `Array` is about every list.
-        let applied = Self.applying(claim.held.head, over: types).claimed
+        let applied = claim.held.head.applying(types[type]?.held).claimed
         let claimed = applied?.type ?? languageType ?? .named(type)
         let held = applied?.bounds ?? [:]
         let standing = applied?.standing ?? [:]
+        let loweredTypes = table.loweredTypes
+        let values = claimed.lowered(in: loweredTypes, bounds: held)
 
-        for (procedure, wanted) in asked.held.sorted(by: { $0.key < $1.key }) {
+        // What the type gives under each type the contract asks, for the
+        // values the head takes: the type member of that name given within
+        // what the claim's document stands on, under a head taking every one
+        // of those values, and of a type answering what the contract holds
+        // it to. A contract's procedure writing that type, `Self.Item`, reads
+        // it as this.
+        var readingSelf: [Name: LoweredType] = [TypeSpelling.selfType: values]
+
+        for name in asked.held.types.sorted() {
+            let spelling = name.spelled(under: type)
+
+            guard typeMembers.contains(spelling), let member = table.typeMembers[type]?[name] else {
+                throw BuildError(
+                    says + ", which asks the type '\(name)', and nothing it stands on gives '\(type)' the type"
+                        + " member '\(name)'. A contract's type is answered by the type's type member of that name",
+                    at: claim.place
+                )
+            }
+
+            if let under = member.head.applying(types[type]?.held).lowered(in: loweredTypes),
+                loweredTypes.refusal(of: values, under: under) != nil {
+                throw BuildError(
+                    says + ", and '\(type)' is given the type member '\(name)' under '\(member.head.spelling)',"
+                        + " which does not take every value '\(claim.held.head.spelling)' takes",
+                    at: claim.place
+                )
+            }
+
+            guard let read = loweredTypes.member(name, of: values, among: [contract]) else {
+                throw BuildError(
+                    says + ", which asks the type '\(name)', and '\(type)' gives it none for the values"
+                        + " '\(claim.held.head.spelling)' takes",
+                    at: claim.place
+                )
+            }
+
+            for bound in (asked.held.bounds[name] ?? []).sorted() {
+                if let refusal = loweredTypes.refusal(
+                    of: read,
+                    answering: bound,
+                    orNull: false,
+                    as: "the type member '\(name)' is"
+                ) {
+                    throw BuildError(
+                        says + ", and \(refusal), where '\(contract)' holds it to '\(bound)'",
+                        at: claim.place
+                    )
+                }
+            }
+
+            readingSelf[name.spelled(under: TypeSpelling.selfType)] = read
+        }
+
+        for (procedure, wanted) in asked.held.procedures.sorted(by: { $0.key < $1.key }) {
             let spelling = procedure.spelled(under: type)
 
             // What answers is what a document the claim stands on gave the
@@ -313,8 +346,7 @@ struct ClaimChecker {
                 reading: witness.held.facts?.answer,
                 answering: type,
                 under: claim.held.head,
-                claimed: claimed,
-                holding: held,
+                readingSelf: readingSelf,
                 standing: standing,
                 of: contract,
                 procedure: procedure,
@@ -376,11 +408,10 @@ struct ClaimChecker {
     private func answers(
         _ asked: Signature,
         by given: Signature,
-        reading read: LoweredType?,
+        reading answerRead: LoweredType?,
         answering type: Name,
         under head: Head,
-        claimed: TypeExpression,
-        holding held: [Name: Set<Name>],
+        readingSelf: [Name: LoweredType],
         standing: [Name: Name],
         of contract: Name,
         procedure: Name,
@@ -395,17 +426,18 @@ struct ClaimChecker {
         }
 
         // The contract's procedure as the claim reads it: `Self` is the type
-        // the claim is about, wherever it stands, its own parameters held to
-        // what the language holds them to.
-        let replaced = asked.replacingSelf(with: claimed)
-        let substituted = Signature(
-            parameters: replaced.parameters,
-            returns: replaced.returns,
-            bounds: replaced.bounds.merging(held) { mine, _ in mine }
-        )
+        // the claim is about, wherever it stands, and each member of it the
+        // type the type gives under that name, as `readingSelf` says.
+        let read = asked.read(of: contract)
         let takes = given.lowered(in: loweredTypes).map(\.type)
-        let asks = substituted.lowered(in: loweredTypes).map(\.type)
-        let substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
+        let asks = read.lowered(in: loweredTypes).map { slot in slot.type.replacingParameters(readingSelf) }
+        var substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
+
+        substitution.derive(given.members, over: takes, said: given.loweredMembers(in: loweredTypes), in: loweredTypes)
+
+        if let refusal = substitution.memberRefusal(in: loweredTypes) {
+            return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)' asks, and \(refusal)"
+        }
 
         // What fills the declaration's own parameters is held to their bounds
         // the way a call's readings are: what each was read as, and each
@@ -451,15 +483,15 @@ struct ClaimChecker {
 
         guard
             let answer = asked.returns,
-            let promised = substituted.returns?.lowered(in: loweredTypes, bounds: substituted.bounds)
+            let promised = read.loweredReturns(in: loweredTypes)?.replacingParameters(readingSelf)
         else {
             return nil
         }
 
         // What the declaration wrote is rendered as lowered, so a type
         // parameter names the bound its signature holds it to.
-        let declared = given.returns?.lowered(in: loweredTypes, bounds: given.bounds)
-        let answered = (declared ?? read ?? .any)
+        let declared = given.loweredReturns(in: loweredTypes)
+        let answered = (declared ?? answerRead ?? .any)
             .filling(substitution.readings)
 
         guard promised.accepts(answered, in: loweredTypes) else {

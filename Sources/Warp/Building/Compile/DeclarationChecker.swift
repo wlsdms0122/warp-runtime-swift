@@ -34,6 +34,7 @@ struct DeclarationChecker {
         let table = TypeTable(
             types: declared.mapValues(\.held),
             contracts: namespace.contracts.mapValues(\.held),
+            typeMembers: namespace.typeMembers.values.map(\.held),
             standing: Prelude.types.keys.sorted() + documents.flatMap { document in document.types.keys.sorted() },
             of: linkage
         )
@@ -82,13 +83,19 @@ struct DeclarationChecker {
                         subexpressions: block,
                         at: .procedure(name.spelling, in: .of(module)),
                         bounds: procedure.signature.bounds,
+                        sameTypes: procedure.signature.sameTypes,
                         in: table
                     )
                 }
             }
 
             try judge(contracts: module.contracts, of: .of(module), in: table)
-            try judge(heads: Set(module.claims.keys).union(module.members.keys), of: .of(module), in: table)
+            try judge(
+                heads: Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys),
+                of: .of(module),
+                in: table
+            )
+            try judge(typeMembers: module.typeMembers, of: .of(module), in: table)
 
             for (name, constant) in module.constants.sorted(by: { $0.key < $1.key }) {
                 try judge(subexpressions: constant, at: .constant(name.spelling, in: .of(module)), in: table)
@@ -127,11 +134,12 @@ struct DeclarationChecker {
 
             try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
             try judge(
-                heads: Set(object.claims.keys).union(object.members.keys),
+                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
                 of: object.document,
                 in: table,
                 answering: false
             )
+            try judge(typeMembers: object.typeMembers, of: object.document, in: table, answering: false)
         }
     }
 
@@ -140,14 +148,18 @@ struct DeclarationChecker {
     // and what a call is judged against is what was judged. `Self` is read
     // as one type parameter the contract bounds.
     private func judge(
-        contracts: [Name: [Name: ContractProcedure]],
+        contracts: [Name: Contract],
         of document: Place.Document,
         in table: TypeTable,
         answering: Bool = true
     ) throws {
-        for (contract, procedures) in contracts.sorted(by: { $0.key < $1.key }) {
-            for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
-                let place = Place.contract(contract.spelling, in: document).key(name.spelling)
+        for (contract, declared) in contracts.sorted(by: { $0.key < $1.key }) {
+            let home = Place.contract(contract.spelling, in: document)
+
+            try judge(bounds: declared.bounds, at: { _ in home.part(.bounds) }, in: table)
+
+            for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
+                let place = home.part(.procedures).key(name.spelling)
 
                 try judge(asked.signature.read(of: contract), at: place, in: table, answering: answering)
             }
@@ -177,6 +189,25 @@ struct DeclarationChecker {
         }
     }
 
+    // A type member mentions what its type names, the way a field does, its
+    // head's type parameters held to what the head holds them to.
+    private func judge(
+        typeMembers: [Head: [Name: TypeExpression]],
+        of document: Place.Document,
+        in table: TypeTable,
+        answering: Bool = true
+    ) throws {
+        for member in TypeMember.listed(typeMembers) {
+            try mentioned(
+                in: member.type,
+                at: .typeMember(member, in: document),
+                bounds: member.head.applying(table.types[member.head.type]).bounds,
+                resolve: table,
+                answering: answering
+            )
+        }
+    }
+
     // Every type a body mentions, held where it is written: the signatures its
     // closures carry, the types its casts name, and what its names say they
     // hold. A procedure's, a constant's and a variable's body each ask this,
@@ -187,21 +218,22 @@ struct DeclarationChecker {
         subexpressions held: some Traversable,
         at place: Place,
         bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:],
         in table: TypeTable
     ) throws {
         let subexpressions = held.subexpressions(at: place)
 
         for (place, inner) in closures(in: subexpressions) {
-            try judge(inner.signature.bounded(by: bounds), at: place, in: table)
+            try judge(inner.signature.bounded(by: bounds, sameTypes: sameTypes), at: place, in: table)
         }
 
         for (place, named) in castTypes(in: subexpressions) {
-            try judge(cast: named, at: place, bounds: bounds, in: table)
+            try judge(cast: named, at: place, bounds: bounds, sameTypes: sameTypes, in: table)
         }
 
         // A name saying what it holds is a mention like the other two.
         for (place, declared) in held.declaring(at: place) {
-            try mentioned(in: declared, at: place, bounds: bounds, resolve: table)
+            try mentioned(in: declared, at: place, bounds: bounds, sameTypes: sameTypes, resolve: table)
         }
     }
 
@@ -219,6 +251,7 @@ struct DeclarationChecker {
                 in: parameter.type.slotUnwrapped,
                 at: place.part(.parameters).index(position),
                 bounds: signature.bounds,
+                sameTypes: signature.sameTypes,
                 resolve: table,
                 answering: answering
             )
@@ -228,11 +261,55 @@ struct DeclarationChecker {
             in: signature.returns ?? .any,
             at: place.part(.returns),
             bounds: signature.bounds,
+            sameTypes: signature.sameTypes,
             resolve: table,
             answering: answering
         )
 
         try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
+
+        // A member the signature bounds or says is a type is one a contract
+        // bounding its parameter asks, and the type it is said to be answers
+        // what holds the member, as a type a call fills it with would.
+        for label in Set(signature.bounds.keys).union(signature.sameTypes.keys).sorted() {
+            guard let member = label.memberOf else { continue }
+
+            let at = place.part(signature.sameTypes[label] != nil ? .sameTypes : .bounds).key(label.spelling)
+
+            try mentioned(
+                in: .member(of: member.of, name: member.name),
+                at: at,
+                bounds: signature.bounds,
+                resolve: table,
+                answering: answering
+            )
+        }
+
+        for (label, same) in signature.sameTypes.sorted(by: { $0.key < $1.key }) {
+            let at = place.part(.sameTypes).key(label.spelling)
+
+            try mentioned(
+                in: same,
+                at: at,
+                bounds: signature.bounds,
+                sameTypes: signature.sameTypes,
+                resolve: table,
+                answering: answering
+            )
+
+            guard answering, let member = label.memberOf else { continue }
+
+            let types = table.loweredTypes
+            let held = types.bounds(of: member.name, askedBy: signature.bounds[member.of] ?? [])?
+                .union(signature.bounds[label] ?? []) ?? []
+            let lowered = same.lowered(in: types, bounds: signature.bounds, sameTypes: signature.sameTypes)
+
+            for bound in held.sorted() {
+                if let refusal = types.refusal(of: lowered, answering: bound, orNull: false, as: "says '\(label)' is") {
+                    throw BuildError(refusal + ", and '\(label)' is held to '\(bound)'", at: at)
+                }
+            }
+        }
     }
 
     // A procedure the host answers calls a procedure it was handed with
@@ -262,9 +339,10 @@ struct DeclarationChecker {
         cast named: TypeExpression,
         at place: Place,
         bounds: [Name: Set<Name>],
+        sameTypes: [Name: TypeExpression],
         in table: TypeTable
     ) throws {
-        try mentioned(in: named, at: place, bounds: bounds, resolve: table)
+        try mentioned(in: named, at: place, bounds: bounds, sameTypes: sameTypes, resolve: table)
 
         switch named.lowered(in: table.loweredTypes) {
         case .any:
@@ -295,21 +373,41 @@ struct DeclarationChecker {
         in type: TypeExpression,
         at place: Place,
         bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:],
         resolve table: TypeTable,
         answering: Bool = true
     ) throws {
+        // A part, judged under the same signature.
+        func part(_ type: TypeExpression, at place: Place) throws {
+            try mentioned(in: type, at: place, bounds: bounds, sameTypes: sameTypes, resolve: table, answering: answering)
+        }
+
         switch type {
         case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
             return
+
+        // A member is a type a contract bounding its parameter asks, `Self`
+        // in a contract's procedures being bounded by that contract.
+        case let .member(of, name):
+            guard table.loweredTypes.bounds(of: name, askedBy: bounds[of] ?? []) != nil else {
+                let bounding = (bounds[of] ?? []).sorted().map(\.spelling).joined(separator: " & ")
+
+                throw BuildError(
+                    "writes `\(type.rendered)`, and "
+                        + (bounding.isEmpty ? "no contract bounds '\(of)'" : "'\(of)' is bounded by \(bounding)")
+                        + ", which asks no type '\(name)'. A member is a type a contract bounding its parameter asks",
+                    at: place
+                )
+            }
 
         case let .procedure(type, _, _):
             guard let type else { return }
 
             for (position, parameter) in type.parameters.enumerated() {
-                try mentioned(in: parameter.slotUnwrapped, at: place.index(position), bounds: bounds, resolve: table, answering: answering)
+                try part(parameter.slotUnwrapped, at: place.index(position))
             }
 
-            try mentioned(in: type.returns ?? .any, at: place.part(.returns), bounds: bounds, resolve: table, answering: answering)
+            try part(type.returns ?? .any, at: place.part(.returns))
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some
@@ -336,26 +434,34 @@ struct DeclarationChecker {
             }
 
             for argument in arguments {
-                try mentioned(in: argument, at: place, bounds: bounds, resolve: table, answering: answering)
+                try part(argument, at: place)
             }
 
-            try applied(name, to: arguments, at: place, bounds: bounds, in: table, answering: answering)
+            try applied(
+                name,
+                to: arguments,
+                at: place,
+                bounds: bounds,
+                sameTypes: sameTypes,
+                in: table,
+                answering: answering
+            )
 
         case let .array(inner), let .inout(inner), let .variable(inner):
-            try mentioned(in: inner, at: place, bounds: bounds, resolve: table, answering: answering)
+            try part(inner, at: place)
 
         case let .dictionary(key, value):
-            try mentioned(in: key, at: place, bounds: bounds, resolve: table, answering: answering)
-            try mentioned(in: value, at: place, bounds: bounds, resolve: table, answering: answering)
+            try part(key, at: place)
+            try part(value, at: place)
             if answering {
-                try keyed(by: key, at: place, bounds: bounds, in: table)
+                try keyed(by: key, at: place, bounds: bounds, sameTypes: sameTypes, in: table)
             }
 
         // The load held a `?` to saying something new on what it wraps as
         // written. A name may stand for what it says nothing on, and that is
         // known here, where names resolve: what the name lowers to, spelled.
         case let .nullable(inner):
-            try mentioned(in: inner, at: place, bounds: bounds, resolve: table, answering: answering)
+            try part(inner, at: place)
 
             guard case .named = inner else { return }
 
@@ -410,6 +516,7 @@ struct DeclarationChecker {
         to arguments: [TypeExpression],
         at place: Place,
         bounds: [Name: Set<Name>],
+        sameTypes: [Name: TypeExpression],
         in table: TypeTable,
         answering: Bool = true
     ) throws {
@@ -442,7 +549,7 @@ struct DeclarationChecker {
         for (parameter, argument) in zip(typeParameters, arguments) {
             for contract in declaredBounds[parameter, default: []].sorted() {
                 if let refusal = types.refusal(
-                    of: argument.lowered(in: types, bounds: bounds),
+                    of: argument.lowered(in: types, bounds: bounds, sameTypes: sameTypes),
                     answering: contract,
                     orNull: false,
                     as: "applies '\(name)' at '\(parameter)' to"
@@ -458,12 +565,13 @@ struct DeclarationChecker {
         by key: TypeExpression,
         at place: Place,
         bounds: [Name: Set<Name>],
+        sameTypes: [Name: TypeExpression],
         in table: TypeTable
     ) throws {
         let types = table.loweredTypes
 
         if let refusal = types.keyRefusal(
-            of: key.lowered(in: types, bounds: bounds)
+            of: key.lowered(in: types, bounds: bounds, sameTypes: sameTypes)
         ) {
             throw BuildError(refusal, at: place)
         }

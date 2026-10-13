@@ -92,11 +92,34 @@ struct Validator: Sendable {
             }
         }
 
-        for (contract, procedures) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
-            try held(contract, as: .type, at: .contract(contract.spelling, in: .of(module)))
+        for (contract, declared) in module.contracts.sorted(by: { one, other in one.key < other.key }) {
+            let home = Place.contract(contract.spelling, in: .of(module))
 
-            for (name, asked) in procedures.sorted(by: { one, other in one.key < other.key }) {
-                let place = Place.contract(contract.spelling, in: .of(module)).key(name.spelling)
+            try held(contract, as: .type, at: home)
+
+            // A type the contract asks is named the way a member of a type
+            // parameter names it, by one identifier, and a bound holds one
+            // the contract asks.
+            for name in declared.types.sorted() {
+                try held(name, as: .typeMember, at: home.part(.types))
+            }
+
+            for (name, contracts) in declared.bounds.sorted(by: { one, other in one.key < other.key }) {
+                guard declared.types.contains(name) else {
+                    throw ValidationError(
+                        "bounds '\(name)', and the contract asks no type '\(name)'. A contract's bound holds"
+                            + " a type it asks",
+                        at: home.part(.bounds)
+                    )
+                }
+
+                for bound in contracts.sorted() {
+                    try held(bound, as: .contractMention, at: home.part(.bounds))
+                }
+            }
+
+            for (name, asked) in declared.procedures.sorted(by: { one, other in one.key < other.key }) {
+                let place = home.part(.procedures).key(name.spelling)
 
                 try held(name, as: .contractProcedure, at: place)
 
@@ -108,6 +131,26 @@ struct Validator: Sendable {
                         "a contract's procedure writes no bounds. A bound is declared in the `bounds`"
                             + " of a procedure's own signature",
                         at: place.part(.bounds)
+                    )
+                }
+
+                guard asked.signature.sameTypes.isEmpty else {
+                    throw ValidationError(
+                        "a contract's procedure writes no same types. What a type gives under a name the"
+                            + " contract asks is the type's to say",
+                        at: place.part(.sameTypes)
+                    )
+                }
+
+                // `Self.Item` is a type this contract asks, since `Self` is
+                // whatever answers it.
+                if let unasked = asked.signature.members.values
+                    .filter({ member in member.of == TypeSpelling.selfType && !declared.types.contains(member.name) })
+                    .map(\.name).sorted().first {
+                    throw ValidationError(
+                        "writes `\(TypeExpression.member(of: TypeSpelling.selfType, name: unasked).rendered)`, and"
+                            + " '\(contract)' asks no type '\(unasked)'. A contract's procedure names the types it asks",
+                        at: place
                     )
                 }
 
@@ -135,7 +178,7 @@ struct Validator: Sendable {
         // be written as no extension, and read back as none. A head writes
         // what the type is applied to as a mention writes it, its own type
         // parameters each bounded where the head names it.
-        for head in Set(module.claims.keys).union(module.members.keys).sorted() {
+        for head in Set(module.claims.keys).union(module.members.keys).union(module.typeMembers.keys).sorted() {
             let place = Place(module.document.home(of: head), in: module.document)
 
             try held(head.type, as: .claimedType, at: place)
@@ -175,6 +218,26 @@ struct Validator: Sendable {
 
             if module.members[head]?.isEmpty == true {
                 throw ValidationError("gives '\(head.spelling)' no member, which gives it nothing", at: place.part(.procedures))
+            }
+
+            // A type member is named by one identifier, since `some T.Item`
+            // writes it after a dot, and it writes the type parameters of the
+            // head it is given under, or of the struct where its declaration
+            // gives it. Under a bare head elsewhere it writes none: one taking
+            // the type's parameters is given under a head applying the type.
+            let declaring: Set<Name> = if head.isBare, case let .struct(_, typeParameters, _)? = module.types[head.type] {
+                Set(typeParameters)
+            } else {
+                head.parameterNames
+            }
+
+            for (name, type) in (module.typeMembers[head] ?? [:]).sorted(by: { one, other in one.key < other.key }) {
+                let member = TypeMember(head: head, name: name, type: type)
+                let here = Place.typeMember(member, in: module.document)
+
+                try held(name, as: .typeMember, at: here)
+                try marked(type, at: here)
+                try written(type, in: .typeMember(declaring: declaring), at: here)
             }
 
             if case .alias? = module.types[head.type] {
@@ -1036,15 +1099,62 @@ struct Validator: Sendable {
         for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
             let here = place.part(.bounds).key(parameter.spelling)
 
-            try held(parameter, as: .typeParameter, at: here)
+            try held(key: parameter, at: here)
 
             for contract in contracts.sorted() {
                 try held(contract, as: .contractMention, at: here)
             }
         }
 
+        // A bound and a same type ride on a parameter some slot writes, or on
+        // a member of one.
         let named = signature.parameterNames
-        let unwritten = signature.bounds.keys.filter { name in !named.contains(name) }.sorted()
+        let riding = named.union(signature.members.values.map(\.of))
+        let unwritten = signature.bounds.keys.filter { name in !riding.contains(name.memberOf?.of ?? name) }.sorted()
+
+        // What a member is, the procedure declaring its parameter says: a
+        // closure's are that procedure's, and a contract's procedure leaves
+        // it to what answers the contract.
+        if !signature.sameTypes.isEmpty, case .closure = context {
+            throw ValidationError(
+                "a closure writes no same types. A closure's `some T` is the procedure's around it, which says"
+                    + " what its members are",
+                at: place.part(.sameTypes)
+            )
+        }
+
+        for (label, same) in signature.sameTypes.sorted(by: { one, other in one.key < other.key }) {
+            let here = place.part(.sameTypes).key(label.spelling)
+
+            guard let member = label.memberOf else {
+                throw ValidationError(
+                    "says '\(label)' is a type, and a same type is said of a member of a type parameter,"
+                        + " `T.Item`. A type parameter is filled by a call",
+                    at: here
+                )
+            }
+
+            try held(key: label, at: here)
+
+            guard riding.contains(member.of) else {
+                throw ValidationError(
+                    "says '\(label)' is a type, and no slot writes `some \(member.of.spelling)`."
+                        + " A same type rides on a parameter some slot mentions",
+                    at: here
+                )
+            }
+
+            try marked(same, at: here)
+            try written(same, in: context, at: here)
+
+            if let said = same.members.keys.sorted().first(where: { key in signature.sameTypes[key] != nil }) {
+                throw ValidationError(
+                    "says '\(label)' is `\(same.rendered)`, which writes '\(said)', and says '\(said)' is a type"
+                        + " too. A same type says what a member is in one step",
+                    at: here
+                )
+            }
+        }
 
         if let first = unwritten.first {
             throw ValidationError(
@@ -1065,6 +1175,19 @@ struct Validator: Sendable {
                         + " A call fills a type parameter from what it hands, so one only the answer names"
                         + " is filled by nothing",
                     at: place.part(.returns)
+                )
+            }
+
+            // A member is what the type filling its parameter gives, so the
+            // parameter itself stands where a call fills it.
+            if let (label, member) = signature.members.sorted(by: { one, other in one.key < other.key })
+                .first(where: { _, member in member.of != TypeSpelling.selfType && !taken.contains(member.of) }) {
+                throw ValidationError(
+                    "writes `\(TypeExpression.member(of: member.of, name: member.name).rendered)`, and no parameter"
+                        + " writes `\(TypeExpression.parameter(name: member.of).rendered)`. A member '\(label)' is"
+                        + " what the type filling its parameter gives, so one whose parameter no call fills is"
+                        + " filled by nothing",
+                    at: place
                 )
             }
         }
@@ -1142,8 +1265,43 @@ struct Validator: Sendable {
                 )
             }
 
+        // A member is filled by what fills the parameter it is a member of,
+        // `Self` where a contract's procedure writes it.
+        case let .member(of, name):
+            try held(name, as: .typeMember, at: place)
+
+            guard of != TypeSpelling.selfType else {
+                guard context.takesSelf else {
+                    throw ValidationError(
+                        "writes `\(type.rendered)`, and `Self` stands for the type that answers a contract"
+                            + " and is written in that contract's procedures alone",
+                        at: place
+                    )
+                }
+
+                return
+            }
+
+            guard context.takesMember else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and \(context.refusesMember)",
+                    at: place
+                )
+            }
+
+            try written(.parameter(name: of), in: context, at: place)
+
         case let .parameter(name):
             guard context.takes(typeParameter: name) else {
+                if case .typeMember = context {
+                    throw ValidationError(
+                        "writes `\(type.rendered)`, and what it is given under names no '\(name)'. A type member"
+                            + " writes the type parameters of the head it is given under, or of the struct whose"
+                            + " declaration gives it, and under a bare head none",
+                        at: place
+                    )
+                }
+
                 guard case .struct = context else {
                     throw ValidationError(
                         "writes `\(type.rendered)`, and nothing here is"
@@ -1288,6 +1446,17 @@ struct Validator: Sendable {
         guard !grammar.holds(name) else { return }
 
         throw ValidationError(grammar.refusal(of: name), at: place)
+    }
+
+    // A key of `bounds` or `sameTypes`: a type parameter's name, or a member
+    // of one, the parameter's name and the member's with a dot between them.
+    private func held(key: Name, at place: Place) throws {
+        guard let member = key.memberOf else {
+            return try held(key, as: .typeParameter, at: place)
+        }
+
+        try held(member.of, as: .typeParameter, at: place)
+        try held(member.name, as: .typeMember, at: place)
     }
 
     // A name a body introduces: a parameter, a statement's name, or the one a

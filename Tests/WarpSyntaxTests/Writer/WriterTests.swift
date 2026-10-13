@@ -505,7 +505,7 @@ struct WriterTests {
             try Loader().load(written, identity: nil)
         }
 
-        #expect(refused?.place?.rendered == "contracts.App.Kept.keep.bounds")
+        #expect(refused?.place?.rendered == "contracts.App.Kept.procedures.keep.bounds")
     }
 
     @Test("a call of literal text has no document to write")

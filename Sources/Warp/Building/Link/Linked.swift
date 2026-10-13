@@ -135,7 +135,7 @@ public final class Linked: Sendable {
         in table: LoweredTypeTable
     ) {
         let slots = signature.lowered(in: table)
-        let returns = signature.returns?.lowered(in: table, bounds: signature.bounds)
+        let returns = signature.loweredReturns(in: table)
 
         self.label = label
         self.origin = origin
@@ -388,11 +388,26 @@ public final class Linked: Sendable {
 
         guard closure == nil, !parameters.isEmpty else { return [:] }
 
-        let substitution = Substitution(
+        var substitution = Substitution(
             filling: types,
             against: values.map { value in LoweredType(of: value, in: table) },
             in: table
         )
+        let members = signature.members
+
+        // A member is what the type of the value at its parameter gives, so
+        // a value at one is held to that type.
+        if !members.isEmpty {
+            substitution.derive(members, over: types, said: signature.loweredSameTypes(in: table), in: table)
+
+            let disagreeing = members.keys.sorted().lazy.compactMap { label in
+                substitution.disagreement(of: label, in: table)
+            }
+
+            if let refusal = substitution.memberRefusal(in: table) ?? disagreeing.first {
+                throw ArgumentError(refusal)
+            }
+        }
 
         // A bounded parameter is one type, and a value says of its type the
         // struct it is and not what that struct is applied to.
@@ -402,7 +417,7 @@ public final class Linked: Sendable {
             in: table
         )
 
-        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) {
+        for (parameter, bounds) in parameters.sorted(by: { $0.key < $1.key }) where members[parameter] == nil {
             let read = bounds.isEmpty ? substitution : unapplied
             let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
             let refusal = read.disagreement(of: parameter, in: table)
@@ -423,6 +438,12 @@ public final class Linked: Sendable {
             let (name, bounds) = parameter
 
             let standing = LoweredType.parameter(label: name, bounds: bounds)
+
+            guard members[name] == nil else {
+                filled[name] = substitution.readings[name] ?? standing
+
+                return
+            }
 
             filled[name] = bounds.isEmpty ? substitution.readings[name] ?? standing : standing
         }

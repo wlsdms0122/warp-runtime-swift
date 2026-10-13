@@ -167,7 +167,7 @@ struct TypeChecker {
         with context: TypingContext,
         folding: Folding?
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
-        let promised = returns?.lowered(in: context.loweredTypes, bounds: context.bounds)
+        let promised = returns?.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
 
         // A closure literal the body answers, at any depth, is completed by
         // the type the declaration answers.
@@ -292,7 +292,7 @@ struct TypeChecker {
                 from: only.block,
                 at: only.symbol.place,
                 in: only.environment,
-                with: context().bounding(only.symbol.procedure.signature.bounds)
+                with: context().bounding(only.symbol.procedure.signature)
             )
 
             // A reading naming a type parameter is handed on as it is. What a
@@ -538,6 +538,10 @@ struct TypeChecker {
 
         if let disagreement = substitution.disagreements(in: loweredTypes) {
             return .refusal(disagreement)
+        }
+
+        if let refusal = substitution.memberRefusal(in: loweredTypes) {
+            return .refusal(refusal)
         }
 
         let bounds = declared.bounds.sorted(by: { $0.key < $1.key })
@@ -1087,6 +1091,31 @@ struct TypeChecker {
     // where the declaration is generic. One statement of the rule, whichever
     // ask gathered the readings, and the filling is asked for lazily, so a
     // non-generic call never pays for it.
+    // What a call puts in the type parameters a declaration names: what the
+    // arguments read each as, and each member of one as what fills its
+    // parameter gives under the member's name, a member of a parameter of the
+    // procedure being read as that procedure reads it.
+    private func filling(
+        _ signature: Signature?,
+        over slots: [Slot],
+        against readings: [LoweredType],
+        with context: TypingContext
+    ) -> Substitution {
+        var substitution = Substitution(filling: slots.map(\.type), against: readings, in: context.loweredTypes)
+
+        guard let signature, !signature.members.isEmpty else { return substitution }
+
+        substitution.derive(
+            signature.members,
+            over: slots.map(\.type),
+            said: signature.loweredSameTypes(in: context.loweredTypes),
+            reading: context.members,
+            in: context.loweredTypes
+        )
+
+        return substitution
+    }
+
     private func answered(
         by signature: Signature?,
         answering: LoweredType?,
@@ -1821,7 +1850,9 @@ struct TypeChecker {
             // A closure's `some T` is the name the procedure around it filled,
             // held to the bounds that procedure declared; its own signature
             // writes none.
-            var procedure = written.with(signature: written.signature.bounded(by: context.bounds))
+            var procedure = written.with(
+                signature: written.signature.bounded(by: context.bounds, sameTypes: context.sameTypes)
+            )
             var rewritten = expression
             var calls: [CallSite] = []
             var judgements = JudgementTable()
@@ -1846,7 +1877,7 @@ struct TypeChecker {
             // A closure literal the body answers, at any depth, is completed
             // by the type the closure answers. Its body reads the names of
             // the procedure around it, so a closure it writes does too.
-            let promised = procedure.signature.returns?.lowered(in: context.loweredTypes, bounds: procedure.signature.bounds)
+            let promised = procedure.signature.loweredReturns(in: context.loweredTypes)
             let inner = try await inspected(
                 block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
                 into: promised,
@@ -1871,7 +1902,7 @@ struct TypeChecker {
                         parameters: procedure.signature.parameters,
                         returns: answered.spelled(in: context.loweredTypes)
                     )
-                    .bounded(by: context.bounds)
+                    .bounded(by: context.bounds, sameTypes: context.sameTypes)
                 )
             }
 
@@ -1998,7 +2029,11 @@ struct TypeChecker {
                     const ? .const : .unstated,
                     isolated ? .isolated : .unstated
                 )
-                .lowered(in: context.loweredTypes, bounds: procedure.signature.bounds),
+                .lowered(
+                    in: context.loweredTypes,
+                    bounds: procedure.signature.bounds,
+                    sameTypes: procedure.signature.sameTypes
+                ),
                 flow: flow
             )
 
@@ -2244,7 +2279,7 @@ struct TypeChecker {
                     reading: answered(
                         by: signature,
                         answering: context.answer(of: call.selector),
-                        filling: Substitution(filling: slots.map(\.type), against: readings, in: context.loweredTypes).readings
+                        filling: filling(signature, over: slots, against: readings, with: context).readings
                     ),
                     flow: flow
                 )
@@ -2316,7 +2351,7 @@ struct TypeChecker {
 
             // The one filling of the call, which its site judges: its answer
             // and every slot an argument is read into come from it.
-            let substitution = Substitution(filling: slots.map(\.type), against: sent, in: context.loweredTypes)
+            let substitution = filling(signature, over: slots, against: sent, with: context)
             let taking = slots.map { slot in slot.type.filling(substitution.readings) }
 
             // A parameter read two ways fills nothing a literal could be read
@@ -3423,7 +3458,7 @@ struct TypeChecker {
         switch instantiated(
             declared,
             over: declaredSlots,
-            substitution: Substitution(filling: declaredSlots.map(\.type), against: site.readings, in: loweredTypes),
+            substitution: filling(declared, over: declaredSlots, against: site.readings, with: context),
             shaped: site.shapes,
             in: loweredTypes,
             at: site.place

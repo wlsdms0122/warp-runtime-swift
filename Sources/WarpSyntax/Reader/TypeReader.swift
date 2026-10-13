@@ -356,6 +356,12 @@ struct TypeReader: Decodable {
         // Read before `&`, which joins the bounds here.
         if let bounding, let parameter = dropPrefixed("\(TypeSpelling.some) ", from: text) {
             let parts = parameter.split(separator: ":", maxSplits: 1)
+
+            // A member read as one, for the load to say a head writes none.
+            if parts.count == 1, let member = try member(String(parameter)) {
+                return member
+            }
+
             let name = try named(parts[0].trimmingCharacters(in: Path.whiteSpace))
 
             try bounding(name, parts.count > 1 ? try contracts(String(parts[1]), qualifying: qualifying) : nil)
@@ -379,10 +385,23 @@ struct TypeReader: Decodable {
         // call, where `T` alone would be looked up in the table of declared
         // types. A slot only names the parameter; its bound is the
         // signature's, under `BoundsReader`.
+        //
+        // `some T.Item` is the type the type filling `T` gives under `Item`,
+        // and `Self.Item` the type the type answering a contract does. Read
+        // at the first dot, so a member of a member is no name the load
+        // takes.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
             let written = text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)
 
+            if let member = try member(written) {
+                return member
+            }
+
             return .parameter(name: try named(written))
+        }
+
+        if text.hasPrefix("\(TypeSpelling.selfType.spelling)."), let member = try member(text) {
+            return member
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -434,6 +453,17 @@ struct TypeReader: Decodable {
         }
 
         return held
+    }
+
+    // A member's spelling, the name it stands on and its own with a dot
+    // between them, or nil where the spelling writes no dot.
+    private static func member(_ text: String) throws -> TypeExpression? {
+        guard let dot = text.firstIndex(of: ".") else { return nil }
+
+        return .member(
+            of: try named(String(text[..<dot]).trimmingCharacters(in: Path.whiteSpace)),
+            name: try named(String(text[text.index(after: dot)...]).trimmingCharacters(in: Path.whiteSpace))
+        )
     }
 
     // The names the parts an `&` at the top of a spelling joins are, or the

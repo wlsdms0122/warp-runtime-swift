@@ -211,7 +211,9 @@ struct ModuleDeclarationTests {
             ],
             "contracts": [
                 "App.Describable": [
-                    "describe": ["parameters": [["name": "of", "type": "Self"]], "returns": "String"]
+                    "procedures": [
+                        "describe": ["parameters": [["name": "of", "type": "Self"]], "returns": "String"]
+                    ]
                 ]
             ],
             "procedures": [

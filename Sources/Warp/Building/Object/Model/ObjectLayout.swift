@@ -22,6 +22,7 @@ enum ObjectLayout {
         case contracts
         case claims
         case members
+        case typeMembers
         case importedClaims
         case rows
         case lifted
@@ -80,6 +81,7 @@ enum ObjectLayout {
         case composition
         case projection
         case selfType
+        case member
     }
 
     enum SegmentTag: Int {

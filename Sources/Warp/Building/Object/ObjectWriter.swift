@@ -151,15 +151,19 @@ struct ObjectWriter {
             return try keyed(compiled.types, declaration)
 
         case .contracts:
-            return try keyed(compiled.contracts) { (procedures) throws(ObjectUnwritable) -> Value in
-                try keyed(procedures) { (asked) throws(ObjectUnwritable) -> Value in
-                    .array([
-                        try signature(asked.signature),
-                        constness(asked.constness),
-                        isolation(asked.isolation),
-                        failing(.these(asked.failing))
-                    ])
-                }
+            return try keyed(compiled.contracts) { (contract) throws(ObjectUnwritable) -> Value in
+                .array([
+                    .array(contract.types.sorted().map(name)),
+                    keyed(contract.bounds) { contracts in .array(contracts.sorted().map(name)) },
+                    try keyed(contract.procedures) { (asked) throws(ObjectUnwritable) -> Value in
+                        .array([
+                            try signature(asked.signature),
+                            constness(asked.constness),
+                            isolation(asked.isolation),
+                            failing(.these(asked.failing))
+                        ])
+                    }
+                ])
             }
 
         case .claims:
@@ -167,6 +171,11 @@ struct ObjectWriter {
 
         case .members:
             return try headed(compiled.members) { members in .array(members.sorted().map(name)) }
+
+        case .typeMembers:
+            return try headed(compiled.typeMembers) { (types) throws(ObjectUnwritable) -> Value in
+                try keyed(types, type)
+            }
 
         case .importedClaims:
             return .array(compiled.importedClaims.sorted().map { pair in
@@ -234,12 +243,12 @@ struct ObjectWriter {
     // A list a head keys, in the order of the heads' spellings.
     private func headed<T>(
         _ entries: [Head: T],
-        _ write: (T) -> Value
+        _ write: (T) throws(ObjectUnwritable) -> Value
     ) throws(ObjectUnwritable) -> Value {
         var written: [Value] = []
 
         for (head, entry) in entries.sorted(by: { one, other in one.key < other.key }) {
-            written.append(.array([try self.head(head), write(entry)]))
+            written.append(.array([try self.head(head), try write(entry)]))
         }
 
         return .array(written)
@@ -354,6 +363,9 @@ struct ObjectWriter {
 
         case .selfType:
             return tagged(Tag.selfType)
+
+        case let .member(of, member):
+            return tagged(Tag.member, name(of), name(member))
         }
     }
 
@@ -391,7 +403,8 @@ struct ObjectWriter {
         .array([
             .array(try signature.parameters.map(parameter)),
             try ObjectWriter.maybe(signature.returns, type),
-            keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) }
+            keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) },
+            try keyed(signature.sameTypes, type)
         ])
     }
 

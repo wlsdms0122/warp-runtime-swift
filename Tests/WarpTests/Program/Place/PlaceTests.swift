@@ -415,7 +415,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.spend.parameters[1]")
+        #expect(error?.place?.rendered == "d0cf00/contracts.Wallet.Spendable.procedures.spend.parameters[1]")
     }
 
     @Test("a statement's construct is the language's name, and says so")

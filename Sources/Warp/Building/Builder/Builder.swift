@@ -422,6 +422,9 @@ public struct Builder: Sendable {
                     extending: extended,
                     in: namespace,
                     members: Set(namespace.members.filter { _, giver in standsAt[giver].map(reached.contains) ?? false }.keys),
+                    typeMembers: Set(namespace.typeMembers.filter { _, given in
+                        standsAt[given.handed].map(reached.contains) ?? false
+                    }.keys),
                     among: signatures,
                     in: answering
                 )

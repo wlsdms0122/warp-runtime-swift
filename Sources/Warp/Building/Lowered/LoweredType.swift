@@ -1326,6 +1326,44 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
+    // This type with each parameter `given` names read as what it gives, and
+    // every other left standing: a declaration's own parameters, some of
+    // which a reading says and the rest of which stay the declaration's.
+    func replacingParameters(_ given: [Name: LoweredType]) -> LoweredType {
+        switch self {
+        case let .parameter(label, _):
+            return given[label] ?? self
+
+        case let .array(element):
+            return .array(element.replacingParameters(given))
+
+        case let .dictionary(key, value):
+            return LoweredType(keyedBy: key.replacingParameters(given), holding: value.replacingParameters(given))
+
+        case let .procedure(signature, constness, isolation):
+            return .procedure(
+                signature?.map { part in part.replacingParameters(given) },
+                constness: constness,
+                isolation: isolation
+            )
+
+        case let .variable(inner):
+            return .variable(inner.replacingParameters(given))
+
+        case let .inout(inner):
+            return .inout(inner.replacingParameters(given))
+
+        case let .nullable(inner):
+            return inner.replacingParameters(given).admittingNull
+
+        case let .named(row, arguments):
+            return .named(row, arguments: arguments.map { argument in argument.replacingParameters(given) })
+
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .projection:
+            return self
+        }
+    }
+
     // Whether a value read as this type could be a procedure: the question a
     // call of a value asks before the run. A reading no procedure could stand in
     // is a call every run refuses.
@@ -1886,8 +1924,11 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .named(row, arguments):
             return .named(table.labels[row], arguments: arguments.map { argument in argument.spelled(in: table) })
 
+        // A member's label is the parameter's name and the member's.
         case let .parameter(label, _):
-            return .parameter(name: label)
+            guard let member = label.memberOf else { return .parameter(name: label) }
+
+            return .member(of: member.of, name: member.name)
 
         case let .composition(names):
             return .composition(Set(names))

@@ -56,12 +56,20 @@ struct TypingContext: Sendable {
     // `T` the caller filled, bound the way the declaration bound it.
     var bounds: [Name: Set<Name>] = [:]
 
+    // The members of its type parameters it says are a type, and each member
+    // it names as the procedure reads it, by label: what a member a call
+    // fills from one of its parameters reads as here.
+    var sameTypes: [Name: TypeExpression] = [:]
+    var members: [Name: LoweredType] = [:]
+
     // MARK: - Initializer
     // MARK: - Public
-    // The same context, reading the body of a procedure bound this way.
-    func bounding(_ bounds: [Name: Set<Name>]) -> TypingContext {
+    // The same context, reading the body of a procedure declared this way.
+    func bounding(_ signature: Signature) -> TypingContext {
         var held = self
-        held.bounds = bounds
+        held.bounds = signature.bounds
+        held.sameTypes = signature.sameTypes
+        held.members = signature.loweredMembers(in: loweredTypes)
 
         return held
     }

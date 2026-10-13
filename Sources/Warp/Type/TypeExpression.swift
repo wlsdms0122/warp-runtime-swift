@@ -138,6 +138,17 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // that never meet.
     case projection(of: Name, path: Path)
 
+    // The type a type parameter's type gives under a name a contract asks,
+    // written `some T.Item`, and `Self.Item` in a contract's procedures,
+    // where the base is `Self`. What fills `T` decides it: the type member of
+    // that name the type gives. Inside the declaration it is one type the
+    // body does not know, held to what the contracts bounding `T` and the
+    // signature say of it.
+    //
+    // One step from a type parameter, so the base is a parameter's name and
+    // never another member.
+    case member(of: Name, name: Name)
+
     // MARK: - Property
     // The types the language names, by the spelling a document writes each
     // under. A spelling here is never a declaration's: what a document
@@ -217,6 +228,12 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .projection(of, path):
             return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
+        case let .member(of, name) where of == TypeSpelling.selfType:
+            return name.spelled(under: of).spelling
+
+        case let .member(of, name):
+            return "\(TypeSpelling.some) \(name.spelled(under: of))"
+
         case let .variable(inner):
             return "\(TypeSpelling.variable) \(inner.rendered)"
 
@@ -287,8 +304,34 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .composition(names):
             names
 
-        case .parameter, .selfType, .projection:
+        case .parameter, .selfType, .projection, .member:
             []
+        }
+    }
+
+    // Every member named in here, by the label its lowering takes, beside the
+    // type parameter it is a member of and the name it is asked under.
+    var members: [Name: (of: Name, name: Name)] {
+        switch self {
+        case let .member(of, name):
+            return [name.spelled(under: of): (of, name)]
+
+        case let .array(element), let .nullable(element), let .variable(element), let .inout(element):
+            return element.members
+
+        case let .dictionary(key, value):
+            return key.members.merging(value.members) { first, _ in first }
+
+        case let .procedure(type, _, _):
+            return ((type?.parameters ?? []) + [type?.returns].compactMap { $0 }).reduce(into: [:]) { found, part in
+                found.merge(part.members) { first, _ in first }
+            }
+
+        case let .named(_, arguments):
+            return arguments.reduce(into: [:]) { found, argument in found.merge(argument.members) { first, _ in first } }
+
+        case .any, .never, .null, .bool, .int, .double, .string, .parameter, .projection, .composition, .selfType:
+            return [:]
         }
     }
 
@@ -298,7 +341,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .parameter(name):
             return [name]
 
-        case .projection, .composition, .selfType:
+        case .projection, .composition, .selfType, .member:
             return []
 
         case let .array(element), let .nullable(element):
@@ -327,7 +370,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         switch self {
         // Both are types a call decides, and the deep question is only
         // whether this declaration has to be filled at all.
-        case .parameter, .projection:
+        case .parameter, .projection, .member:
             return true
 
         case let .array(element), let .nullable(element):
@@ -363,7 +406,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .array, .dictionary, .procedure, .variable,
-            .nullable, .named, .parameter, .projection, .composition, .selfType:
+            .nullable, .named, .parameter, .projection, .member, .composition, .selfType:
             return self
         }
     }
@@ -377,7 +420,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             return false
 
         case .bool, .int, .double, .string, .array, .dictionary, .procedure, .variable,
-            .inout, .named, .projection, .composition, .selfType:
+            .inout, .named, .projection, .member, .composition, .selfType:
             return true
         }
     }
@@ -389,7 +432,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     var hasSpelling: Bool {
         switch self {
         case .any, .never, .null, .bool, .int, .double, .string, .parameter, .composition,
-            .selfType, .projection:
+            .selfType, .projection, .member:
             return true
 
         case let .named(_, arguments):
@@ -425,7 +468,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
         case .any, .never, .null, .bool, .int, .double, .string,
             .array, .dictionary, .procedure, .inout,
-            .nullable, .named, .parameter, .projection, .composition, .selfType:
+            .nullable, .named, .parameter, .projection, .member, .composition, .selfType:
             return self
         }
     }
@@ -464,8 +507,11 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         case let .named(name, arguments):
             return .named(name, arguments: arguments.map { argument in argument.replacingSelf(with: type) })
 
+        // A member of `Self` stays one: a call through the contract reads
+        // `Self` as its type parameter, whose member it then is, and a claim
+        // reads it as the type's member before it reads `Self`.
         case .any, .never, .null, .bool, .int, .double, .string, .parameter, .composition,
-            .projection:
+            .projection, .member:
             return self
         }
     }

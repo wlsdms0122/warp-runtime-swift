@@ -100,6 +100,33 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
     }
 
     // MARK: - Public
+    // The head this one stands for where it is bare: its type applied to the
+    // type's own parameters, held to the bounds `declared` holds them to, an
+    // element for a list and a key and an element for a map. A head applying
+    // its type, and a type taking no parameters, stand for themselves.
+    func applying(_ declared: TypeDeclaration?) -> Head {
+        guard isBare else { return self }
+
+        switch type {
+        case TypeSpelling.array:
+            return Head(type, arguments: [.parameter(name: TypeSpelling.element)])
+
+        case TypeSpelling.dictionary:
+            return Head(
+                type,
+                arguments: [.parameter(name: TypeSpelling.key), .parameter(name: TypeSpelling.element)],
+                bounds: [TypeSpelling.key: [TypeSpelling.hashable]]
+            )
+
+        default:
+            guard case let .struct(_, typeParameters, bounds)? = declared, !typeParameters.isEmpty else {
+                return self
+            }
+
+            return Head(type, arguments: typeParameters.map { name in .parameter(name: name) }, bounds: bounds)
+        }
+    }
+
     public static func < (lhs: Head, rhs: Head) -> Bool {
         lhs.spelling < rhs.spelling
     }
@@ -145,6 +172,9 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
 
         case let .inout(inner):
             return .inout(renamed(inner, by: names))
+
+        case let .member(of, name):
+            return .member(of: names[of] ?? of, name: name)
 
         case .any, .never, .null, .bool, .int, .double, .string, .procedure(nil, _, _), .composition, .selfType,
             .projection:

@@ -60,9 +60,10 @@ struct ObjectReader {
         // every part is in.
         var dependencies: [Fingerprint] = []
         var types: [Name: TypeDeclaration] = [:]
-        var contracts: [Name: [Name: ContractProcedure]] = [:]
+        var contracts: [Name: Contract] = [:]
         var claims: [Head: Set<Name>] = [:]
         var members: [Head: Set<Name>] = [:]
+        var typeMembers: [Head: [Name: TypeExpression]] = [:]
         var importedClaims: Set<ClaimPair> = []
         var declaredRows: [Judged] = []
         var liftedRows: [Value] = []
@@ -96,9 +97,7 @@ struct ObjectReader {
                 }
 
             case .contracts:
-                contracts = try keyed(part, of: "contracts") { written in
-                    try keyed(written, of: "contract", contractProcedure)
-                }
+                contracts = try keyed(part, of: "contracts", contract)
 
             // A type stands here because the document claimed a contract
             // for it, at least one.
@@ -125,6 +124,18 @@ struct ObjectReader {
                     }
 
                     return Set(names)
+                }
+
+            // A type is given at least one type where it stands here.
+            case .typeMembers:
+                typeMembers = try headed(part, of: "typeMembers") { written in
+                    let types = try keyed(written, of: "typeMembers", expression)
+
+                    guard !types.isEmpty else {
+                        throw ObjectRefused("'typeMembers' gives a type no type")
+                    }
+
+                    return types
                 }
 
             case .importedClaims:
@@ -193,6 +204,7 @@ struct ObjectReader {
             contracts: contracts,
             claims: claims,
             members: members,
+            typeMembers: typeMembers,
             importedClaims: importedClaims,
             declared: declared,
             constants: constants,
@@ -510,6 +522,9 @@ struct ObjectReader {
         case .selfType:
             read = .selfType
 
+        case .member:
+            read = .member(of: try name(cursor.next()), name: try name(cursor.next()))
+
         case nil:
             throw ObjectRefused("'type' names a kind this reads none of")
         }
@@ -576,6 +591,32 @@ struct ObjectReader {
         return read
     }
 
+    // A contract: the types it asks, the bounds of those it bounds, and the
+    // procedures it asks. Each bound holds a type the contract asks, to one
+    // contract at least.
+    private func contract(_ value: Value) throws -> Contract {
+        var cursor = try FieldCursor(value, of: "contract")
+        let types = try Field(cursor.next(), of: "types").ordered(name)
+        let bounds = try keyed(cursor.next(), of: "bounds") { written in
+            let contracts = try Field(written, of: "bounds").ordered(name)
+
+            guard !contracts.isEmpty else {
+                throw ObjectRefused("'bounds' holds a type to nothing")
+            }
+
+            return Set(contracts)
+        }
+        let procedures = try keyed(cursor.next(), of: "contract", contractProcedure)
+
+        try cursor.end()
+
+        if let unasked = bounds.keys.sorted().first(where: { name in !types.contains(name) }) {
+            throw ObjectRefused("'bounds' holds '\(unasked)', which the contract asks as no type")
+        }
+
+        return Contract(procedures: procedures, types: Set(types), bounds: bounds)
+    }
+
     private func procedureType(_ value: Value) throws -> ProcedureType {
         var cursor = try FieldCursor(value, of: "procedure type")
         let read = ProcedureType(
@@ -602,7 +643,8 @@ struct ObjectReader {
                 }
 
                 return Set(contracts)
-            }
+            },
+            sameTypes: try keyed(cursor.next(), of: "sameTypes", expression)
         )
 
         try cursor.end()

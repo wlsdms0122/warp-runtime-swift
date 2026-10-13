@@ -835,7 +835,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("contracts.App.Shown.show.parameters[0]")
+            error is ValidationError && "\(error)".hasPrefix("contracts.App.Shown.procedures.show.parameters[0]")
                 && "\(error)".contains("is no name a path reads")
         }
     }
@@ -951,7 +951,7 @@ struct ValidationTests {
                 procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
             )
         } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.keep.bounds: ")
+            error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.procedures.keep.bounds: ")
                 && "\(error)".contains("a contract's procedure writes no bounds")
         }
     }

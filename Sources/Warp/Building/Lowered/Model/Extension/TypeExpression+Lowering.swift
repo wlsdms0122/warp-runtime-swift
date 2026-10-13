@@ -16,8 +16,18 @@ extension TypeExpression {
     // table a host builds is held to the same judge; the load refuses the
     // third in a document, and an object writing it there reads it as
     // `Never`. `bounds` are what the signature this type is written in holds
-    // each type parameter to, by its name.
-    func lowered(in table: LoweredTypeTable, bounds: [Name: Set<Name>] = [:]) -> LoweredType {
+    // each type parameter and each member of one to, by its name, and
+    // `sameTypes` the members it says are a type.
+    func lowered(
+        in table: LoweredTypeTable,
+        bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:]
+    ) -> LoweredType {
+        // A part, read under the same signature.
+        func part(_ type: TypeExpression) -> LoweredType {
+            type.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+        }
+
         switch self {
         case .any:
             return .any
@@ -41,17 +51,17 @@ extension TypeExpression {
             return .string
 
         case let .array(element):
-            return .array(element.lowered(in: table, bounds: bounds))
+            return .array(part(element))
 
         case let .dictionary(key, value):
-            return .dictionary(key: key.lowered(in: table, bounds: bounds), value: value.lowered(in: table, bounds: bounds))
+            return .dictionary(key: part(key), value: part(value))
 
         case let .procedure(type, constness, isolation):
             return .procedure(
                 type.map { type in
                     LoweredProcedureType(
-                        parameters: type.parameters.map { parameter in parameter.lowered(in: table, bounds: bounds) },
-                        returns: type.returns?.lowered(in: table, bounds: bounds),
+                        parameters: type.parameters.map(part),
+                        returns: type.returns.map(part),
                         failing: type.failing
                     )
                 },
@@ -60,13 +70,13 @@ extension TypeExpression {
             )
 
         case let .variable(inner):
-            return .variable(inner.lowered(in: table, bounds: bounds))
+            return .variable(part(inner))
 
         case let .inout(inner):
-            return .inout(inner.lowered(in: table, bounds: bounds))
+            return .inout(part(inner))
 
         case let .nullable(inner):
-            return inner.lowered(in: table, bounds: bounds).admittingNull
+            return part(inner).admittingNull
 
         // Types and contracts are two tables and no name is in both, so a
         // mention is looked for in each. A contract standing as a type is a
@@ -74,7 +84,7 @@ extension TypeExpression {
         // A struct applied to types is the row and what it is applied to.
         case let .named(name, arguments):
             if let row = table.row(named: name) {
-                return table.mention(of: row).applied(to: arguments.map { argument in argument.lowered(in: table, bounds: bounds) })
+                return table.mention(of: row).applied(to: arguments.map(part))
             }
 
             guard table.declaresContract(name) else { return .never }
@@ -90,6 +100,25 @@ extension TypeExpression {
 
         case let .projection(of, path):
             return .projection(of: of, path: path)
+
+        // A member is a type parameter of its own, labelled as it is
+        // written, which what fills its base decides. The contracts bounding
+        // the base say what holds it, the signature may say more, and where
+        // the signature says it is a type it is that type. One no contract
+        // bounding the base asks stands for no type, which the build refuses
+        // where it is written.
+        case let .member(of, name):
+            let label = name.spelled(under: of)
+
+            if let same = sameTypes[label] {
+                return same.lowered(in: table, bounds: bounds, sameTypes: sameTypes.filter { key, _ in key != label })
+            }
+
+            guard let asked = table.bounds(of: name, askedBy: bounds[of] ?? []) else { return .never }
+
+            return lowered(bounds: asked.union(bounds[label] ?? []), in: table) { bounds in
+                .parameter(label: label, bounds: bounds)
+            }
 
         // A contract's procedures read `Self` before anything lowers them, so
         // what is left is `Self` written where no contract stands, which is
