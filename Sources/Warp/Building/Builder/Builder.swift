@@ -337,6 +337,12 @@ public struct Builder: Sendable {
         let standsAt = Dictionary(uniqueKeysWithValues: handed.enumerated().map { position, handed in (handed, position) })
         let claimStands = namespace.claims.map { claim in standsAt[claim.handed] }
 
+        // The members each document gives, which are what a claim is held to
+        // and so the declarations whose facts a later claim reads.
+        let givenHere = namespace.members.reduce(into: [Int: Set<Name>]()) { given, member in
+            given[member.value, default: []].insert(member.key)
+        }
+
         // A claim imported is one some document makes, as a name imported is
         // one some document declares.
         let pairs = namespace.claims.map { claim in ClaimPair(claim.held.type, claim.held.contract) }
@@ -401,6 +407,7 @@ public struct Builder: Sendable {
             for (name, declared) in try Self.declarations(
                 of: object,
                 at: own,
+                answering: givenHere[own] ?? [],
                 in: answering.loweredTypes
             ) where signatures[name] != nil {
                 signatures[name] = declared
@@ -521,19 +528,24 @@ public struct Builder: Sendable {
         })
     }
 
-    // What one object's declarations say of themselves, with what the build
-    // worked out of each, under the spelling each was declared by. What the
-    // build read off a body is in the object's own type numbers, so it is read
-    // as the rows of `loweredTypes`.
+    // What one object's members say of themselves, with what the build
+    // worked out of each, under the spelling each was declared by: what a
+    // claim is held to. What the build read off a body is in the object's own
+    // type numbers, so it is read as the rows of `loweredTypes`.
     private static func declarations(
         of object: Compiled,
         at handed: Int,
+        answering members: Set<Name>,
         in loweredTypes: LoweredTypeTable
     ) throws -> [Name: Placed<Declared>] {
+        guard !members.isEmpty else { return [:] }
+
         let rows = object.typeNumbering.rows(in: loweredTypes)
 
         return try object.declared.enumerated().reduce(into: [:]) { declarations, entry in
             let (offset, name) = entry
+
+            guard members.contains(name) else { return }
             let judged = object.table[offset]
             let place = Place.procedure(name.spelling, in: object.document)
 
