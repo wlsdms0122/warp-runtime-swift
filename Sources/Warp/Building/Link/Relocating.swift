@@ -317,7 +317,7 @@ final class Relocating {
             procedure: dispatch.procedure,
             first: dispatch.first,
             arguments: dispatch.arguments,
-            calls: try asked.answering.reduce(into: [Name: CallOperation]()) { calls, entry in
+            calls: try asked.answering(in: loweredTypes).reduce(into: [Name: CallOperation]()) { calls, entry in
                 guard let row = rows[entry.value] else {
                     throw BuildError.unjudged(
                         "'\(entry.value)' answering '\(spelling)', which has no row",

@@ -333,7 +333,7 @@ struct DeclaredSpellingTests {
         await #expect {
             try await builder.build([arithmetic] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("no document in this link says 'String' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'String' answers")
         }
     }
 

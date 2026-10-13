@@ -16,8 +16,8 @@ struct FoldedContractTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a null leans on a claim about Null the way any value leans on its type's")
-    func aNullLeansOnAClaimAboutNull() async throws {
+    @Test("a null answers by a claim about Null the way any value answers by its type's")
+    func aNullAnswersByAClaimAboutNull() async throws {
         // Given. A procedure answering `Any` hands null, cast to a contract,
         // where the contract is asked, and a document claims it for `Null`.
         let answering = try Module(
@@ -31,52 +31,58 @@ struct FoldedContractTests {
                 )
             ]
         )
+        let importing = try documents(
+            returning: .any,
+            giving: .literal(.null),
+            importing: [ClaimPair("Null", "App.Describable")]
+        ) + Module.standard
         let asking = try documents(returning: .any, giving: .literal(.null)) + Module.standard
 
-        // When / Then. Null is an instance of `Null`, so the fold writes the
-        // pair down and the list answers it, as it does for any other value:
-        // with the claim the build stands, and without it the list refuses
-        // the pair where it was folded.
+        // When / Then. Null is an instance of `Null`, so the fold asks the
+        // claims within the program's reach, as it does for any other value:
+        // with the claim imported the build stands, and with the claim
+        // beside it and not imported the build refuses where it folded.
         await #expect(throws: Never.self) {
-            try await Builder().build(asking + [answering])
+            try await Builder().build(importing + [answering])
         }
 
         await #expect {
-            try await Builder().build(asking)
+            try await Builder().build(asking + [answering])
         } throws: { error in
             "\(error)".contains("constants.counted:")
-                && "\(error)".contains("no document in this link says 'Null' answers it")
+                && "\(error)".contains("casts a value of Null to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
-    @Test("a value of a type the language names leans on what the whole list claims")
-    func aValueOfALanguageTypeLeansOnTheList() async throws {
+    @Test("a value of a type the language names answers by the claims within reach")
+    func aValueOfALanguageTypeAnswersByTheClaimsWithinReach() async throws {
         // Given. The same constant handing a string, which is an instance of
         // `String`, and a claim about `String` is one any document may make.
         let modules = try documents(returning: .any, giving: .literal(.string("x"))) + Module.standard
 
-        // When. Compiled against part of the list, the pair is written down
-        // rather than judged.
+        // When / Then. Compiled one at a time or as a whole, nothing within
+        // the program's reach makes such a claim, and the refusal says so.
         var compiled: [Compiled] = []
 
-        for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        await #expect {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            }
+        } throws: { error in
+            "\(error)".contains("casts a value of String to App.Describable, which turns on a claim no document within reach makes")
         }
-
-        // Then. The whole list holds no such claim, and the refusal says so.
         await #expect {
             try await Builder().build(modules)
         } throws: { error in
-            "\(error)".contains("hands 'String' where 'App.Describable' is asked, and no document in this link says 'String' answers it")
+            "\(error)".contains("casts a value of String to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
-    @Test("a deferred pair stands where it was folded, not where the walk ended")
-    func aDeferredPairStandsWhereItWasFolded() async throws {
-        // Given. Two constants leaning on two pairs, settled one after the
-        // other. The refusal the list makes stands where the pair was folded,
-        // which is the constant that handed it and not whichever was settled
-        // last.
+    @Test("a pair a fold refuses stands at the constant that handed it")
+    func aRefusedPairStandsWhereItWasFolded() async throws {
+        // Given. Two constants handing two pairs, settled one after the
+        // other. The refusal stands where the pair was folded, which is the
+        // constant that handed it.
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
@@ -105,8 +111,8 @@ struct FoldedContractTests {
             types: ["Bank.Plain": .struct(["note": .string]), "Zed.Plain": .struct(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        // `aaa` settles first and `zzz` last, and the pair the list
-        // reports first is `Bank.Plain`, which `zzz` handed.
+        // `aaa` settles first and `zzz` last, so the pair refused is
+        // `Zed.Plain`, which `aaa` handed.
         let program = try Module(
             constants: [
                 "aaa": .call(Call(selector: "App.count", arguments: [.cast(.call(Call(selector: "App.giveEarly")), as: .named("App.Describable"), optional: false)])),
@@ -126,17 +132,16 @@ struct FoldedContractTests {
         await #expect {
             try await Builder().build([asking, typed, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("constants.zzz:")
-                && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
+            "\(error)".contains("constants.aaa:")
+                && "\(error)".contains("casts a value of Zed.Plain to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
-    @Test("a value wearing a name is written down where the table cannot decide")
-    func aNamedValueIsWrittenDown() async throws {
+    @Test("a value wearing a name is judged where it is folded")
+    func aNamedValueIsJudgedWhereItIsFolded() async throws {
         // Given. A procedure answering `Any` hands a named struct, cast to a
         // contract, where the contract is asked, and the reading says nothing
-        // about what arrives, so nothing is written down where the call is
-        // read.
+        // about what arrives, so only the fold meets the value.
         let typed = try Module(
             types: ["Bank.Plain": .struct(["note": .string])],
             procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
@@ -146,30 +151,34 @@ struct FoldedContractTests {
             giving: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
         ) + [typed] + Module.standard
 
-        // When. Each document compiled against the ones before it, so the
-        // table folding runs against cannot say which types answer.
+        // When / Then. Each document compiled against the ones before it, or
+        // all at once, the fold judges the value by the claims within the
+        // program's reach, and says which declaration it was working out.
         var compiled: [Compiled] = []
 
-        for origin in try ModuleGraph(modules).standing {
-            compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
-        }
-
-        // Then. The pair the fold handed over is answered by the list, which
-        // is the same answer the whole graph gives, and both say which
-        // declaration was being worked out when the fold turned it up.
-        for link in [compiled, try await Builder().compile(modules)] {
-            #expect {
-                try Builder().link(link, supplying: Supplying(Module.standard))
-            } throws: { error in
-                "\(error)".contains("constants.counted:")
-                    && "\(error)".contains("no document in this link says 'Bank.Plain' answers it")
+        await #expect {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(contentsOf: try await Builder().compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
             }
+        } throws: { error in
+            "\(error)".contains("constants.counted:")
+                && "\(error)".contains("casts a value of Bank.Plain to App.Describable, which turns on a claim no document within reach makes")
+        }
+        await #expect {
+            try await Builder().compile(modules)
+        } throws: { error in
+            "\(error)".contains("constants.counted:")
+                && "\(error)".contains("casts a value of Bank.Plain to App.Describable, which turns on a claim no document within reach makes")
         }
     }
 
     // MARK: - Public
     // MARK: - Private
-    private func documents(returning type: TypeExpression, giving: Warp.Expression) throws -> [Module] {
+    private func documents(
+        returning type: TypeExpression,
+        giving: Warp.Expression,
+        importing claims: Set<ClaimPair> = []
+    ) throws -> [Module] {
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
@@ -190,6 +199,7 @@ struct FoldedContractTests {
             ]
         )
         let program = try Module(
+            importedClaims: claims,
             constants: [
                 "counted": .call(
                     Call(

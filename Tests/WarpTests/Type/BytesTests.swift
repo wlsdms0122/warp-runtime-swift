@@ -70,7 +70,6 @@ struct BytesTests {
             ],
             contracts: ["Ordered": [:], "Textual": [:]],
             satisfying: ["Ordered": ["Int": "Int", "Double": "Double", "String": "String"], "Textual": ["String": "String"]],
-            holdsEveryClaim: true,
             of: Linkage()
         )
 

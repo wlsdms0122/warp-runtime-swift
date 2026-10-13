@@ -62,6 +62,12 @@ public struct Draft: Sendable {
     // module resolves this; here it is still only what was written.
     public private(set) var imports: Set<Name>?
 
+    // The claims other documents make that this one stands on, by the pair
+    // each is about. Written among the imports: a claim declares no name, so
+    // this is how a document reaches one made in a document it names nothing
+    // of. Claims made where it names something are within its reach already.
+    public let importedClaims: Set<ClaimPair>
+
     public let types: [Name: TypeDeclaration]
 
     // Contracts this module declares: a name bound to the procedures a value's
@@ -73,8 +79,9 @@ public struct Draft: Sendable {
 
     // Which contracts each type this document names answers, by the head it
     // says so under. A type answers a contract because a document says it
-    // does: the link holds the claim to the type's members. The type may be
-    // another document's, and a document claims it where it extends it.
+    // does, and the build holds the claim to the type's members within what
+    // the document stands on. The type may be another document's, and a
+    // document claims it where it extends it.
     public let claims: [Head: Set<Name>]
 
     // The procedures this document gives each type, by the head it gives
@@ -118,10 +125,18 @@ public struct Draft: Sendable {
         Set(types.keys).union(contracts.keys)
     }
 
+    // The pairs this document's claims are about.
+    var claimedPairs: Set<ClaimPair> {
+        claims.reduce(into: []) { pairs, claim in
+            pairs.formUnion(claim.value.map { contract in ClaimPair(claim.key.type, contract) })
+        }
+    }
+
     // MARK: - Initializer
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
+        importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Head: Set<Name>] = [:],
@@ -132,6 +147,7 @@ public struct Draft: Sendable {
     ) {
         self.description = description
         self.imports = imports
+        self.importedClaims = importedClaims
         self.types = types
         self.contracts = contracts
         self.claims = claims

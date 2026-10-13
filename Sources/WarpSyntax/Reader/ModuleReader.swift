@@ -125,9 +125,12 @@ public struct ModuleReader: Decodable {
             }
         }
 
+        let imports = try Self.imports(in: container)
+
         self.draft = Draft(
             description: try container.decodeIfPresent(String.self, forKey: .description),
-            imports: try Self.imports(in: container),
+            imports: imports?.names ?? nil,
+            importedClaims: imports?.claims ?? [],
             types: types.mapValues(\.declared),
             contracts: try Self.mapping(ContractReader.self, in: container, forKey: .contracts)
                 .mapValues(\.procedures),
@@ -150,15 +153,48 @@ public struct ModuleReader: Decodable {
     // Nothing written is nothing claimed, and a slot written as null says the
     // same. Whether a document may leave it out at all is the load's, which
     // reads the claim off the draft this answers.
+    //
+    // A name, or a claim another document makes, written as the type and the
+    // contract it is about, `T.Card: App.Describable`. A list writing claims
+    // and no name claims no names: a notation's author never wrote the
+    // spellings its shorthands were spent into, and the names are filled in
+    // where a text is written out. A document is held to its whole list
+    // where it is loaded, by being the one way its program is written.
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
-    ) throws -> Set<Name>? {
+    ) throws -> (names: Set<Name>?, claims: Set<ClaimPair>)? {
         guard container.contains(.imports), try !container.decodeNil(forKey: .imports) else { return nil }
 
         let written = try container.superDecoder(forKey: .imports)
+        var names: Set<Name> = []
+        var claims: Set<ClaimPair> = []
 
-        return Set(try written.read([String].self).map { spelled in try Name.read(spelled, at: written.steps) })
+        for (position, spelled) in try written.read([String].self).enumerated() {
+            let steps = written.steps + [.index(position)]
+            let parts = spelled.split(separator: ":", omittingEmptySubsequences: false)
+                .map { part in part.trimmingCharacters(in: .whitespaces) }
+
+            switch parts.count {
+            case 1:
+                names.insert(try Name.read(spelled, at: steps))
+
+            // Written the one way where a document is loaded, which the
+            // write-back holds a text to.
+            case 2:
+                claims.insert(ClaimPair(try Name.read(parts[0], at: steps), try Name.read(parts[1], at: steps)))
+
+            default:
+                throw ReadingError(
+                    "imports '\(spelled)', which is neither a name nor a claim: a claim is written"
+                        + " as the type and the contract it is about, `T.Card: App.Describable`",
+                    at: steps
+                )
+            }
+        }
+
+        return (names.isEmpty && !claims.isEmpty ? nil : names, claims)
     }
+
 
     // One of the slots a module declares a mapping of things under, read
     // standing on the slot so that what is refused inside it is addressed

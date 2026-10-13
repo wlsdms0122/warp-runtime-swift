@@ -23,14 +23,17 @@ struct DeclarerTable {
     // MARK: - Property
     // Nothing for a document that has no fingerprint. The name is declared and
     // the answer is that there is nothing to struct, which is not the same as
-    // a name nothing declares.
-    private var declares: [Reference: Fingerprint?] = [:]
+    // a name nothing declares. A name has one declarer; a claim may be made
+    // by several documents, and an importer reads the copy each of them makes.
+    private var declares: [Reference: [Fingerprint?]] = [:]
 
     // MARK: - Initializer
     // MARK: - Public
     // One document laid down, under what it turned out to be.
     mutating func lay(_ document: Compiled) {
-        hold(document.supplies, as: document.fingerprint)
+        for reference in document.supplies {
+            declares[reference, default: []].append(document.fingerprint)
+        }
     }
 
     // What this document was compiled against, or nothing where one of the
@@ -42,11 +45,11 @@ struct DeclarerTable {
             // A name nothing here declares is left alone. The build refuses it,
             // and refusing here would be a second copy of a rule that has to be
             // right once.
-            guard let declared = declares[used] else { continue }
+            for declared in declares[used] ?? [] {
+                guard let fingerprint = declared else { return nil }
 
-            guard let fingerprint = declared else { return nil }
-
-            against.insert(fingerprint)
+                against.insert(fingerprint)
+            }
         }
 
         // In byte order, so a set leaves as one sequence however it was
@@ -55,11 +58,4 @@ struct DeclarerTable {
     }
 
     // MARK: - Private
-    // A name two documents declare is held to one declarer before this is
-    // asked, so the first answer stands.
-    private mutating func hold(_ declared: Set<Reference>, as fingerprint: Fingerprint?) {
-        for reference in declared where declares[reference] == nil {
-            declares[reference] = .some(fingerprint)
-        }
-    }
 }

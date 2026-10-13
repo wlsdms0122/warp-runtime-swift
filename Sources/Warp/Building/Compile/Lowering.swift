@@ -226,8 +226,9 @@ struct Lowering {
     let contractProcedures: [Name: LoweredContractProcedure]
 
     // The declared types as the run reads them, for a cast's type and a
-    // closure's row.
-    let loweredTypes: LoweredTypeTable
+    // closure's row, answering with the claims the document being lowered
+    // stands on.
+    private(set) var loweredTypes: LoweredTypeTable
 
     // Each document's constants, settled.
     private var constants: [Int: [Name: Value]] = [:]
@@ -276,6 +277,12 @@ struct Lowering {
     }
 
     // MARK: - Public
+    // The document lowered next answers with the claims it stands on. The
+    // rows are the same rows.
+    mutating func answer(with loweredTypes: LoweredTypeTable) {
+        self.loweredTypes = loweredTypes
+    }
+
     // One document laid down: its declarations take the rows after the ones
     // already here, in the order they are handed over, then the closures its
     // bodies lifted, and its numbering says what the bodies it lowers are
@@ -456,17 +463,14 @@ struct Lowering {
     // document's last body is lowered and not while one is.
     func numbered(
         _ rows: [Int],
-        answering answers: [Name: LoweredType],
-        leaning leaned: [Leaning: Place]
+        answering answers: [Name: LoweredType]
     ) throws -> (
         table: [Linked],
         numbering: LoweredTypeNumbering,
-        answers: [Name: LoweredType],
-        leaned: [Leaning: Place]
+        answers: [Name: LoweredType]
     ) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies, the answers read off them and the readings it leaned
-        // on. Read through the walks
+        // rows' bodies and the answers read off them. Read through the walks
         // that rewrite them, so which cases hold a type is answered in one
         // place; what those walks rebuild is dropped.
         var types: Set<Int> = []
@@ -485,10 +489,6 @@ struct Lowering {
 
         for answer in answers.values {
             _ = stand(answer)
-        }
-
-        for leaning in leaned.keys {
-            _ = stand(leaning.reading)
         }
 
         let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
@@ -516,13 +516,7 @@ struct Lowering {
             read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
         }
 
-        let leaning = try leaned.reduce(into: [Leaning: Place]()) { leaning, entry in
-            let reading = try renumbered(entry.key.reading, in: place, of: entry.key.contract)
-
-            leaning[Leaning(reading: reading, contract: entry.key.contract)] = entry.value
-        }
-
-        return (numbered, numbering, read, leaning)
+        return (numbered, numbering, read)
     }
 
     // MARK: - Private

@@ -48,7 +48,9 @@ public struct Writer: Sendable {
         var written: [Name: Value] = [
             Module.versionKey: .int(ModuleReader.version),
             ModuleReader.CodingKeys.imports.name: .array(
-                (draft.imports ?? draft.uses).sorted().map { name in .string(name.spelling) }
+                ((draft.imports ?? draft.uses).map(\.spelling) + draft.importedClaims.map(\.spelling))
+                    .sorted { one, other in one.utf8.lexicographicallyPrecedes(other.utf8) }
+                    .map(Value.string)
             )
         ]
 

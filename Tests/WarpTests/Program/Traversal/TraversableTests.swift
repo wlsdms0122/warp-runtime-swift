@@ -137,8 +137,7 @@ struct TraversableTests {
             declaring: "App.walked",
             answering: nil,
             with: context,
-            folding: nil,
-            writing: Fulfillment()
+            folding: nil
         )
 
         // Then. The table holds one entry for each call of a value and each

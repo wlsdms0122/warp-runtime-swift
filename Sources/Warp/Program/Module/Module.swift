@@ -34,6 +34,10 @@ public struct Module: Sendable {
     // spelling lists it once. Which kinds it uses is `references`.
     public let imports: Set<Name>
 
+    // The claims other documents make that this one stands on. What a claim
+    // is about is a pair and not a name, so it is listed apart.
+    public var importedClaims: Set<ClaimPair> { source.importedClaims }
+
     // The same fact said as lookups rather than as a grant, the kind riding on
     // each. Read where the module is made, since a link asks each module it is
     // handed for them and the text they are read off does not move.
@@ -60,8 +64,8 @@ public struct Module: Sendable {
 
     // Which contracts each type this document names answers, by the head it
     // says so under. A type answers a contract because a document says it
-    // does, and this is where one says it. Which declarations back the claim
-    // is the link's to find and to hold the claim to.
+    // does, and this is where one says it. The build holds the claim to the
+    // type's members within what this document stands on.
     public var claims: [Head: Set<Name>] { source.claims }
 
     // The procedures this module gives each type, by the head it gives them
@@ -133,6 +137,7 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
+        importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Head: Set<Name>] = [:],
@@ -146,6 +151,7 @@ public struct Module: Sendable {
         try self.init(
             description: description,
             imports: imports,
+            importedClaims: importedClaims,
             types: types,
             contracts: contracts,
             claims: claims,
@@ -162,6 +168,7 @@ public struct Module: Sendable {
     public init(
         description: String? = nil,
         imports: Set<Name>? = nil,
+        importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         claims: [Head: Set<Name>] = [:],
@@ -176,6 +183,7 @@ public struct Module: Sendable {
             Draft(
                 description: description,
                 imports: imports,
+                importedClaims: importedClaims,
                 types: types,
                 contracts: contracts,
                 claims: claims,
@@ -219,10 +227,12 @@ public struct Module: Sendable {
         self.imports = draft.imports ?? reading.uses
         self.references = Set(reading.sends.map(Reference.procedure))
             .union(reading.mentions.map(Reference.type))
+            .union(draft.importedClaims.map(Reference.claim))
         self.closures = reading.closures
         let hidden = Set(draft.procedures.filter { _, procedure in !procedure.access.reachesOtherDocuments }.keys)
         self.supplies = Set(draft.declaredProcedures.subtracting(hidden).map(Reference.procedure))
             .union(draft.declaredTypes.map(Reference.type))
+            .union(draft.claimedPairs.map(Reference.claim))
     }
 
     // MARK: - Public

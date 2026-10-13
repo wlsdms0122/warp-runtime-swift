@@ -66,8 +66,6 @@ public struct TypeTable: Sendable {
         types: [Name: TypeDeclaration],
         contracts: [Name: [Name: ContractProcedure]] = [:],
         satisfying: [Name: [Name: Head]] = [:],
-        holdsEveryClaim: Bool = false,
-        fulfillment: Fulfillment? = nil,
         standing: [Name]? = nil,
         of linkage: Linkage
     ) {
@@ -83,35 +81,42 @@ public struct TypeTable: Sendable {
             satisfying: satisfying.merging(
                 contracts.keys.map { contract in (contract, [Name: Head]()) }
             ) { held, _ in held },
-            holdsEveryClaim: holdsEveryClaim,
-            fulfillment: fulfillment,
             standing: standing,
             of: linkage
         )
     }
 
     // MARK: - Public
-    // The same declarations with the satisfaction worked out. Which types
-    // answer a contract is read off the documents' claims, which are gathered
-    // after this table is first built, so the table is remade rather than
-    // holding an answer it did not have. The rows are numbered from the
-    // declarations alone, so they are the rows the first table had. The
-    // table holds every claim where every document is in, which is where
-    // nothing is left to write down.
-    func satisfying(
-        _ satisfying: [Name: [Name: Head]],
-        fulfillment: Fulfillment? = nil
-    ) -> TypeTable {
+    // The same declarations with the claims of what an asker stands on in
+    // them. Which types answer a contract is read off the documents' claims,
+    // and a compile asks it of the claims within each document's reach, so
+    // the table is remade per asker rather than holding an answer it did not
+    // have. The rows are the first table's: only what answers changes.
+    func satisfying(_ satisfying: [Name: [Name: Head]], holdsEveryClaim: Bool) -> TypeTable {
         TypeTable(
             types: types,
             contracts: contracts,
-            satisfying: satisfying,
-            holdsEveryClaim: fulfillment == nil,
-            fulfillment: fulfillment,
+            loweredTypes: loweredTypes.satisfying(
+                satisfying.merging(contracts.keys.map { contract in (contract, [Name: Head]()) }) { held, _ in held },
+                holdsEveryClaim: holdsEveryClaim
+            ),
             standing: standing,
             of: linkage
         )
     }
 
     // MARK: - Private
+    private init(
+        types: [Name: TypeDeclaration],
+        contracts: [Name: [Name: ContractProcedure]],
+        loweredTypes: LoweredTypeTable,
+        standing: [Name]?,
+        of linkage: Linkage
+    ) {
+        self.types = types
+        self.contracts = contracts
+        self.loweredTypes = loweredTypes
+        self.standing = standing
+        self.linkage = linkage
+    }
 }

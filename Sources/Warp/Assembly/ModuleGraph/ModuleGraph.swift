@@ -84,35 +84,29 @@ public struct ModuleGraph: Sendable {
         needing references: [Set<Reference>],
         after held: Int
     ) throws -> [Int] {
-        // Which document declares each reference. One table, since every one
+        // Which documents declare each reference. One table, since every one
         // of them answers the same question; the kind rides on the reference,
-        // so a procedure and a type spelled alike stay two rows.
-        var declares: [Reference: Int] = [:]
+        // so a procedure and a type spelled alike stay two rows. A name has
+        // one declarer, which the build holds; a claim may be made by several
+        // documents, and a document importing it is compiled after each, so
+        // every copy it reads is one compiled already.
+        var declares: [Reference: [Int]] = [:]
 
         for (position, supplied) in supplies.enumerated() {
-            // In no order. Which document answers a reference is the order the
-            // host handed the documents over, and inside one document no two
-            // of these are the same reference, so nothing here reads an order.
             for reference in supplied {
-                guard declares[reference] == nil else { continue }
-
-                declares[reference] = position
+                declares[reference, default: []].append(position)
             }
         }
 
         // What each document needs of another, and under which name, so a
         // refusal can name the step rather than the cycle.
         let needs = references.enumerated().map { position, used in
-            var reached: [(position: Int, name: Name)] = []
-
-            func need(_ name: Name, of declaring: Int?) {
-                guard let declaring, declaring != position else { return }
-
-                reached.append((declaring, name))
-            }
+            var reached: [(position: Int, name: String)] = []
 
             for reference in used.sorted() {
-                need(reference.name, of: declares[reference])
+                for declaring in declares[reference] ?? [] where declaring != position {
+                    reached.append((declaring, reference.spelling))
+                }
             }
 
             return reached
@@ -126,7 +120,7 @@ public struct ModuleGraph: Sendable {
         var standing: [Int] = []
         var stood = [Bool](repeating: false, count: documents.count)
         var walking = [Bool](repeating: false, count: documents.count)
-        var route: [(position: Int, name: Name)] = []
+        var route: [(position: Int, name: String)] = []
 
         func stand(_ position: Int) throws {
             if stood[position] { return }

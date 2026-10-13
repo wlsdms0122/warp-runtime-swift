@@ -40,9 +40,12 @@ struct DeclarationChecker {
 
         // The table is walked whole rather than per module: it arrives
         // carrying where each name was written, and asking a module again
-        // would be spelling that a second way.
+        // would be spelling that a second way. What a mention asks of a
+        // contract is not asked here: which claims answer is each document's
+        // reach, and a document is judged against its own where it is
+        // compiled.
         for (_, declaration) in declared.sorted(by: { $0.key < $1.key }) {
-            try mentioned(in: declaration.held, at: declaration.place, resolve: table)
+            try mentioned(in: declaration.held, at: declaration.place, resolve: table, answering: false)
         }
 
         return table
@@ -51,13 +54,10 @@ struct DeclarationChecker {
     // Every type a document names, held to being one the link declares, and
     // every map type it names keyed by a type that answers `Hashable`. A
     // document is read on its own: what is judged is its own text, and the
-    // table is what the whole link declared. Where the table cannot say
-    // whether a key answers, the pair is written down for the document at
-    // its place in the link, from `origin` on.
-    func judge(_ modules: [Module], from origin: Int = 0, in table: TypeTable) throws {
-        for (offset, module) in modules.enumerated() {
-            table.loweredTypes.fulfillment?.laying(origin + offset, at: Place(in: .of(module)))
-
+    // table is what the link declared, answering with the claims the
+    // document stands on.
+    func judge(_ modules: [Module], in table: TypeTable) throws {
+        for module in modules {
             for (name, declared) in module.types.sorted(by: { $0.key < $1.key }) {
                 try mentioned(in: declared, at: .type(name.spelling, in: .of(module)), resolve: table)
             }
@@ -109,18 +109,29 @@ struct DeclarationChecker {
     }
 
     // Every type an object's signatures name, held to being one the link
-    // declares, the way a document's are where it is compiled: an object
-    // compiled against other documents may name what none of these declares.
+    // declares: an object compiled against other documents may name what
+    // none of these declares. What it asked of a contract was answered
+    // where it was compiled, within its reach, so it is not asked again.
     // What its declared types name is held by `types`, and what its bodies
     // stand on where their numbers are answered with rows.
     func judge(_ objects: [Compiled], in table: TypeTable) throws {
         for object in objects {
             for row in object.table {
-                try judge(row.signature, at: .procedure(row.label.spelling, in: object.document), in: table)
+                try judge(
+                    row.signature,
+                    at: .procedure(row.label.spelling, in: object.document),
+                    in: table,
+                    answering: false
+                )
             }
 
-            try judge(contracts: object.contracts, of: object.document, in: table)
-            try judge(heads: Set(object.claims.keys).union(object.members.keys), of: object.document, in: table)
+            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
+            try judge(
+                heads: Set(object.claims.keys).union(object.members.keys),
+                of: object.document,
+                in: table,
+                answering: false
+            )
         }
     }
 
@@ -131,13 +142,14 @@ struct DeclarationChecker {
     private func judge(
         contracts: [Name: [Name: ContractProcedure]],
         of document: Place.Document,
-        in table: TypeTable
+        in table: TypeTable,
+        answering: Bool = true
     ) throws {
         for (contract, procedures) in contracts.sorted(by: { $0.key < $1.key }) {
             for (name, asked) in procedures.sorted(by: { $0.key < $1.key }) {
                 let place = Place.contract(contract.spelling, in: document).key(name.spelling)
 
-                try judge(asked.signature.read(of: contract), at: place, in: table)
+                try judge(asked.signature.read(of: contract), at: place, in: table, answering: answering)
             }
         }
     }
@@ -149,14 +161,15 @@ struct DeclarationChecker {
     private func judge(
         heads: Set<Head>,
         of document: Place.Document,
-        in table: TypeTable
+        in table: TypeTable,
+        answering: Bool = true
     ) throws {
         for head in heads.sorted() {
             guard let mention = head.mention else { continue }
 
             let place = Place(document.home(of: head), in: document)
 
-            try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table)
+            try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table, answering: answering)
 
             // A head writes its bounds beside the names, so a bound stands where
             // the head is written.
@@ -198,18 +211,26 @@ struct DeclarationChecker {
     private func judge(
         _ signature: Signature,
         at place: Place,
-        in table: TypeTable
+        in table: TypeTable,
+        answering: Bool = true
     ) throws {
         for (position, parameter) in signature.parameters.enumerated() {
             try mentioned(
                 in: parameter.type.slotUnwrapped,
                 at: place.part(.parameters).index(position),
                 bounds: signature.bounds,
-                resolve: table
+                resolve: table,
+                answering: answering
             )
         }
 
-        try mentioned(in: signature.returns ?? .any, at: place.part(.returns), bounds: signature.bounds, resolve: table)
+        try mentioned(
+            in: signature.returns ?? .any,
+            at: place.part(.returns),
+            bounds: signature.bounds,
+            resolve: table,
+            answering: answering
+        )
 
         try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
     }
@@ -274,7 +295,8 @@ struct DeclarationChecker {
         in type: TypeExpression,
         at place: Place,
         bounds: [Name: Set<Name>] = [:],
-        resolve table: TypeTable
+        resolve table: TypeTable,
+        answering: Bool = true
     ) throws {
         switch type {
         case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
@@ -284,10 +306,10 @@ struct DeclarationChecker {
             guard let type else { return }
 
             for (position, parameter) in type.parameters.enumerated() {
-                try mentioned(in: parameter.slotUnwrapped, at: place.index(position), bounds: bounds, resolve: table)
+                try mentioned(in: parameter.slotUnwrapped, at: place.index(position), bounds: bounds, resolve: table, answering: answering)
             }
 
-            try mentioned(in: type.returns ?? .any, at: place.part(.returns), bounds: bounds, resolve: table)
+            try mentioned(in: type.returns ?? .any, at: place.part(.returns), bounds: bounds, resolve: table, answering: answering)
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some
@@ -314,24 +336,26 @@ struct DeclarationChecker {
             }
 
             for argument in arguments {
-                try mentioned(in: argument, at: place, bounds: bounds, resolve: table)
+                try mentioned(in: argument, at: place, bounds: bounds, resolve: table, answering: answering)
             }
 
-            try applied(name, to: arguments, at: place, bounds: bounds, in: table)
+            try applied(name, to: arguments, at: place, bounds: bounds, in: table, answering: answering)
 
         case let .array(inner), let .inout(inner), let .variable(inner):
-            try mentioned(in: inner, at: place, bounds: bounds, resolve: table)
+            try mentioned(in: inner, at: place, bounds: bounds, resolve: table, answering: answering)
 
         case let .dictionary(key, value):
-            try mentioned(in: key, at: place, bounds: bounds, resolve: table)
-            try mentioned(in: value, at: place, bounds: bounds, resolve: table)
-            try keyed(by: key, at: place, bounds: bounds, in: table)
+            try mentioned(in: key, at: place, bounds: bounds, resolve: table, answering: answering)
+            try mentioned(in: value, at: place, bounds: bounds, resolve: table, answering: answering)
+            if answering {
+                try keyed(by: key, at: place, bounds: bounds, in: table)
+            }
 
         // The load held a `?` to saying something new on what it wraps as
         // written. A name may stand for what it says nothing on, and that is
         // known here, where names resolve: what the name lowers to, spelled.
         case let .nullable(inner):
-            try mentioned(in: inner, at: place, bounds: bounds, resolve: table)
+            try mentioned(in: inner, at: place, bounds: bounds, resolve: table, answering: answering)
 
             guard case .named = inner else { return }
 
@@ -355,32 +379,39 @@ struct DeclarationChecker {
     private func mentioned(
         in declared: TypeDeclaration,
         at place: Place,
-        resolve table: TypeTable
+        resolve table: TypeTable,
+        answering: Bool = true
     ) throws {
         switch declared {
         case let .struct(fields, _, bounds):
             for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
-                try mentioned(in: field, at: place.part(.fields).key(name.spelling), bounds: bounds, resolve: table)
+                try mentioned(
+                    in: field,
+                    at: place.part(.fields).key(name.spelling),
+                    bounds: bounds,
+                    resolve: table,
+                    answering: answering
+                )
             }
 
             try judge(bounds: bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
 
         case let .alias(type):
-            try mentioned(in: type, at: place, resolve: table)
+            try mentioned(in: type, at: place, resolve: table, answering: answering)
         }
     }
 
     // A declared name applied to as many types as its declaration takes:
     // a struct to one per type parameter it lists, each answering the
     // bounds of its position the way a map's key answers `Hashable`, and
-    // an alias or a contract to none. Where the table cannot say whether
-    // one answers, the pair is written down where the mention stands.
+    // an alias or a contract to none.
     private func applied(
         _ name: Name,
         to arguments: [TypeExpression],
         at place: Place,
         bounds: [Name: Set<Name>],
-        in table: TypeTable
+        in table: TypeTable,
+        answering: Bool = true
     ) throws {
         guard case let .struct(_, typeParameters, declaredBounds) = table.types[name] else {
             guard arguments.isEmpty else {
@@ -404,6 +435,8 @@ struct DeclarationChecker {
             )
         }
 
+        guard answering else { return }
+
         let types = table.loweredTypes
 
         for (parameter, argument) in zip(typeParameters, arguments) {
@@ -412,8 +445,7 @@ struct DeclarationChecker {
                     of: argument.lowered(in: types, bounds: bounds),
                     answering: contract,
                     orNull: false,
-                    as: "applies '\(name)' at '\(parameter)' to",
-                    leaning: { leaning in types.fulfillment?.require(leaning, at: place) }
+                    as: "applies '\(name)' at '\(parameter)' to"
                 ) {
                     throw BuildError(refusal, at: place)
                 }
@@ -421,9 +453,7 @@ struct DeclarationChecker {
         }
     }
 
-    // A map's key answers `Hashable`. Where the table cannot say, the pair
-    // is written down where the map is mentioned, for the link that holds
-    // every claim.
+    // A map's key answers `Hashable`, by the claims the table holds.
     private func keyed(
         by key: TypeExpression,
         at place: Place,
@@ -433,8 +463,7 @@ struct DeclarationChecker {
         let types = table.loweredTypes
 
         if let refusal = types.keyRefusal(
-            of: key.lowered(in: types, bounds: bounds),
-            leaning: { leaning in types.fulfillment?.require(leaning, at: place) }
+            of: key.lowered(in: types, bounds: bounds)
         ) {
             throw BuildError(refusal, at: place)
         }

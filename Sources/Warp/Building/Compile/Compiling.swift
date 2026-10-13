@@ -22,8 +22,9 @@ import Foundation
 // are held here and read from here.
 struct Compiling {
     // MARK: - Property
-    // What only the whole list answers, which a document has no say in.
-    let types: TypeTable
+    // The types of the list, answering with the claims the document being
+    // laid down stands on, and the procedures the contracts ask.
+    private(set) var types: TypeTable
     let contractProcedures: [Name: LoweredContractProcedure]
 
     // Which document each position is, for a refusal that names one.
@@ -119,6 +120,13 @@ struct Compiling {
     }
 
     // MARK: - Public
+    // The document laid down next asks with the claims it stands on. The
+    // rows are the same rows: only what answers a contract changes.
+    mutating func answer(with types: TypeTable) {
+        self.types = types
+        self.lowering.answer(with: types.loweredTypes)
+    }
+
     // One document already compiled laid down, as the document itself wrote
     // it.
     //

@@ -73,7 +73,7 @@ struct CallTests {
                 result: reference("probe")
             )
         } throws: { error in
-            error is BuildError && "\(error)".contains("hands 'Int' where 'Standard.Collection' is asked, and no document in this link says 'Int' answers it")
+            error is BuildError && "\(error)".contains("no claim within reach says 'Int' answers")
         }
     }
 

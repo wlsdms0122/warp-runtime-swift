@@ -9,15 +9,15 @@ import Foundation
 import Testing
 @testable import Warp
 
-@Suite("A claim nobody leans on refuses nobody")
+@Suite("A claim is held where it is written")
 struct UnheldClaimTests {
     // MARK: - Property
     private let main: Name = "App.main"
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a claim with no procedure behind it refuses only what leans on it")
-    func anUnheldClaimRefusesOnlyWhatLeansOnIt() async throws {
+    @Test("a claim with no procedure behind it refuses at the claim though nothing asks it")
+    func anUnheldClaimRefusesAtTheClaim() async throws {
         // Given. A contract, a type, and a claim about the two with no procedure
         // anywhere to answer it. The program names both and hands the type
         // nowhere.
@@ -44,7 +44,7 @@ struct UnheldClaimTests {
             claims: ["Bank.Account": ["App.Describable"]],
             procedures: ["Other.nothing": Procedure(body: [], result: .literal(.null))]
         )
-        // Names both, and leans on neither: it never hands an Account to tell.
+        // Names both, and asks neither: it never hands an Account to tell.
         let program = try Module(
             procedures: [
                 "App.mine": Procedure(
@@ -75,16 +75,20 @@ struct UnheldClaimTests {
         )
         let linked = [asking, typed, broken, program] + Module.standard
 
-        // When / Then. The claim stands in the link and puts its type under no
-        // contract, and the program that never handed the type where the
-        // contract is asked is not the one to hear about it.
-        await #expect(throws: Never.self) { try await Builder().build(linked) }
+        // When / Then. The claim is judged where it is written, so the
+        // document making it hears about it, whoever asks the contract.
+        await #expect {
+            try await Builder().build(linked)
+        } throws: { error in
+            "\(error)".contains("extensions.Bank.Account.satisfies")
+                && "\(error)".contains("nothing it stands on gives 'Bank.Account' the member 'describe'")
+        }
     }
 
-    @Test("a good claim beside an unheld one in the same document")
-    func aGoodClaimBesideAnUnheldOne() async throws {
+    @Test("an unheld claim refuses beside a good one in the same document")
+    func anUnheldClaimRefusesBesideAGoodOne() async throws {
         // Given. One document claiming two pairs, one of them with no procedure
-        // behind it, and a program leaning on the other.
+        // behind it, and a program asking the other.
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
@@ -148,13 +152,17 @@ struct UnheldClaimTests {
         )
         let linked = [asking, typed, adapting, program] + Module.standard
 
-        // When / Then. The pair the program leans on is answered, and the one
-        // beside it that nothing can answer refuses nobody.
-        await #expect(throws: Never.self) { try await Builder().build(linked) }
+        // When / Then. The pair the program asks is answered, and the one
+        // beside it that nothing can answer refuses at itself.
+        await #expect {
+            try await Builder().build(linked)
+        } throws: { error in
+            "\(error)".contains("extensions.Bank.Plain.satisfies")
+        }
     }
 
-    @Test("an unheld claim refuses at the call that leaned on it")
-    func anUnheldClaimRefusesAtTheLeaningCall() async throws {
+    @Test("an unheld claim a program imports refuses at the claim")
+    func anImportedUnheldClaimRefusesAtTheClaim() async throws {
         // Given. The claim in one document with no procedure behind it, and the
         // program that hands the type in another.
         let asking = try Module(
@@ -184,6 +192,7 @@ struct UnheldClaimTests {
             procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
+            importedClaims: [ClaimPair("Bank.Plain", "App.Describable")],
             procedures: [
                 main: Procedure(
                     access: .public,
@@ -204,21 +213,20 @@ struct UnheldClaimTests {
         )
 
         // When / Then. The refusal says why the claim did not hold and stands
-        // where the type was handed over, which is the document an author is
-        // reading.
+        // where the claim was written, whoever stands on it.
         await #expect {
             try await Builder().build([asking, typed, claims, program] + Module.standard)
         } throws: { error in
-            "\(error)".contains("procedures.App.main.result")
-                && "\(error)".contains("nothing in this link gives 'Bank.Plain' the member 'describe'")
+            "\(error)".contains("extensions.Bank.Plain.satisfies")
+                && "\(error)".contains("nothing it stands on gives 'Bank.Plain' the member 'describe'")
         }
     }
 
-    @Test("a constant folded before the claim arrives is answered by the list")
-    func aFoldedConstantIsAnsweredByTheList() async throws {
+    @Test("a constant folds through a claim its document imports, however the documents were compiled")
+    func aFoldedConstantStandsOnAnImportedClaim() async throws {
         // Given. A procedure bounded by a contract that answers without running, a
         // constant handing it a type, and the claim in a document the program
-        // never names.
+        // names nothing of and imports the claim of.
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
@@ -254,6 +262,7 @@ struct UnheldClaimTests {
             procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
         )
         let program = try Module(
+            importedClaims: [ClaimPair("Bank.Account", "App.Describable")],
             constants: [
                 "counted": .call(
                     Call(
@@ -279,9 +288,8 @@ struct UnheldClaimTests {
         )
 
         // When / Then. Folding runs where the document is compiled, against
-        // the claims of what stood before it, and the claim is not among them.
-        // The pair is written down there and the list answers, so the order
-        // the host listed them in decides nothing.
+        // the claims within its reach, which the import puts the claim among,
+        // so the order the host listed them in decides nothing.
         let modules = [typed, asking, program, claims] + Module.standard
         var compiled: [Compiled] = []
 

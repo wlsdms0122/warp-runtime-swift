@@ -951,13 +951,12 @@ indirect enum LoweredType: Sendable, Hashable {
         // A composition takes what answers each of its contracts, asked of
         // the table knowing, where the slot takes null as well, that it does.
         // A value read as `Any` or along a path a call decides answers none
-        // until a cast says what it is, and one leaning on a claim passes,
-        // for the link to decide.
+        // until a cast says what it is.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
             return bounds.allSatisfy { contract in
-                if case .decided(false) = table.answering(contract: contract, reading: other, orNull: orNull) { false } else { true }
+                table.answering(contract: contract, reading: other, orNull: orNull)
             }
 
         case let (.nullable(mine), _) where !other.slotUnwrapped.declaresNull(in: table):
@@ -1535,10 +1534,23 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // What a cast does, said once. The judgement is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
+    //
+    // A fold casts against the claims of one document's reach. Where the
+    // value fits once every type no claim there is about is taken to answer,
+    // what the cast comes to turns on claims beyond the reach, which the run
+    // reads and the build does not, so the fold has nothing to settle from.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {
             return try settling(value, at: "as \(rendered(in: table))", in: table)
         } catch let mismatch as ArgumentError {
+            if !table.holdsEveryClaim, (try? settling(value, at: "", in: table.assumingUnseenClaims())) != nil {
+                throw ExecutionError(
+                    "settling this at the build casts a value of \(LoweredType(of: value, in: table).rendered(in: table))"
+                        + " to \(rendered(in: table)), which turns on a claim no document within reach makes. What the build settles stands on what its document"
+                        + " stands on, and the run reads every claim the link holds"
+                )
+            }
+
             // Only a mismatch is read as the author's expectation. Naming what
             // is absorbed rather than what is not keeps the default closed:
             // an error kind added later surfaces instead of quietly becoming
@@ -1584,16 +1596,14 @@ indirect enum LoweredType: Sendable, Hashable {
         // A parameter stands for what arrived and does not settle it. A
         // bounded one asks each value whether its type stands where every
         // contract is asked, and every byte is an `Int`, so one answer is the
-        // answer for all of them, a pair the table cannot decide written down
-        // as each byte would write it.
+        // answer for all of them.
         case let .parameter(_, bounds), let .composition(bounds):
             return bounds.allSatisfy { contract in
                 table.refusal(
                     of: .int,
                     answering: contract,
                     orNull: false,
-                    as: "is",
-                    leaning: { leaning in table.fulfillment?.require(folded: leaning) }
+                    as: "is"
                 ) == nil
             }
 
@@ -2045,9 +2055,9 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // A type parameter the call site filled, or a composition, holding what
     // arrived to a contract by what the value reads as, in the sentence the
-    // build refuses such a reading in: what the link found to answer it is
-    // what a value may arrive as, and a table that cannot say yet writes the
-    // claim down. Neither settles: a value stands as it arrived.
+    // build refuses such a reading in: what the claims the table holds answer
+    // is what a value may arrive as. It does not settle: a value stands as it
+    // arrived.
     private func standing(
         _ value: Value,
         answering name: Name,
@@ -2058,8 +2068,7 @@ indirect enum LoweredType: Sendable, Hashable {
             of: table.reading(of: value, answering: name),
             answering: name,
             orNull: false,
-            as: "is",
-            leaning: { leaning in table.fulfillment?.require(folded: leaning) }
+            as: "is"
         )
 
         if let refusal {

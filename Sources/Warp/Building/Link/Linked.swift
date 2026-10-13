@@ -239,12 +239,14 @@ public final class Linked: Sendable {
 
     // Arguments handed by position from outside the build: the door a host
     // hands a closure values through, and a procedure the host answers its
-    // sends. One for each slot, settled together by the door rule.
-    func settle(outside given: [Value]) throws -> [Value] {
+    // sends. One for each slot, settled together by the door rule, against
+    // the claims `table` holds: the run's, which are the link's, or a fold's,
+    // which are those of the document folding.
+    func settle(outside given: [Value], in table: LoweredTypeTable) throws -> [Value] {
         try refuseInPlace()
         try refuseCount(given.count)
 
-        return try settled(given)
+        return try settled(given, in: table)
     }
 
     // Arguments given by name: the door a run's entry is handed values
@@ -252,7 +254,7 @@ public final class Linked: Sendable {
     // declaration lacks is refused, and so is one it declares that was not
     // given; a null standing at a name was given, since null is a value the
     // way any other is. They are settled together by the door rule.
-    func settle(_ given: [Name: Value]) throws -> [Value] {
+    func settle(_ given: [Name: Value], in table: LoweredTypeTable) throws -> [Value] {
         try refuseInPlace()
 
         let undeclared = given.keys
@@ -274,14 +276,14 @@ public final class Linked: Sendable {
             throw ArgumentError("entry '\(label)' was given nothing for \(missing.joined(separator: ", "))")
         }
 
-        return try settled(values)
+        return try settled(values, in: table)
     }
 
     // What a procedure the host answers hands back, a value from outside at
     // the door it comes through: fitted to what the row declares and judged
     // against it, `Any` where it declares nothing, which is what the build
     // reads such a call's answer as.
-    func settling(answered value: Value) throws -> Value {
+    func settling(answered value: Value, in table: LoweredTypeTable) throws -> Value {
         try (returns ?? .any).settling(outside: value, at: "returns", in: table)
     }
 
@@ -350,11 +352,11 @@ public final class Linked: Sendable {
     // declares, fitted to it, the type parameters the slots name filled by
     // what the fitted values read as, and each value judged at its slot so
     // filled.
-    private func settled(_ values: [Value]) throws -> [Value] {
+    private func settled(_ values: [Value], in table: LoweredTypeTable) throws -> [Value] {
         let fitted = try zip(slots, values).map { slot, value in
             try table.resolvingNames(in: value, under: slot.type, at: "input '\(slot.name)'")
         }
-        let filling = try filling(by: fitted)
+        let filling = try filling(by: fitted, in: table)
 
         return try zip(slots, fitted).map { slot, value in
             try slot.type.filling(filling).settling(value, at: "input '\(slot.name)'", in: table)
@@ -378,7 +380,7 @@ public final class Linked: Sendable {
     // A closure's type parameters are its writer's, filled by the call that
     // made it, which no value at this door says, so they stand as they are
     // and each value is held to the bounds alone.
-    private func filling(by values: [Value]) throws -> [Name: LoweredType] {
+    private func filling(by values: [Value], in table: LoweredTypeTable) throws -> [Name: LoweredType] {
         let types = slots.map(\.type)
         let parameters = types.reduce(into: [Name: [Name]]()) { found, type in
             found.merge(type.typeParameters) { first, _ in first }
@@ -405,9 +407,7 @@ public final class Linked: Sendable {
             let typed = read.everyReading(of: parameter).allSatisfy { reading in reading.nominal(in: table) != nil }
             let refusal = read.disagreement(of: parameter, in: table)
                 ?? read.severalTypes(of: parameter, bounds: Set(bounds), over: types, in: table)
-                ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table) { leaning in
-                    table.fulfillment?.require(folded: leaning)
-                })
+                ?? (typed ? nil : read.unanswered(parameter, bounds: Set(bounds), in: table))
 
             if let refusal {
                 let standing = slots
