@@ -67,6 +67,10 @@ struct ReachTests {
                 "Bank.Account": ["App.Describable"],
                 "Bank.Card": ["App.Describable"]
             ],
+            members: [
+                "Bank.Account": ["describe"],
+                "Bank.Card": ["describe"]
+            ],
             procedures: [
                 entryName: Procedure(
                     access: .public,

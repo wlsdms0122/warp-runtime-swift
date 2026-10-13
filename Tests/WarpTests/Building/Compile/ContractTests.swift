@@ -147,6 +147,7 @@ struct ContractTests {
                 types: ["Bank.Account": .struct(["balance": .int])],
                 contracts: [contract: [procedure: Signature(parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "n", type: parameter)], returns: .int)]],
                 claims: ["Bank.Account": [contract]],
+                members: ["Bank.Account": [procedure]],
                 procedures: [
                     Name(stringLiteral: "Bank.Account.\(procedure.spelling)"): Procedure(
                         signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account")), Parameter(name: "n", type: parameter)], returns: .int),
@@ -196,6 +197,7 @@ struct ContractTests {
             types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
+            members: ["Bank.Account": ["describe"]],
             procedures: leaning(on: "Bank.Account", holding: ["balance": .literal(.int(1))]).merging([
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
@@ -213,7 +215,7 @@ struct ContractTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             "\(error)".hasPrefix("procedures.entry.result: the module at 0")
-                && "\(error)".contains("declares 'Bank.Account.describe', which is named for")
+                && "\(error)".contains("declares 'Bank.Account.describe', which is the member 'describe' of 'Bank.Account'")
                 && "\(error)".contains("answers Int where the contract writes String")
         }
     }
@@ -266,7 +268,7 @@ struct ContractTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("nothing in this link declares 'Bank.Plain.describe'")
+            "\(error)".contains("nothing in this link gives 'Bank.Plain' the member 'describe'")
         }
     }
 
@@ -297,6 +299,7 @@ struct ContractTests {
         )
         let adapting = try Module(
             claims: ["Bank.Account": ["Chart.Plottable"]],
+            members: ["Bank.Account": ["height"]],
             procedures: [
                 "Bank.Account.height": Procedure(
                     signature: Signature(
@@ -341,6 +344,7 @@ struct ContractTests {
             types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             claims: ["Bank.Account": ["App.Describable"]],
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "Bank.Account.describe": Procedure(
@@ -389,6 +393,7 @@ struct ContractTests {
         let sut = try Module(
             contracts: ["App.Sortable": ["sort": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
             claims: ["Array": ["App.Sortable"]],
+            members: ["Array": ["sort"]],
             procedures: [
                 "Array.sort": Procedure(
                     signature: Signature(
@@ -505,6 +510,7 @@ struct ContractTests {
             types: ["Bank.Account": .struct(["balance": .int])],
             contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string), constness: constness)]],
             claims: ["Bank.Account": ["App.Describable"]],
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
@@ -601,6 +607,10 @@ struct ContractTests {
             claims: [
                 "Bank.Account": ["App.Describable"],
                 "Bank.Card": ["App.Describable"]
+            ],
+            members: [
+                "Bank.Account": ["describe"],
+                "Bank.Card": ["describe"]
             ],
             procedures: [
                 entryName: Procedure(access: .public, body: body, result: result),

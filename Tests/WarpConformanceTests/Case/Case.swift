@@ -156,6 +156,7 @@ struct Case: Sendable, CustomStringConvertible {
                     types: declared.types,
                     contracts: declared.contracts,
                     claims: declared.claims,
+                    members: declared.members,
                     procedures: Dictionary(
                         uniqueKeysWithValues: try vocabulary.procedures.map { one in
                             guard let read = declared.procedures[one.name] else {
@@ -255,11 +256,12 @@ struct Case: Sendable, CustomStringConvertible {
     struct Vocabulary: Sendable {
         // MARK: - Property
         // What a vocabulary writes: what the host's procedures are, the types,
-        // contracts and claims their signatures stand on, and what it uses
-        // from other modules, as any module lists it. Which version it is read
+        // contracts and extensions their signatures stand on, a member being
+        // one of the host's procedures, and what it uses from other modules,
+        // as any module lists it. Which version it is read
         // at is the runner's to say, and what a program declares beside them
         // (constants, variables) is a document's.
-        static let declaringKeys: Set<Name> = ["imports", "types", "contracts", "satisfies", "procedures"]
+        static let declaringKeys: Set<Name> = ["imports", "types", "contracts", "extensions", "procedures"]
 
         // The module as the reader takes it.
         let module: Value
@@ -619,45 +621,79 @@ struct Case: Sendable, CustomStringConvertible {
         if let taken = try module.named().map(\.name).first(where: { name in !Vocabulary.declaringKeys.contains(name) }) {
             throw ConformanceError(
                 "the vocabulary a case asks for writes '\(taken)'. A vocabulary writes `imports`"
-                    + " and declares `types`, `contracts`, `satisfies` and `procedures`, and how it is"
+                    + " and declares `types`, `contracts`, `extensions` and `procedures`, and how it is"
                     + " read is the runner's"
             )
         }
 
-        let procedures: [Supplied] = try entries.named().map { entry in
-            guard case let .dictionary(mapping) = entry.value else {
-                throw ConformanceError("'\(entry.name)' is written the way a procedure is")
-            }
-
-            let declaration = Value.dictionary(
-                Dictionary(
-                    uniqueKeysWithValues: try mapping.named()
-                        .filter { field in !Supplied.ownKeys.contains(field.name) }
-                        .map { field in (field.name, field.value) }
-                )
-            )
-
-            return Supplied(
-                name: entry.name,
-                declaration: declaration,
-                answers: mapping["answers"] ?? .null,
-                runs: try Self.flag(mapping, "runs", of: entry.name, or: false),
-                isolated: try Self.flag(mapping, "isolated", of: entry.name, or: true),
-                failing: try Self.failing(mapping["failing"], of: entry.name)
-            )
-        }
+        let procedures: [Supplied] = try entries.named().map { entry in try Self.supplied(entry.name, entry.value) }
 
         // The module as the reader takes it: what the case wrote, with the
         // declarations stripped of the keys that are the host's rather than the
-        // document's, and the version the runner says for itself.
+        // document's, and the version the runner says for itself. A member is
+        // one of the host's procedures, written where its type is given it.
         var stripped = Dictionary(uniqueKeysWithValues: try module.named().map { field in (field.name, field.value) })
+        var members: [Supplied] = []
+
+        for table in ["types", "extensions"] as [Name] {
+            guard case let .dictionary(given)? = module[table] else { continue }
+
+            var rewritten: [Name: Value] = [:]
+
+            for (type, written) in try given.named() {
+                guard case let .dictionary(fields) = written, case let .dictionary(declared)? = fields["procedures"] else {
+                    rewritten[type] = written
+
+                    continue
+                }
+
+                let supplied = try declared.named().map { member in
+                    (member.name, try Self.supplied(try Name("\(type).\(member.name)"), member.value))
+                }
+
+                members += supplied.map(\.1)
+                rewritten[type] = .dictionary(
+                    fields.writing(
+                        "procedures",
+                        with: .dictionary(Value.Dictionary(Dictionary(uniqueKeysWithValues: supplied.map { name, one in (name, one.declaration) })))
+                    )
+                )
+            }
+
+            stripped[table] = .dictionary(Value.Dictionary(rewritten))
+        }
 
         stripped["warp"] = .int(1)
         stripped["procedures"] = procedures.isEmpty
             ? nil
             : .dictionary(Dictionary(uniqueKeysWithValues: procedures.map { one in (one.name, one.declaration) }))
 
-        return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures)
+        return Vocabulary(module: .dictionary(Value.Dictionary(stripped)), procedures: procedures + members)
+    }
+
+    // One of the host's procedures as a vocabulary writes it: the declaration,
+    // and beside it what the host's implementation does.
+    private static func supplied(_ name: Name, _ written: Value) throws -> Supplied {
+        guard case let .dictionary(mapping) = written else {
+            throw ConformanceError("'\(name)' is written the way a procedure is")
+        }
+
+        let declaration = Value.dictionary(
+            Dictionary(
+                uniqueKeysWithValues: try mapping.named()
+                    .filter { field in !Supplied.ownKeys.contains(field.name) }
+                    .map { field in (field.name, field.value) }
+            )
+        )
+
+        return Supplied(
+            name: name,
+            declaration: declaration,
+            answers: mapping["answers"] ?? .null,
+            runs: try Self.flag(mapping, "runs", of: name, or: false),
+            isolated: try Self.flag(mapping, "isolated", of: name, or: true),
+            failing: try Self.failing(mapping["failing"], of: name)
+        )
     }
 
     // What the entry is given is a mapping or is not written. Anything else

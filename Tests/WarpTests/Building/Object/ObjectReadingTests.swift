@@ -545,6 +545,7 @@ struct ObjectReadingTests {
                 "App.Two": ["two": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]
             ],
             claims: ["App.Box": ["App.One", "App.Two"]],
+            members: ["App.Box": ["one", "two"]],
             procedures: [
                 "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
                 "App.Box.one": Procedure(

@@ -115,6 +115,7 @@ struct UnheldClaimTests {
                 "Bank.Account": ["App.Describable"],
                 "Bank.Plain": ["App.Describable"]
             ],
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
@@ -209,7 +210,7 @@ struct UnheldClaimTests {
             try await Builder().build([asking, typed, claims, program] + Module.standard)
         } throws: { error in
             "\(error)".contains("procedures.App.main.result")
-                && "\(error)".contains("nothing in this link declares 'Bank.Plain.describe'")
+                && "\(error)".contains("nothing in this link gives 'Bank.Plain' the member 'describe'")
         }
     }
 
@@ -236,6 +237,7 @@ struct UnheldClaimTests {
         )
         let typed = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
+            members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(

@@ -18,6 +18,9 @@ enum ObjectCoverageFixture {
             types: ["a.one": .alias(.any), "a.two": .alias(.never), "a.three": structOfEveryTypeExpression],
             contracts: ["a.five": ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])]],
             claims: ["a.seven": ["a.eight", "a.nine"]],
+            // A member is a row the document declares, under its type's name
+            // and its own.
+            members: ["a": ["ten"]],
             leaned: everyPlace,
             declared: ["a.eleven", "a.ten"],
             constants: ["a.sixteen"],
@@ -166,7 +169,7 @@ enum ObjectCoverageFixture {
     }()
 
     static let everyPart: [Place.Part] = [
-        .procedures, .constants, .variables, .types, .contracts, .satisfies,
+        .procedures, .constants, .variables, .types, .contracts, .satisfies, .extensions,
         .imports, .parameters, .returns, .bounds, .body, .result, .subject(optional: false), .subject(optional: true), .callee, .arguments,
         .closure, .fields, .condition(of: .conditional), .condition(of: .loop), .then, .otherwise, .rescue
     ]

@@ -186,17 +186,33 @@ struct ModuleDeclarationTests {
         // neither
         let sut = try loader.loadDocument([
             "types": [
-                "Bank.Account": ["struct": ["balance": "Int"]],
-                "Bank.Card": ["struct": ["last": "String"]]
+                "Bank.Account": [
+                    "struct": ["balance": "Int"],
+                    "satisfies": ["App.Describable"],
+                    "procedures": [
+                        "describe": [
+                            "parameters": [["name": "of", "type": "Bank.Account"]],
+                            "returns": "String",
+                            "result": "an account"
+                        ]
+                    ]
+                ],
+                "Bank.Card": [
+                    "struct": ["last": "String"],
+                    "satisfies": ["App.Describable"],
+                    "procedures": [
+                        "describe": [
+                            "parameters": [["name": "of", "type": "Bank.Card"]],
+                            "returns": "String",
+                            "result": "a card"
+                        ]
+                    ]
+                ]
             ],
             "contracts": [
                 "App.Describable": [
                     "describe": ["parameters": [["name": "of", "type": "Self"]], "returns": "String"]
                 ]
-            ],
-            "satisfies": [
-                "Bank.Account": ["App.Describable"],
-                "Bank.Card": ["App.Describable"]
             ],
             "procedures": [
                 "entry": [
@@ -213,16 +229,6 @@ struct ModuleDeclarationTests {
                     "bounds": ["T": "App.Describable"],
                     "returns": "String",
                     "result": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]
-                ],
-                "Bank.Account.describe": [
-                    "parameters": [["name": "of", "type": "Bank.Account"]],
-                    "returns": "String",
-                    "result": "an account"
-                ],
-                "Bank.Card.describe": [
-                    "parameters": [["name": "of", "type": "Bank.Card"]],
-                    "returns": "String",
-                    "result": "a card"
                 ]
             ]
         ])
