@@ -115,7 +115,6 @@ public struct Builder: Sendable {
 
         try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
-        try refuseImportedTwice(compiled)
 
         // Laid end to end through the door a link lays documents through, so a
         // name two of them declare is refused here as it is there.
@@ -235,8 +234,6 @@ public struct Builder: Sendable {
 
         let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
 
-        try refuseImportedTwice(documents)
-
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
         // their rows, and what they wrote themselves. No spelling is in it
@@ -318,8 +315,17 @@ public struct Builder: Sendable {
         // host split the documents between compiles changes nothing. Where
         // the host put each, which is what a claim and a member say of the
         // document making them.
+        //
+        // A claim a document imports is the claim itself, every copy of it
+        // the list holds, and not what the documents making it stand on: the
+        // copies are one claim, so what it answers is the same whichever of
+        // them the host compiled it beside.
         let supplied = compiled.map(\.supplies) + laying.map(\.supplies)
-        let named = compiled.map(\.references) + laying.map(\.references)
+        let named = (compiled.map(\.references) + laying.map(\.references)).map { references in
+            references.filter { reference in
+                if case .claim = reference { false } else { true }
+            }
+        }
         let standingOn = named.map { reaches in
             Set(supplied.indices.filter { other in !supplied[other].isDisjoint(with: reaches) })
         }
@@ -333,7 +339,12 @@ public struct Builder: Sendable {
 
         // A claim imported is one some document makes, as a name imported is
         // one some document declares.
-        let made = Set(namespace.claims.map { claim in ClaimPair(claim.held.type, claim.held.contract) })
+        let pairs = namespace.claims.map { claim in ClaimPair(claim.held.type, claim.held.contract) }
+        let made = Set(
+            namespace.claims.indices
+                .filter { index in namespace.claims[index].handed != Prelude.handed }
+                .map { index in pairs[index] }
+        )
 
         // The table each set of claims answers with, by where the claims
         // stand in the namespace.
@@ -353,8 +364,12 @@ public struct Builder: Sendable {
             // What the document asks of a contract is answered by the claims
             // made within its reach, the language's among them. Documents
             // standing on the same claims ask the same table.
+            let imported = reached.reduce(into: Set<ClaimPair>()) { imported, stood in
+                imported.formUnion(documents[stood].importedClaims)
+            }
             let claimed = namespace.claims.indices.filter { index in
                 claimStands[index].map(reached.contains) ?? (namespace.claims[index].handed == Prelude.handed)
+                    || imported.contains(pairs[index])
             }
             let answering = try tables[claimed] ?? ClaimChecker().satisfying(
                 declaring,
@@ -429,7 +444,6 @@ public struct Builder: Sendable {
     ) throws -> Image {
         try refuseRepeated(compiled.map(\.document))
         try refuseMissingDependencies(compiled)
-        try refuseImportedTwice(compiled)
 
         // Every document's block laid down, which is where its rows first
         // stand somewhere. What a name reaches is answered from here on.
@@ -562,36 +576,6 @@ public struct Builder: Sendable {
                     + " (\(missing)) that is not laid beside it as it was then",
                 at: Place(in: compiled[origin].document)
             )
-        }
-    }
-
-    // A claim a document imports is made by one document of the link, the
-    // way a name it uses is declared by one: what it stands on is then the
-    // same whichever documents the host compiled it beside. Two documents
-    // making one claim stay one claim for every document reaching both by
-    // what they name.
-    private func refuseImportedTwice(_ documents: [any Declaring]) throws {
-        var makers: [ClaimPair: [Int]] = [:]
-
-        for (position, document) in documents.enumerated() {
-            for (head, contracts) in document.claims {
-                for contract in contracts {
-                    makers[ClaimPair(head.type, contract), default: []].append(position)
-                }
-            }
-        }
-
-        for (position, document) in documents.enumerated() {
-            for pair in document.importedClaims.sorted() {
-                guard let making = makers[pair], making.count > 1 else { continue }
-
-                throw BuildError(
-                    "imports the claim '\(pair.spelling)', which "
-                        + making.map { maker in documents[maker].document.spelled(at: maker) }.joined(separator: " and ")
-                        + " make. A claim a document imports is made by one document of the link",
-                    at: Place([.part(.imports)], in: documents[position].document)
-                )
-            }
         }
     }
 

@@ -46,6 +46,11 @@ final class LoweredTypeTable: Sendable {
     // document it judges, which a fold runs against too.
     let holdsEveryClaim: Bool
 
+    // Whether a type no claim here is about answers every contract, which is
+    // what a table holding one reach asks to see whether an answer turns on
+    // claims beyond it.
+    private let assumesUnseenClaims: Bool
+
     private let rows: [Name: Int]
 
     // A table declaring nothing, for a judgement asked with no declarations
@@ -67,16 +72,23 @@ final class LoweredTypeTable: Sendable {
         self.labels = labels
         self.satisfying = satisfying
         self.holdsEveryClaim = true
+        self.assumesUnseenClaims = false
         self.linkage = linkage
         self.rows = Dictionary(uniqueKeysWithValues: labels.enumerated().map { row, label in (label, row) })
     }
 
     // The same rows answering with other claims, the index carried over.
-    private init(_ table: LoweredTypeTable, satisfying: [Name: [Name: LoweredType?]], holdsEveryClaim: Bool) {
+    private init(
+        _ table: LoweredTypeTable,
+        satisfying: [Name: [Name: LoweredType?]],
+        holdsEveryClaim: Bool,
+        assumesUnseenClaims: Bool = false
+    ) {
         self.loweredTypes = table.loweredTypes
         self.labels = table.labels
         self.satisfying = satisfying
         self.holdsEveryClaim = holdsEveryClaim
+        self.assumesUnseenClaims = assumesUnseenClaims
         self.linkage = table.linkage
         self.rows = table.rows
     }
@@ -253,7 +265,7 @@ final class LoweredTypeTable: Sendable {
     // asked to say.
     func answers(contract name: Name, reading: LoweredType, of type: Name) -> Bool? {
         guard let claimed = satisfying[name] else { return nil }
-        guard let entry = claimed[type] else { return false }
+        guard let entry = claimed[type] else { return assumesUnseenClaims }
         guard let head = entry else { return true }
 
         return refusal(of: reading, under: head) == nil
@@ -382,30 +394,6 @@ final class LoweredTypeTable: Sendable {
         return read + ", and '\(type)' answers '\(name)' as \(head.rendered(in: self)), which does not take it: \(reason)"
     }
 
-    // The same, where what is judged is a value: at a door, a cast, a struct
-    // from outside. A table holding the claims of one document's reach, which
-    // a fold runs against, cannot say a value's type answers no contract where
-    // no claim within that reach is about the type: the run reads every claim
-    // the link holds. A fold asking that has nothing to settle from.
-    func refusal(ofValue reading: LoweredType, answering name: Name, orNull: Bool, as label: String) throws -> String? {
-        guard let refusal = refusal(of: reading, answering: name, orNull: orNull, as: label) else { return nil }
-
-        guard
-            !holdsEveryClaim,
-            let held = read(reading, orNull: orNull),
-            let type = held.nominal(in: self),
-            satisfying[name]?.keys.contains(type) == false
-        else {
-            return refusal
-        }
-
-        throw ExecutionError(
-            "settling this at the build asks whether '\(type)' answers '\(name)', and no claim within reach"
-                + " says so. What the build settles stands on what its document stands on, and the run reads"
-                + " every claim the link holds"
-        )
-    }
-
     // Why a map keyed by `key` is no map type the language has, or nil
     // where the key answers `Hashable`: by what the documents claim about
     // its type, and a type parameter through its bounds. The one sentence a
@@ -428,6 +416,13 @@ final class LoweredTypeTable: Sendable {
             satisfying: heads.mapValues { held in held.mapValues { head in head.lowered(in: declaring) } },
             holdsEveryClaim: holdsEveryClaim
         )
+    }
+
+    // The same claims, with a type none of them is about answering every
+    // contract: a reach's answer that holds here and fails in the table it
+    // came from is one that claims beyond the reach decide.
+    func assumingUnseenClaims() -> LoweredTypeTable {
+        LoweredTypeTable(self, satisfying: satisfying, holdsEveryClaim: holdsEveryClaim, assumesUnseenClaims: true)
     }
 
     // The declarations as the run reads them. A link says which order its rows
@@ -519,7 +514,7 @@ final class LoweredTypeTable: Sendable {
             guard read.1.nominal(in: self) == nil else { return .parameter(label: parameter, bounds: held) }
 
             for contract in held {
-                if let refusal = try refusal(ofValue: read.1, answering: contract, orNull: false, as: "'\(parameter)' is read as") {
+                if let refusal = refusal(of: read.1, answering: contract, orNull: false, as: "'\(parameter)' is read as") {
                     throw ArgumentError("\(path): \(refusal)")
                 }
             }

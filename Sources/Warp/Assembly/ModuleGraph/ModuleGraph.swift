@@ -88,7 +88,8 @@ public struct ModuleGraph: Sendable {
         // of them answers the same question; the kind rides on the reference,
         // so a procedure and a type spelled alike stay two rows. A name has
         // one declarer, which the build holds; a claim may be made by several
-        // documents, and a document importing it stands on every one.
+        // documents, and a document importing it is compiled after each, so
+        // every copy it reads is one compiled already.
         var declares: [Reference: [Int]] = [:]
 
         for (position, supplied) in supplies.enumerated() {

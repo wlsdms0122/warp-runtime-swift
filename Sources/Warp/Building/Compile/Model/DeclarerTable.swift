@@ -24,7 +24,7 @@ struct DeclarerTable {
     // Nothing for a document that has no fingerprint. The name is declared and
     // the answer is that there is nothing to struct, which is not the same as
     // a name nothing declares. A name has one declarer; a claim may be made
-    // by several documents, and each of them is what an importer stands on.
+    // by several documents, and an importer reads the copy each of them makes.
     private var declares: [Reference: [Fingerprint?]] = [:]
 
     // MARK: - Initializer

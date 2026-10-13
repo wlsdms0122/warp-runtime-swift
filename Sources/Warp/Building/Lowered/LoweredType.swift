@@ -1534,10 +1534,23 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // What a cast does, said once. The judgement is `settling`'s; what this
     // adds is the one thing the cast spelling decides: what a mismatch means.
+    //
+    // A fold casts against the claims of one document's reach. Where the
+    // value fits once every type no claim there is about is taken to answer,
+    // what the cast comes to turns on claims beyond the reach, which the run
+    // reads and the build does not, so the fold has nothing to settle from.
     func reading(_ value: Value, optional: Bool, in table: LoweredTypeTable) throws -> Value {
         do {
             return try settling(value, at: "as \(rendered(in: table))", in: table)
         } catch let mismatch as ArgumentError {
+            if !table.holdsEveryClaim, (try? settling(value, at: "", in: table.assumingUnseenClaims())) != nil {
+                throw ExecutionError(
+                    "settling this at the build casts a value of \(LoweredType(of: value, in: table).rendered(in: table))"
+                        + " to \(rendered(in: table)), which turns on a claim no document within reach makes. What the build settles stands on what its document"
+                        + " stands on, and the run reads every claim the link holds"
+                )
+            }
+
             // Only a mismatch is read as the author's expectation. Naming what
             // is absorbed rather than what is not keeps the default closed:
             // an error kind added later surfaces instead of quietly becoming
@@ -2051,8 +2064,8 @@ indirect enum LoweredType: Sendable, Hashable {
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        let refusal = try table.refusal(
-            ofValue: table.reading(of: value, answering: name),
+        let refusal = table.refusal(
+            of: table.reading(of: value, answering: name),
             answering: name,
             orNull: false,
             as: "is"
