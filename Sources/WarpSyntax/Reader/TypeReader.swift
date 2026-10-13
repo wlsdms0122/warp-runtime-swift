@@ -357,9 +357,10 @@ struct TypeReader: Decodable {
         if let bounding, let parameter = dropPrefixed("\(TypeSpelling.some) ", from: text) {
             let parts = parameter.split(separator: ":", maxSplits: 1)
 
-            // A member read as one, for the load to say a head writes none.
-            if parts.count == 1, let member = try member(String(parameter)) {
-                return member
+            // An associated type read as one, for the load to say a head
+            // writes none.
+            if parts.count == 1, let associated = try associatedType(String(parameter)) {
+                return associated
             }
 
             let name = try named(parts[0].trimmingCharacters(in: Path.whiteSpace))
@@ -387,21 +388,19 @@ struct TypeReader: Decodable {
         // signature's, under `BoundsReader`.
         //
         // `some T.Item` is the type the type filling `T` gives under `Item`,
-        // and `Self.Item` the type the type answering a contract does. Read
-        // at the first dot, so a member of a member is no name the load
-        // takes.
+        // and `Self.Item` the type the type answering a contract does.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
             let written = text.dropFirst(TypeSpelling.some.spelling.count).trimmingCharacters(in: Path.whiteSpace)
 
-            if let member = try member(written) {
-                return member
+            if let associated = try associatedType(written) {
+                return associated
             }
 
             return .parameter(name: try named(written))
         }
 
-        if text.hasPrefix("\(TypeSpelling.selfType.spelling)."), let member = try member(text) {
-            return member
+        if text.hasPrefix("\(TypeSpelling.selfType.spelling)."), let associated = try associatedType(text) {
+            return associated
         }
 
         guard let open = text.firstIndex(of: "<") else {
@@ -455,12 +454,13 @@ struct TypeReader: Decodable {
         return held
     }
 
-    // A member's spelling, the name it stands on and its own with a dot
-    // between them, or nil where the spelling writes no dot.
-    private static func member(_ text: String) throws -> TypeExpression? {
+    // An associated type's spelling, what it is the associated type of and its
+    // own name with a dot between them, or nil where the spelling writes no
+    // dot. Read at the last dot, so `T.Item.Key` is `T.Item`'s `Key`.
+    private static func associatedType(_ text: String) throws -> TypeExpression? {
         guard let dot = text.firstIndex(of: ".") else { return nil }
 
-        return .member(
+        return .associatedType(
             of: try named(String(text[..<dot]).trimmingCharacters(in: Path.whiteSpace)),
             name: try named(String(text[text.index(after: dot)...]).trimmingCharacters(in: Path.whiteSpace))
         )

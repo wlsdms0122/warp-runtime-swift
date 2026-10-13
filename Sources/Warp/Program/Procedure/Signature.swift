@@ -26,9 +26,9 @@ public struct Signature: Sendable, Equatable {
     // slots mention it, and a name absent here is bounded by nothing.
     public let bounds: [Name: Set<Name>]
 
-    // The members of its type parameters it says are a type, by the label a
-    // member is written under, `T.Item`. What fills `T` must give that type
-    // there, and inside the declaration the member is that type.
+    // The associated types of its type parameters it says are a type, by
+    // the label one is written under, `T.Item`. What fills `T` must give that
+    // type there, and inside the declaration the associated type is that type.
     public let sameTypes: [Name: TypeExpression]
 
     // The declared names in position order.
@@ -76,17 +76,17 @@ public struct Signature: Sendable, Equatable {
         }
     }
 
-    // Every member of a type parameter this names, by its label, beside the
+    // Every associated type of a type parameter this names, by its label, beside the
     // parameter and the name: in what it takes and answers, what its same
-    // types say and the members its bounds and same types are written under.
-    var members: [Name: (of: Name, name: Name)] {
+    // types say and the ones its bounds and same types are written under.
+    var associatedTypes: [Name: (of: Name, name: Name)] {
         let written = ([returns].compactMap { $0 } + parameters.map(\.type) + Array(sameTypes.values))
             .reduce(into: [Name: (of: Name, name: Name)]()) { found, type in
-                found.merge(type.members) { first, _ in first }
+                found.merge(type.associatedTypes) { first, _ in first }
             }
 
         return Set(bounds.keys).union(sameTypes.keys).reduce(into: written) { found, key in
-            if let member = key.memberOf { found[key] = member }
+            if let member = key.associated { found[key] = member }
         }
     }
 
@@ -147,33 +147,33 @@ public struct Signature: Sendable, Equatable {
         returns?.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
     }
 
-    // Each member this says is a type, as the declaration reads that type.
+    // Each associated type this says is a type, as the declaration reads that type.
     func loweredSameTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
-        loweredMembers(in: table).filter { label, _ in sameTypes[label] != nil }
+        loweredAssociatedTypes(in: table).filter { label, _ in sameTypes[label] != nil }
     }
 
-    // Each member this names as the declaration reads it, by its label: the
+    // Each associated type this names as the declaration reads it, by its label: the
     // type its same types say, or one type the declaration does not know,
     // held to what bounds it.
-    func loweredMembers(in table: LoweredTypeTable) -> [Name: LoweredType] {
-        members.reduce(into: [:]) { lowered, entry in
-            lowered[entry.key] = TypeExpression.member(of: entry.value.of, name: entry.value.name)
+    func loweredAssociatedTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        associatedTypes.reduce(into: [:]) { lowered, entry in
+            lowered[entry.key] = TypeExpression.associatedType(of: entry.value.of, name: entry.value.name)
                 .lowered(in: table, bounds: bounds, sameTypes: sameTypes)
         }
     }
 
     // A closure's signature as the procedure it is written in reads it: each
-    // type parameter it names, and each member of one, held to the bounds
+    // type parameter it names, and each associated type of one, held to the bounds
     // `declared` gives that name and said to be what `said` says, since the
     // procedure around it owns the name.
     func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
-        let named = parameterNames.union(members.values.map(\.of))
+        let named = parameterNames.union(associatedTypes.values.map(\.of))
 
         return Signature(
             parameters: parameters,
             returns: returns,
-            bounds: declared.filter { name, _ in named.contains(name.memberOf?.of ?? name) },
-            sameTypes: said.filter { label, _ in named.contains(label.memberOf?.of ?? label) }
+            bounds: declared.filter { name, _ in named.contains(name.associated?.of ?? name) },
+            sameTypes: said.filter { label, _ in named.contains(label.associated?.of ?? label) }
         )
     }
 

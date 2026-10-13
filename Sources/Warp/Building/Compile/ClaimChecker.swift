@@ -289,7 +289,7 @@ struct ClaimChecker {
                 )
             }
 
-            guard let read = loweredTypes.member(name, of: values, among: [contract]) else {
+            guard let read = loweredTypes.associatedType(name, of: values, among: [contract]) else {
                 throw BuildError(
                     says + ", which asks the type '\(name)', and '\(type)' gives it none for the values"
                         + " '\(claim.held.head.spelling)' takes",
@@ -426,16 +426,16 @@ struct ClaimChecker {
         }
 
         // The contract's procedure as the claim reads it: `Self` is the type
-        // the claim is about, wherever it stands, and each member of it the
+        // the claim is about, wherever it stands, and each associated type of it the
         // type the type gives under that name, as `readingSelf` says.
         let read = asked.read(of: contract)
         let takes = given.lowered(in: loweredTypes).map(\.type)
         let asks = read.lowered(in: loweredTypes).map { slot in slot.type.replacingParameters(readingSelf) }
         var substitution = Substitution(filling: takes, against: asks, in: loweredTypes)
 
-        substitution.derive(given.members, over: takes, said: given.loweredMembers(in: loweredTypes), in: loweredTypes)
+        substitution.derive(given.associatedTypes, over: takes, said: given.loweredAssociatedTypes(in: loweredTypes), in: loweredTypes)
 
-        if let refusal = substitution.memberRefusal(in: loweredTypes) {
+        if let refusal = substitution.associatedTypeRefusal(in: loweredTypes) {
             return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)' asks, and \(refusal)"
         }
 

@@ -122,7 +122,7 @@ enum ObjectCoverageFixture {
         "nullable": .nullable(.int),
         "named": .named("a.one"),
         "parameter": .parameter(name: "T"),
-        "member": .member(of: "T", name: "Item"),
+        "associatedType": .associatedType(of: "T", name: "Item"),
         "composition": .composition(["a.five", "a.four"]),
         "projection": .projection(
             of: "a.fifteen",

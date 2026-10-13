@@ -173,8 +173,8 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
         case let .inout(inner):
             return .inout(renamed(inner, by: names))
 
-        case let .member(of, name):
-            return .member(of: names[of] ?? of, name: name)
+        case let .associatedType(of, name):
+            return .associatedType(of: names[of] ?? of, name: name)
 
         case .any, .never, .null, .bool, .int, .double, .string, .procedure(nil, _, _), .composition, .selfType,
             .projection:

@@ -71,7 +71,8 @@ public enum NameGrammar: Sendable {
     // Whether a name written here is one this grammar takes.
     public func holds(_ name: Name) -> Bool {
         switch self {
-        // `Self.Item` is a member of `Self`, so no type's name begins there.
+        // `Self.Item` is an associated type of `Self`, so no type's name
+        // begins there.
         case .type:
             return !NameGrammar.reserved.contains(name) && NameGrammar.joinsIdentifiers(name)
                 && !name.spelling.hasPrefix("\(TypeSpelling.selfType.spelling).")
@@ -123,7 +124,7 @@ public enum NameGrammar: Sendable {
         switch self {
         case .type, .mention, .contractMention, .claimedType:
             return "'\(name)' is no name a module gives a type or a contract: such a name is identifiers"
-                + " joined by dots, not beginning `Self.`, which writes a member of `Self`, and a word the"
+                + " joined by dots, not beginning `Self.`, which writes an associated type of `Self`, and a word the"
                 + " language writes itself (`Int`, `some`, `null` and the rest) is the language's"
 
         case .typeParameter:

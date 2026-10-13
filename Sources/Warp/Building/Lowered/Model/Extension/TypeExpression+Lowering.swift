@@ -16,8 +16,8 @@ extension TypeExpression {
     // table a host builds is held to the same judge; the load refuses the
     // third in a document, and an object writing it there reads it as
     // `Never`. `bounds` are what the signature this type is written in holds
-    // each type parameter and each member of one to, by its name, and
-    // `sameTypes` the members it says are a type.
+    // each type parameter and each associated type of one to, by its name,
+    // and `sameTypes` the associated types it says are a type.
     func lowered(
         in table: LoweredTypeTable,
         bounds: [Name: Set<Name>] = [:],
@@ -101,13 +101,13 @@ extension TypeExpression {
         case let .projection(of, path):
             return .projection(of: of, path: path)
 
-        // A member is a type parameter of its own, labelled as it is
+        // An associated type is a type parameter of its own, labelled as it is
         // written, which what fills its base decides. The contracts bounding
         // the base say what holds it, the signature may say more, and where
         // the signature says it is a type it is that type. One no contract
         // bounding the base asks stands for no type, which the build refuses
         // where it is written.
-        case let .member(of, name):
+        case let .associatedType(of, name):
             let label = name.spelled(under: of)
 
             if let same = sameTypes[label] {

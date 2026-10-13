@@ -522,8 +522,8 @@ struct ObjectReader {
         case .selfType:
             read = .selfType
 
-        case .member:
-            read = .member(of: try name(cursor.next()), name: try name(cursor.next()))
+        case .associatedType:
+            read = .associatedType(of: try name(cursor.next()), name: try name(cursor.next()))
 
         case nil:
             throw ObjectRefused("'type' names a kind this reads none of")

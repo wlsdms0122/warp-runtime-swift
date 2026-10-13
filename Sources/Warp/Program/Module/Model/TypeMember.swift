@@ -11,7 +11,7 @@ import Foundation
 // the name, and the type it is there, written in the head's own type
 // parameters, or a struct's where its declaration gives it. A contract asking
 // a type under that name is answered for the type by this, and a type
-// parameter the type fills reads it as its member, `some T.Item`.
+// parameter the type fills reads it as its associated type, `some T.Item`.
 public struct TypeMember: Sendable, Equatable {
     // MARK: - Property
     public let head: Head
@@ -19,7 +19,7 @@ public struct TypeMember: Sendable, Equatable {
     public let type: TypeExpression
 
     // The spelling one type member of a type takes: the type's name and its
-    // own, with a dot between them. One type gives one member under a name.
+    // own, with a dot between them. One type gives one type member under a name.
     public var spelling: Name { name.spelled(under: head.type) }
 
     // MARK: - Initializer

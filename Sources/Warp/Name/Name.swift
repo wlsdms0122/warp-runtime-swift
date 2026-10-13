@@ -92,11 +92,11 @@ public struct Name: Sendable, Hashable, Comparable, CustomStringConvertible {
         Name(normal: "\(owner.spelling).\(spelling)")
     }
 
-    // What a member's label, `T.Item`, is written under and the name it
+    // What an associated type's label, `T.Item`, is written under and the name it
     // takes there, read at its first dot, or nil where it writes none. A
-    // type parameter's name is one identifier, so its member's label is the
+    // type parameter's name is one identifier, so an associated type's label is the
     // one key of `bounds` and `sameTypes` with a dot.
-    package var memberOf: (of: Name, name: Name)? {
+    package var associated: (of: Name, name: Name)? {
         guard let dot = spelling.firstIndex(of: ".") else { return nil }
 
         return (

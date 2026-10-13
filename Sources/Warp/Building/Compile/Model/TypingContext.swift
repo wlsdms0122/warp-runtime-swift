@@ -56,11 +56,11 @@ struct TypingContext: Sendable {
     // `T` the caller filled, bound the way the declaration bound it.
     var bounds: [Name: Set<Name>] = [:]
 
-    // The members of its type parameters it says are a type, and each member
-    // it names as the procedure reads it, by label: what a member a call
+    // The associated types of its type parameters it says are a type, and
+    // each one it names as the procedure reads it, by label: what one a call
     // fills from one of its parameters reads as here.
     var sameTypes: [Name: TypeExpression] = [:]
-    var members: [Name: LoweredType] = [:]
+    var associatedTypes: [Name: LoweredType] = [:]
 
     // MARK: - Initializer
     // MARK: - Public
@@ -69,7 +69,7 @@ struct TypingContext: Sendable {
         var held = self
         held.bounds = signature.bounds
         held.sameTypes = signature.sameTypes
-        held.members = signature.loweredMembers(in: loweredTypes)
+        held.associatedTypes = signature.loweredAssociatedTypes(in: loweredTypes)
 
         return held
     }

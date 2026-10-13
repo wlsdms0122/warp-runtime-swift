@@ -540,7 +540,7 @@ struct TypeChecker {
             return .refusal(disagreement)
         }
 
-        if let refusal = substitution.memberRefusal(in: loweredTypes) {
+        if let refusal = substitution.associatedTypeRefusal(in: loweredTypes) {
             return .refusal(refusal)
         }
 
@@ -1092,8 +1092,8 @@ struct TypeChecker {
     // ask gathered the readings, and the filling is asked for lazily, so a
     // non-generic call never pays for it.
     // What a call puts in the type parameters a declaration names: what the
-    // arguments read each as, and each member of one as what fills its
-    // parameter gives under the member's name, a member of a parameter of the
+    // arguments read each as, and each associated type of one as what fills
+    // its parameter gives under its name, one of a parameter of the
     // procedure being read as that procedure reads it.
     private func filling(
         _ signature: Signature?,
@@ -1103,13 +1103,13 @@ struct TypeChecker {
     ) -> Substitution {
         var substitution = Substitution(filling: slots.map(\.type), against: readings, in: context.loweredTypes)
 
-        guard let signature, !signature.members.isEmpty else { return substitution }
+        guard let signature, !signature.associatedTypes.isEmpty else { return substitution }
 
         substitution.derive(
-            signature.members,
+            signature.associatedTypes,
             over: slots.map(\.type),
             said: signature.loweredSameTypes(in: context.loweredTypes),
-            reading: context.members,
+            reading: context.associatedTypes,
             in: context.loweredTypes
         )
 

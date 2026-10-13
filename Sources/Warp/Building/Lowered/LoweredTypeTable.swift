@@ -43,12 +43,12 @@ final class LoweredTypeTable: Sendable {
 
     // The types each declared contract asks, by the contract's spelling and
     // then the type's name, beside the contracts the contract holds each to,
-    // in name order. What a member of a type parameter the contract bounds
+    // in name order. What an associated type of a type parameter the contract bounds
     // is held to.
     let asking: [Name: [Name: [Name]]]
 
     // What each type gives under each name, by the type's name and the
-    // member's: what a member of a type parameter the type fills reads as,
+    // member's: what an associated type of a type parameter the type fills reads as,
     // where a claim within reach says the type answers a contract asking it.
     // Every type member of the link, since a type gives one member under a
     // name whichever document gave it.
@@ -339,7 +339,7 @@ final class LoweredTypeTable: Sendable {
         return nil
     }
 
-    // What a member under `name` of a type parameter bounded by `contracts`
+    // What an associated type `name` of a type parameter bounded by `contracts`
     // is held to: what each of them asking a type under the name holds it to,
     // or nil where none asks one.
     func bounds(of name: Name, askedBy contracts: some Collection<Name>) -> Set<Name>? {
@@ -350,16 +350,16 @@ final class LoweredTypeTable: Sendable {
         return Set(asking.joined())
     }
 
-    // What a member under `name` of a type parameter bounded by `contracts`
+    // What an associated type `name` of a type parameter bounded by `contracts`
     // reads as where `base` fills the parameter, or nil where nothing says.
-    // A type parameter's member is its own, held to what those contracts
+    // A type parameter's associated type is its own, held to what those contracts
     // hold it to; a reading of a type a value is an instance of gives the
     // type member under the name, where a claim within reach says the type
     // answers one of them asking it, filled by what the reading puts in the
     // head the member was given under. A value of a contract, of what may be
     // null, or of `Any`, is of no one type, and gives none; what holds no
     // value gives what holds none.
-    func member(_ name: Name, of base: LoweredType, among contracts: [Name]) -> LoweredType? {
+    func associatedType(_ name: Name, of base: LoweredType, among contracts: [Name]) -> LoweredType? {
         switch base {
         case .never:
             return .never
@@ -384,7 +384,7 @@ final class LoweredTypeTable: Sendable {
 
             var substitution = Substitution(filling: [head], against: [base], in: self)
 
-            substitution.derive(given.members, over: [head], in: self)
+            substitution.derive(given.associatedTypes, over: [head], in: self)
 
             return given.type.filling(substitution.readings)
         }
@@ -549,7 +549,7 @@ final class LoweredTypeTable: Sendable {
 
         // A head lowers against the rows, as a parameter written as it would,
         // and a type member against what the contracts ask, since it may
-        // name a member of one of its head's parameters.
+        // name an associated type of one of its head's parameters.
         let asking = contracts.mapValues { contract in
             contract.types.reduce(into: [Name: [Name]]()) { asked, name in
                 asked[name] = (contract.bounds[name] ?? []).sorted()

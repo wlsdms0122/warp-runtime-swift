@@ -393,7 +393,7 @@ public final class Linked: Sendable {
             against: values.map { value in LoweredType(of: value, in: table) },
             in: table
         )
-        let members = signature.members
+        let members = signature.associatedTypes
 
         // A member is what the type of the value at its parameter gives, so
         // a value at one is held to that type.
@@ -404,7 +404,7 @@ public final class Linked: Sendable {
                 substitution.disagreement(of: label, in: table)
             }
 
-            if let refusal = substitution.memberRefusal(in: table) ?? disagreeing.first {
+            if let refusal = substitution.associatedTypeRefusal(in: table) ?? disagreeing.first {
                 throw ArgumentError(refusal)
             }
         }

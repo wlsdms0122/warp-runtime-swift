@@ -148,8 +148,8 @@ struct Compiler {
 
             resolvedBodies[symbol.declared] = answer.procedure
 
-            // Judged as the declaration reads its own type parameters, since a
-            // member a call fills from one is the declaration's.
+            // Judged as the declaration reads its own type parameters, since an
+            // associated type a call fills from one is the declaration's.
             try TypeChecker().checked(answer.calls, in: context().bounding(answer.procedure.signature))
 
             // Lowered once every call in it passed the gate, so nothing

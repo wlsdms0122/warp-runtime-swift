@@ -1924,11 +1924,11 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .named(row, arguments):
             return .named(table.labels[row], arguments: arguments.map { argument in argument.spelled(in: table) })
 
-        // A member's label is the parameter's name and the member's.
+        // An associated type's label is the parameter's name and its own.
         case let .parameter(label, _):
-            guard let member = label.memberOf else { return .parameter(name: label) }
+            guard let member = label.associated else { return .parameter(name: label) }
 
-            return .member(of: member.of, name: member.name)
+            return .associatedType(of: member.of, name: member.name)
 
         case let .composition(names):
             return .composition(Set(names))

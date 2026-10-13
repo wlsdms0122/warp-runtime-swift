@@ -104,7 +104,7 @@ struct Substitution: Sendable {
             guard let base = readings[member.of] else { continue }
 
             guard
-                let derived = table.member(member.name, of: base, among: bases[member.of] ?? [])?
+                let derived = table.associatedType(member.name, of: base, among: bases[member.of] ?? [])?
                     .replacingParameters(reading)
             else {
                 ungiven[label] = (member.of, member.name, base)
@@ -141,12 +141,12 @@ struct Substitution: Sendable {
     // Why a member has no answer, or nil where every member read has one:
     // its base read as what gives it no type, or what fills its base giving
     // another type than the declaration says. Named in label order.
-    func memberRefusal(in table: LoweredTypeTable) -> String? {
+    func associatedTypeRefusal(in table: LoweredTypeTable) -> String? {
         if let ungiven = ungiven.sorted(by: { $0.key < $1.key }).first?.value {
             return "'\(ungiven.of)' is read as \(ungiven.base.rendered(in: table)), which gives no type"
-                + " '\(ungiven.name)' for `\(TypeExpression.member(of: ungiven.of, name: ungiven.name).rendered)`."
-                + " A member is what one type gives, where a claim within reach says it answers a contract"
-                + " asking it"
+                + " '\(ungiven.name)' for `\(TypeExpression.associatedType(of: ungiven.of, name: ungiven.name).rendered)`."
+                + " An associated type is what one type gives, where a claim within reach says it answers a"
+                + " contract asking it"
         }
 
         if let (label, unsame) = unsame.sorted(by: { $0.key < $1.key }).first {

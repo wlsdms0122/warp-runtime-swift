@@ -364,8 +364,8 @@ struct ObjectWriter {
         case .selfType:
             return tagged(Tag.selfType)
 
-        case let .member(of, member):
-            return tagged(Tag.member, name(of), name(member))
+        case let .associatedType(of, name):
+            return tagged(Tag.associatedType, self.name(of), self.name(name))
         }
     }
 

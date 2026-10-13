@@ -58,31 +58,31 @@ enum TypeContext: Sendable {
         }
     }
 
-    // Whether `some T.Item` may stand here: what fills `T` decides it. A
-    // struct's field writes none, since a value carries no type's arguments
-    // and a door reads what fills a struct's parameters off its fields, which
-    // `T.Item` says nothing of. A head writes none, since it is a type a value
-    // is an instance of.
-    var takesMember: Bool {
+    // Whether an associated type, `some T.Item`, may stand here: what fills
+    // `T` decides it. A struct's field writes none, since a value carries no
+    // type's arguments and a door reads what fills a struct's parameters off
+    // its fields, which `T.Item` says nothing of. A head writes none, since it
+    // is a type a value is an instance of.
+    var takesAssociatedType: Bool {
         switch self {
         case .signature, .closure, .contract, .typeMember: true
         case .struct, .head, .value: false
         }
     }
 
-    // Why a member does not stand here.
-    var refusesMember: String {
+    // Why an associated type does not stand here.
+    var refusesAssociatedType: String {
         switch self {
         case .struct:
-            "a struct's field writes no member of a type parameter. A value carries no type's arguments,"
-                + " so what fills a struct's parameters is read off its fields, and a member says nothing of"
-                + " its parameter"
+            "a struct's field writes no associated type of a type parameter. A value carries no type's"
+                + " arguments, so what fills a struct's parameters is read off its fields, and an associated"
+                + " type says nothing of its parameter"
 
         case .head:
-            "a head writes no member of a type parameter. A head is a type a value is an instance of"
+            "a head writes no associated type of a type parameter. A head is a type a value is an instance of"
 
         case .signature, .closure, .contract, .typeMember, .value:
-            "nothing here is filled by a call. A member stands on a type parameter of a signature"
+            "nothing here is filled by a call. An associated type stands on a type parameter of a signature"
         }
     }
 

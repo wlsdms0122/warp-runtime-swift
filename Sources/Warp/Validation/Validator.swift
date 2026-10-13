@@ -144,11 +144,11 @@ struct Validator: Sendable {
 
                 // `Self.Item` is a type this contract asks, since `Self` is
                 // whatever answers it.
-                if let unasked = asked.signature.members.values
+                if let unasked = asked.signature.associatedTypes.values
                     .filter({ member in member.of == TypeSpelling.selfType && !declared.types.contains(member.name) })
                     .map(\.name).sorted().first {
                     throw ValidationError(
-                        "writes `\(TypeExpression.member(of: TypeSpelling.selfType, name: unasked).rendered)`, and"
+                        "writes `\(TypeExpression.associatedType(of: TypeSpelling.selfType, name: unasked).rendered)`, and"
                             + " '\(contract)' asks no type '\(unasked)'. A contract's procedure names the types it asks",
                         at: place
                     )
@@ -1109,16 +1109,16 @@ struct Validator: Sendable {
         // A bound and a same type ride on a parameter some slot writes, or on
         // a member of one.
         let named = signature.parameterNames
-        let riding = named.union(signature.members.values.map(\.of))
-        let unwritten = signature.bounds.keys.filter { name in !riding.contains(name.memberOf?.of ?? name) }.sorted()
+        let riding = named.union(signature.associatedTypes.values.map(\.of))
+        let unwritten = signature.bounds.keys.filter { name in !riding.contains(name.associated?.of ?? name) }.sorted()
 
-        // What a member is, the procedure declaring its parameter says: a
+        // What an associated type is, the procedure declaring its parameter says: a
         // closure's are that procedure's, and a contract's procedure leaves
         // it to what answers the contract.
         if !signature.sameTypes.isEmpty, case .closure = context {
             throw ValidationError(
                 "a closure writes no same types. A closure's `some T` is the procedure's around it, which says"
-                    + " what its members are",
+                    + " what its associated types are",
                 at: place.part(.sameTypes)
             )
         }
@@ -1126,9 +1126,9 @@ struct Validator: Sendable {
         for (label, same) in signature.sameTypes.sorted(by: { one, other in one.key < other.key }) {
             let here = place.part(.sameTypes).key(label.spelling)
 
-            guard let member = label.memberOf else {
+            guard let member = label.associated else {
                 throw ValidationError(
-                    "says '\(label)' is a type, and a same type is said of a member of a type parameter,"
+                    "says '\(label)' is a type, and a same type is said of an associated type of a type parameter,"
                         + " `T.Item`. A type parameter is filled by a call",
                     at: here
                 )
@@ -1147,10 +1147,10 @@ struct Validator: Sendable {
             try marked(same, at: here)
             try written(same, in: context, at: here)
 
-            if let said = same.members.keys.sorted().first(where: { key in signature.sameTypes[key] != nil }) {
+            if let said = same.associatedTypes.keys.sorted().first(where: { key in signature.sameTypes[key] != nil }) {
                 throw ValidationError(
                     "says '\(label)' is `\(same.rendered)`, which writes '\(said)', and says '\(said)' is a type"
-                        + " too. A same type says what a member is in one step",
+                        + " too. A same type says what an associated type is in one step",
                     at: here
                 )
             }
@@ -1178,14 +1178,14 @@ struct Validator: Sendable {
                 )
             }
 
-            // A member is what the type filling its parameter gives, so the
-            // parameter itself stands where a call fills it.
-            if let (label, member) = signature.members.sorted(by: { one, other in one.key < other.key })
+            // An associated type is what the type filling its parameter
+            // gives, so the parameter itself stands where a call fills it.
+            if let (label, member) = signature.associatedTypes.sorted(by: { one, other in one.key < other.key })
                 .first(where: { _, member in member.of != TypeSpelling.selfType && !taken.contains(member.of) }) {
                 throw ValidationError(
-                    "writes `\(TypeExpression.member(of: member.of, name: member.name).rendered)`, and no parameter"
-                        + " writes `\(TypeExpression.parameter(name: member.of).rendered)`. A member '\(label)' is"
-                        + " what the type filling its parameter gives, so one whose parameter no call fills is"
+                    "writes `\(TypeExpression.associatedType(of: member.of, name: member.name).rendered)`, and no parameter"
+                        + " writes `\(TypeExpression.parameter(name: member.of).rendered)`. The associated type '\(label)'"
+                        + " is what the type filling its parameter gives, so one whose parameter no call fills is"
                         + " filled by nothing",
                     at: place
                 )
@@ -1265,9 +1265,9 @@ struct Validator: Sendable {
                 )
             }
 
-        // A member is filled by what fills the parameter it is a member of,
-        // `Self` where a contract's procedure writes it.
-        case let .member(of, name):
+        // An associated type is filled by what fills the parameter it is
+        // one of, `Self` where a contract's procedure writes it.
+        case let .associatedType(of, name):
             try held(name, as: .typeMember, at: place)
 
             guard of != TypeSpelling.selfType else {
@@ -1282,9 +1282,9 @@ struct Validator: Sendable {
                 return
             }
 
-            guard context.takesMember else {
+            guard context.takesAssociatedType else {
                 throw ValidationError(
-                    "writes `\(type.rendered)`, and \(context.refusesMember)",
+                    "writes `\(type.rendered)`, and \(context.refusesAssociatedType)",
                     at: place
                 )
             }
@@ -1448,10 +1448,11 @@ struct Validator: Sendable {
         throw ValidationError(grammar.refusal(of: name), at: place)
     }
 
-    // A key of `bounds` or `sameTypes`: a type parameter's name, or a member
-    // of one, the parameter's name and the member's with a dot between them.
+    // A key of `bounds` or `sameTypes`: a type parameter's name, or an
+    // associated type of one, the parameter's name and the associated
+    // type's with a dot between them.
     private func held(key: Name, at place: Place) throws {
-        guard let member = key.memberOf else {
+        guard let member = key.associated else {
             return try held(key, as: .typeParameter, at: place)
         }
 

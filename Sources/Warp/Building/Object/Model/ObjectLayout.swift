@@ -81,7 +81,7 @@ enum ObjectLayout {
         case composition
         case projection
         case selfType
-        case member
+        case associatedType
     }
 
     enum SegmentTag: Int {

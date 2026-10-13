@@ -268,16 +268,16 @@ struct DeclarationChecker {
 
         try judge(bounds: signature.bounds, at: { parameter in place.part(.bounds).key(parameter.spelling) }, in: table)
 
-        // A member the signature bounds or says is a type is one a contract
-        // bounding its parameter asks, and the type it is said to be answers
-        // what holds the member, as a type a call fills it with would.
+        // An associated type the signature bounds or says is a type is one a
+        // contract bounding its parameter asks, and the type it is said to be
+        // answers what holds it, as a type a call fills it with would.
         for label in Set(signature.bounds.keys).union(signature.sameTypes.keys).sorted() {
-            guard let member = label.memberOf else { continue }
+            guard let member = label.associated else { continue }
 
             let at = place.part(signature.sameTypes[label] != nil ? .sameTypes : .bounds).key(label.spelling)
 
             try mentioned(
-                in: .member(of: member.of, name: member.name),
+                in: .associatedType(of: member.of, name: member.name),
                 at: at,
                 bounds: signature.bounds,
                 resolve: table,
@@ -297,7 +297,7 @@ struct DeclarationChecker {
                 answering: answering
             )
 
-            guard answering, let member = label.memberOf else { continue }
+            guard answering, let member = label.associated else { continue }
 
             let types = table.loweredTypes
             let held = types.bounds(of: member.name, askedBy: signature.bounds[member.of] ?? [])?
@@ -386,16 +386,16 @@ struct DeclarationChecker {
         case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
             return
 
-        // A member is a type a contract bounding its parameter asks, `Self`
-        // in a contract's procedures being bounded by that contract.
-        case let .member(of, name):
+        // An associated type is one a contract bounding its parameter asks,
+        // `Self` in a contract's procedures being bounded by that contract.
+        case let .associatedType(of, name):
             guard table.loweredTypes.bounds(of: name, askedBy: bounds[of] ?? []) != nil else {
                 let bounding = (bounds[of] ?? []).sorted().map(\.spelling).joined(separator: " & ")
 
                 throw BuildError(
                     "writes `\(type.rendered)`, and "
                         + (bounding.isEmpty ? "no contract bounds '\(of)'" : "'\(of)' is bounded by \(bounding)")
-                        + ", which asks no type '\(name)'. A member is a type a contract bounding its parameter asks",
+                        + ", which asks no type '\(name)'. An associated type is one a contract bounding its parameter asks",
                     at: place
                 )
             }

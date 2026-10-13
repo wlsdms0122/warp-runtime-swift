@@ -16,9 +16,9 @@ struct LoweredTypeMember: Sendable {
     let head: LoweredType?
     let type: LoweredType
 
-    // The members of the head's type parameters the type names, by label,
+    // The associated types of the head's type parameters the type names, by label,
     // which what fills those parameters decides.
-    let members: [Name: (of: Name, name: Name)]
+    let associatedTypes: [Name: (of: Name, name: Name)]
 
     // MARK: - Initializer
     // `head` is what the member was given under, applied to its type's own
@@ -26,7 +26,7 @@ struct LoweredTypeMember: Sendable {
     init(_ member: TypeExpression, under head: Head, in table: LoweredTypeTable) {
         self.head = head.lowered(in: table)
         self.type = member.lowered(in: table, bounds: head.bounds)
-        self.members = member.members
+        self.associatedTypes = member.associatedTypes
     }
 
     // MARK: - Public

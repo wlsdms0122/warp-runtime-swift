@@ -123,7 +123,7 @@ struct TypeWriter {
         case let .parameter(name):
             return .string("\(TypeSpelling.some) \(name)")
 
-        case .member:
+        case .associatedType:
             return .string(type.rendered)
 
         case let .composition(names):
