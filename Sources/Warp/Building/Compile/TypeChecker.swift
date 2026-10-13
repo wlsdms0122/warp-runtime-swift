@@ -556,7 +556,9 @@ struct TypeChecker {
             }
         }
 
-        for (parameter, names) in bounds {
+        // A derived associated type is one type, what fills its base gives,
+        // so the values read at it do not make it several types.
+        for (parameter, names) in bounds where !substitution.derived.contains(parameter) {
             if let refusal = substitution.severalTypes(
                 of: parameter,
                 bounds: names,

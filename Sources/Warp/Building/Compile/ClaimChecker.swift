@@ -314,6 +314,24 @@ struct ClaimChecker {
             readingSelf[name.spelled(under: TypeSpelling.selfType)] = read
         }
 
+        // One standing on a type the contract asks, `Self.Item.Key`, is what
+        // that type gives under its name, derived as a call through the
+        // contract derives it.
+        let standingOnAsked = asked.held.procedures.values.reduce(into: [Name: (of: Name, name: Name)]()) { found, wanted in
+            found.merge(wanted.signature.read(of: contract).associatedTypes) { first, _ in first }
+        }
+
+        if standingOnAsked.keys.contains(where: { label in readingSelf[label] == nil }) {
+            var substitution = Substitution(
+                filling: [.parameter(label: TypeSpelling.selfType, bounds: [contract])],
+                against: [values],
+                in: loweredTypes
+            )
+
+            substitution.derive(standingOnAsked, bounds: [TypeSpelling.selfType: [contract]], in: loweredTypes)
+            readingSelf.merge(substitution.readings) { known, _ in known }
+        }
+
         for (procedure, wanted) in asked.held.procedures.sorted(by: { $0.key < $1.key }) {
             let spelling = procedure.spelled(under: type)
 

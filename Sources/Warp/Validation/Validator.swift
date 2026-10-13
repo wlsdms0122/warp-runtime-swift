@@ -277,6 +277,26 @@ struct Validator: Sendable {
             }
         }
 
+        // One type gives one type member under a name, so a document gives
+        // it under one head.
+        var given: [Name: Head] = [:]
+
+        for (head, types) in module.typeMembers.sorted(by: { one, other in one.key < other.key }) {
+            for name in types.keys.sorted() {
+                let spelling = name.spelled(under: head.type)
+
+                if let first = given[spelling] {
+                    throw ValidationError(
+                        "gives '\(head.spelling)' the type member '\(name)', and gives '\(first.spelling)' it too."
+                            + " One type gives one type member under a name",
+                        at: .typeMember(TypeMember(head: head, name: name, type: types[name] ?? .any), in: module.document)
+                    )
+                }
+
+                given[spelling] = head
+            }
+        }
+
         // A member is named by one identifier, since a call spells it after
         // its type's name and a dot. Under a head applying its type, a member
         // is there for the values the head takes, and a call says which by

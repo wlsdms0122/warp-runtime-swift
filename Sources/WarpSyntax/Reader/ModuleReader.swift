@@ -53,7 +53,6 @@ public struct ModuleReader: Decodable {
         var claims: [Head: Set<Name>] = [:]
         var members: [Head: Set<Name>] = [:]
         var typeMembers: [Head: [Name: TypeExpression]] = [:]
-        var givenTypes: Set<Name> = []
 
         // An extension's key is a head: the type, and what it is applied to
         // where what it gives holds for some of the type's values. A struct
@@ -117,21 +116,6 @@ public struct ModuleReader: Decodable {
 
             if !memberTypes.isEmpty {
                 typeMembers[head] = memberTypes
-            }
-
-            for member in memberTypes.keys.sorted() {
-                let spelling = member.spelled(under: head.type)
-
-                guard givenTypes.insert(spelling).inserted else {
-                    throw ReadingError(
-                        "gives '\(head.spelling)' the type member '\(member)', and '\(spelling)' is given"
-                            + " once already in this document",
-                        at: steps + [
-                            .key(ExtensionReader.CodingKeys.types.rawValue),
-                            .key(member.spelling)
-                        ]
-                    )
-                }
             }
 
             for (member, procedure) in memberProcedures.sorted(by: { $0.key < $1.key }) {
