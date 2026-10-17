@@ -298,10 +298,11 @@ struct Validator: Sendable {
         }
 
         // A member is named by one identifier, since a call spells it after
-        // its type's name and a dot. Under a head applying its type, a member
-        // is there for the values the head takes, and a call says which by
-        // the value it hands first, so the member takes that value first,
-        // written as the head is.
+        // its type's name and a dot. A member is there for the values its head
+        // takes, and a call says which by the value it hands first, so the
+        // member takes a value of its type first: written as the head is
+        // under a head applying the type, and the type under its bare name. A
+        // procedure that takes none is no member of the type.
         for (head, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
             for member in members.sorted() {
                 let spelling = member.spelled(under: head.type)
@@ -316,9 +317,20 @@ struct Validator: Sendable {
                     )
                 }
 
-                guard let mention = head.mention else { continue }
-
                 let first = procedure.signature.parameters.first?.type.slotUnwrapped
+
+                guard let mention = head.mention else {
+                    guard let first, Self.instance(of: first) == head.type else {
+                        throw ValidationError(
+                            "gives '\(head.spelling)' the member '\(member)', which takes \(first?.rendered ?? "nothing") first."
+                                + " A member takes a value of its type first, and a procedure that takes none"
+                                + " is declared under `procedures` as '\(spelling)'",
+                            at: place.part(.parameters)
+                        )
+                    }
+
+                    continue
+                }
 
                 guard first == mention else {
                     throw ValidationError(
@@ -343,6 +355,22 @@ struct Validator: Sendable {
         // Last, so a module whose declarations refuse is refused for them
         // before its list.
         try declared(module)
+    }
+
+    // The type a value of this is an instance of, by name: what a bare head
+    // names. A type naming no such type answers nil.
+    private static func instance(of type: TypeExpression) -> Name? {
+        switch type {
+        case .null: TypeSpelling.null
+        case .bool: TypeSpelling.bool
+        case .int: TypeSpelling.int
+        case .double: TypeSpelling.double
+        case .string: TypeSpelling.string
+        case .array: TypeSpelling.array
+        case .dictionary: TypeSpelling.dictionary
+        case let .named(name, _): name
+        default: nil
+        }
     }
 
     // Whether a declared name that is no struct comes back to itself through
