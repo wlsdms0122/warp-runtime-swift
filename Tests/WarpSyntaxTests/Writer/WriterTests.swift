@@ -405,9 +405,9 @@ struct WriterTests {
                                     ]]
                                 ]
                             ]
-                        ]],
-                        ["value": ["return": "done"]]
-                    ]
+                        ]]
+                    ],
+                    "result": "done"
                 ]
             ]
         ],

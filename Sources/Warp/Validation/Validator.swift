@@ -565,6 +565,7 @@ struct Validator: Sendable {
             ),
             at: place
         )
+        try answersOneWay(block, at: place)
     }
 
     // A native procedure reads its arguments at the places its own keys stand at,
@@ -880,6 +881,7 @@ struct Validator: Sendable {
                 scope: scope.enclosed(taking: parameters),
                 at: inside
             )
+            try answersOneWay(block, at: inside)
 
         case let .apply(callee, arguments):
             try held(callee, asOperand: place.child(.callee))
@@ -1097,6 +1099,22 @@ struct Validator: Sendable {
                 at: place
             )
         }
+    }
+
+    // A procedure's own body says what it answers one way: a `return` ending it
+    // answers what a `result` would, and one program has one text.
+    private func answersOneWay(_ block: Block, at place: Place) throws {
+        guard
+            let last = block.body.statements.last,
+            case let .leave(leave) = last.expression,
+            leave.reach == .procedure
+        else { return }
+
+        throw ValidationError(
+            "ends its body with 'return', which answers what 'result' does. A body says what it"
+                + " answers one way: under 'result'",
+            at: place.child(.body).statement(last, at: block.body.statements.count - 1)
+        )
     }
 
     private func validate(

@@ -483,7 +483,9 @@ struct PlaceTests {
                         parameters: [Parameter(name: "message", type: .string)],
                         returns: .never
                     ),
-                    body: [Statement(expression: .leave(Leave(reach: .procedure)))]
+                    body: [
+                        Statement(expression: .call(Call(selector: "Standard.Control.abort", arguments: [reference("message")])))
+                    ]
                 )
             ]
         )

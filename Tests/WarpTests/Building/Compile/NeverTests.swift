@@ -71,20 +71,20 @@ struct NeverTests {
 
     @Test("a body that ends by leaving still carries its folded constant")
     func aLeavingBodyKeepsItsFolding() async throws {
-        // Given. The image holds only judged spellings, and a body whose last
-        // statement leaves is still a body the image holds: the constant it
-        // carries out folds like any other
+        // Given. The image holds only judged spellings, and a body every way
+        // through which leaves is still a body the image holds: the constant
+        // it carries out folds like any other
         let sut = try Module(
             constants: ["C": .literal(.int(7))],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(
-                            expression: .leave(
-                                Leave(reach: .procedure, value: .reference([.name("C")]))
-                            )
-                        )
+                        Statement(expression: .conditional(
+                            .literal(.bool(true)),
+                            then: [Statement(expression: .leave(Leave(reach: .procedure, value: .reference([.name("C")]))))],
+                            else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(0)))))]
+                        ))
                     ]
                 )
             ]
@@ -101,14 +101,16 @@ struct NeverTests {
         let sut = Procedure(
             body: [
                 Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
-                Statement(
-                    expression: .leave(
-                        Leave(
+                Statement(expression: .conditional(
+                    .literal(.bool(true)),
+                    then: [
+                        Statement(expression: .leave(Leave(
                             reach: .procedure,
                             value: .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
-                        )
-                    )
-                )
+                        )))
+                    ],
+                    else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(0)))))]
+                ))
             ]
         )
 

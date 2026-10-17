@@ -296,7 +296,8 @@ struct LeaveTests {
                                 "procedure": [
                                     "closure": [
                                         "returns": "String",
-                                        "body": [["value": ["return": "from the closure"]]]
+                                        "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the closure"]]]]]]],
+                                        "result": "not reached"
                                     ]
                                 ]
                             ]
@@ -306,7 +307,8 @@ struct LeaveTests {
                 ],
                 "helper": [
                     "returns": "String",
-                    "body": [["value": ["return": "from the procedure"]]]
+                    "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the procedure"]]]]]]],
+                    "result": "not reached"
                 ]
             ]
         ])
