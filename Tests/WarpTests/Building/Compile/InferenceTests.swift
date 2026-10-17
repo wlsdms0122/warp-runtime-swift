@@ -1068,40 +1068,6 @@ struct InferenceTests {
         }
     }
 
-    @Test("naming a step of a path through a parameter does not change what it means")
-    func aParameterPathSurvivesBeingNamed() async throws {
-        // Given. `of.a.b` in one statement stands, so `x = of.a` then `x.b`
-        // must stand too. Folding the parameter walk's reading to `Any` made
-        // the second refuse on a type the author never wrote
-        let sut = try Module(
-            types: ["App.Outer": .struct(["a": .named("App.Inner")]), "App.Inner": .struct(["b": .string])],
-            procedures: [
-                "peek": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "of", type: .parameter(name: "T"))],
-                        returns: .any
-                    ),
-                    body: [
-                        Statement(binding: .constant("held"), expression: .reference([.name("of"), .name("a")]))
-                    ],
-                    result: .reference([.name("held"), .name("b")])
-                ),
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(returns: .any),
-                    body: [],
-                    result: .call(Call(
-                        selector: "peek",
-                        arguments: [.cast(.struct(["a": .struct(["b": .literal(.string("deep"))])]), as: .named("App.Outer"), optional: false)]
-                    ))
-                )
-            ]
-        )
-
-        // When / Then
-        #expect(try await run(sut) == .string("deep"))
-    }
-
     @Test("a constant folded before any run may hold a cast")
     func aConstantMayHoldACast() async throws {
         // Given. The build calls a cast const, so the const evaluator has to be

@@ -1317,17 +1317,6 @@ struct Validator: Sendable {
                 try held(name, as: .contractMention, at: place)
             }
 
-        // The build's own note to itself: a type it read out of a body, which
-        // nobody declared and no document spells.
-        case let .projection(of, path):
-            throw ValidationError(
-                "writes `\(type.rendered)`, which is a type the build"
-                    + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.name(of)] + path.segments).rendered)` is a path"
-                    + " only that body can read",
-                at: place
-            )
-
         case .selfType:
             guard context.takesSelf else {
                 throw ValidationError(

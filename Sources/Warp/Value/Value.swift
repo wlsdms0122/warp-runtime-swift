@@ -840,7 +840,7 @@ public indirect enum Value: Sendable, Equatable {
 
             return .struct(instance.writing(at: position, with: written))
 
-        // A field by its name, of a struct a call decides.
+        // A field by its name, where the build laid out no struct.
         case let (.struct(instance), .name(name)):
             guard let field = instance[name] else {
                 throw ExecutionError("'\(rendered)' writes '\(name)' past the fields this struct holds")

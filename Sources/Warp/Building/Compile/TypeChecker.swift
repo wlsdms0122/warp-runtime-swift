@@ -671,9 +671,9 @@ struct TypeChecker {
                 // Three types stop a walk, and they stop it for three
                 // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
-                // proves at this site: `Any` declares nothing and never will, a
-                // type parameter's type is declared at the call, and `Never`
-                // declares a value that does not arrive at all.
+                // proves at this site: `Any` and a type parameter declare
+                // nothing here, and `Never` declares a value that does not
+                // arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
                 // ever be proven, and a dot the build cannot judge is the one
@@ -695,20 +695,20 @@ struct TypeChecker {
                     )
                 }
 
-                // A type parameter is declared at the call, so the segments
-                // stand as written and the call's type answers them. The
-                // reading is what the parameter's type reaches through them,
-                // neither `Any` nor the parameter itself, so a body naming a
-                // step on the way (`held = of.inner`, then `held.count`) reads
-                // the same field.
-                if let reached = current.projecting(along: rest()) {
-                    switch asWritten(rest(), in: environment, with: context, at: place) {
-                    case let .refused(reason):
-                        return .refused(reason)
-
-                    case let .reads(_, standing):
-                        return .reads(reached, placed: placed.appending(contentsOf: standing))
+                // A type parameter is one type the body does not know, so it
+                // declares nothing here either. What the type gives is asked
+                // of a contract it answers, which a claim backs.
+                if case .parameter = current {
+                    let reach = switch segment {
+                    case .name: "reads a dot on"
+                    case .index, .indexRef: "indexes into"
                     }
+
+                    return .refused(
+                        "\(walked.rendered) \(reach) \(current.rendered(in: context.loweredTypes)),"
+                            + " a type the call decides, which declares nothing here."
+                            + " What a type gives is asked through a contract it answers"
+                    )
                 }
 
                 // Nothing arrives to be read, so there is nothing to judge and

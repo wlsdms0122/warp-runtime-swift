@@ -355,9 +355,6 @@ struct ObjectWriter {
         case let .parameter(spelling):
             return tagged(Tag.parameter, name(spelling))
 
-        case let .projection(of: read, path: path):
-            return tagged(Tag.projection, name(read), try self.path(path))
-
         case let .composition(names):
             return tagged(Tag.composition, .array(names.sorted().map(name)))
 
@@ -366,25 +363,6 @@ struct ObjectWriter {
 
         case let .associatedType(of, name):
             return tagged(Tag.associatedType, self.name(of), self.name(name))
-        }
-    }
-
-    private func path(_ path: Path) throws(ObjectUnwritable) -> Value {
-        .array(try path.segments.map(segment))
-    }
-
-    private func segment(_ segment: PathSegment) throws(ObjectUnwritable) -> Value {
-        typealias Tag = ObjectLayout.SegmentTag
-
-        switch segment {
-        case let .name(spelling, optional):
-            return tagged(Tag.name, name(spelling), .bool(optional))
-
-        case let .index(index, optional):
-            return tagged(Tag.index, try value(index), .bool(optional))
-
-        case let .indexRef(path, optional):
-            return tagged(Tag.indexRef, try self.path(path), .bool(optional))
         }
     }
 
@@ -558,9 +536,6 @@ struct ObjectWriter {
 
         case let .composition(bounds):
             return tagged(Tag.composition, .array(bounds.sorted().map(name)))
-
-        case let .projection(of: read, path: path):
-            return tagged(Tag.projection, name(read), try self.path(path))
         }
     }
 

@@ -386,7 +386,7 @@ struct DeclarationChecker {
         }
 
         switch type {
-        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter, .projection:
+        case .any, .never, .null, .bool, .int, .double, .string, .selfType, .parameter:
             return
 
         // An associated type is one a contract bounding what it stands on

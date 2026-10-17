@@ -58,13 +58,6 @@ indirect enum LoweredType: Sendable, Hashable {
     // bounds.
     case composition([Name])
 
-    // The type a walk reached by taking a path through one a call decides.
-    // The root is the type parameter's spelling and the path is what was
-    // walked from it, so two walks landing on one field land on one type.
-    // Nothing is proven about what it holds, so every judgement answers it the
-    // way it answers `Any`; it stands apart for the walk's own naming.
-    case projection(of: Name, path: Path)
-
     // MARK: - Property
     // What a field a declaration wrote `var` holds. The mark is a fact about
     // the field, and what is read out of it is the type inside.
@@ -78,7 +71,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .struct, .procedure, .inout, .nullable,
-            .named, .parameter, .composition, .projection:
+            .named, .parameter, .composition:
             return self
         }
     }
@@ -119,7 +112,7 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .named(_, arguments):
             return arguments.contains(where: \.namesParameter)
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition:
             return false
         }
     }
@@ -147,7 +140,7 @@ indirect enum LoweredType: Sendable, Hashable {
                 found.merge(argument.typeParameters) { first, _ in first }
             }
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition:
             return [:]
         }
     }
@@ -161,7 +154,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
             .array, .dictionary, .struct, .procedure, .nullable,
-            .named, .parameter, .composition, .projection:
+            .named, .parameter, .composition:
             return self
         }
     }
@@ -224,7 +217,7 @@ indirect enum LoweredType: Sendable, Hashable {
     // Whether what this stands for is decided at the call.
     var decidedAtCall: Bool {
         switch self {
-        case .parameter, .projection:
+        case .parameter:
             return true
 
         default:
@@ -268,7 +261,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return .named(row, arguments: arguments.map(\.asHeld))
 
         case .any, .never, .null, .bool, .int, .double, .string, .struct, .procedure, .variable, .inout,
-            .parameter, .composition, .projection:
+            .parameter, .composition:
             return self
         }
     }
@@ -299,7 +292,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return .named(row, arguments: arguments.map(\.boxed))
 
         case .any, .never, .null, .bool, .int, .double, .string, .struct, .variable, .inout,
-            .parameter, .composition, .projection:
+            .parameter, .composition:
             return self
         }
     }
@@ -324,12 +317,12 @@ indirect enum LoweredType: Sendable, Hashable {
         .array([]), .dictionary([:]), .bytes([])
     ]
 
-    // Whether a value of any type passes this as it is: nothing declared,
-    // a type parameter no bound holds, or a path a call decides. Settling
+    // Whether a value of any type passes this as it is: nothing declared, or
+    // a type parameter no bound holds. Settling
     // against one says nothing, so what holds it need not be walked.
     var passesEverything: Bool {
         switch self {
-        case .any, .projection, .parameter(_, bounds: []):
+        case .any, .parameter(_, bounds: []):
             return true
 
         default:
@@ -612,30 +605,8 @@ indirect enum LoweredType: Sendable, Hashable {
 
             return table.loweredTypes[row].carriesProcedureTakingInPlace(in: table, walked: walked.union([row]))
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition, .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .parameter, .composition:
             return false
-        }
-    }
-
-    // What a walk through this type reaches by taking those segments. Nil
-    // where this is not a type a call decides, which is where a walk has a
-    // type to read the segments against and no need for one of these.
-    //
-    // A parameter roots a projection at itself, and a projection already
-    // rooted extends the path it carries.
-    //
-    // The marks come off on the way in: what a mark says is expected of the
-    // value, and where the walk landed is the same field either way.
-    func projecting(along path: Path) -> LoweredType? {
-        switch self {
-        case let .parameter(name, _):
-            return .projection(of: name, path: path.unmarked)
-
-        case let .projection(of, walked):
-            return .projection(of: of, path: walked.appending(contentsOf: path.unmarked.segments))
-
-        default:
-            return nil
         }
     }
 
@@ -888,7 +859,7 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .variable(inner), let .inout(inner):
             return inner.nominal(in: table)
 
-        case .any, .never, .nullable, .parameter, .composition, .projection:
+        case .any, .never, .nullable, .parameter, .composition:
             return nil
         }
     }
@@ -950,8 +921,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
         // A composition takes what answers each of its contracts, asked of
         // the table knowing, where the slot takes null as well, that it does.
-        // A value read as `Any` or along a path a call decides answers none
-        // until a cast says what it is.
+        // A value read as `Any` answers none until a cast says what it is.
         case let (.composition(bounds), _), let (.nullable(.composition(bounds)), _):
             let orNull = if case .nullable = self { true } else { false }
 
@@ -965,10 +935,10 @@ indirect enum LoweredType: Sendable, Hashable {
         case let (_, .variable(inner)), let (_, .inout(inner)):
             return accepts(inner, in: table)
 
-        case (.any, _), (.projection, _):
+        case (.any, _):
             return true
 
-        case (_, .any), (_, .projection), (_, .composition):
+        case (_, .any), (_, .composition):
             return false
 
         case (.never, _):
@@ -1291,13 +1261,6 @@ indirect enum LoweredType: Sendable, Hashable {
             case let .parameter(name, _):
                 return (filled[name] ?? .any).asHeld
 
-            // Nothing fills a walk through a parameter. It is named for a path
-            // only the body that wrote it can read, and no call site says
-            // anything about that. So the caller reads what a declaration
-            // saying nothing says.
-            case .projection:
-                return .any
-
             default:
                 return nil
             }
@@ -1322,7 +1285,7 @@ indirect enum LoweredType: Sendable, Hashable {
         switch self {
         // A type parameter or a contract stands for whichever type fills or
         // answers it, `Procedure` among them.
-        case .procedure, .any, .never, .parameter, .composition, .projection:
+        case .procedure, .any, .never, .parameter, .composition:
             return true
 
         case let .nullable(inner), let .variable(inner), let .inout(inner):
@@ -1383,7 +1346,7 @@ indirect enum LoweredType: Sendable, Hashable {
         // Every case that stands on no row, listed rather than let through:
         // a case added here has to say whether it holds one.
         case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string,
-            .parameter, .composition, .projection:
+            .parameter, .composition:
             return self
         }
     }
@@ -1396,7 +1359,7 @@ indirect enum LoweredType: Sendable, Hashable {
     // than the whole argument.
     func settling(_ value: Value, at path: @autoclosure () -> String, in table: LoweredTypeTable) throws -> Value {
         switch self {
-        case .any, .projection:
+        case .any:
             return value
 
         // Both ask the contracts and neither settles: a value stands as what
@@ -1576,7 +1539,7 @@ indirect enum LoweredType: Sendable, Hashable {
     // `settling` says one byte at a time, and a test holds the two together.
     func holdsEveryByte(in table: LoweredTypeTable) -> Bool {
         switch self {
-        case .any, .projection, .int, .wholeLiteral:
+        case .any, .int, .wholeLiteral:
             return true
 
         case let .variable(inner), let .inout(inner), let .nullable(inner):
@@ -1611,10 +1574,6 @@ indirect enum LoweredType: Sendable, Hashable {
         switch self {
         case .any:
             return TypeSpelling.any.spelling
-
-        // Spelled as `TypeExpression` spells it, for the message alone.
-        case let .projection(of, path):
-            return "\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)"
 
         case .never:
             return TypeSpelling.never.spelling
@@ -1883,9 +1842,6 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case let .composition(names):
             return .composition(Set(names))
-
-        case let .projection(of, path):
-            return .projection(of: of, path: path)
         }
     }
 
@@ -1935,9 +1891,6 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case let (.composition(mine), .composition(theirs)):
             return mine == theirs
-
-        case let (.projection(myRoot, myPath), .projection(theirRoot, theirPath)):
-            return myRoot == theirRoot && myPath == theirPath
 
         default:
             return false
@@ -2011,8 +1964,7 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .named(row, arguments):
             return .named(row, arguments: arguments.map { argument in argument.replacing(replaced) })
 
-        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .parameter,
-            .projection:
+        case .any, .never, .null, .bool, .int, .wholeLiteral, .double, .string, .struct, .composition, .parameter:
             return self
         }
     }
@@ -2038,7 +1990,6 @@ indirect enum LoweredType: Sendable, Hashable {
         case .named: 15
         case .parameter: 16
         case .composition: 17
-        case .projection: 18
         }
     }
 

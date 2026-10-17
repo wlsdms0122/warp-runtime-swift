@@ -513,12 +513,6 @@ struct ObjectReader {
 
             read = .composition(Set(names))
 
-        case .projection:
-            read = .projection(
-                of: try name(cursor.next()),
-                path: try path(cursor.next())
-            )
-
         case .selfType:
             read = .selfType
 
@@ -544,32 +538,6 @@ struct ObjectReader {
 
     private func text(_ value: Value) throws -> String {
         try Field(value, of: "a text").text()
-    }
-
-    private func path(_ value: Value) throws -> Path {
-        Path(try Field(value, of: "path").list(segment))
-    }
-
-    private func segment(_ value: Value) throws -> PathSegment {
-        var cursor = try FieldCursor(value, of: "path segment")
-        let read: PathSegment
-
-        switch ObjectLayout.SegmentTag(rawValue: try cursor.field().integer()) {
-        case .name: read = .name(try name(cursor.next()), optional: try cursor.field().flag())
-        case .index: read = .index(try self.value(cursor.next()), optional: try cursor.field().flag())
-        case .indexRef:
-            read = .indexRef(
-                try path(cursor.next()),
-                optional: try cursor.field().flag()
-            )
-
-        case nil:
-            throw ObjectRefused("'path segment' steps in a way this reads none of")
-        }
-
-        try cursor.end()
-
-        return read
     }
 
     private func contractProcedure(_ value: Value) throws -> ContractProcedure {
@@ -797,12 +765,6 @@ struct ObjectReader {
             }
 
             read = .composition(bounds)
-
-        case .projection:
-            read = .projection(
-                of: try name(cursor.next()),
-                path: try path(cursor.next())
-            )
 
         case nil: throw ObjectRefused("'lowered type' names a kind this reads none of")
         }

@@ -232,30 +232,6 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("a type read out of a body is no declaration anybody can write")
-    func aProjectionIsRefusedWhereADeclarationGoes() throws {
-        // When / Then. A declaration assembled in the host claiming what only
-        // a walk produces: a declaration says what a call fills, and nothing
-        // fills a path only one body can read
-        #expect {
-            try Module(
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(
-                            parameters: [Parameter(name: "of", type: .projection(of: "T", path: [.name("inner")]))]
-                        ),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
-                && "\(error)".contains("read out of a body")
-        }
-    }
-
     // MARK: - Public
     // MARK: - Private
 }

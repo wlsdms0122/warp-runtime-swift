@@ -425,7 +425,7 @@ final class LoweredTypeTable: Sendable {
             return true
 
         // A procedure answers no contract: no claim is about one.
-        case .any, .projection, .procedure:
+        case .any, .procedure:
             return false
 
         // A parameter stands for whatever fills it, and a call fills it with
