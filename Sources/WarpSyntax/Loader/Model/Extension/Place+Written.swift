@@ -106,7 +106,6 @@ public extension Place {
         // A call is a tag, and every table reads it under that one key.
         case .call: return ExpressionTag.call.rawValue
         case .literal, .reference, .array, .struct, .dictionary, .closure, .cast: return StatementReader.valueKey.spelling
-        case .block: form = BlockForm.self
         case .conditional: form = ConditionalForm.self
         case .loop: form = LoopForm.self
         case .attempt: form = AttemptForm.self

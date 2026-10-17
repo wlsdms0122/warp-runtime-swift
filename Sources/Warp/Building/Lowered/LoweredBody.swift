@@ -15,39 +15,6 @@ struct LoweredBody: Sendable {
         // MARK: - Property
         // MARK: - Initializer
         // MARK: - Public
-        // Whether this one node reads a slot of the range, apart from what nests
-        // in it. Unlike `stand`, it counts only the slots a body's value
-        // depends on, and leaves out the ones it binds.
-        func reads(_ slots: Range<Int>) -> Bool {
-            switch self {
-            case let .instruction(instruction):
-                guard case let .assign(address)? = instruction.binding else { return false }
-
-                return address.reads(slots)
-
-            case let .operation(operation):
-                switch operation {
-                case let .local(address):
-                    return address.reads(slots)
-
-                case let .closure(_, captures):
-                    return captures.contains { outer, _ in slots.contains(outer) }
-
-                case let .call(call):
-                    return call.handed.contains { handed in handed.address.reads(slots) }
-
-                case let .apply(_, arguments):
-                    return arguments.contains { argument in argument.reads(slots) }
-
-                case let .dispatch(dispatch):
-                    return dispatch.arguments.contains { argument in argument.reads(slots) }
-
-                case .literal, .array, .struct, .dictionary, .cast, .block, .conditional, .loop, .attempt, .leave:
-                    return false
-                }
-            }
-        }
-
         // What this one node stands on, apart from what nests in it.
         func stand(in standing: inout LoweredBody.Standing) {
             switch self {
@@ -74,9 +41,8 @@ struct LoweredBody: Sendable {
                     captures.forEach { outer, _ in standing.stand(on: outer) }
                     standing.stand(up: number, taking: captures.map { _, inner in inner })
 
-                case let .loop(_, _, round, keeps):
+                case let .loop(_, _, round):
                     round.map { round in standing.stand(on: round) }
-                    keeps.map { kept in standing.stand(over: kept) }
 
                 case let .attempt(_, _, failure):
                     failure.map { failure in standing.stand(on: failure) }
@@ -91,7 +57,7 @@ struct LoweredBody: Sendable {
                 case let .dispatch(dispatch):
                     dispatch.arguments.forEach { argument in argument.stand(in: &standing) }
 
-                case .literal, .array, .struct, .dictionary, .cast, .block, .conditional, .leave:
+                case .literal, .array, .struct, .dictionary, .cast, .conditional, .leave:
                     break
                 }
             }
@@ -113,13 +79,6 @@ struct LoweredBody: Sendable {
         // body does not fit.
         private(set) var slots: [Int] = []
 
-        // The runs of slots the body takes whole. A range is not a slot and
-        // not a set of them either: a run is read as one, so an empty one whose
-        // bounds stand outside the frame is an array reached past its end just
-        // as a full one is. Held as a range so that what it is cannot be
-        // mistaken for what it holds.
-        private(set) var extents: [Range<Int>] = []
-
         // The closures the body stands up: which one of its document's it is,
         // and where what it takes with it stands in the closure's own frame.
         private(set) var closures: [(number: Int, inner: [Int])] = []
@@ -133,10 +92,6 @@ struct LoweredBody: Sendable {
         // MARK: - Public
         mutating func stand(on slot: Int) {
             slots.append(slot)
-        }
-
-        mutating func stand(over run: Range<Int>) {
-            extents.append(run)
         }
 
         mutating func stand(calling number: Int, handing arguments: Int) {
@@ -173,10 +128,6 @@ struct LoweredBody: Sendable {
     }
 
     // MARK: - Public
-    func reads(_ slots: Range<Int>) -> Bool {
-        contains { node in node.reads(slots) }
-    }
-
     // Every operation and instruction a body holds, outermost first. What a
     // reading of the code asks is answered node by node; how the code nests is
     // answered by each kind of node walking what it holds.

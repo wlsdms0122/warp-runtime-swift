@@ -146,72 +146,6 @@ struct InferenceTests {
         }
     }
 
-    @Test("a loop's result carries the body name it reads, nullable")
-    func aLoopResultCarriesTheBodyNameItReads() async throws {
-        // Given. A finished round's exit hands the result the body's own
-        // declarations; the 0-round exit never bound them, and a name a scope
-        // does not hold reads as null. So `kept` holds `Int?`, not an `Any` for
-        // a name the entry never saw, and not a plain `Int` the 0-round run would
-        // break
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [Statement(binding: .constant("tick"), expression: .literal(.int(7)))],
-                result: reference("tick")
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.name("kept")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Refused as the nullable it is
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("holds Int?")
-        }
-
-        // And the 0-round run answers the null the reading admitted
-        let running = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("kept"), expression: .loop(
-                                while: .literal(.bool(false)),
-                                body: Block(
-                                    body: [
-                                        Statement(binding: .constant("tick"), expression: .literal(.int(7)))
-                                    ],
-                                    result: reference("tick")
-                                )
-                            )
-                        )
-                    ],
-                    result: reference("kept")
-                )
-            ]
-        )
-
-        #expect(try await run([running]) == .null)
-    }
-
     @Test("a name bound to a call carries that call's declared answer")
     func boundCallCarriesItsAnswer() async throws {
         // Given
@@ -1411,7 +1345,7 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.name("ready")]),
-                                body: Block(body: [
+                                body: [
                                     Statement(
                                         expression: .conditional(
                                             .reference([.name("ready")]),
@@ -1426,7 +1360,7 @@ struct InferenceTests {
                                             else: nil
                                         )
                                     )
-                                ])
+                                ]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1523,13 +1457,13 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.name("ready")]),
-                                body: Block(body: [
+                                body: [
                                     Statement(binding: .constant("said"), expression: .call(Call(
                                         selector: "wants",
                                         arguments: [.reference([.name("held")])]
                                     ))),
                                     Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
-                                ])
+                                ]
                             )
                         )
                     ]
@@ -1579,7 +1513,7 @@ struct InferenceTests {
                     } + [
                         Statement(binding: .constant("spin"), expression: .loop(
                                 while: .reference([.name("ready")]),
-                                body: Block(body: chain)
+                                body: chain
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(

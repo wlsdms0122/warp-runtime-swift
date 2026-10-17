@@ -604,11 +604,19 @@ struct Validator: Sendable {
                     throw ValidationError(Expression.nameOnWhatNeverFinishes, at: here)
                 }
 
-                if statement.expression.answersNothing {
+                if statement.expression.answersNothing, !statement.expression.namesItsOwn {
                     throw ValidationError(
                         "a conditional answers nothing, so its name"
                             + " could never bind. It takes no name; what an arm"
                             + " keeps is written to an outer variable with 'set'",
+                        at: here
+                    )
+                }
+
+                if statement.expression.answersNothing, case .assignment = binding {
+                    throw ValidationError(
+                        "a loop answers nothing, so there is nothing to write."
+                            + " What a round keeps is written to an outer variable with 'set'",
                         at: here
                     )
                 }
@@ -681,7 +689,9 @@ struct Validator: Sendable {
                 at: here
             )
 
-            switch statement.binding {
+            // A name a construct answering nothing binds is the construct's
+            // own, read inside it, and holds nothing after it.
+            switch statement.expression.answersNothing ? nil : statement.binding {
             case let .constant(name, _)?:
                 visible.insert(name)
                 variables.remove(name)
@@ -868,9 +878,6 @@ struct Validator: Sendable {
                 )
             }
 
-        case let .block(block):
-            try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
-
         case let .conditional(condition, then, otherwise):
             try held(condition, asOperand: place.child(.condition(of: .conditional)))
             try validate(
@@ -919,7 +926,7 @@ struct Validator: Sendable {
                 visible: inner,
                 variables: variables,
                 scope: scope.inside(round),
-                at: place.child(.held)
+                at: place.child(.round)
             )
 
         // While the rescue runs, the failure is a value under the declared name.

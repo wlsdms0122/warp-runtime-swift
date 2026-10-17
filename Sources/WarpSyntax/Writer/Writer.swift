@@ -444,9 +444,6 @@ public struct Writer: Sendable {
         case let .apply(callee, arguments):
             return (ExpressionTag.call.key, try self.call(of: callee, handing: arguments))
 
-        case let .block(block):
-            return (try spelling(BlockForm.self), .dictionary(try fields(of: block, in: BlockForm.self)))
-
         case let .conditional(condition, then, otherwise):
             var written: [Name: Value] = [
                 ConditionalForm.CodingKeys.when.name: try value(of: condition),
@@ -462,11 +459,10 @@ public struct Writer: Sendable {
             return (try spelling(ConditionalForm.self), .dictionary(written))
 
         case let .loop(condition, body):
-            var written: [Name: Value] = [
-                LoopForm.CodingKeys.while.name: try value(of: condition)
+            let written: [Name: Value] = [
+                LoopForm.CodingKeys.while.name: try value(of: condition),
+                LoopForm.CodingKeys.body.name: .array(try body.statements.map(value(of:)))
             ]
-
-            written.merge(try fields(of: body, in: LoopForm.self)) { one, _ in one }
 
             return (try spelling(LoopForm.self), .dictionary(written))
 
@@ -621,7 +617,6 @@ public struct Writer: Sendable {
         case .dictionary: "a map"
         case .closure: "a closure"
         case .apply: "a call of a value"
-        case .block: "a block"
         case .conditional: "a conditional"
         case .loop: "a loop"
         case .attempt: "an attempt"

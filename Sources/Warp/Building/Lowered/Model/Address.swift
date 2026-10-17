@@ -27,12 +27,6 @@ struct Address: Sendable {
     }
 
     // MARK: - Public
-    // Whether reaching here reads any slot in the range, through the index
-    // references among the steps as well as through the head.
-    func reads(_ slots: Range<Int>) -> Bool {
-        slots.contains(slot) || steps.contains { step in step.reads(slots) }
-    }
-
     func stand(in standing: inout LoweredBody.Standing) {
         standing.stand(on: slot)
         steps.forEach { step in step.stand(in: &standing) }

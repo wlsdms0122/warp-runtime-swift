@@ -192,7 +192,6 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
                 code: .conditional(
@@ -206,9 +205,8 @@ enum ObjectCoverageFixture {
                 binding: nil,
                 code: .loop(
                     while: .literal(.bool(true)),
-                    body: LoweredBody(instructions: [], result: nil),
-                    round: 7,
-                    keeps: 8 ..< 9
+                    body: [Instruction(binding: nil, code: .literal(.int(4)), label: "round")],
+                    round: 7
                 ),
                 label: "loop"
             ),

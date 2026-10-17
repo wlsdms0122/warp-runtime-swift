@@ -2237,8 +2237,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // The walk `written` and `completing` share: an expression standing where
     // this is read, through what may be null and the names around it, at the
-    // depths a list, a map, a struct and the answer of a block, an attempt or
-    // a loop hand on. `replacing` is asked first at each depth, with the type
+    // depths a list, a map, a struct and the answer of an attempt hand on. `replacing` is asked first at each depth, with the type
     // read there, and answers what stands in place of the expression, or nil
     // to walk on.
     private func reaching(
@@ -2253,21 +2252,10 @@ indirect enum LoweredType: Sendable, Hashable {
             )
         }
 
-        // What a block, an attempt or a loop answers stands where this is
-        // read, so it is walked with this type as it stands, a name around
-        // it included.
-        switch expression {
-        case let .block(block):
-            return .block(answering(block))
-
-        case let .attempt(block, rescue):
+        // What an attempt answers stands where this is read, so it is walked
+        // with this type as it stands, a name around it included.
+        if case let .attempt(block, rescue) = expression {
             return .attempt(answering(block), rescue: answering(rescue))
-
-        case let .loop(condition, body):
-            return .loop(while: condition, body: answering(body))
-
-        default:
-            break
         }
 
         switch self {

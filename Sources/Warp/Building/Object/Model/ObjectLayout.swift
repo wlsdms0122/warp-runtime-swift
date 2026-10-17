@@ -167,7 +167,6 @@ enum ObjectLayout {
         case closure
         case apply
         case cast
-        case block
         case conditional
         case loop
         case attempt

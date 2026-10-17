@@ -500,7 +500,7 @@ public final class Linked: Sendable {
         case let .dispatch(dispatch):
             dispatch.calls.values.forEach { call in rows.append(call.procedure) }
 
-        case .local, .array, .struct, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+        case .local, .array, .struct, .dictionary, .apply, .cast, .conditional, .loop, .attempt, .leave:
             break
         }
     }

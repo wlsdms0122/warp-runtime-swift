@@ -69,49 +69,6 @@ struct NeverTests {
         }
     }
 
-    @Test("a loop's result reads at the exits, not a round further in")
-    func aLoopResultReadsAtTheExits() async throws {
-        // Given. The run may take any exit: a condition that declines at the
-        // start answers before a single round wrote anything. So the result
-        // reads in the join of the exits (`x` holds Int or String, not
-        // the one a finished round would prove), so a cast to the Int the
-        // 0-round value is stands, where a reading of the round's String would
-        // make it a cast no value could satisfy
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [
-                    Statement(binding: .assignment([.name("x")]), expression: .literal(.string("s")))
-                ],
-                result: reference("x")
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("x"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.cast(.reference([.name("kept")]), as: .int, optional: false)]
-                        )))
-                    ],
-                    result: reference("kept")
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then. Builds, and the run answers the 0-round value
-        #expect(try await run([sut]) == .int(1))
-    }
-
     @Test("a body that ends by leaving still carries its folded constant")
     func aLeavingBodyKeepsItsFolding() async throws {
         // Given. The image holds only judged spellings, and a body whose last
@@ -159,70 +116,28 @@ struct NeverTests {
         #expect(try await run(sut) == .int(2))
     }
 
-    @Test("a loop whose rounds never finish still answers its result")
-    func aLoopWhoseRoundsNeverFinishStillAnswers() async throws {
-        // Given. A loop's result is read at the exits: a condition that
-        // declines at the start runs no round and answers, whatever the rounds
-        // would have done. So the result is not "after" the body the way a
-        // plain block's is, and a body no run comes back from (here a procedure only
-        // the build knows declares `Never`) leaves the loop answerable still. The
-        // reader refuses the leaves it can see; this is the type only the build
-        // sees, and the run keeps it
+    @Test("a loop whose rounds never finish still finishes")
+    func aLoopWhoseRoundsNeverFinishStillFinishes() async throws {
+        // Given. A condition that declines at the start runs no round, whatever
+        // the rounds would have done, so a body no run comes back from (here a
+        // procedure only the build knows declares `Never`) leaves what follows
+        // the loop reachable. The reader refuses the leaves it can see; this is
+        // the type only the build sees, and the run keeps it
         let loop = Warp.Expression.loop(
             while: .literal(.bool(false)),
-            body: Block(
-                body: [Statement(expression: aborting(literal("stops")))],
-                result: .literal(.string("done"))
-            )
+            body: [Statement(expression: aborting(literal("stops")))]
         )
 
         let sut = Procedure(
-            body: [Statement(binding: .constant("kept"), expression: loop)],
-            result: reference("kept")
+            body: [
+                Statement(binding: .constant("kept"), expression: loop),
+                Statement(binding: .constant("after"), expression: .literal(.string("done")))
+            ],
+            result: reference("after")
         )
 
         // When / Then
         #expect(try await run(sut) == .string("done"))
-    }
-
-    @Test("such a loop's name holds what the result reads")
-    func aNeverBodiedLoopStillReadsAsItsResult() async throws {
-        // Given. The result reads in what the entry left, and the reading says
-        // so: `kept` holds the result's string, and a slot that declared `Int`
-        // refuses it by that reading rather than by `Never`
-        let loop = Warp.Expression.loop(
-            while: .literal(.bool(false)),
-            body: Block(
-                body: [Statement(expression: aborting(literal("stops")))],
-                result: .literal(.string("done"))
-            )
-        )
-
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("kept"), expression: loop),
-                        Statement(binding: .constant("said"), expression: .call(Call(
-                            selector: "wants",
-                            arguments: [.reference([.name("kept")])]
-                        )))
-                    ]
-                ),
-                "wants": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .int)]),
-                    body: []
-                )
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("holds String")
-        }
     }
 
     @Test("a result after a statement that never finishes is refused at the build")

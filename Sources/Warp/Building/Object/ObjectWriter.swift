@@ -694,9 +694,6 @@ struct ObjectWriter {
         case let .cast(read, as: type, optional: optional):
             return tagged(Tag.cast, try self.operation(read), try lowered(type), .bool(optional))
 
-        case let .block(body):
-            return tagged(Tag.block, try self.body(body))
-
         case let .conditional(condition, then: then, else: otherwise):
             return tagged(
                 Tag.conditional,
@@ -707,13 +704,12 @@ struct ObjectWriter {
                 }
             )
 
-        case let .loop(while: condition, body: body, round: round, keeps: keeps):
+        case let .loop(while: condition, body: body, round: round):
             return tagged(
                 Tag.loop,
                 try self.operation(condition),
-                try self.body(body),
-                ObjectWriter.maybe(round) { round in .int(round) },
-                ObjectWriter.maybe(keeps) { kept in .array([.int(kept.lowerBound), .int(kept.upperBound)]) }
+                .array(try body.map(instruction)),
+                ObjectWriter.maybe(round) { round in .int(round) }
             )
 
         case let .attempt(body, rescue: rescue, failure: failure):

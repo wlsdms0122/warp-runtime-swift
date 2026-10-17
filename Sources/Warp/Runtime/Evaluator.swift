@@ -344,9 +344,6 @@ struct Evaluator: Sendable {
         case let .apply(callee, arguments):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
 
-        case let .block(body):
-            return try await run(body, in: &activation, at: trace)
-
         // A conditional answers nothing: the condition chooses a way through the
         // body, and what an arm keeps it writes to an outer variable.
         case let .conditional(condition, then, otherwise):
@@ -358,15 +355,10 @@ struct Evaluator: Sendable {
 
             return .null
 
-        case let .loop(condition, body, round, keeps):
-            return try await loop(
-                while: condition,
-                body: body,
-                round: round,
-                keeps: keeps,
-                in: &activation,
-                at: trace
-            )
+        case let .loop(condition, body, round):
+            try await loop(while: condition, body: body, round: round, in: &activation, at: trace)
+
+            return .null
 
         case let .attempt(body, rescue, failure):
             return try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
@@ -585,45 +577,26 @@ struct Evaluator: Sendable {
 
     private func loop(
         while condition: Operation,
-        body: LoweredBody,
+        body: [Instruction],
         round: Int?,
-        keeps: Range<Int>?,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> Value {
+    ) async throws {
         let name = round.map { round in activation.frame.names[round] }
         var index = 0
 
         while true {
-            // The condition reads the state before the round it would start,
-            // and the result reads it as it stands when the loop ends.
+            // The condition reads the state before the round it would start.
             if let round {
                 activation.cells[round] = .value(.struct(Struct(name: TypeSpelling.round, [Prelude.index: .int(index)])))
             }
 
-            guard try bool(try await evaluate(condition, in: &activation, at: trace)) else {
-                guard let result = body.result else { return .null }
-
-                return try await evaluate(result, in: &activation, at: trace)
-            }
-
-            // What the last finished round bound is what the result reads. A
-            // round cut short is put back to that, where the build said the
-            // result could tell.
-            let kept = keeps.map { range in activation.cells[range] }
+            guard try bool(try await evaluate(condition, in: &activation, at: trace)) else { return }
 
             do {
-                try await perform(body.instructions, in: &activation, at: trace.appending(.round(index)))
+                try await perform(body, in: &activation, at: trace.appending(.round(index)))
             } catch let leaving as Leaving where leaving.claimed(by: name) {
-                if let keeps, let kept {
-                    activation.cells.replaceSubrange(keeps, with: kept)
-                }
-
-                guard leaving.reach == .round else {
-                    guard let result = body.result else { return .null }
-
-                    return try await evaluate(result, in: &activation, at: trace)
-                }
+                guard leaving.reach == .round else { return }
             }
 
             index += 1

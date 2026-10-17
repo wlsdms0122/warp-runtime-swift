@@ -88,10 +88,10 @@ struct VariableTests {
             Statement(binding: .variable("latest"), expression: .literal(.int(0))),
             Statement(binding: .constant("gate"), expression: .loop(
                     while: differs(reference("gate", "index"), .literal(.int(3))),
-                    body: Block(body: [
+                    body: [
                         Statement(binding: .constant("transient"), expression: reference("gate", "index")),
                         Statement(binding: .assignment([.name("latest")]), expression: reference("transient"))
-                    ])
+                    ]
                 )
             )
         ]

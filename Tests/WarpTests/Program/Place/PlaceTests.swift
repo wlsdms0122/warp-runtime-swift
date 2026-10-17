@@ -37,8 +37,8 @@ struct PlaceTests {
         // what a caller assembling this wrote.
         let spin = place(
             refusing: Statement(binding: .constant("spin"), expression: .loop(
-                    while: .block(Block(body: [], result: .literal(.bool(true)))),
-                    body: Block(body: [])
+                    while: .conditional(.literal(.bool(true)), then: [], else: nil),
+                    body: []
                 )
             )
         )

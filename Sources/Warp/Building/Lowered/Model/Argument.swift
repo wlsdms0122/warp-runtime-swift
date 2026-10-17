@@ -34,14 +34,6 @@ enum Argument: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Whether the place this hands reads any slot in the range. A value is an
-    // operation, read where the walk reaches it.
-    func reads(_ slots: Range<Int>) -> Bool {
-        guard case let .reference(address) = self else { return false }
-
-        return address.reads(slots)
-    }
-
     func stand(in standing: inout LoweredBody.Standing) {
         guard case let .reference(address) = self else { return }
 

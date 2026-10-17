@@ -69,23 +69,21 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             signature: Signature(parameters: [Parameter(name: "rounds", type: .int)]),
             body: [
+                Statement(binding: .variable("seen"), expression: .literal(.int(-1))),
                 Statement(binding: .constant("counted"), expression: .loop(
                         while: differs(
                             index,
                             .reference([.name("rounds")])
                             ),
-                        body: Block(
-                            body: [Statement(binding: .constant("tick"), expression: index)],
-                            result: index
-                        )
+                        body: [Statement(binding: .assignment([.name("seen")]), expression: index)]
                     )
                 ),
                 Statement(binding: .variable("verdict"), expression: .literal(.string("counted otherwise"))),
                 Statement(
                     expression: .conditional(
                         equals(
-                            .reference([.name("counted")]),
-                            .literal(.int(3))
+                            .reference([.name("seen")]),
+                            .literal(.int(2))
                             ),
                         then: [
                             Statement(binding: .assignment([.name("verdict")]), expression: .literal(.string("counted to three")))

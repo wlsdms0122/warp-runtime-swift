@@ -16,52 +16,6 @@ struct ControlFlowTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a block answers what it says it answers, and nothing if it says nothing")
-    func aBlockAnswersOnlyWhatItDeclares() async throws {
-        // Given. Reading the last statement instead would put the answer in the
-        // ordering, where nothing points at it. Appending a statement would
-        // change what the block was worth, and the author who appended it wrote
-        // nothing that says so.
-        let sut = Warp.Expression.block(
-            Block(body: [
-                Statement(binding: .constant("first"), expression: .literal(.int(1))),
-                Statement(binding: .constant("second"), expression: .literal(.int(2)))
-            ])
-        )
-
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
-        )
-
-        // Then
-        #expect(answer == .null)
-    }
-
-    @Test("a declared result outranks the last statement")
-    func declaredResultOutranksLastStatement() async throws {
-        // Given
-        let sut = Warp.Expression.block(
-            Block(
-                body: [
-                    Statement(binding: .constant("first"), expression: .literal(.int(1))),
-                    Statement(binding: .constant("second"), expression: .literal(.int(2)))
-                ],
-                result: reference("first")
-            )
-        )
-
-        // When
-        let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
-        )
-
-        // Then
-        #expect(answer == .int(1))
-    }
-
     @Test("a conditional answers nothing, and what an arm keeps it writes outward")
     func aBranchAnswersNothingAndWritesOutward() async throws {
         // Given. The condition chooses a way through the body, not a value:
@@ -125,60 +79,25 @@ struct ControlFlowTests {
         #expect(answer == .null)
     }
 
-    @Test("a loop's result reads a name its body declared as the body's, whatever the entry holds under it")
-    func aLoopResultReadsTheBodysOwnDeclaration() async throws {
-        // Given. The entry holds `x` in a box declared `Int`. The body declares
-        // its own `x`, a string, and the result reads that one: null where no
-        // round ran, and the body's otherwise
-        let loop = Warp.Expression.loop(
-            while: differs(reference("probe", "index"), .literal(.int(1))),
-            body: Block(
-                body: [Statement(binding: .variable("x"), expression: .literal(.string("s")))],
-                result: reference("x")
-            )
-        )
-        let sut = try Module(
-            imports: ["Standard.Logic.notEqual"],
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .variable("x", declared: .int), expression: .literal(.int(1))),
-                        Statement(binding: .constant("probe"), expression: loop)
-                    ],
-                    result: reference("probe")
-                )
-            ]
-        )
-
-        // When
-        let compiled = try await Builder().compile([sut] + Module.standard)
-        let answered = compiled.compactMap { document in document.answers[entryName] }.first
-
-        // Then. The reading is the body's string, nullable for the exit no
-        // round reached, and not the entry's int joined into anything
-        #expect(answered == .nullable(.string))
-        let image = try await Builder().build([sut] + Module.standard)
-        #expect(try await Executor().run(image) == .string("s"))
-    }
-
     @Test("a loop reads how many rounds have passed")
     func loopReadsItsRoundIndex() async throws {
         // Given
         let sut = Warp.Expression.loop(
             while: differs(reference("probe", "index"), .literal(.int(3))),
-            body: Block(body: [Statement(binding: .constant("tick"), expression: reference("probe", "index"))])
+            body: [Statement(binding: .assignment([.name("seen")]), expression: reference("probe", "index"))]
         )
 
         // When
         let answer = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
+            of: [
+                Statement(binding: .variable("seen"), expression: .literal(.int(-1))),
+                Statement(binding: .constant("probe"), expression: sut)
+            ],
+            result: reference("seen")
         )
 
-        // Then. The loop answers null without a declared result, which is
-        // what its name reads after it
-        #expect(answer == .null)
+        // Then. The last round to run was the one the index read 2 in
+        #expect(answer == .int(2))
     }
 
     @Test("an author bounds a loop with the language it already has")
@@ -190,7 +109,7 @@ struct ControlFlowTests {
             while: .call(
                 Call(selector: "Standard.Comparable.lessThan", arguments: [reference("probe", "index"), .literal(.int(3))])
             ),
-            body: Block(body: [
+            body: [
                 Statement(
                     expression: .conditional(
                         .call(
@@ -212,14 +131,14 @@ struct ControlFlowTests {
                         else: nil
                     )
                 )
-            ])
+            ]
         )
 
         // When / Then
         await #expect(throws: Aborted.self) {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: reference("probe")
+                result: .literal(.null)
             )
         }
     }

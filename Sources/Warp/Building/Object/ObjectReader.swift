@@ -1001,7 +1001,6 @@ struct ObjectReader {
                 optional: try cursor.field().flag()
             )
 
-        case .block: read = .block(try body(cursor.next()))
         case .conditional:
             read = .conditional(
                 try operation(cursor.next()),
@@ -1014,21 +1013,8 @@ struct ObjectReader {
         case .loop:
             read = .loop(
                 while: try operation(cursor.next()),
-                body: try body(cursor.next()),
-                round: try cursor.field().maybe(counted),
-                keeps: try cursor.field().maybe { written in
-                    var held = try FieldCursor(written, of: "keeps")
-                    let low = try held.field().count()
-                    let high = try held.field().count()
-
-                    try held.end()
-
-                    guard low <= high else {
-                        throw ObjectRefused("'keeps' ends before it begins")
-                    }
-
-                    return low ..< high
-                }
+                body: try Field(cursor.next(), of: "body").list(instruction),
+                round: try cursor.field().maybe(counted)
             )
 
         case .attempt:

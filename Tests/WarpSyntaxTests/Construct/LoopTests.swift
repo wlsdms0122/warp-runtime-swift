@@ -29,12 +29,11 @@ struct LoopTests {
                     "let": "gate",
                     "value": ["loop": [
                         "while": ["of": ["ref": "gate.index"], "notEqual": 3],
-                        "body": [["set": "latest", "value": ["ref": "gate.index"]]],
-                        "result": ["ref": "latest"]
+                        "body": [["set": "latest", "value": ["ref": "gate.index"]]]
                     ]
                 ]]
             ],
-            "result": ["dictionary": [["result", ["ref": "gate"]]]]
+            "result": ["dictionary": [["result", ["ref": "latest"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
@@ -55,12 +54,11 @@ struct LoopTests {
                     "let": "gate",
                     "value": ["loop": [
                         "while": ["of": ["ref": "gate.index"], "notEqual": 7],
-                        "body": [["set": "latest", "value": ["ref": "gate.index"]]],
-                        "result": ["ref": "latest"]
+                        "body": [["set": "latest", "value": ["ref": "gate.index"]]]
                     ]
                 ]]
             ],
-            "result": ["dictionary": [["result", ["ref": "gate"]]]]
+            "result": ["dictionary": [["result", ["ref": "latest"]]]]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When

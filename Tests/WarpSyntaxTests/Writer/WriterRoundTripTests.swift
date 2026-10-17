@@ -32,7 +32,7 @@ struct WriterRoundTripTests {
         let constructs: [Name: Warp.Expression] = [
             "spin": .loop(
                 while: .literal(.bool(false)),
-                body: Block(body: [])
+                body: []
             ),
             "guarded": .attempt(
                 Block(body: []),
