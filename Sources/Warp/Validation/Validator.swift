@@ -320,13 +320,11 @@ struct Validator: Sendable {
                 let first = procedure.signature.parameters.first?.type.slotUnwrapped
 
                 guard let mention = head.mention else {
-                    guard let first, Self.takesEveryValue(first, of: head.type) else {
+                    guard let first, Self.instance(of: first) == head.type else {
                         throw ValidationError(
                             "gives '\(head.spelling)' the member '\(member)', which takes \(first?.rendered ?? "nothing") first."
-                                + " Under its type's bare name a member takes every value of the type first: the type,"
-                                + " applied to type parameters of its own or `Any`. One for some of its values is given"
-                                + " under a head applying the type, and a procedure that takes none is declared under"
-                                + " `procedures` as '\(spelling)'",
+                                + " A member takes a value of its type first, written by the type's own name, and a"
+                                + " procedure that takes none is declared under `procedures` as '\(spelling)'",
                             at: place.part(.parameters)
                         )
                     }
@@ -359,36 +357,20 @@ struct Validator: Sendable {
         try declared(module)
     }
 
-    // Whether this takes every value of the type a bare head names: the type
-    // by its own name, applied to nothing but type parameters, each its own,
-    // and `Any`.
-    private static func takesEveryValue(_ type: TypeExpression, of named: Name) -> Bool {
-        let (name, arguments): (Name?, [TypeExpression]) = switch type {
-        case .null: (TypeSpelling.null, [])
-        case .bool: (TypeSpelling.bool, [])
-        case .int: (TypeSpelling.int, [])
-        case .double: (TypeSpelling.double, [])
-        case .string: (TypeSpelling.string, [])
-        case let .array(element): (TypeSpelling.array, [element])
-        case let .dictionary(key, value): (TypeSpelling.dictionary, [key, value])
-        case let .named(name, arguments): (name, arguments)
-        default: (nil, [])
+    // The type a value of this is an instance of, by name: what a bare head
+    // names. A type naming no such type answers nil.
+    private static func instance(of type: TypeExpression) -> Name? {
+        switch type {
+        case .null: TypeSpelling.null
+        case .bool: TypeSpelling.bool
+        case .int: TypeSpelling.int
+        case .double: TypeSpelling.double
+        case .string: TypeSpelling.string
+        case .array: TypeSpelling.array
+        case .dictionary: TypeSpelling.dictionary
+        case let .named(name, _): name
+        default: nil
         }
-
-        guard name == named else { return false }
-
-        let parameters = arguments.compactMap { argument in
-            if case let .parameter(parameter) = argument { parameter } else { nil }
-        }
-
-        let open = arguments.allSatisfy { argument in
-            switch argument {
-            case .any, .parameter: true
-            default: false
-            }
-        }
-
-        return open && Set(parameters).count == parameters.count
     }
 
     // Whether a declared name that is no struct comes back to itself through
@@ -743,9 +725,7 @@ struct Validator: Sendable {
                 at: here
             )
 
-            // A name a construct answering nothing binds is the construct's
-            // own, read inside it, and holds nothing after it.
-            switch statement.expression.answersNothing ? nil : statement.binding {
+            switch statement.bindingAfter {
             case let .constant(name, _)?:
                 visible.insert(name)
                 variables.remove(name)

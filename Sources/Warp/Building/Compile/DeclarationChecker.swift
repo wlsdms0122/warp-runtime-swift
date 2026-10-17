@@ -72,6 +72,8 @@ struct DeclarationChecker {
                 in: table
             )
 
+            try judge(bareMembers: module.members, of: module, in: table)
+
             for (name, procedure) in module.procedures.sorted(by: { $0.key < $1.key }) {
                 try judge(procedure.signature, at: .procedure(name.spelling, in: .of(module)), in: table)
 
@@ -195,6 +197,46 @@ struct DeclarationChecker {
 
     // A type member mentions what its type names, the way a field does, its
     // head's type parameters held to what the head holds them to.
+    // A member under its type's bare name is there for every value of the
+    // type, so it takes each first: what a claim under that name reads `Self`
+    // as, the type applied to parameters no call fills, held to the bounds the
+    // type holds them to. What fills its own parameters there is held to their
+    // bounds, as a claim's member is.
+    private func judge(bareMembers members: [Head: Set<Name>], of module: Module, in table: TypeTable) throws {
+        let loweredTypes = table.loweredTypes
+
+        for (head, names) in members.sorted(by: { $0.key < $1.key }) where head.isBare {
+            let applied = head.applying(table.types[head.type]).claimed
+            let type = applied?.type ?? TypeExpression.nominalTypes[head.type] ?? .named(head.type)
+            let values = type.lowered(in: loweredTypes, bounds: applied?.bounds ?? [:])
+
+            for name in names.sorted() {
+                let spelling = name.spelled(under: head.type)
+
+                guard
+                    let signature = module.procedures[spelling]?.signature,
+                    let first = signature.lowered(in: loweredTypes).first?.type
+                else { continue }
+
+                let substitution = Substitution(filling: [first], against: [values], in: loweredTypes)
+                let unanswered = signature.bounds.sorted(by: { $0.key < $1.key }).contains { parameter, bounds in
+                    substitution.everyReading(of: parameter).contains { reading in
+                        !LoweredType.composition(bounds.sorted()).accepts(reading, in: loweredTypes)
+                    }
+                }
+
+                guard !unanswered, first.filling(substitution.readings).takes(values, in: loweredTypes) else {
+                    throw BuildError(
+                        "gives '\(head.type)' the member '\(name)', which takes \(first.rendered(in: loweredTypes)) first."
+                            + " Under its type's bare name a member takes every value of the type first, and one for"
+                            + " some of them is given under a head applying the type",
+                        at: Place.procedure(spelling.spelling, in: .of(module)).part(.parameters)
+                    )
+                }
+            }
+        }
+    }
+
     private func judge(
         typeMembers: [Head: [Name: TypeExpression]],
         of document: Place.Document,

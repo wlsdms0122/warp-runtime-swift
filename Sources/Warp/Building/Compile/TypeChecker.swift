@@ -2897,9 +2897,7 @@ struct TypeChecker {
             // A write's path, as the walk where it lands placed it.
             var placed: LoweredPath?
 
-            // A name a construct answering nothing binds is the construct's
-            // own, read inside it, and holds nothing after it.
-            switch statement.expression.answersNothing ? nil : statement.binding {
+            switch statement.bindingAfter {
             case let .constant(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(

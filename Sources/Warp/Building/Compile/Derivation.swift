@@ -524,7 +524,7 @@ struct Derivation {
         into declaredTypes: inout [Name: LoweredType],
         in table: LoweredTypeTable
     ) {
-        guard let binding = statement.binding, let name = binding.introduced else { return }
+        guard let binding = statement.bindingAfter, let name = binding.introduced else { return }
 
         let reading = declaredTypes
 
