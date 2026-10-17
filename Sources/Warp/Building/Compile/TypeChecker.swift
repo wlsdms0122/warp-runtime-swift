@@ -2850,7 +2850,7 @@ struct TypeChecker {
 
                 // What never finishes binds nothing, so a name on it
                 // promises a binding that cannot happen.
-                if statement.binding != nil {
+                if statement.bindingAfter != nil {
                     try refuse(Expression.nameOnWhatNeverFinishes, at: here, when: ask)
                 }
 

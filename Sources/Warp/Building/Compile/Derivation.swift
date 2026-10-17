@@ -409,7 +409,7 @@ struct Derivation {
                 return false
             }
 
-            if case let .variable(name, _)? = statement.binding {
+            if case let .variable(name, _)? = statement.bindingAfter {
                 declared.insert(name)
             }
 
