@@ -105,8 +105,8 @@ struct TypeChecker {
 
         // What a list or map literal holds where it is written into a slot,
         // part by part, where its reading, joined across the parts, does not
-        // say. A block or a loop holds what its result holds, and an
-        // attempt what each of its two ways answers.
+        // say. A block holds what its result holds, and an attempt what each
+        // of its two ways answers.
         var literalShape: LiteralShape?
 
         // What the expression holds where it is written into a slot.
@@ -621,10 +621,10 @@ struct TypeChecker {
     // `Any` the walk **refuses**: nothing was declared, so there is nothing a
     // dot could be judged against, and a dot no declaration proves is what a
     // run would otherwise have to decide for itself. The type is named
-    // instead, with `as`. On a type parameter the segments stand **as
-    // written**: the type is declared, at the call rather than here, and what
-    // the call filled in answers them. On `Never` nothing arrives to be read at
-    // all, so there is nothing to judge and nothing to refuse.
+    // instead, with `as`. On a type parameter it refuses the same way: the
+    // body does not know the type, and what a type gives is asked through a
+    // contract. On `Never` nothing arrives to be read at all, so there is
+    // nothing to judge and nothing to refuse.
     private func reading(
         of path: Path,
         in environment: [Name: Binding],
@@ -671,9 +671,9 @@ struct TypeChecker {
                 // Three types stop a walk, and they stop it for three
                 // different reasons, so they are asked separately, and each
                 // says its own. A dot is judged against what a declaration
-                // proves at this site: `Any` declares nothing and never will, a
-                // type parameter's type is declared at the call, and `Never`
-                // declares a value that does not arrive at all.
+                // proves at this site: `Any` and a type parameter declare
+                // nothing here, and `Never` declares a value that does not
+                // arrive at all.
 
                 // Nothing was declared here, so nothing about this value can
                 // ever be proven, and a dot the build cannot judge is the one
@@ -695,20 +695,20 @@ struct TypeChecker {
                     )
                 }
 
-                // A type parameter is declared at the call, so the segments
-                // stand as written and the call's type answers them. The
-                // reading is what the parameter's type reaches through them,
-                // neither `Any` nor the parameter itself, so a body naming a
-                // step on the way (`held = of.inner`, then `held.count`) reads
-                // the same field.
-                if let reached = current.projecting(along: rest()) {
-                    switch asWritten(rest(), in: environment, with: context, at: place) {
-                    case let .refused(reason):
-                        return .refused(reason)
-
-                    case let .reads(_, standing):
-                        return .reads(reached, placed: placed.appending(contentsOf: standing))
+                // A type parameter is one type the body does not know, so it
+                // declares nothing here either. What the type gives is asked
+                // of a contract it answers, which a claim backs.
+                if case .parameter = current {
+                    let reach = switch segment {
+                    case .name: "reads a dot on"
+                    case .index, .indexRef: "indexes into"
                     }
+
+                    return .refused(
+                        "\(walked.rendered) \(reach) \(current.rendered(in: context.loweredTypes)),"
+                            + " a type the call decides, which declares nothing here."
+                            + " What a type gives is asked through a contract it answers"
+                    )
                 }
 
                 // Nothing arrives to be read, so there is nothing to judge and
@@ -1024,7 +1024,7 @@ struct TypeChecker {
     // promise.
     private func runs(in expression: Expression, given context: TypingContext) -> Name? {
         switch expression {
-        case .literal, .reference, .closure, .apply, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .apply, .conditional, .loop, .attempt, .leave:
             return nil
 
         case let .cast(value, _, _):
@@ -2444,18 +2444,6 @@ struct TypeChecker {
                 flow: flow
             )
 
-        case let .block(block):
-            let inner = try await inspected(block: block, into: declared, at: place.child(.held), in: environment, with: context, ask: ask)
-
-            return Inspection(
-                rewritten: ask.rewrites ? .block(inner.block) : expression,
-                calls: inner.calls,
-                judgements: inner.judgements,
-                reading: inner.reading,
-                flow: inner.flow,
-                literalShape: inner.literalShape
-            )
-
         // A conditional answers nothing. A condition chooses a way through the
         // body, not a value; the one thing its type still says is `Never`, when
         // both arms have it. The condition runs every way and the arms are the
@@ -2539,8 +2527,8 @@ struct TypeChecker {
             let round = name
 
             // The fixpoint probes a round as it runs, the condition then the
-            // statements. The rounds are what leave things for one another,
-            // and the result never runs between rounds. The probe reads, so a
+            // statements. The rounds are what leave things for one another.
+            // The probe reads, so a
             // probing asker takes the final probe of the statements as its
             // own walk; judging walks once more for the rewrite.
             let entry = rounded(environment, as: round, in: context.loweredTypes)
@@ -2564,8 +2552,8 @@ struct TypeChecker {
                 asked.flow.apply(to: &asking)
 
                 let walk = try await inspected(
-                    body.body,
-                    at: place.child(.held).child(.body),
+                    body,
+                    at: place.child(.round),
                     in: asking,
                     with: context,
                     ask: .probing
@@ -2603,7 +2591,7 @@ struct TypeChecker {
             head.flow.apply(to: &asked)
 
             let rounds = ask.rewrites
-                ? try await inspected(body.body, at: place.child(.held).child(.body), in: asked, with: context, ask: ask)
+                ? try await inspected(body, at: place.child(.round), in: asked, with: context, ask: ask)
                 : probed
 
             // A round as it runs: the condition, then the body. The loop
@@ -2622,52 +2610,15 @@ struct TypeChecker {
                 meeting: meets
             )
 
-            // The result runs once, at whichever exit the run takes (a
-            // condition that declines, after no round or after rounds that
-            // finished or continued, or a round that breaks), and it reads
-            // where the way the loop ends by leaves the names around it: the
-            // loop's entry, with what that way wrote and took. A name the body
-            // declared is the body's own, whatever the entry holds under that
-            // spelling, and is null at the exit after no round (a name a scope
-            // does not hold reads as null) so it reads back nullable, the same
-            // join every some-ways write gets.
-            var tail: Inspection?
-
-            if let result = body.result {
-                var exit = entry
-
-                ended.apply(to: &exit)
-
-                for (name, written) in rounds.environment where rounds.locals.contains(name) {
-                    exit[name] = written.map { type in LoweredType.null.joined(type) }
-                }
-
-                tail = try await inspected(
-                    result,
-                    naming: nil,
-                    into: declared,
-                    at: place.child(.held).child(.result),
-                    in: exit,
-                    with: context,
-                    ask: ask
-                )
-            }
-
             return Inspection(
-                rewritten: ask.rewrites
-                    ? .loop(
-                        while: head.rewritten,
-                        body: Block(body: rounds.body, result: tail?.rewritten ?? body.result)
-                    )
-                    : expression,
-                calls: head.calls + rounds.calls + (tail?.calls ?? []),
-                judgements: head.judgements.absorbing(rounds.judgements, tail?.judgements),
-                reading: tail?.reading ?? .null,
-                // The round is the loop's own name, read in the condition,
-                // the body and the result alike.
-                flow: (tail.map { tail in ended.followed(by: tail.flow.outside(rounds.locals)) } ?? ended)
-                    .outside(Set([round].compactMap { $0 })),
-                literalShape: tail?.literalShape
+                rewritten: ask.rewrites ? .loop(while: head.rewritten, body: rounds.body) : expression,
+                calls: head.calls + rounds.calls,
+                judgements: head.judgements.absorbing(rounds.judgements),
+                reading: .null,
+                // The round is the loop's own name, read in the condition and
+                // the body alike.
+                flow: ended.outside(Set([round].compactMap { $0 })),
+                literalShape: nil
             )
 
         // The body and the rescue are two ways through, not a sequence. A body
@@ -2784,9 +2735,7 @@ struct TypeChecker {
 
         // Where the result reads, or why it does not. A block's result sits
         // after its statements. It reads in the environment the body left, and
-        // a body no run comes back from leaves it nothing to run, refused. The
-        // one rule the type has: a loop's exit-answered result is the loop's
-        // own to read, not this walk's.
+        // a body no run comes back from leaves it nothing to run, refused.
         let tail: Inspection?
         let reading: LoweredType
         let flow: Flow
@@ -2901,7 +2850,7 @@ struct TypeChecker {
 
                 // What never finishes binds nothing, so a name on it
                 // promises a binding that cannot happen.
-                if statement.binding != nil {
+                if statement.bindingAfter != nil {
                     try refuse(Expression.nameOnWhatNeverFinishes, at: here, when: ask)
                 }
 
@@ -2948,7 +2897,7 @@ struct TypeChecker {
             // A write's path, as the walk where it lands placed it.
             var placed: LoweredPath?
 
-            switch statement.binding {
+            switch statement.bindingAfter {
             case let .constant(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(

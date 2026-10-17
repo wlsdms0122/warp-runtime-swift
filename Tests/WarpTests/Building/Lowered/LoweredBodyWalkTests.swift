@@ -23,7 +23,6 @@ struct LoweredBodyWalkTests {
         case closure
         case apply
         case cast
-        case block
         case conditional
         case loop
         case attempt
@@ -43,7 +42,6 @@ struct LoweredBodyWalkTests {
             case .closure: self = .closure
             case .apply: self = .apply
             case .cast: self = .cast
-            case .block: self = .block
             case .conditional: self = .conditional
             case .loop: self = .loop
             case .attempt: self = .attempt
@@ -77,14 +75,14 @@ struct LoweredBodyWalkTests {
             case .cast:
                 return [.cast(leaf, as: .int, optional: false)]
 
-            case .block:
-                return [.block(body)]
-
             case .conditional:
                 return [.conditional(leaf, then: [], else: nil)]
 
             case .loop:
-                return [.loop(while: leaf, body: empty, round: 0, keeps: nil)]
+                return [
+                    .loop(while: leaf, body: [], round: 0),
+                    .loop(while: .literal(.bool(true)), body: [Instruction(binding: nil, code: leaf, label: "leaf")], round: 0)
+                ]
 
             case .attempt:
                 return [.attempt(body, rescue: empty, failure: 0)]
@@ -235,8 +233,6 @@ struct LoweredBodyWalkTests {
 
         // Then
         #expect(instructions == 1)
-        #expect(sut.reads(4..<5))
-        #expect(!sut.reads(9..<10))
     }
 
     @Test("an argument handed in place is the dispatch's own to read")
@@ -256,11 +252,9 @@ struct LoweredBodyWalkTests {
 
         let standing = LoweredBody(instructions: [], result: sut).standing
 
-        // Then. The place is not walked as an operation, and the reads and the
-        // standing both count it.
+        // Then. The place is not walked as an operation, and the standing
+        // counts it.
         #expect(locals == 0)
-        #expect(sut.reads(3..<4))
-        #expect(sut.reads(4..<5))
         #expect(standing.slots.contains(3))
         #expect(standing.slots.contains(4))
     }

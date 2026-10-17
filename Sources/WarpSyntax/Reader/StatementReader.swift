@@ -183,23 +183,21 @@ public struct StatementReader: Decodable {
             )
         }
 
-        let expression = try Self.expression(
+        return try Self.statement(
             in: try decoder.descending(to: valueKey),
             registry: registry,
-            boundTo: binding?.introduced
+            binding: binding
         )
-
-        return Statement(binding: binding, expression: expression)
     }
 
     // What stands under `value`: a construct, where the mapping's one key is a
-    // construct's, and an expression otherwise. A construct that binds through
-    // the statement's name is handed the name the statement introduces.
-    private static func expression(
+    // construct's, and an expression otherwise. A construct is handed the
+    // binding the statement was written under and says the statement it is.
+    private static func statement(
         in decoder: Decoder,
         registry: ConstructRegistry,
-        boundTo name: Name?
-    ) throws -> Warp.Expression {
+        binding: Statement.Binding?
+    ) throws -> Statement {
         if
             let keyed = try? decoder.container(keyedBy: AnyCodingKey.self),
             keyed.allKeys.count == 1,
@@ -217,12 +215,15 @@ public struct StatementReader: Decodable {
             }
 
             do {
-                return try built.expression(boundTo: name)
+                return try built.statement(binding: binding)
             } catch let refusal as ReadingError {
                 throw refusal.asked(at: decoder.steps)
             }
         }
 
-        return try ExpressionReader.read(try ValueReader(from: decoder).value, in: decoder)
+        return Statement(
+            binding: binding,
+            expression: try ExpressionReader.read(try ValueReader(from: decoder).value, in: decoder)
+        )
     }
 }

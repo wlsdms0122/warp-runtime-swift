@@ -98,8 +98,6 @@ extension TypeExpression {
         case let .composition(names):
             return lowered(bounds: names, in: table, as: LoweredType.composition)
 
-        case let .projection(of, path):
-            return .projection(of: of, path: path)
 
         // An associated type is a type parameter of its own, labelled as it is
         // written, which what fills what it stands on decides. The contracts

@@ -123,15 +123,7 @@ enum ObjectCoverageFixture {
         "named": .named("a.one"),
         "parameter": .parameter(name: "T"),
         "associatedType": .associatedType(of: "T", name: "Item"),
-        "composition": .composition(["a.five", "a.four"]),
-        "projection": .projection(
-            of: "a.fifteen",
-            path: [
-                .name("k", optional: true),
-                .index(3, optional: false),
-                .indexRef([.name("inner", optional: false)], optional: true)
-            ]
-        )
+        "composition": .composition(["a.five", "a.four"])
     ])
 
     // Every case of `LoweredType` an object writes, each holding something
@@ -163,7 +155,6 @@ enum ObjectCoverageFixture {
         .named(2),
         .parameter(label: "U", bounds: ["a.five"]),
         .parameter(label: "V", bounds: []),
-        .projection(of: "a.sixteen", path: [.index(1, optional: true)]),
         .composition(["a.five", "a.four"])
     ]
 
@@ -192,7 +183,6 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
-            Instruction(binding: nil, code: .block(LoweredBody(instructions: [], result: .literal(.int(4)))), label: "block"),
             Instruction(
                 binding: nil,
                 code: .conditional(
@@ -206,9 +196,8 @@ enum ObjectCoverageFixture {
                 binding: nil,
                 code: .loop(
                     while: .literal(.bool(true)),
-                    body: LoweredBody(instructions: [], result: nil),
-                    round: 7,
-                    keeps: 8 ..< 9
+                    body: [Instruction(binding: nil, code: .literal(.int(4)), label: "round")],
+                    round: 7
                 ),
                 label: "loop"
             ),

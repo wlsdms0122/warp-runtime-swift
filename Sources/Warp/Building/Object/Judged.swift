@@ -156,9 +156,7 @@ struct Judged: Sendable {
 
         let standing = body.standing
 
-        guard standing.slots.allSatisfy({ slot in slot < frame.size }),
-            standing.extents.allSatisfy({ run in run.upperBound <= frame.size })
-        else {
+        guard standing.slots.allSatisfy({ slot in slot < frame.size }) else {
             throw ObjectRefused(
                 "a body stands on a slot its frame of \(frame.size) does not hold"
             )

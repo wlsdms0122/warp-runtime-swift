@@ -176,8 +176,7 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
         case let .associatedType(of, name):
             return .associatedType(of: names[of] ?? of, name: name)
 
-        case .any, .never, .null, .bool, .int, .double, .string, .procedure(nil, _, _), .composition, .selfType,
-            .projection:
+        case .any, .never, .null, .bool, .int, .double, .string, .procedure(nil, _, _), .composition, .selfType:
             return type
         }
     }

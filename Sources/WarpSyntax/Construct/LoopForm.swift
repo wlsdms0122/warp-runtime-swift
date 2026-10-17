@@ -15,7 +15,6 @@ public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`
         case body
-        case result
     }
 
     // MARK: - Property
@@ -26,19 +25,14 @@ public struct LoopForm: ConstructForm {
     public static let requiresBody = true
 
     private let condition: Warp.Expression
-    private let body: Block
+    private let body: Body
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
         self.condition = try decoder.descending(to: CodingKeys.while).read(ExpressionReader.self).expression
-        self.body = Block(
-            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
-            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
-                .read(ExpressionReader.self)
-                .expression
-        )
+        self.body = try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body
     }
 
     // MARK: - Public

@@ -298,10 +298,11 @@ struct Validator: Sendable {
         }
 
         // A member is named by one identifier, since a call spells it after
-        // its type's name and a dot. Under a head applying its type, a member
-        // is there for the values the head takes, and a call says which by
-        // the value it hands first, so the member takes that value first,
-        // written as the head is.
+        // its type's name and a dot. A member is there for the values its head
+        // takes, and a call says which by the value it hands first, so the
+        // member takes a value of its type first: written as the head is
+        // under a head applying the type, and the type under its bare name. A
+        // procedure that takes none is no member of the type.
         for (head, members) in module.members.sorted(by: { one, other in one.key < other.key }) {
             for member in members.sorted() {
                 let spelling = member.spelled(under: head.type)
@@ -316,9 +317,20 @@ struct Validator: Sendable {
                     )
                 }
 
-                guard let mention = head.mention else { continue }
-
                 let first = procedure.signature.parameters.first?.type.slotUnwrapped
+
+                guard let mention = head.mention else {
+                    guard let first, Self.instance(of: first) == head.type else {
+                        throw ValidationError(
+                            "gives '\(head.spelling)' the member '\(member)', which takes \(first?.rendered ?? "nothing") first."
+                                + " A member takes a value of its type first, written by the type's own name, and a"
+                                + " procedure that takes none is declared under `procedures` as '\(spelling)'",
+                            at: place.part(.parameters)
+                        )
+                    }
+
+                    continue
+                }
 
                 guard first == mention else {
                     throw ValidationError(
@@ -343,6 +355,22 @@ struct Validator: Sendable {
         // Last, so a module whose declarations refuse is refused for them
         // before its list.
         try declared(module)
+    }
+
+    // The type a value of this is an instance of, by name: what a bare head
+    // names. A type naming no such type answers nil.
+    private static func instance(of type: TypeExpression) -> Name? {
+        switch type {
+        case .null: TypeSpelling.null
+        case .bool: TypeSpelling.bool
+        case .int: TypeSpelling.int
+        case .double: TypeSpelling.double
+        case .string: TypeSpelling.string
+        case .array: TypeSpelling.array
+        case .dictionary: TypeSpelling.dictionary
+        case let .named(name, _): name
+        default: nil
+        }
     }
 
     // Whether a declared name that is no struct comes back to itself through
@@ -537,6 +565,7 @@ struct Validator: Sendable {
             ),
             at: place
         )
+        try answersOneWay(block, at: place)
     }
 
     // A native procedure reads its arguments at the places its own keys stand at,
@@ -604,11 +633,26 @@ struct Validator: Sendable {
                     throw ValidationError(Expression.nameOnWhatNeverFinishes, at: here)
                 }
 
-                if statement.expression.answersNothing {
+                if statement.expression.answersNothing, !statement.expression.namesItsOwn {
                     throw ValidationError(
                         "a conditional answers nothing, so its name"
                             + " could never bind. It takes no name; what an arm"
                             + " keeps is written to an outer variable with 'set'",
+                        at: here
+                    )
+                }
+
+                if case .loop = statement.expression, case .variable = binding {
+                    throw ValidationError(
+                        "a loop's name is its round, which nothing writes, so it is introduced with 'let'",
+                        at: here
+                    )
+                }
+
+                if statement.expression.answersNothing, case .assignment = binding {
+                    throw ValidationError(
+                        "a loop answers nothing, so there is nothing to write."
+                            + " What a round keeps is written to an outer variable with 'set'",
                         at: here
                     )
                 }
@@ -681,7 +725,7 @@ struct Validator: Sendable {
                 at: here
             )
 
-            switch statement.binding {
+            switch statement.bindingAfter {
             case let .constant(name, _)?:
                 visible.insert(name)
                 variables.remove(name)
@@ -729,6 +773,10 @@ struct Validator: Sendable {
                         + " struct is read",
                     at: place
                 )
+            }
+
+            guard !value.holdsNonFiniteNumber else {
+                throw ValidationError("a literal holds a fraction with no finite value, which no document carries", at: place)
             }
 
         case let .reference(path):
@@ -842,6 +890,7 @@ struct Validator: Sendable {
                 scope: scope.enclosed(taking: parameters),
                 at: inside
             )
+            try answersOneWay(block, at: inside)
 
         case let .apply(callee, arguments):
             try held(callee, asOperand: place.child(.callee))
@@ -867,9 +916,6 @@ struct Validator: Sendable {
                     at: here
                 )
             }
-
-        case let .block(block):
-            try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
 
         case let .conditional(condition, then, otherwise):
             try held(condition, asOperand: place.child(.condition(of: .conditional)))
@@ -919,8 +965,9 @@ struct Validator: Sendable {
                 visible: inner,
                 variables: variables,
                 scope: scope.inside(round),
-                at: place.child(.held)
+                at: place.child(.round)
             )
+            try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue):
@@ -1062,6 +1109,30 @@ struct Validator: Sendable {
                 at: place
             )
         }
+    }
+
+    // One program has one text, so a leave landing where its body ends anyway
+    // is not written: a `return` ending a procedure's own body answers what
+    // its `result` would, and a `continue` ending a round goes where the round
+    // goes on its own.
+    private func answersOneWay(_ block: Block, at place: Place) throws {
+        try refuseLeave(.procedure, endingAt: block.body, named: nil, at: place.child(.body))
+    }
+
+    private func refuseLeave(_ reach: Leave.Reach, endingAt body: Body, named loop: Name?, at place: Place) throws {
+        guard
+            let last = body.statements.last,
+            case let .leave(leave) = last.expression,
+            leave.reach == reach,
+            leave.target == nil || leave.target == loop
+        else { return }
+
+        let reason = switch reach {
+        case .procedure: "ends its body with 'return', which answers what 'result' does. A body says what it answers one way: under 'result'"
+        default: "ends its round with 'continue', where the round ends on its own"
+        }
+
+        throw ValidationError(reason, at: place.statement(last, at: body.statements.count - 1))
     }
 
     private func validate(
@@ -1281,17 +1352,6 @@ struct Validator: Sendable {
             for name in names.sorted() {
                 try held(name, as: .contractMention, at: place)
             }
-
-        // The build's own note to itself: a type it read out of a body, which
-        // nobody declared and no document spells.
-        case let .projection(of, path):
-            throw ValidationError(
-                "writes `\(type.rendered)`, which is a type the build"
-                    + " read out of a body. A declaration says what a call fills,"
-                    + " and `\(Path([.name(of)] + path.segments).rendered)` is a path"
-                    + " only that body can read",
-                at: place
-            )
 
         case .selfType:
             guard context.takesSelf else {

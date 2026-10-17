@@ -88,6 +88,13 @@ public struct Statement: Sendable {
     // The name a statement is called by, for a place that points at it.
     public var name: Name? { binding?.name }
 
+    // What this statement binds for the statements after it. A construct
+    // answering nothing binds nothing there: a loop's name is its round, read
+    // inside the loop.
+    var bindingAfter: Binding? {
+        expression.answersNothing ? nil : binding
+    }
+
     // MARK: - Initializer
     public init(binding: Binding? = nil, expression: Expression) {
         self.binding = binding

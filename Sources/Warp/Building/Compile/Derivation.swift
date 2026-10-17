@@ -206,16 +206,13 @@ struct Derivation {
         case let .apply(callee, arguments):
             return arguments.reduce(read(callee).joined(here)) { carried, argument in carried.joined(read(argument)) }
 
-        case let .block(block):
-            return read(block)
-
         case let .conditional(condition, then, otherwise):
             return read(condition)
                 .joined(read(Block(body: then)))
                 .joined(otherwise.map { arm in read(Block(body: arm)) } ?? .these([]))
 
         case let .loop(condition, body):
-            return read(condition).joined(read(body))
+            return read(condition).joined(read(Block(body: body)))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
@@ -253,7 +250,7 @@ struct Derivation {
         case let .call(call):
             return failing(call.selector) ?? .unstated
 
-        case .literal, .reference, .closure, .array, .struct, .dictionary, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .array, .struct, .dictionary, .conditional, .loop, .attempt, .leave:
             return .these([])
         }
     }
@@ -412,7 +409,7 @@ struct Derivation {
                 return false
             }
 
-            if case let .variable(name, _)? = statement.binding {
+            if case let .variable(name, _)? = statement.bindingAfter {
                 declared.insert(name)
             }
 
@@ -496,9 +493,6 @@ struct Derivation {
 
         // Which part of a construct runs is decided inside the body, so a
         // construct holds the fact as far as the parts it holds.
-        case let .block(block):
-            return holds(block)
-
         case let .conditional(condition, then, otherwise):
             return holds(condition) && holds(then) && (otherwise.map(holds) ?? true)
 
@@ -530,7 +524,7 @@ struct Derivation {
         into declaredTypes: inout [Name: LoweredType],
         in table: LoweredTypeTable
     ) {
-        guard let binding = statement.binding, let name = binding.introduced else { return }
+        guard let binding = statement.bindingAfter, let name = binding.introduced else { return }
 
         let reading = declaredTypes
 

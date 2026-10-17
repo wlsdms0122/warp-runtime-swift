@@ -52,11 +52,10 @@ struct LeaveTests {
         #expect(carried == .string("kept going"))
     }
 
-    @Test("breaking ends the loop, which answers what it was going to answer")
+    @Test("breaking ends the loop")
     func breakingEndsTheLoop() async throws {
-        // Given. The loop counts to ten and stops at three. What it answers is
-        // its own `result:`, read in the round that stopped: ending early asks
-        // nothing new of the type a loop already has.
+        // Given. The loop counts to ten and stops at three, and what it kept
+        // it wrote outward.
         let sut = try loader.loadProcedure([
             "body": [
                 ["var": "seen", "value": 0],
@@ -78,12 +77,11 @@ struct LeaveTests {
                                     "then": [["value": ["break": Value.null]]]
                                 ]
                             ]]
-                        ],
-                        "result": ["ref": "seen"]
+                        ]
                     ]
                 ]]
             ],
-            "result": ["ref": "walked"]
+            "result": ["ref": "seen"]
         ], importing: ["Standard.Logic.equal", "Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When / Then
@@ -175,12 +173,11 @@ struct LeaveTests {
                                     ]
                                 ]
                             ]]
-                        ],
-                        "result": ["ref": "count"]
+                        ]
                     ]
                 ]]
             ],
-            "result": ["ref": "outer"]
+            "result": ["ref": "count"]
         ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When / Then. One round of each, because the break left both
@@ -299,7 +296,8 @@ struct LeaveTests {
                                 "procedure": [
                                     "closure": [
                                         "returns": "String",
-                                        "body": [["value": ["return": "from the closure"]]]
+                                        "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the closure"]]]]]]],
+                                        "result": "not reached"
                                     ]
                                 ]
                             ]
@@ -309,47 +307,14 @@ struct LeaveTests {
                 ],
                 "helper": [
                     "returns": "String",
-                    "body": [["value": ["return": "from the procedure"]]]
+                    "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the procedure"]]]]]]],
+                    "result": "not reached"
                 ]
             ]
         ])
 
         // When / Then
         #expect(try await answer(sut) == .string("the outer answer"))
-    }
-
-    @Test("a body naming no result is worth nothing to the build too")
-    func theBuildAgreesAboutWhatABodyAnswers() async throws {
-        // Given. A block naming no result answers null at the run, so the
-        // build reads it as `Null` too, and handing it where `Int` is declared
-        // does not build.
-        let sut: Value = [
-            "procedures": [
-                "entry": [
-                    "body": [
-                        ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 3]]]]],
-                        [
-                            "let": "used",
-                            "value": ["call": [
-                                "procedure": "wants",
-                                "arguments": [["ref": "blocked"]]
-                            ]
-                        ]]
-                    ],
-                    "result": ["ref": "used"]
-                ],
-                "wants": ["parameters": [["name": "it", "type": "Int"]], "returns": "Int", "result": ["ref": "it"]]
-            ]
-        ]
-
-        // When / Then
-        await #expect {
-            try await Builder().build(
-                [try loader.loadDocument(sut)] + Module.standard
-            )
-        } throws: { error in
-            "\(error)".contains("holds Null where Int is declared")
-        }
     }
 
     @Test("a body watched by a rescue is still inside the loop around it")
@@ -382,49 +347,15 @@ struct LeaveTests {
                                     "rescue": ["result": "the rescue ran"]
                                 ]
                             ]]
-                        ],
-                        "result": ["ref": "seen"]
+                        ]
                     ]
                 ]]
             ],
-            "result": ["ref": "walked"]
+            "result": ["ref": "seen"]
         ], importing: ["Standard.Numeric.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(1))
-    }
-
-    @Test("a loop's result reads what its rounds bound")
-    func aLoopResultReadsWhatTheBodyBound() async throws {
-        // Given. The build shows the result what the body declared, so a
-        // result naming one has to work. Reading the scope the round started in
-        // would show it nothing the round bound.
-        let sut = try loader.loadProcedure([
-            "body": [
-                ["var": "seen", "value": 0],
-                [
-                    "let": "walked",
-                    "value": ["loop": [
-                        "while": ["of": ["ref": "seen"], "notEqual": 2],
-                        "body": [
-                            [
-                                "set": "seen",
-                                "value": ["call": [
-                                    "procedure": "Standard.Numeric.plus",
-                                    "arguments": [["ref": "seen"], 1]
-                                ]
-                            ]],
-                            ["let": "noted", "value": ["ref": "seen"]]
-                        ],
-                        "result": ["ref": "noted"]
-                    ]
-                ]]
-            ],
-            "result": ["ref": "walked"]
-        ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
-
-        // When / Then. What the last round bound, not nothing
-        #expect(try await answer(sut) == .int(2))
     }
 
     @Test("a result under a body that always leaves is refused on the result")
@@ -434,15 +365,12 @@ struct LeaveTests {
         #expect {
             try loader.loadProcedure([
                 "returns": "Int",
-                "body": [["value": ["block": [
-                    "body": [["value": ["return": 1]]],
-                    "result": 2
-                ]]]],
+                "body": [["value": ["return": 1]]],
                 "result": 3
             ])
         } throws: { error in
             error is ValidationError
-                && "\(error)".contains("block.result: follows a body that never finishes")
+                && "\(error)".contains("result: follows a body that never finishes")
         }
     }
 
@@ -465,11 +393,9 @@ struct LeaveTests {
         }
     }
 
-    @Test("a loop answers what it carries, and leaving does not change its type")
+    @Test("a break carries nothing")
     func leavingDoesNotWidenALoop() throws {
-        // Given. `break` carries nothing on purpose. Were it to carry a value,
-        // a loop's type would be the join of its result and every break in it,
-        // and a loop over strings broken with an int would answer `Any`.
+        // Given. A loop answers nothing, so a `break` has nothing to carry.
         let sut: Value = [
             "body": [
                 [

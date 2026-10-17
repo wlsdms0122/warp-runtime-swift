@@ -39,13 +39,11 @@ func walking(
                 ]
             )
         ),
-        body: Block(
-            body: Body([
-                Statement(
-                    binding: .constant(element),
-                    expression: .reference(material.appending(contentsOf: [.indexRef([.name(round), .name("index")])]))
-                )
-            ] + body.statements)
-        )
+        body: Body([
+            Statement(
+                binding: .constant(element),
+                expression: .reference(material.appending(contentsOf: [.indexRef([.name(round), .name("index")])]))
+            )
+        ] + body.statements)
     )
 }

@@ -9,8 +9,8 @@ import Foundation
 
 // A path as the type check placed it: its segments as the run reads them,
 // with no slot named yet. A dot on a struct whose layout the build proved
-// stands at the place the field takes; a dot on a type a call decides is read
-// by its name; what stands between brackets is written into the place it
+// stands at the place the field takes; a dot the build read past no value,
+// a null or a `Never`, stands by its name; what stands between brackets is written into the place it
 // stands in, and an index the run reads is a path of its own. The type check
 // works it out once, where it judges the path, and lowering names the slots.
 struct LoweredPath: Sendable, Equatable {
@@ -19,8 +19,8 @@ struct LoweredPath: Sendable, Equatable {
         // stands in, beside the spelling the path wrote.
         case field(Int, Name, optional: Bool)
 
-        // A field read by its name, of a value whose type a call decides.
-        // The head is one too.
+        // A field read by its name, where the build read no value to lay it
+        // out against. The head is one too.
         case name(Name, optional: Bool)
 
         case index(Value, optional: Bool)

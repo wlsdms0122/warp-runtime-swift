@@ -23,7 +23,6 @@ public enum Construct: Sendable, Hashable {
     case closure
     case cast
 
-    case block
     case conditional
     case loop
     case attempt
@@ -47,7 +46,6 @@ public enum Construct: Sendable, Hashable {
         case .dictionary: "dictionary"
         case .closure: "closure"
         case .cast: "cast"
-        case .block: "block"
         case .conditional: "conditional"
         case .loop: "loop"
         case .attempt: "attempt"

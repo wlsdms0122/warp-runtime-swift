@@ -42,21 +42,24 @@ struct LoweringTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a name declared again inside a block gets its own slot")
+    @Test("a name declared again inside an arm gets its own slot")
     func aShadowingDeclarationHasItsOwnSlot() async throws {
         // Given. The inner `x` is a different name, so the outer one reads as
-        // it was after the block
+        // it was after the arm
         let module = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("inner"), expression: .block(
-                            Block(
-                                body: [Statement(binding: .constant("x"), expression: .literal(.int(2)))],
-                                result: .reference([.name("x")])
-                            )
+                        Statement(binding: .variable("inner"), expression: .literal(.int(0))),
+                        Statement(expression: .conditional(
+                            .literal(.bool(true)),
+                            then: [
+                                Statement(binding: .constant("x"), expression: .literal(.int(2))),
+                                Statement(binding: .assignment([.name("inner")]), expression: .reference([.name("x")]))
+                            ],
+                            else: nil
                         ))
                     ],
                     result: .array([.reference([.name("x")]), .reference([.name("inner")])])
@@ -74,7 +77,7 @@ struct LoweringTests {
             return
         }
 
-        #expect(layout.names == ["x", "x", "inner"])
+        #expect(layout.names == ["x", "inner", "x"])
         #expect(try await Executor().run(image) == .array([.int(1), .int(2)]))
     }
 
@@ -184,64 +187,6 @@ struct LoweringTests {
 
         #expect(frame.names[slot] == "digits")
         #expect(value == .dictionary(["0": .int(0), "1": .int(1)]))
-    }
-
-    @Test("a loop keeps its round's slots only where its result reads them")
-    func aLoopKeepsOnlyWhereTheResultCouldTell() async throws {
-        // Given. One loop whose result reads a body name; another whose result
-        // reads nothing the body bound
-        func loop(_ round: Name, _ body: Body, result: Warp.Expression?) -> Warp.Expression {
-            .loop(
-                while: .call(Call(
-                    selector: "Standard.Comparable.lessThan",
-                    arguments: [.reference([.name(round), .name("index")]), .literal(.int(1))]
-                )),
-                body: Block(body: body, result: result)
-            )
-        }
-
-        let continuing = Statement(expression: .conditional(
-            .literal(.bool(false)),
-            then: [Statement(expression: .leave(Leave(reach: .round)))],
-            else: nil
-        ))
-        let module = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(binding: .constant("told"), expression: loop(
-                            "told",
-                            [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
-                            result: .reference([.name("seen")])
-                        )),
-                        Statement(binding: .constant("nested"), expression: loop(
-                            "nested",
-                            [Statement(binding: .constant("seen"), expression: .literal(.int(1))), continuing],
-                            result: .reference([.name("nested"), .name("index")])
-                        ))
-                    ],
-                    result: .literal(.null)
-                )
-            ]
-        )
-
-        // When
-        let image = try await builder.build([module] + Module.standard)
-
-        // Then
-        guard
-            case let .body(body, _) = image[entryName]!.implementation,
-            case let .loop(_, _, _, told) = body.instructions[0].code,
-            case let .loop(_, _, _, nested) = body.instructions[1].code
-        else {
-            Issue.record("the loops were not lowered")
-
-            return
-        }
-
-        #expect(told != nil)
-        #expect(nested == nil)
     }
 
     @Test("arguments stand at their parameter's position")

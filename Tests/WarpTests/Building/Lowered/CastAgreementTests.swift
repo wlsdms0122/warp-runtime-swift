@@ -66,7 +66,6 @@ struct CastAgreementTests {
         .parameter(name: "T"),
         .parameter(name: "N"),
         .composition(["Comparable"]),
-        .projection(of: "T", path: [.name("inner")]),
         .procedure(nil)
     ]
 

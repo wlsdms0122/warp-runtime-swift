@@ -83,8 +83,8 @@ struct BuilderTests {
         #expect(last == .int(3))
     }
 
-    @Test("a closure reading a constant from inside a block still has it")
-    func aClosureReadsASiblingFromInsideABlock() async throws {
+    @Test("a closure reading a constant from inside an arm still has it")
+    func aClosureReadsASiblingFromInsideAnArm() async throws {
         // Given. How deep in the closure the name is read makes no difference
         // to when it has to be settled: the capture happens once, when the
         // closure is made. The spelling puts the closure first in name order,
@@ -94,7 +94,12 @@ struct BuilderTests {
                 "apply": .closure(Procedure(
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .constant("got"), expression: .block(Block(body: [], result: reference("zebra"))))
+                        Statement(binding: .variable("got"), expression: .literal(.int(0))),
+                        Statement(expression: .conditional(
+                            .literal(.bool(true)),
+                            then: [Statement(binding: .assignment([.name("got")]), expression: reference("zebra"))],
+                            else: nil
+                        ))
                     ],
                     result: reference("got")
                 )),

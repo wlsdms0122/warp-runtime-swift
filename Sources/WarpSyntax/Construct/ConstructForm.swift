@@ -35,10 +35,19 @@ public protocol ConstructForm: Sendable, Decodable {
 
     // Throws when the form cannot be the statement it was written as.
     func expression(boundTo name: Name?) throws -> Warp.Expression
+
+    // The statement this form is, with the binding it was written under. A
+    // form that spends into more than one statement says so here, inside a
+    // body of its own, so the names it adds are read nowhere after it.
+    func statement(binding: Statement.Binding?) throws -> Statement
 }
 
 public extension ConstructForm {
     static var requiresBody: Bool { false }
 
     static func vocabulary(with notation: Notation) -> Set<Name> { [] }
+
+    func statement(binding: Statement.Binding?) throws -> Statement {
+        Statement(binding: binding, expression: try expression(boundTo: binding?.introduced))
+    }
 }

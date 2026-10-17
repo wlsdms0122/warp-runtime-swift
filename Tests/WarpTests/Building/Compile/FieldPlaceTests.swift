@@ -191,33 +191,6 @@ struct FieldPlaceTests {
         #expect(answer == .int(2))
     }
 
-    @Test("a place and a name answer the same field")
-    func bothWaysAnswerTheSameField() async throws {
-        // Given. One reads a struct the build laid out and one a struct a
-        // call decides, read by the field's name
-        let laid = Procedure(
-            signature: Signature(
-                parameters: [Parameter(name: "point", type: .named("App.Point"))]
-            ),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
-        )
-        let named = Procedure(
-            signature: Signature(parameters: [Parameter(name: "point", type: .parameter(name: "T"))]),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
-        )
-        let point = Value.struct(Struct(name: "App.Point", ["x": .int(1), "y": .int(2)]))
-
-        // When
-        let byPlace = try await run(laid, arguments: ["point": point])
-        let byName = try await run(named, arguments: ["point": point])
-
-        // Then
-        #expect(byPlace == .int(2))
-        #expect(byPlace == byName)
-    }
-
     // MARK: - Public
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests

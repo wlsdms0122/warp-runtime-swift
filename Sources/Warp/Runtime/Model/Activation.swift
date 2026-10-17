@@ -143,7 +143,8 @@ struct Activation: Sendable {
 
                 read = .found(instance.values[position])
 
-            // A field by its name, of a struct a call decides.
+            // A field by its name, as the text wrote it where the build read
+            // no value to lay it out against: past a null or a `Never`.
             case let .name(name, _):
                 guard case let .struct(instance) = current else {
                     return .unfit("\(walked().rendered) drills a field into \(current.nominal)")

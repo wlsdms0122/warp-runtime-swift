@@ -61,16 +61,13 @@ struct LessThanQuery: Query {
     // MARK: - Private
     // Whether one orders before the other, for the kinds that order: whole
     // numbers, fractions and strings. Nil is a pair with no order: two of
-    // different kinds, a kind that does not order, and a fraction that is
-    // not a number, which orders with nothing.
+    // different kinds, or a kind that does not order.
     private func ordered(_ lhs: Value, _ rhs: Value) -> Bool? {
         switch (lhs, rhs) {
         case let (.int(first), .int(second)):
             return first < second
 
         case let (.double(first), .double(second)):
-            guard !first.isNaN, !second.isNaN else { return nil }
-
             return first < second
 
         case let (.string(first), .string(second)):

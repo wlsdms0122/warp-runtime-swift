@@ -92,17 +92,16 @@ struct ObservationTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("outer"), expression: .block(
-                                Block(
-                                    body: [
-                                        Statement(binding: .constant("inner"), expression: .literal(.int(7)))
-                                    ],
-                                    result: reference("inner")
-                                )
+                        Statement(binding: .constant("outer"), expression: .loop(
+                                while: .literal(.bool(true)),
+                                body: [
+                                    Statement(binding: .constant("inner"), expression: .literal(.int(7))),
+                                    Statement(expression: .leave(Leave(reach: .construct)))
+                                ]
                             )
                         )
                     ],
-                    result: reference("outer")
+                    result: .literal(.int(1))
                 )
             ]
         )
@@ -113,8 +112,8 @@ struct ObservationTests {
         _ = try await Executor(observer: observer).run(image)
 
         // Then
-        #expect(await observer.events.contains(.started("outer.inner")))
-        #expect(await observer.events.contains(.completed("outer.inner", .int(7))))
+        #expect(await observer.events.contains(.started("outer[0].inner")))
+        #expect(await observer.events.contains(.completed("outer[0].inner", .int(7))))
     }
 
     @Test("the same statement run twice is announced as two different places")
@@ -133,9 +132,9 @@ struct ObservationTests {
                                         arguments: [reference("round", "index"), .literal(.int(2))]
                                     )
                                 ),
-                                body: Block(body: [
+                                body: [
                                     Statement(binding: .constant("step"), expression: reference("round", "index"))
-                                ])
+                                ]
                             )
                         )
                     ]
@@ -358,9 +357,9 @@ struct ObservationTests {
                     body: [
                         Statement(binding: .constant("walk"), expression: .loop(
                                 while: .literal(.bool(true)),
-                                body: Block(body: [
+                                body: [
                                     Statement(expression: .leave(Leave(reach: .construct)))
-                                ])
+                                ]
                             )
                         )
                     ],

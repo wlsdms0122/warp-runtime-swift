@@ -133,22 +133,6 @@ struct LoweredTypeTests {
         #expect(table.structRow(named: "App.Whole") == nil)
     }
 
-    @Test("a projection lowers to itself, and every judgement answers it as Any")
-    func aProjectionLowersToItself() throws {
-        // Given. Nothing is known of what a projection holds, so it takes
-        // anything, and a slot of a type takes it only through a cast
-        let table = types.loweredTypes
-        let projection = try TypeExpression.projection(of: "T", path: [.name("inner")]).lowered(in: table)
-
-        // When / Then
-        #expect(projection == .projection(of: "T", path: [.name("inner")]))
-        #expect(try TypeExpression.array(.projection(of: "T", path: [])).lowered(in: table)
-            == .array(.projection(of: "T", path: [])))
-        #expect(!LoweredType.int.accepts(projection, in: table))
-        #expect(projection.accepts(.int, in: table))
-        #expect(try projection.settling(.int(1), at: "", in: table) == .int(1))
-    }
-
     @Test("a struct handed in under an alias's name takes its struct's name, settles again by comparison, and a map is refused")
     func aStructSettlesUnderTheCanonicalName() throws {
         // Given. A slot spelled with the alias, and a struct a door is handed

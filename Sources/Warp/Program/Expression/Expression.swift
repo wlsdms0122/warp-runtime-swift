@@ -63,16 +63,15 @@ public indirect enum Expression: Sendable {
     // so the reading is `T?` and the author says which of the two they meant.
     case cast(Expression, as: TypeExpression, optional: Bool)
 
-    case block(Block)
     // A conditional is a statement: it answers nothing, so its arms are
     // statements alone. What an arm keeps it writes to an outer variable, and a
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
     case conditional(Expression, then: Body, else: Body?)
-    // The round is the name the statement this is the value of introduces,
-    // and a loop under no such name binds none; the same for an attempt's
-    // failure.
-    case loop(while: Expression, body: Block)
+    // A loop is a statement too, answering nothing. The round is the name the
+    // statement this is the value of introduces, and a loop under no such name
+    // binds none; the same for an attempt's failure.
+    case loop(while: Expression, body: Body)
     case attempt(Block, rescue: Block)
     case call(Call)
 
@@ -116,8 +115,11 @@ public indirect enum Expression: Sendable {
         case otherwise
         case rescue
 
-        // What stands at the expression's own place: the block of a block, a
-        // loop or an attempt, and the value a leave carries.
+        // The statements a loop runs each round.
+        case round
+
+        // What stands at the expression's own place: the block of an attempt,
+        // and the value a leave carries.
         case held
 
         // MARK: - Property
@@ -136,6 +138,7 @@ public indirect enum Expression: Sendable {
             case .then: [.part(.then)]
             case .otherwise: [.part(.otherwise)]
             case .rescue: [.part(.rescue)]
+            case .round: [.part(.body)]
             case .held: []
             }
         }
@@ -167,7 +170,6 @@ public indirect enum Expression: Sendable {
         case .closure: .closure
         case .cast: .cast
         case .apply: .call
-        case .block: .block
         case .conditional: .conditional
         case .loop: .loop
         case .attempt: .attempt
@@ -201,13 +203,18 @@ public indirect enum Expression: Sendable {
     }
 
     // Whether this construct answers nothing by its own grammar. A conditional
-    // chooses a way through a body, not a value, so it has nothing to give a
-    // slot that holds an answer and nothing for a name to bind. What never
-    // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
+    // chooses a way through a body and a loop repeats one, not a value, so
+    // neither has anything to give a slot that holds an answer. A loop's name
+    // binds its round, read inside the loop. What never finishes is
+    // `alwaysLeaves`'s to say, refused with its own sentence.
     var answersNothing: Bool {
-        if case .conditional = self { return true }
+        switch self {
+        case .conditional, .loop:
+            return true
 
-        return false
+        default:
+            return false
+        }
     }
 
     // Whether the construct decides what the statement's name holds: a loop's
@@ -271,7 +278,7 @@ public indirect enum Expression: Sendable {
         case let .cast(value, _, _):
             return value.holdsConstruct
 
-        case .block, .conditional, .loop, .attempt, .leave:
+        case .conditional, .loop, .attempt, .leave:
             return true
         }
     }
@@ -281,7 +288,7 @@ public indirect enum Expression: Sendable {
     // `holdsConstruct`'s to say.
     var callsValue: Bool {
         switch self {
-        case .literal, .reference, .closure, .block, .conditional, .loop, .attempt, .leave:
+        case .literal, .reference, .closure, .conditional, .loop, .attempt, .leave:
             return false
 
         case let .array(array):
@@ -331,9 +338,6 @@ public indirect enum Expression: Sendable {
             guard let otherwise else { return false }
 
             return then.alwaysLeaves && otherwise.alwaysLeaves
-
-        case let .block(block):
-            return block.alwaysLeaves
 
         default:
             return false

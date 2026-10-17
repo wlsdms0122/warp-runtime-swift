@@ -207,7 +207,7 @@ struct Fanout: Sendable {
         // brackets it.
         let frame = Rendering(piece.key).text()
 
-        guard let environment = invocation.environment else {
+        guard let environment = invocation.environment as? ConcurrentEnvironment else {
             return try await invocation.call(
                 piece.closure,
                 handing: [],

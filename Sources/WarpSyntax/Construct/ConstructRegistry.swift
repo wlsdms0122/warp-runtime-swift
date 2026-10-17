@@ -18,7 +18,6 @@ public struct ConstructRegistry: Sendable {
     public static let standard = ConstructRegistry(unchecked: [
         ConditionalForm.self,
         LoopForm.self,
-        BlockForm.self,
         AttemptForm.self,
         ReturnForm.self,
         BreakForm.self,

@@ -156,17 +156,6 @@ struct TypeWriter {
 
             return .string("\(name.spelling)<\(spelled.joined(separator: ", "))>")
 
-        // No document spells this. It is a type the build worked out from a
-        // body, and the load refuses one written into a declaration; a draft
-        // holding one is said rather than written as something else.
-        case let .projection(of, path):
-            throw WritingError(
-                "`\(TypeSpelling.some) \(Path([.name(of)] + path.segments).rendered)` is a type"
-                    + " the build read out of a body,"
-                    + " and no document writes one. A declaration says what a call"
-                    + " fills"
-            )
-
         // Its bound beside it where the slots first name it.
         case let .parameter(name):
             guard let contracts = introducing?.bound(at: name) else {

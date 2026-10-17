@@ -111,13 +111,9 @@ struct ValidationTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("got"), expression: .block(Block(
-                                    body: [statement],
-                                    result: reference("limit")
-                                ))
-                            )
+                            Statement(expression: .conditional(.literal(.bool(true)), then: [statement], else: nil))
                         ],
-                        result: reference("got")
+                        result: reference("limit")
                     )
                 ]
             )
@@ -179,7 +175,7 @@ struct ValidationTests {
 
         // When / Then
         #expect {
-            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body)))
+            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body.body)))
         } throws: { error in
             error is ValidationError
                 && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
@@ -280,16 +276,15 @@ struct ValidationTests {
     func aConstructWhereAValueIsWantedIsRefused() throws {
         // Given. No document writes one there; a module made in Swift meets
         // the same rule where it is made. Each place below wants a value
-        let construct = Warp.Expression.block(Block(body: [], result: .literal(.int(1))))
+        let construct = Warp.Expression.conditional(.literal(.bool(true)), then: [], else: nil)
         let places: [(Body, String)] = [
             ([Statement(expression: .call(Call(selector: "App.f", arguments: [construct])))], "body[0].call.arguments[0]"),
             ([Statement(expression: .apply(.closure(Procedure(body: [])), arguments: [.array([construct])]))], "body[0].call.arguments[0]"),
             ([Statement(expression: .conditional(construct, then: [], else: nil))], "body[0].conditional.condition"),
-            ([Statement(expression: .loop(while: construct, body: Block(body: [])))], "body[0].loop.condition"),
+            ([Statement(expression: .loop(while: construct, body: []))], "body[0].loop.condition"),
             ([Statement(binding: .constant("list"), expression: .array([construct]))], "body.list[0].array[0]"),
             ([Statement(binding: .constant("pair"), expression: .struct(["a": construct]))], "body.pair[0].struct.fields.a"),
             ([Statement(binding: .constant("read"), expression: .cast(construct, as: .int, optional: false))], "body.read[0].cast.subject"),
-            ([Statement(binding: .constant("held"), expression: .block(Block(body: [], result: construct)))], "body.held[0].block.result"),
             ([Statement(expression: .leave(Leave(reach: .procedure, value: construct)))], "body[0].leave")
         ]
 
@@ -340,7 +335,7 @@ struct ValidationTests {
         // Given. A loop binds the round under the statement's name
         let statement = Statement(
             binding: .constant("walk", declared: .int),
-            expression: .loop(while: .literal(.bool(false)), body: Block(body: []))
+            expression: .loop(while: .literal(.bool(false)), body: [])
         )
 
         // When / Then. Refused where the module is made
@@ -1053,19 +1048,19 @@ struct ValidationTests {
         #expect(!validates(body: [Statement(binding: .constant("gone"), expression: conditional)]))
     }
 
-    @Test("an arm that leaves inside a block is still a leaving arm")
+    @Test("an arm that leaves inside a nested conditional is still a leaving arm")
     func anArmLeavingInsideAGroupCounts() {
         // Given. The rule reaches through structure because the fact does: a
-        // block whose body leaves never finishes, and an arm that ends in one
-        // ends every way through the arm
+        // conditional whose arms both leave never finishes, and an arm that
+        // ends in one ends every way through the arm
         let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [
                 Statement(
-                    expression: .block(
-                        Block(body: [
-                            Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
-                        ])
+                    expression: .conditional(
+                        .literal(.bool(false)),
+                        then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))],
+                        else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(3)))))]
                     )
                 )
             ],

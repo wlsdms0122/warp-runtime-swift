@@ -36,12 +36,6 @@ enum Step: Sendable {
 
     // MARK: - Initializer
     // MARK: - Public
-    func reads(_ slots: Range<Int>) -> Bool {
-        guard case let .at(address, _) = self else { return false }
-
-        return address.reads(slots)
-    }
-
     func stand(in standing: inout LoweredBody.Standing) {
         guard case let .at(address, _) = self else { return }
 

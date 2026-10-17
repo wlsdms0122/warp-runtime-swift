@@ -34,10 +34,6 @@ struct TraversableTests {
             )),
             .apply(marker("apply callee"), arguments: [marker("apply argument")]),
             .call(Call(selector: "procedure", arguments: [marker("call first argument"), marker("call second argument")])),
-            .block(Block(
-                body: [Statement(binding: .constant("held"), expression: marker("block body"))],
-                result: marker("block result")
-            )),
             .conditional(
                 marker("conditional condition"),
                 then: [Statement(expression: marker("conditional then"))],
@@ -45,7 +41,7 @@ struct TraversableTests {
             ),
             .loop(
                 while: marker("loop condition"),
-                body: Block(body: [Statement(expression: marker("loop body"))])
+                body: [Statement(expression: marker("loop body"))]
             ),
             .attempt(
                 Block(body: [Statement(expression: marker("attempt body"))]),
@@ -66,7 +62,6 @@ struct TraversableTests {
             "closure body", "closure result",
             "apply callee", "apply argument",
             "call first argument", "call second argument",
-            "block body", "block result",
             "conditional condition", "conditional then", "conditional else",
             "loop condition", "loop body",
             "attempt body", "attempt rescue"
@@ -101,12 +96,11 @@ struct TraversableTests {
                     )
                 ),
                 call,
-                Statement(expression: .block(Block(body: [call], result: closure()))),
                 Statement(expression: .conditional(name("going"), then: [call], else: [call])),
                 Statement(
                     expression: .loop(
                         while: name("going"),
-                        body: Block(body: [call, Statement(expression: .leave(Leave(reach: .construct)))], result: closure())
+                        body: [call, Statement(expression: .leave(Leave(reach: .construct)))]
                     )
                 ),
                 Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
@@ -165,8 +159,8 @@ struct TraversableTests {
             return false
         }.keys
 
-        #expect(calls.count == 14)
-        #expect(closures.count == 7)
+        #expect(calls.count == 11)
+        #expect(closures.count == 5)
         #expect(Set(judgedCalls) == Set(calls))
         #expect(Set(judgedClosures) == Set(closures))
     }

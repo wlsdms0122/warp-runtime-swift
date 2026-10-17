@@ -354,7 +354,7 @@ public final class Linked: Sendable {
     // filled.
     private func settled(_ values: [Value], in table: LoweredTypeTable) throws -> [Value] {
         let fitted = try zip(slots, values).map { slot, value in
-            try table.resolvingNames(in: value, under: slot.type, at: "input '\(slot.name)'")
+            try table.admitting(value, under: slot.type, at: "input '\(slot.name)'")
         }
         let filling = try filling(by: fitted, in: table)
 
@@ -500,7 +500,7 @@ public final class Linked: Sendable {
         case let .dispatch(dispatch):
             dispatch.calls.values.forEach { call in rows.append(call.procedure) }
 
-        case .local, .array, .struct, .dictionary, .apply, .cast, .block, .conditional, .loop, .attempt, .leave:
+        case .local, .array, .struct, .dictionary, .apply, .cast, .conditional, .loop, .attempt, .leave:
             break
         }
     }

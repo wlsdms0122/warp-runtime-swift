@@ -38,14 +38,10 @@ indirect enum Operation: Sendable {
 
     case cast(Operation, as: LoweredType, optional: Bool)
 
-    case block(LoweredBody)
     case conditional(Operation, then: [Instruction], else: [Instruction]?)
 
-    // `keeps` is the range of body slots the result reads: the result reads
-    // what the last finished round bound, so a round cut short is put back
-    // before the result reads. Nil where the result reads none of them.
     // The round's slot, where the statement bound one.
-    case loop(while: Operation, body: LoweredBody, round: Int?, keeps: Range<Int>?)
+    case loop(while: Operation, body: [Instruction], round: Int?)
 
     case attempt(LoweredBody, rescue: LoweredBody, failure: Int?)
     case call(CallOperation)
@@ -58,12 +54,6 @@ indirect enum Operation: Sendable {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // Whether this reads any slot in the range, through a path's index
-    // references as well. A closure's captures are reads of its own.
-    func reads(_ slots: Range<Int>) -> Bool {
-        contains { node in node.reads(slots) }
-    }
-
     @discardableResult
     func walk(_ visit: (LoweredBody.Node) -> Bool) -> Bool {
         guard visit(.operation(self)) else { return false }
@@ -94,16 +84,13 @@ indirect enum Operation: Sendable {
         case let .cast(read, _, _):
             return read.walk(visit)
 
-        case let .block(body):
-            return body.walk(visit)
-
         case let .conditional(condition, then, otherwise):
             return condition.walk(visit)
                 && then.allSatisfy { instruction in instruction.walk(visit) }
                 && (otherwise?.allSatisfy { instruction in instruction.walk(visit) } ?? true)
 
-        case let .loop(condition, body, _, _):
-            return condition.walk(visit) && body.walk(visit)
+        case let .loop(condition, body, _):
+            return condition.walk(visit) && body.allSatisfy { instruction in instruction.walk(visit) }
 
         case let .attempt(body, rescue, _):
             return body.walk(visit) && rescue.walk(visit)
@@ -179,9 +166,6 @@ indirect enum Operation: Sendable {
                 optional: optional
             )
 
-        case let .block(body):
-            inside = .block(try body.rewritten(operation: operation, type: type))
-
         case let .conditional(condition, then, otherwise):
             inside = .conditional(
                 try condition.rewritten(operation: operation, type: type),
@@ -191,12 +175,11 @@ indirect enum Operation: Sendable {
                 }
             )
 
-        case let .loop(condition, body, round, keeps):
+        case let .loop(condition, body, round):
             inside = .loop(
                 while: try condition.rewritten(operation: operation, type: type),
-                body: try body.rewritten(operation: operation, type: type),
-                round: round,
-                keeps: keeps
+                body: try body.map { instruction in try instruction.rewritten(operation: operation, type: type) },
+                round: round
             )
 
         case let .attempt(body, rescue, failure):

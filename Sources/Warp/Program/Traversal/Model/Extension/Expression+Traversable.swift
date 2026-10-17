@@ -57,9 +57,6 @@ extension Expression: Traversable {
         case let .call(call):
             call.arguments.enumerated().flatMap { position, argument in inner(argument, as: .argument(position)) }
 
-        case let .block(block):
-            block.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
-
         case let .conditional(condition, then, otherwise):
             inner(condition, as: .condition(of: .conditional))
                 + then.walked(at: stepped(here, to: .then, by: stepping), stepping: stepping)
@@ -67,7 +64,7 @@ extension Expression: Traversable {
 
         case let .loop(condition, body):
             inner(condition, as: .condition(of: .loop))
-                + body.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)
+                + body.walked(at: stepped(here, to: .round, by: stepping), stepping: stepping)
 
         case let .attempt(attempted, rescue):
             attempted.walked(at: stepped(here, to: .held, by: stepping), stepping: stepping)

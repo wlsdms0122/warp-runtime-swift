@@ -173,8 +173,7 @@ struct WriterTests {
                                         "arguments": [["ref": "seen"], 1]
                                     ]
                                 ]]
-                            ],
-                            "result": ["ref": "seen"]
+                            ]
                         ]
                     ]],
                     ["var": "pick"],
@@ -214,7 +213,6 @@ struct WriterTests {
                             ]
                         ]
                     ]],
-                    ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]],
                     [
                         "let": "called",
                         "value": ["call": [
@@ -316,8 +314,7 @@ struct WriterTests {
                                 "then": [["set": "pick", "value": "yes"]],
                                 "else": [["set": "pick", "value": "no"]]
                             ]
-                        ]],
-                        ["let": "blocked", "value": ["block": ["body": [["let": "inner", "value": 1]]]]]
+                        ]]
                     ],
                     "result": ["dictionary": [["result", ["ref": "pick"]]]]
                 ]
@@ -408,9 +405,9 @@ struct WriterTests {
                                     ]]
                                 ]
                             ]
-                        ]],
-                        ["value": ["return": ["ref": "outer"]]]
-                    ]
+                        ]]
+                    ],
+                    "result": "done"
                 ]
             ]
         ],

@@ -394,7 +394,7 @@ struct ContractTests {
         let sut = try Module(
             contracts: ["App.Sortable": ["sort": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .int)]],
             claims: ["Array": ["App.Sortable"]],
-            members: ["Array": ["sort"]],
+            members: [Head("Array", arguments: [.parameter(name: "T")], bounds: ["T": ["Standard.Comparable"]]): ["sort"]],
             procedures: [
                 "Array.sort": Procedure(
                     signature: Signature(

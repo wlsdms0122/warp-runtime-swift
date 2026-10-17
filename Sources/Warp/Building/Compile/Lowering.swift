@@ -551,7 +551,7 @@ struct Lowering {
             let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
             let binding: Instruction.Binding?
 
-            switch statement.binding {
+            switch statement.bindingAfter {
             case let .constant(name, _)?:
                 let slot = context.slots.allocate(name)
                 scope.slots[name] = slot
@@ -633,9 +633,6 @@ struct Lowering {
 
         case let .cast(value, type, optional):
             return try lower(cast: value, as: type, optional: optional, in: scope, on: context, at: place)
-
-        case let .block(block):
-            return .block(try lower(block, in: scope, on: context, at: place.child(.held)))
 
         case let .conditional(condition, then, otherwise):
             return try lower(conditional: condition, then: then, else: otherwise, in: scope, on: context, at: place)
@@ -837,7 +834,7 @@ struct Lowering {
 
     private mutating func lower(
         loop condition: Expression,
-        body: Block,
+        body: Body,
         round: Name?,
         in scope: SlotScope,
         on context: Context,
@@ -851,25 +848,9 @@ struct Lowering {
         }
 
         let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))
-        let start = context.slots.size
-        let instructions = try lower(body.body, in: &inner, on: context, at: place.child(.held).child(.body))
-        let bound = start ..< context.slots.size
-        let result = try body.result.map { result in
-            try lower(result, naming: nil, in: inner, on: context, at: place.child(.held).child(.result))
-        }
+        let instructions = try lower(body, in: &inner, on: context, at: place.child(.round))
 
-        // A round that ends early has bound part of what a full round
-        // binds. The result reads the last finished round, so where it
-        // reads the body's slots, the run puts them back after a round
-        // cut short. Whether a round can end early is the run's fact.
-        let keeps = result.map { result in result.reads(bound) ? bound : nil } ?? nil
-
-        return .loop(
-            while: taking,
-            body: LoweredBody(instructions: instructions, result: result),
-            round: slot,
-            keeps: keeps
-        )
+        return .loop(while: taking, body: instructions, round: slot)
     }
 
     private mutating func lower(
