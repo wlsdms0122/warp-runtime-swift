@@ -1481,7 +1481,7 @@ indirect enum LoweredType: Sendable, Hashable {
         at path: @autoclosure () -> String,
         in table: LoweredTypeTable
     ) throws -> Value {
-        try settling(try table.resolvingNames(in: value, under: self, at: path()), at: path(), in: table)
+        try settling(try table.admitting(value, under: self, at: path()), at: path(), in: table)
     }
 
     // What a cast does, said once. The judgement is `settling`'s; what this

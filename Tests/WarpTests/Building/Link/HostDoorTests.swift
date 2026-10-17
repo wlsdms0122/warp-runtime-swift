@@ -172,6 +172,22 @@ struct HostDoorTests {
         }
     }
 
+    @Test("a fraction with no finite value refuses at the door, wherever it stands")
+    func aNonFiniteNumberIsRefused() async throws {
+        // Given. No document and no encoding carries one, so a run never
+        // holds one: the door says so before the slot is asked
+        let image = try await Builder().build([sut])
+
+        // When / Then
+        for number in [Double.nan, .infinity, -.infinity] {
+            #expect {
+                try image.settling(.struct(Struct(name: "Bank.Account", ["balance": .double(number)])), as: "Bank.Account")
+            } throws: { error in
+                error is ArgumentError && "\(error)".contains("holds a fraction with no finite value")
+            }
+        }
+    }
+
     @Test("a field the declaration never named is not carried past the door")
     func anUndeclaredFieldDoesNotRideThrough() async throws {
         // Given

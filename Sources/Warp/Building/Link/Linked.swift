@@ -354,7 +354,7 @@ public final class Linked: Sendable {
     // filled.
     private func settled(_ values: [Value], in table: LoweredTypeTable) throws -> [Value] {
         let fitted = try zip(slots, values).map { slot, value in
-            try table.resolvingNames(in: value, under: slot.type, at: "input '\(slot.name)'")
+            try table.admitting(value, under: slot.type, at: "input '\(slot.name)'")
         }
         let filling = try filling(by: fitted, in: table)
 

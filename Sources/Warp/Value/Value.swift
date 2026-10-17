@@ -346,6 +346,27 @@ public indirect enum Value: Sendable, Equatable {
         holdsClosure { _ in true }
     }
 
+    // Whether a fraction with no finite value is anywhere in here, however
+    // deep: a value no document and no encoding carries.
+    var holdsNonFiniteNumber: Bool {
+        switch self {
+        case let .double(number):
+            return !number.isFinite
+
+        case .null, .bool, .int, .string, .bytes, .procedure:
+            return false
+
+        case let .array(elements):
+            return elements.contains { element in element.holdsNonFiniteNumber }
+
+        case let .dictionary(held):
+            return held.entries.contains { key, value in key.holdsNonFiniteNumber || value.holdsNonFiniteNumber }
+
+        case let .struct(instance):
+            return instance.values.contains { field in field.holdsNonFiniteNumber }
+        }
+    }
+
     // Whether a struct is anywhere in here, however deep. A struct is the
     // value of a declared struct, made where a literal is written into one or
     // handed through a door under the struct's name.

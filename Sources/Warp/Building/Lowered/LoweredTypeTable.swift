@@ -189,6 +189,17 @@ final class LoweredTypeTable: Sendable {
     // walked in step with the value: a struct whose place applies it to
     // types is judged applied to them, and only where nothing says are its
     // arguments read off its fields.
+    // A value from outside as a run holds it: data a document could carry,
+    // so no fraction with no finite value, and every struct held to the struct
+    // its name declares.
+    func admitting(_ value: Value, under type: LoweredType?, at path: @autoclosure () -> String) throws -> Value {
+        guard !value.holdsNonFiniteNumber else {
+            throw ArgumentError("\(path()): holds a fraction with no finite value, which no document carries")
+        }
+
+        return try resolvingNames(in: value, under: type, at: path())
+    }
+
     func resolvingNames(in value: Value, under type: LoweredType?, at path: @autoclosure () -> String) throws -> Value {
         guard value.holdsStruct else { return value }
 
