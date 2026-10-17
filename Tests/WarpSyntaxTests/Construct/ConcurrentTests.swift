@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpStandard
 import WarpTestSupport
 
 // Running at once, as a document spells it: closures handed to the
@@ -17,7 +18,7 @@ import WarpTestSupport
 @Suite("Running at once, as a document spells it")
 struct ConcurrentTests {
     // Probe environment counting how many pieces pass through the isolation hook.
-    private final class IsolationBoundaryProbe: Environment, @unchecked Sendable {
+    private final class IsolationBoundaryProbe: ConcurrentEnvironment, @unchecked Sendable {
         // MARK: - Property
         private let lock = NSLock()
         private var count = 0
