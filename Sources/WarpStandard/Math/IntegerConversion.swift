@@ -21,17 +21,10 @@ struct IntegerConversion: Sendable {
     }
 
     // MARK: - Public
-    // The whole a fraction rounds to. The reasons there is none are
-    // different facts, and the refusal names the one that happened: a
-    // fraction that is not a number has no whole at all, and a rounded
-    // whole past the `Int`'s own edge is one no `Int` holds. Rounding is done
-    // here, so the fraction read back has no digits after the point to
-    // refuse.
+    // The whole a fraction rounds to, refused where it is past the `Int`'s
+    // own edge, which no `Int` holds. Rounding is done here, so the fraction
+    // read back has no digits after the point to refuse.
     func of(_ asked: Double, rounded rule: FloatingPointRoundingRule) throws -> Int {
-        guard !asked.isNaN else {
-            throw ExecutionError("\(procedure) of \(asked) has no whole answer")
-        }
-
         guard let answered = Int(exactly: asked.rounded(rule)) else {
             throw ExecutionError("\(procedure) of \(asked) overflows Int")
         }

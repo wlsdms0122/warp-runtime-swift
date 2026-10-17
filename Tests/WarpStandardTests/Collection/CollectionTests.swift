@@ -305,11 +305,10 @@ struct CollectionTests {
         )
     }
 
-    @Test("what orders with nothing is not sorted around")
-    func aFractionThatIsNotANumberRefusesToSort() async {
-        // When / Then. NaN answers no comparison, so any placement of it would
-        // be an order sorted could not answer for; refused, the way a mixed
-        // array is, rather than placed arbitrarily
+    @Test("a literal holding a fraction with no finite value is no program")
+    func aNonFiniteLiteralIsRefused() async {
+        // When / Then. No document carries one, and a module assembled in
+        // Swift meets the same rule where it is made
         await #expect {
             try await run(
                 Procedure(
@@ -324,7 +323,7 @@ struct CollectionTests {
                 )
             )
         } throws: { error in
-            "\(error)".contains("which have no order")
+            "\(error)".contains("a literal holds a fraction with no finite value")
         }
     }
 

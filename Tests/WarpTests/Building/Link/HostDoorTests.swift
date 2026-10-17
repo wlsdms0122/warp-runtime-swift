@@ -188,6 +188,37 @@ struct HostDoorTests {
         }
     }
 
+    @Test("a fraction with no finite value refuses at the entry's door and at a failure's")
+    func aNonFiniteNumberIsRefusedAtEveryDoor() async throws {
+        // Given. An entry taking anything, and a procedure the host answers
+        // failing with what it holds: two more doors a value from outside
+        // comes through
+        let entry = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "x")]),
+                    body: [],
+                    result: .reference([.name("x")])
+                )
+            ]
+        )
+        let taking = try await Builder().build([entry] + Module.standard)
+        let failing = try await Builder().build(try carrying(.array([.double(.nan)])) + Module.standard)
+
+        // When / Then
+        await #expect {
+            try await Executor().run(taking, arguments: ["x": .double(.infinity)])
+        } throws: { error in
+            "\(error)".contains("holds a fraction with no finite value")
+        }
+        await #expect {
+            try await Executor().run(failing)
+        } throws: { error in
+            "\(error)".contains("holds a fraction with no finite value")
+        }
+    }
+
     @Test("a field the declaration never named is not carried past the door")
     func anUndeclaredFieldDoesNotRideThrough() async throws {
         // Given

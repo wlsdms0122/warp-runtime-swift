@@ -150,6 +150,8 @@ let vocabulary = try Module(
 
 Linked beside `Module.standard`, it lets a document send `App.shout`. A document that sends a procedure nobody linked is refused by name before anything runs. The standard vocabulary ships the same way, as bundles a host picks from.
 
+What a host hands a run is its `Environment`, which its own procedures take back. A host carrying ambient state on the task, a task local holding an open session say, conforms that environment to `WarpStandard.ConcurrentEnvironment`, and a fan-out runs each piece through its `isolateConcurrentWork`, where the state is severed or forked.
+
 ## Stopping and watching
 
 A run can always be stopped from outside. Cancellation is observed between statements and at the start of every round. The runtime sets no fan-out cap, recursion depth or iteration limit; a `loop`'s `while` is the author's own bound. Runaway work is watched through `ExecutionObserver` and stopped by cancelling the task.

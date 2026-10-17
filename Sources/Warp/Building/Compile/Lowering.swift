@@ -551,7 +551,8 @@ struct Lowering {
             let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
             let binding: Instruction.Binding?
 
-            switch statement.binding {
+            // A loop's name is its round's alone, which the loop lays out.
+            switch statement.expression.answersNothing ? nil : statement.binding {
             case let .constant(name, _)?:
                 let slot = context.slots.allocate(name)
                 scope.slots[name] = slot

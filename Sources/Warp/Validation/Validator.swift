@@ -320,11 +320,13 @@ struct Validator: Sendable {
                 let first = procedure.signature.parameters.first?.type.slotUnwrapped
 
                 guard let mention = head.mention else {
-                    guard let first, Self.instance(of: first) == head.type else {
+                    guard let first, Self.takesEveryValue(first, of: head.type) else {
                         throw ValidationError(
                             "gives '\(head.spelling)' the member '\(member)', which takes \(first?.rendered ?? "nothing") first."
-                                + " A member takes a value of its type first, and a procedure that takes none"
-                                + " is declared under `procedures` as '\(spelling)'",
+                                + " Under its type's bare name a member takes every value of the type first: the type,"
+                                + " applied to type parameters of its own or `Any`. One for some of its values is given"
+                                + " under a head applying the type, and a procedure that takes none is declared under"
+                                + " `procedures` as '\(spelling)'",
                             at: place.part(.parameters)
                         )
                     }
@@ -357,20 +359,36 @@ struct Validator: Sendable {
         try declared(module)
     }
 
-    // The type a value of this is an instance of, by name: what a bare head
-    // names. A type naming no such type answers nil.
-    private static func instance(of type: TypeExpression) -> Name? {
-        switch type {
-        case .null: TypeSpelling.null
-        case .bool: TypeSpelling.bool
-        case .int: TypeSpelling.int
-        case .double: TypeSpelling.double
-        case .string: TypeSpelling.string
-        case .array: TypeSpelling.array
-        case .dictionary: TypeSpelling.dictionary
-        case let .named(name, _): name
-        default: nil
+    // Whether this takes every value of the type a bare head names: the type
+    // by its own name, applied to nothing but type parameters, each its own,
+    // and `Any`.
+    private static func takesEveryValue(_ type: TypeExpression, of named: Name) -> Bool {
+        let (name, arguments): (Name?, [TypeExpression]) = switch type {
+        case .null: (TypeSpelling.null, [])
+        case .bool: (TypeSpelling.bool, [])
+        case .int: (TypeSpelling.int, [])
+        case .double: (TypeSpelling.double, [])
+        case .string: (TypeSpelling.string, [])
+        case let .array(element): (TypeSpelling.array, [element])
+        case let .dictionary(key, value): (TypeSpelling.dictionary, [key, value])
+        case let .named(name, arguments): (name, arguments)
+        default: (nil, [])
         }
+
+        guard name == named else { return false }
+
+        let parameters = arguments.compactMap { argument in
+            if case let .parameter(parameter) = argument { parameter } else { nil }
+        }
+
+        let open = arguments.allSatisfy { argument in
+            switch argument {
+            case .any, .parameter: true
+            default: false
+            }
+        }
+
+        return open && Set(parameters).count == parameters.count
     }
 
     // Whether a declared name that is no struct comes back to itself through
@@ -642,6 +660,13 @@ struct Validator: Sendable {
                     )
                 }
 
+                if case .loop = statement.expression, case .variable = binding {
+                    throw ValidationError(
+                        "a loop's name is its round, which nothing writes, so it is introduced with 'let'",
+                        at: here
+                    )
+                }
+
                 if statement.expression.answersNothing, case .assignment = binding {
                     throw ValidationError(
                         "a loop answers nothing, so there is nothing to write."
@@ -768,6 +793,10 @@ struct Validator: Sendable {
                         + " struct is read",
                     at: place
                 )
+            }
+
+            guard !value.holdsNonFiniteNumber else {
+                throw ValidationError("a literal holds a fraction with no finite value, which no document carries", at: place)
             }
 
         case let .reference(path):
@@ -958,6 +987,7 @@ struct Validator: Sendable {
                 scope: scope.inside(round),
                 at: place.child(.round)
             )
+            try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
 
         // While the rescue runs, the failure is a value under the declared name.
         case let .attempt(block, rescue):
@@ -1101,20 +1131,28 @@ struct Validator: Sendable {
         }
     }
 
-    // A procedure's own body says what it answers one way: a `return` ending it
-    // answers what a `result` would, and one program has one text.
+    // One program has one text, so a leave landing where its body ends anyway
+    // is not written: a `return` ending a procedure's own body answers what
+    // its `result` would, and a `continue` ending a round goes where the round
+    // goes on its own.
     private func answersOneWay(_ block: Block, at place: Place) throws {
+        try refuseLeave(.procedure, endingAt: block.body, named: nil, at: place.child(.body))
+    }
+
+    private func refuseLeave(_ reach: Leave.Reach, endingAt body: Body, named loop: Name?, at place: Place) throws {
         guard
-            let last = block.body.statements.last,
+            let last = body.statements.last,
             case let .leave(leave) = last.expression,
-            leave.reach == .procedure
+            leave.reach == reach,
+            leave.target == nil || leave.target == loop
         else { return }
 
-        throw ValidationError(
-            "ends its body with 'return', which answers what 'result' does. A body says what it"
-                + " answers one way: under 'result'",
-            at: place.child(.body).statement(last, at: block.body.statements.count - 1)
-        )
+        let reason = switch reach {
+        case .procedure: "ends its body with 'return', which answers what 'result' does. A body says what it answers one way: under 'result'"
+        default: "ends its round with 'continue', where the round ends on its own"
+        }
+
+        throw ValidationError(reason, at: place.statement(last, at: body.statements.count - 1))
     }
 
     private func validate(

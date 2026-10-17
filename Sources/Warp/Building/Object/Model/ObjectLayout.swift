@@ -40,29 +40,30 @@ enum ObjectLayout {
         // MARK: - Private
     }
 
+    // Every tag below is the number the page gives it, written out, so a kind
+    // leaving takes its number with it and moves no other.
+    //
     // A value: its kind first, then what the kind holds.
     enum ValueTag: Int {
-        case null
-        case bool
-        case int
-        case double
-        case string
-        case bytes
-        case array
-        case `struct`
-        case closure
-        case dictionary
+        case null = 0
+        case bool = 1
+        case int = 2
+        case double = 3
+        case string = 4
+        case bytes = 5
+        case array = 6
+        case `struct` = 7
+        case closure = 8
+        case dictionary = 9
     }
 
     // The declaration that wrote a closure.
     enum DeclarationTag: Int {
-        case procedure
-        case binding
+        case procedure = 0
+        case binding = 1
     }
 
-    // A type as a document writes it. Each tag is the number the page gives
-    // it, written out, so a kind leaving takes its number with it and moves
-    // no other.
+    // A type as a document writes it.
     enum TypeTag: Int {
         case any = 0
         case never = 1
@@ -86,35 +87,33 @@ enum ObjectLayout {
     }
 
     enum AccessTag: Int {
-        case `private`
-        case `internal`
-        case `public`
+        case `private` = 0
+        case `internal` = 1
+        case `public` = 2
     }
 
     enum ConstnessTag: Int {
-        case unstated
-        case const
+        case unstated = 0
+        case const = 1
     }
 
     enum IsolationTag: Int {
-        case unstated
-        case isolated
+        case unstated = 0
+        case isolated = 1
     }
 
     enum FailingTag: Int {
-        case unstated
-        case these
+        case unstated = 0
+        case these = 1
     }
 
     enum ReachTag: Int {
-        case procedure
-        case construct
-        case round
+        case procedure = 0
+        case construct = 1
+        case round = 2
     }
 
-    // A type as a body stands on it. Each tag is the number the page gives
-    // it, written out, so a kind leaving takes its number with it and moves
-    // no other.
+    // A type as a body stands on it.
     enum LoweredTypeTag: Int {
         case any = 0
         case never = 1
@@ -135,26 +134,24 @@ enum ObjectLayout {
     }
 
     enum ImplementationTag: Int {
-        case body
-        case native
+        case body = 0
+        case native = 1
     }
 
     enum BindingTag: Int {
-        case bind
-        case declare
-        case assign
+        case bind = 0
+        case declare = 1
+        case assign = 2
     }
 
     // A step of an address.
     enum StepTag: Int {
-        case field
-        case name
-        case index
-        case at
+        case field = 0
+        case name = 1
+        case index = 2
+        case at = 3
     }
 
-    // Each tag is the number the page gives it, written out, so a kind
-    // leaving takes its number with it and moves no other.
     enum OperationTag: Int {
         case literal = 0
         case local = 1
@@ -173,8 +170,8 @@ enum ObjectLayout {
     }
 
     enum ArgumentTag: Int {
-        case value
-        case reference
+        case value = 0
+        case reference = 1
     }
 
     // The format, which moves when the layout moves and for no other reason.

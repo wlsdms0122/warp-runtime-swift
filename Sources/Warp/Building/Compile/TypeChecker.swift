@@ -621,10 +621,10 @@ struct TypeChecker {
     // `Any` the walk **refuses**: nothing was declared, so there is nothing a
     // dot could be judged against, and a dot no declaration proves is what a
     // run would otherwise have to decide for itself. The type is named
-    // instead, with `as`. On a type parameter the segments stand **as
-    // written**: the type is declared, at the call rather than here, and what
-    // the call filled in answers them. On `Never` nothing arrives to be read at
-    // all, so there is nothing to judge and nothing to refuse.
+    // instead, with `as`. On a type parameter it refuses the same way: the
+    // body does not know the type, and what a type gives is asked through a
+    // contract. On `Never` nothing arrives to be read at all, so there is
+    // nothing to judge and nothing to refuse.
     private func reading(
         of path: Path,
         in environment: [Name: Binding],
@@ -2897,7 +2897,9 @@ struct TypeChecker {
             // A write's path, as the walk where it lands placed it.
             var placed: LoweredPath?
 
-            switch statement.binding {
+            // A name a construct answering nothing binds is the construct's
+            // own, read inside it, and holds nothing after it.
+            switch statement.expression.answersNothing ? nil : statement.binding {
             case let .constant(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(
