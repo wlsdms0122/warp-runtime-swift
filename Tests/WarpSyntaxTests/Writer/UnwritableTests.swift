@@ -98,7 +98,7 @@ struct UnwritableTests {
                 == .string("Array<String>?")
         )
         #expect(
-            try sut.value(of: TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .unstated))))
+            try sut.value(of: TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .anything))))
                 == .string("(() throws -> Int)?")
         )
         #expect(try sut.value(of: TypeExpression.nullable(.procedure(nil, .const))) == .string("(const Procedure)?"))
@@ -113,7 +113,7 @@ struct UnwritableTests {
                 == .string("App.Box<Int, some T>")
         )
         #expect(
-            try sut.value(of: TypeExpression.named("App.Box", arguments: [.procedure(ProcedureType(returns: .int, failing: .unstated))]))
+            try sut.value(of: TypeExpression.named("App.Box", arguments: [.procedure(ProcedureType(returns: .int, failing: .anything))]))
                 == .string("App.Box<() throws -> Int>")
         )
     }

@@ -24,7 +24,7 @@ struct ConstnessTests {
     // so what fits here is exactly what the predicate admits.
     private let asking = Procedure(
         signature: Signature(
-            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated), .const))],
+            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
             returns: .string
         ),
         body: [
@@ -252,7 +252,7 @@ struct ConstnessTests {
                     access: .public,
                     body: [
                         Statement(
-                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string, failing: .unstated), .const)),
+                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string, failing: .anything), .const)),
                             expression: .closure(
                                 Procedure(
                                     signature: Signature(returns: .string),
@@ -336,7 +336,7 @@ struct ConstnessTests {
         // which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated)))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))]
             ),
             body: [],
             result: .apply(reference("body"), arguments: [])

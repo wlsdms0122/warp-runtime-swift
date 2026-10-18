@@ -129,7 +129,7 @@ struct BuilderTests {
         // so a closure nested in a struct has the same demand on the order as
         // one written on its own.
         let sut = try Module(
-            types: ["App.Runner": .struct(["run": .procedure(ProcedureType(returns: .int, failing: .unstated))])],
+            types: ["App.Runner": .struct(["run": .procedure(ProcedureType(returns: .int, failing: .anything))])],
             constants: [
                 "apply": .cast(
                     .struct([

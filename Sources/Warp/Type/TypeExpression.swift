@@ -425,7 +425,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
             let parameters = type.parameters.map { parameter in parameter.spelled(bounding: bound) }
             let throwing = switch type.failing {
-            case .unstated: " \(TypeSpelling.throws)"
+            case .anything: " \(TypeSpelling.throws)"
             case let .these(failures) where failures.isEmpty: ""
             case let .these(failures): " \(TypeSpelling.throws)(\(failures.sorted().joined(separator: ", ")))"
             }

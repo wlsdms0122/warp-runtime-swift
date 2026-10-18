@@ -374,7 +374,7 @@ struct TypeTests {
                 access: .internal,
                 constness: .unstated,
                 isolation: .unstated,
-                failing: .unstated,
+                failing: .anything,
                 implementation: .body(
                     LoweredBody(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])

@@ -53,7 +53,7 @@ struct TypePlacementTests {
                 types: [
                     "Callback": .alias(.procedure(ProcedureType(
                         parameters: [.parameter(name: "T")],
-                        failing: .unstated
+                        failing: .anything
                     )))
                 ],
                 procedures: [
@@ -150,10 +150,10 @@ struct TypePlacementTests {
     }
 
     @Test("a ? and a slot mark stand on a procedure type as on any type", arguments: [
-        TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .unstated))),
-        .nullable(.array(.procedure(ProcedureType(returns: .int, failing: .unstated)))),
-        .inout(.array(.procedure(ProcedureType(returns: .int, failing: .unstated)))),
-        .inout(.procedure(ProcedureType(returns: .int, failing: .unstated)))
+        TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .anything))),
+        .nullable(.array(.procedure(ProcedureType(returns: .int, failing: .anything)))),
+        .inout(.array(.procedure(ProcedureType(returns: .int, failing: .anything)))),
+        .inout(.procedure(ProcedureType(returns: .int, failing: .anything)))
     ])
     func aMarkOnAProcedureTypeStands(type: TypeExpression) throws {
         // When / Then. Every type has a spelling, so a module made in Swift

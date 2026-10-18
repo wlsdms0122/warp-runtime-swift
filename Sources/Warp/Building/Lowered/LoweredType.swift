@@ -286,7 +286,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return .nullable(inner.boxed)
 
         case let .procedure(signature, _, _):
-            return .procedure(signature?.with(failing: .unstated), constness: .unstated, isolation: .unstated)
+            return .procedure(signature?.with(failing: .anything), constness: .unstated, isolation: .unstated)
 
         case let .named(row, arguments):
             return .named(row, arguments: arguments.map(\.boxed))
@@ -401,7 +401,7 @@ indirect enum LoweredType: Sendable, Hashable {
                 LoweredProcedureType(
                     parameters: signature.parameters.map { parameter in parameter.isInout ? .inout(.never) : .never },
                     returns: answer,
-                    failing: .unstated
+                    failing: .anything
                 ),
                 constness: .unstated,
                 isolation: .unstated
@@ -563,10 +563,10 @@ indirect enum LoweredType: Sendable, Hashable {
         return true
     }
 
-    // What a slot said the procedure it holds may fail with: nothing it
-    // claims where it writes no signature to say it in.
+    // What a slot said the procedure it holds may fail with: anything where
+    // it writes no signature to say it in.
     var procedureFailing: Failing {
-        guard case let .procedure(signature?, _, _)? = procedureHeld else { return .unstated }
+        guard case let .procedure(signature?, _, _)? = procedureHeld else { return .anything }
 
         return signature.failing
     }

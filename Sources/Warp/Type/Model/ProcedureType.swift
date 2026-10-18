@@ -21,8 +21,8 @@ public struct ProcedureType: Sendable, Equatable {
     // What an application answers, or nil where nothing was declared.
     public let returns: TypeExpression?
 
-    // What an application may fail with: unstated, written `throws`, is
-    // anything, and an empty set, written as no `throws`, is nothing.
+    // What an application may fail with: anything, written `throws`, or the
+    // failures listed, none written as no `throws`.
     public let failing: Failing
 
     // Every declared name this type reaches, through what it takes and what

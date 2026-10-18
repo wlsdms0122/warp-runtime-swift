@@ -30,7 +30,7 @@ public protocol NativeProcedure: Sendable {
     // What may come out of this when the work goes wrong, by the types its
     // failures name themselves. One that only ever throws at an author mistake
     // fails nothing, which is the default, so a procedure that can fail says
-    // so and one that could fail anything says `unstated`.
+    // so and one that could fail with anything says `anything`.
     var failing: Failing { get }
 }
 

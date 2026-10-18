@@ -600,7 +600,7 @@ struct TypeReader: Decodable {
 
         let listed = rest.trimmingCharacters(in: Path.whiteSpace)
 
-        guard !listed.isEmpty else { return .unstated }
+        guard !listed.isEmpty else { return .anything }
 
         guard let names = parenthesized(listed)?.trimmingCharacters(in: Path.whiteSpace) else {
             throw TypeFormError("writes `throws\(rest)`, and what a procedure may fail with is listed in parentheses")

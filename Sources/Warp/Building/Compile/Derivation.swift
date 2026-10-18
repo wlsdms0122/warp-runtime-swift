@@ -242,13 +242,13 @@ struct Derivation {
             return optional ? .these([]) : .these([CastRefused.type])
 
         // Which value is called is decided at run time, so what may come out
-        // of it is what the slot it came out of says, and nothing is known
-        // where it came out of none or the slot named nothing.
+        // of it is what the slot it came out of says, and anything where it
+        // came out of none.
         case let .apply(callee, _):
-            return reached(callee, given: declared, in: table)?.procedureFailing ?? .unstated
+            return reached(callee, given: declared, in: table)?.procedureFailing ?? .anything
 
         case let .call(call):
-            return failing(call.selector) ?? .unstated
+            return failing(call.selector) ?? .anything
 
         case .literal, .reference, .closure, .array, .struct, .dictionary, .conditional, .loop, .attempt, .leave:
             return .these([])

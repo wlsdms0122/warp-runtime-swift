@@ -668,10 +668,10 @@ struct ObjectReader {
         let read: Failing
 
         switch ObjectLayout.FailingTag(rawValue: try cursor.field().integer()) {
-        case .unstated: read = .unstated
+        case .anything: read = .anything
         case .these:
             read = .these(Set(try cursor.field().ordered(text)))
-        case nil: throw ObjectRefused("'failing' says neither nothing nor which failures")
+        case nil: throw ObjectRefused("'failing' says neither anything nor which failures")
         }
 
         try cursor.end()
@@ -729,7 +729,7 @@ struct ObjectReader {
                 throw ObjectRefused("a procedure type writes what it answers and nothing of what it takes")
             }
 
-            // A signature says what may fail out of it, `unstated` included,
+            // A signature says what may fail out of it, anything included,
             // and a type writing none says nothing of it.
             guard (parameters == nil) == (claimed == nil) else {
                 throw ObjectRefused("a procedure type writes what it may fail with exactly where it writes what it takes")
@@ -737,7 +737,7 @@ struct ObjectReader {
 
             read = .procedure(
                 parameters.map { parameters in
-                    LoweredProcedureType(parameters: parameters, returns: returns, failing: claimed ?? .unstated)
+                    LoweredProcedureType(parameters: parameters, returns: returns, failing: claimed ?? .anything)
                 },
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())

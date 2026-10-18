@@ -116,7 +116,7 @@ enum ObjectCoverageFixture {
         "String": .string,
         "array": .array(.int),
         "dictionary": .dictionary(key: .string, value: .string),
-        "procedure": .procedure(ProcedureType(returns: .null, failing: .unstated), .const, .isolated),
+        "procedure": .procedure(ProcedureType(returns: .null, failing: .anything), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
         "nullable": .nullable(.int),
@@ -129,7 +129,7 @@ enum ObjectCoverageFixture {
     // Every case of `LoweredType` an object writes, each holding something
     // no other holds, as the parameters of a procedure type.
     static let everyLoweredType: LoweredType = .procedure(
-        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double), failing: .unstated),
+        LoweredProcedureType(parameters: Self.loweredTypes, returns: .nullable(.double), failing: .anything),
         constness: .unstated,
         isolation: .isolated
     )
@@ -263,7 +263,7 @@ enum ObjectCoverageFixture {
             access: .internal,
             constness: .unstated,
             isolation: .unstated,
-            failing: .unstated,
+            failing: .anything,
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -278,7 +278,7 @@ enum ObjectCoverageFixture {
             access: .internal,
             constness: body ? .const : .unstated,
             isolation: body ? .unstated : .isolated,
-            failing: body ? .these(["a.fail", "b.fail"]) : .unstated,
+            failing: body ? .these(["a.fail", "b.fail"]) : .anything,
             judging: body
                 ? .body(
                     everyOperation,

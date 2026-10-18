@@ -30,7 +30,7 @@ struct ModifierNotationTests {
     func everyMarkRoundTrips(mark: SlotMark) throws {
         // Given. A name, and a procedure type, each in front of the mark
         let named = mark.marking(.named("Handle"))
-        let form = mark.marking(.procedure(ProcedureType(returns: .int, failing: .unstated)))
+        let form = mark.marking(.procedure(ProcedureType(returns: .int, failing: .anything)))
 
         // When
         let writtenName = try Writer().value(of: named)
@@ -192,7 +192,7 @@ struct ModifierNotationTests {
     func aMarkAndAModifierRoundTrip() throws {
         // Given. A parameter handed in place, typed a procedure answering
         // without running
-        let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int, failing: .unstated), .const))
+        let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int, failing: .anything), .const))
 
         // When
         let written = try Writer().value(of: type)

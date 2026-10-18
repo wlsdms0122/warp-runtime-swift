@@ -103,7 +103,7 @@ enum ObjectLayout {
     }
 
     enum FailingTag: Int {
-        case unstated = 0
+        case anything = 0
         case these = 1
     }
 

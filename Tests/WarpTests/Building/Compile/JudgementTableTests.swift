@@ -23,7 +23,7 @@ struct JudgementTableTests {
 
         // When
         sut.record(.apply(inPlace: [0]), at: first)
-        sut.record(.closure(constness: .const, isolation: .unstated, failing: .unstated), at: second)
+        sut.record(.closure(constness: .const, isolation: .unstated, failing: .anything), at: second)
 
         // Then
         #expect(handed(at: first, in: sut) == [0])

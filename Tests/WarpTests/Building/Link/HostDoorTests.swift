@@ -21,7 +21,7 @@ struct HostDoorTests {
             var declared: Parameter {
                 Parameter(
                     name: "body",
-                    type: .procedure(ProcedureType(parameters: [.named("App.Ticket")], returns: .string, failing: .unstated), .const)
+                    type: .procedure(ProcedureType(parameters: [.named("App.Ticket")], returns: .string, failing: .anything), .const)
                 )
             }
 
@@ -347,7 +347,7 @@ struct HostDoorTests {
                 "App.mk": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
-                        returns: .procedure(ProcedureType(parameters: [.parameter(name: "T")], returns: .parameter(name: "T"), failing: .unstated))
+                        returns: .procedure(ProcedureType(parameters: [.parameter(name: "T")], returns: .parameter(name: "T"), failing: .anything))
                     ),
                     body: [],
                     result: .closure(Procedure(
@@ -358,7 +358,7 @@ struct HostDoorTests {
                 ),
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .unstated))),
+                    signature: Signature(returns: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .anything))),
                     body: [],
                     result: .call(Call(selector: "App.mk", arguments: [.literal(.int(5))]))
                 )

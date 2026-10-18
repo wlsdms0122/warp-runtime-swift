@@ -238,7 +238,7 @@ struct TypeNotationTests {
         #expect(signature?.parameter(named: "rows")?.type == .array(.procedure(ProcedureType(returns: .int, failing: .these([])))))
         #expect(
             signature?.parameter(named: "steps")?.type
-                == .dictionary(key: .string, value: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .unstated)))
+                == .dictionary(key: .string, value: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .anything)))
         )
 
         // And. A type is a string, so a mapping where one is written is no type

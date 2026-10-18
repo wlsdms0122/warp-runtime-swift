@@ -14,24 +14,22 @@ import Foundation
 // Derived for a body from what it casts, calls and rescues; declared by a
 // native procedure, a contract's procedure and a procedure type.
 public enum Failing: Sendable, Equatable {
-    // No claim. What comes out of this is not knowable before the run.
-    case unstated
+    // Anything at all.
+    case anything
 
     // These and no others. The empty set is a body nothing can fail out of.
     case these(Set<String>)
 
     // MARK: - Property
-    // Whether this says nothing can fail out of it. A claim, so an unstated
-    // one answers false.
+    // Whether this says nothing can fail out of it.
     public var failsNothing: Bool {
         self == .these([])
     }
 
-    // How a refusal names it: the failures in order, nothing, or anything
-    // where nothing was claimed.
+    // How a refusal names it: the failures in order, nothing, or anything.
     public var rendered: String {
         switch self {
-        case .unstated:
+        case .anything:
             return "anything"
 
         case let .these(failures) where failures.isEmpty:
@@ -44,16 +42,16 @@ public enum Failing: Sendable, Equatable {
 
     // MARK: - Initializer
     // MARK: - Public
-    // What may come out of one and then the other. Unstated on either side
-    // carries: an unknown joined with anything is still unknown.
+    // What may come out of one and then the other: anything where either
+    // may fail with anything.
     public func joined(_ other: Failing) -> Failing {
-        guard case let .these(mine) = self, case let .these(theirs) = other else { return .unstated }
+        guard case let .these(mine) = self, case let .these(theirs) = other else { return .anything }
 
         return .these(mine.union(theirs))
     }
 
-    // Whether everything this may fail with is among `allowed`. An unstated
-    // one may fail with anything, so it is within no list.
+    // Whether everything this may fail with is among `allowed`. Anything is
+    // within no list.
     public func fails(within allowed: Set<String>) -> Bool {
         guard case let .these(failures) = self else { return false }
 
@@ -61,7 +59,7 @@ public enum Failing: Sendable, Equatable {
     }
 
     // Whether this stands where a slot says `allowed` may come out: anywhere
-    // a slot claims nothing, and within what it names otherwise.
+    // a slot allows anything, and within what it names otherwise.
     func fails(within allowed: Failing) -> Bool {
         guard case let .these(names) = allowed else { return true }
 

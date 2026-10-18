@@ -71,6 +71,6 @@ public extension Module {
     // touch nothing another piece could touch at once, each answering the
     // one type the call fills.
     private static func pieces(in holding: (TypeExpression) -> TypeExpression) -> Parameter {
-        Parameter(name: "pieces", type: holding(.procedure(ProcedureType(returns: answer, failing: .unstated), .unstated, .isolated)))
+        Parameter(name: "pieces", type: holding(.procedure(ProcedureType(returns: answer, failing: .anything), .unstated, .isolated)))
     }
 }

@@ -137,7 +137,7 @@ struct ClosureTests {
         // applies it beside an `outer` of its own saying "called"
         let running = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string, failing: .unstated)))],
+                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string, failing: .anything)))],
                 returns: .string
             ),
             body: [
@@ -169,7 +169,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .unstated)))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .anything)))
                 ]
             ),
             body: [
@@ -222,7 +222,7 @@ struct ClosureTests {
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated), .const))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))]
             ),
             body: [
                 Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
@@ -269,7 +269,7 @@ struct ClosureTests {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated), .const))],
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
                 returns: .string
             ),
             body: [
@@ -305,7 +305,7 @@ struct ClosureTests {
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
-            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated)))]),
+            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))]),
             body: [
                 Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
                 Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))
@@ -415,7 +415,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .unstated)))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .anything)))
                 ]
             ),
             body: [

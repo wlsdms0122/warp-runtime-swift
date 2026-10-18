@@ -259,7 +259,7 @@ struct Compiler {
                     procedure: symbol.procedure,
                     const: const.contains(symbol.declared),
                     isolated: isolated.contains(symbol.declared),
-                    failing: failing[symbol.declared] ?? .unstated,
+                    failing: failing[symbol.declared] ?? .anything,
                     builtin: module.builtin,
                     sends: try sending.rows(of: symbol),
                     in: loweredTypes
