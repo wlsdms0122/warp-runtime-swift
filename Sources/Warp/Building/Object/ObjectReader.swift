@@ -649,7 +649,13 @@ struct ObjectReader {
         switch ObjectLayout.FailingTag(rawValue: try cursor.field().integer()) {
         case .anything: read = .anything
         case .these:
-            read = .these(Set(try cursor.field().ordered(text)))
+            let failures = try cursor.field().ordered(text)
+
+            for failure in failures where !((try? Name(failure)).map(NameGrammar.failure.holds) ?? false) {
+                throw ObjectRefused("'failing' lists '\(failure)', which is no failure's name")
+            }
+
+            read = .these(Set(failures))
         case nil: throw ObjectRefused("'failing' says neither anything nor which failures")
         }
 

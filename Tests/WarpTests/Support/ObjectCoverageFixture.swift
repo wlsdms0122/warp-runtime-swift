@@ -24,7 +24,7 @@ enum ObjectCoverageFixture {
                         "a.six": Signature(
                             parameters: [Parameter(name: "r", type: .selfType), parameter],
                             returns: .bool,
-                            failing: .these(["a.nineteen", "a.twenty"]),
+                            failing: .these(["a_nineteen", "a_twenty"]),
                             constness: .const
                         )
                     ],
@@ -281,7 +281,7 @@ enum ObjectCoverageFixture {
             signature: Signature(
                 parameters: [parameter],
                 returns: .int,
-                failing: body ? .these(["a.fail", "b.fail"]) : .anything,
+                failing: body ? .these(["a_fail", "b_fail"]) : .anything,
                 constness: body ? .const : .unstated,
                 isolation: body ? .unstated : .isolated,
                 sameTypes: body ? ["T.Item": .string] : [:]

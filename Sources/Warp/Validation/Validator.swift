@@ -1181,6 +1181,8 @@ struct Validator: Sendable {
     // a parameter, at whatever depth; a closure's are the procedure's around
     // it.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
+        try held(signature.failing, at: place)
+
         for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
             let here = place.bound(parameter, of: signature)
 
@@ -1434,6 +1436,7 @@ struct Validator: Sendable {
             }
 
             try written(procedure.returns, in: context, at: place.part(.returns))
+            try held(procedure.failing, at: place)
 
         case .inout:
             throw ValidationError(
@@ -1501,6 +1504,20 @@ struct Validator: Sendable {
         guard !grammar.holds(name) else { return }
 
         throw ValidationError(grammar.refusal(of: name), at: place)
+    }
+
+    // Each failure a signature or a procedure type says may come out of it,
+    // by a failure's name.
+    private func held(_ failing: Failing, at place: Place) throws {
+        guard case let .these(failures) = failing else { return }
+
+        for failure in failures.sorted() {
+            guard let name = try? Name(failure) else {
+                throw ValidationError("a failure's name is written, and this one is empty", at: place)
+            }
+
+            try held(name, as: .failure, at: place)
+        }
     }
 
     // A key of `bounds` or `sameTypes`: a type parameter's name, or an

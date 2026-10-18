@@ -14,8 +14,6 @@ import Warp
 // failure's name stands for anything.
 struct FailingReader: Decodable {
     // MARK: - Property
-    static let anything = "anything"
-
     let failing: Failing
 
     // MARK: - Initializer
@@ -26,9 +24,9 @@ struct FailingReader: Decodable {
             return
         }
 
-        guard word == Self.anything else {
+        guard word == Failing.anythingSpelling else {
             throw ReadingError(
-                "`failing` is '\(word)'. It names the failures as a list, or is `\(Self.anything)`",
+                "`failing` is '\(word)'. It names the failures as a list, or is `\(Failing.anythingSpelling)`",
                 at: decoder.steps
             )
         }

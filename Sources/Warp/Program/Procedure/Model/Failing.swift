@@ -21,6 +21,9 @@ public enum Failing: Sendable, Equatable {
     case these(Set<String>)
 
     // MARK: - Property
+    // The word a document writes for anything.
+    public static let anythingSpelling = "anything"
+
     // Whether this says nothing can fail out of it.
     public var failsNothing: Bool {
         self == .these([])
@@ -30,7 +33,7 @@ public enum Failing: Sendable, Equatable {
     public var rendered: String {
         switch self {
         case .anything:
-            return "anything"
+            return Self.anythingSpelling
 
         case let .these(failures) where failures.isEmpty:
             return "nothing"

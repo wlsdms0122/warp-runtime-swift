@@ -399,7 +399,7 @@ public struct Writer: Sendable {
 
         switch signature.failing {
         case .anything:
-            written[SignatureFieldsReader.CodingKeys.failing.name] = .string(FailingReader.anything)
+            written[SignatureFieldsReader.CodingKeys.failing.name] = .string(Failing.anythingSpelling)
 
         case let .these(failures) where !failures.isEmpty:
             written[SignatureFieldsReader.CodingKeys.failing.name] = .array(failures.sorted().map(Value.string))
