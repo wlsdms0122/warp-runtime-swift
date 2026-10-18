@@ -458,7 +458,7 @@ struct BoundTests {
         // through a cast, and a name standing for a procedure type is such a
         // slot
         let sut = try Module(
-            types: ["App.Pick": .alias(.procedure(ProcedureType(parameters: [.int], returns: .int)))],
+            types: ["App.Pick": .alias(.procedure(ProcedureType(parameters: [.int], returns: .int, failing: .anything)))],
             contracts: Self.markers("App.Marked"),
             claims: ["Int": ["App.Marked"]],
             procedures: [
@@ -480,7 +480,7 @@ struct BoundTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("which holds App.Marked where Procedure<(Int) -> Int> is declared")
+            error is BuildError && "\(error)".contains("which holds App.Marked where (Int) throws -> Int is declared")
         }
     }
 

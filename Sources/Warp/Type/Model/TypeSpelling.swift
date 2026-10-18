@@ -36,6 +36,9 @@ public enum TypeSpelling {
     public static let `inout`: Name = "inout"
     public static let variable: Name = "var"
 
+    // The word a procedure type writes before what it may fail with.
+    public static let `throws`: Name = "throws"
+
     // What the language declares itself: the contract a map's key answers,
     // the failure a rescue binds and the round a loop binds.
     public static let hashable: Name = "Hashable"

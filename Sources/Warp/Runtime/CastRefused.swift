@@ -47,7 +47,7 @@ public struct CastRefused: RecoverableFailure {
     // spelled here, as `details` holds them: the type by its string spelling
     // and the value's type by its name.
     init(_ message: String, expected: LoweredType, actual: Value, in table: LoweredTypeTable) {
-        self.init(message, expected: expected.spelling(in: table), actual: actual.nominal.spelling, trace: nil)
+        self.init(message, expected: expected.rendered(in: table), actual: actual.nominal.spelling, trace: nil)
     }
 
     private init(_ message: String, expected: String, actual: String, trace: Trace?) {

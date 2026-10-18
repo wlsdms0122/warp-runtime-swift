@@ -53,7 +53,7 @@ struct DeclaredNameNotationTests {
     func aDeclarationRoundTrips() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["var": "held", "type": ["procedure": ["returns": "Int"]], "value": ["closure": ["result": 1]]]],
+            "body": [["var": "held", "type": "() -> Int", "value": ["closure": ["result": 1]]]],
             "result": ["ref": "held"]
         ])
 

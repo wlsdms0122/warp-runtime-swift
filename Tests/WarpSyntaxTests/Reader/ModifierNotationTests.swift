@@ -28,10 +28,9 @@ struct ModifierNotationTests {
 
     @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
     func everyMarkRoundTrips(mark: SlotMark) throws {
-        // Given. Both forms a marked type takes: a name, and a procedure
-        // under its one key
+        // Given. A name, and a procedure type, each in front of the mark
         let named = mark.marking(.named("Handle"))
-        let form = mark.marking(.procedure(ProcedureType(returns: .int)))
+        let form = mark.marking(.procedure(ProcedureType(returns: .int, failing: .anything)))
 
         // When
         let writtenName = try Writer().value(of: named)
@@ -42,13 +41,9 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse("\(mark.word) Handle") == named)
         #expect(SlotMark.marked(named) == mark)
 
-        #expect(
-            writtenForm == .dictionary([
-                try Name("\(mark.word) procedure"): .dictionary(["returns": "Int"])
-            ])
-        )
+        #expect(writtenForm == .string("\(mark.word) () throws -> Int"))
 
-        // And the form reads back where the mark may stand: `inout` in front
+        // And the procedure type reads back where the mark may stand: `inout` in front
         // of a parameter, `var` on a declared type's field
         switch mark {
         case .inout:
@@ -73,7 +68,7 @@ struct ModifierNotationTests {
     }
 
     @Test(
-        "a mark inside a mark is written as it is where a name carries it, and has no procedure form",
+        "a mark inside a mark is written as it is, in front of a name or a procedure type",
         arguments: SlotMark.allCases, SlotMark.allCases
     )
     func aMarkInsideAMarkIsWrittenAsItIs(mark: SlotMark, inside: SlotMark) throws {
@@ -85,10 +80,11 @@ struct ModifierNotationTests {
         #expect(try Writer().value(of: named) == .string("\(mark.word) \(inside.word) Handle"))
         #expect(try TypeReader.parse("\(mark.word) \(inside.word) Handle") == named)
 
-        // And a procedure's key carries one
-        #expect(throws: WritingError.self) {
-            try Writer().value(of: mark.marking(inside.marking(.procedure(ProcedureType(returns: .int)))))
-        }
+        // And a procedure type takes both the same way
+        let procedure = mark.marking(inside.marking(.procedure(ProcedureType(returns: .int, failing: .these([])))))
+
+        #expect(try Writer().value(of: procedure) == .string("\(mark.word) \(inside.word) () -> Int"))
+        #expect(try TypeReader.parse("\(mark.word) \(inside.word) () -> Int") == procedure)
     }
 
     @Test(
@@ -192,11 +188,11 @@ struct ModifierNotationTests {
         #expect(try Writer().value(of: parsed) == .string(canonical))
     }
 
-    @Test("a mark and a modifier on one procedure form survive the round trip")
+    @Test("a mark and a modifier on one procedure type survive the round trip")
     func aMarkAndAModifierRoundTrip() throws {
-        // Given. A parameter typed `inout const Procedure<...>`, which the
-        // writer spells as a form under one key
-        let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int), .const))
+        // Given. A parameter handed in place, typed a procedure answering
+        // without running
+        let type = TypeExpression.inout(.procedure(ProcedureType(returns: .int, failing: .anything), .const))
 
         // When
         let written = try Writer().value(of: type)
@@ -207,7 +203,7 @@ struct ModifierNotationTests {
         ])
 
         // Then
-        #expect(written == .dictionary(["inout const procedure": .dictionary(["returns": "Int"])]))
+        #expect(written == .string("inout const () throws -> Int"))
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 

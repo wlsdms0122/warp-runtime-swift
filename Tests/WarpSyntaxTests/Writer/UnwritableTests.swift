@@ -88,35 +88,34 @@ struct UnwritableTests {
         #expect(try sut.value(of: TypeExpression.composition(["App.B", "App.A"])) == .string("App.A & App.B"))
     }
 
-    @Test("a nullable writes its trailing ?, and one with no spelling inside has no document")
-    func aNullableSpellsOrRefuses() throws {
-        // When / Then. The trailing `?` needs a name in front of it, and a
-        // procedure type that writes its signature spells as a mapping rather
-        // than a name
+    @Test("a nullable writes its trailing ?, after parentheses around a procedure type")
+    func aNullableSpells() throws {
+        // When / Then. A `?` after a procedure type's answer would be the
+        // answer's, so the whole procedure is written in parentheses before it
         #expect(try sut.value(of: TypeExpression.nullable(.int)) == .string("Int?"))
         #expect(
             try sut.value(of: TypeExpression.nullable(.array(.string)))
                 == .string("Array<String>?")
         )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.nullable(.procedure(ProcedureType(returns: .int))))
-        }
+        #expect(
+            try sut.value(of: TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .anything))))
+                == .string("(() throws -> Int)?")
+        )
+        #expect(try sut.value(of: TypeExpression.nullable(.procedure(nil, .const))) == .string("(const Procedure)?"))
+        #expect(try sut.value(of: TypeExpression.nullable(.procedure(nil))) == .string("Procedure?"))
     }
 
-    @Test("a struct applied to types writes them between its brackets, and one applied to a signature has no document")
-    func aStructAppliedToTypesSpellsOrRefuses() throws {
-        // When / Then. Each type a struct is applied to is written by its
-        // spelling, and a procedure type that writes its signature spells as
-        // a mapping rather than a name
+    @Test("a struct applied to types writes them between its brackets")
+    func aStructAppliedToTypesSpells() throws {
+        // When / Then
         #expect(
             try sut.value(of: TypeExpression.named("App.Box", arguments: [.int, .parameter(name: "T")]))
                 == .string("App.Box<Int, some T>")
         )
-
-        #expect(throws: WritingError.self) {
-            try sut.value(of: TypeExpression.named("App.Box", arguments: [.procedure(ProcedureType(returns: .int))]))
-        }
+        #expect(
+            try sut.value(of: TypeExpression.named("App.Box", arguments: [.procedure(ProcedureType(returns: .int, failing: .anything))]))
+                == .string("App.Box<() throws -> Int>")
+        )
     }
 
     @Test("a path holding a name no path spells has no document")

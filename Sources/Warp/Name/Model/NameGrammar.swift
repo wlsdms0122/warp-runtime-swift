@@ -37,7 +37,7 @@ import Foundation
 //
 // No type's name and no type parameter's name is a word the language writes
 // itself: the names it gives its own types, the words a type's spelling
-// writes in front of a type, and the scalars a value is written as bare.
+// writes beside a type, and the scalars a value is written as bare.
 public enum NameGrammar: Sendable {
     case type
     case mention
@@ -58,7 +58,8 @@ public enum NameGrammar: Sendable {
             TypeSpelling.const,
             TypeSpelling.isolated,
             TypeSpelling.inout,
-            TypeSpelling.variable
+            TypeSpelling.variable,
+            TypeSpelling.throws
         ])
         .union(Name.scalarKeywords.keys.map(Name.init(normal:)))
 

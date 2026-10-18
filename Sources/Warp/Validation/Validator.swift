@@ -185,15 +185,6 @@ struct Validator: Sendable {
 
             for argument in head.arguments {
                 try written(argument, in: .head, at: place)
-
-                // A head is a key, so what it applies its type to is spelled.
-                guard argument.hasSpelling else {
-                    throw ValidationError(
-                        "applies '\(head.type)' to \(argument.rendered), which has no spelling, and an extension is"
-                            + " keyed by its head. A procedure type is declared and written by its name",
-                        at: place
-                    )
-                }
             }
 
             let named = head.parameterNames
@@ -240,7 +231,6 @@ struct Validator: Sendable {
                 let here = Place.typeMember(member, in: module.document)
 
                 try held(name, as: .typeMember, at: here)
-                try marked(type, at: here)
                 try written(type, in: .typeMember(declaring: declaring), at: here)
             }
 
@@ -1241,7 +1231,6 @@ struct Validator: Sendable {
                 )
             }
 
-            try marked(same, at: here)
             try written(same, in: context, at: here)
 
             // What a same type writes is filled where the call fills the
@@ -1311,7 +1300,6 @@ struct Validator: Sendable {
                 throw ValidationError("declares '\(parameter.name)' twice", at: here)
             }
 
-            try marked(parameter.type, at: here)
             try written(parameter.type.slotUnwrapped, in: context, at: here)
         }
 
@@ -1436,14 +1424,6 @@ struct Validator: Sendable {
                 )
             }
 
-            guard inner.hasSpelling else {
-                throw ValidationError(
-                    "writes `\(type.rendered)`, and a `?` trails a type's spelling, which \(inner.rendered) is"
-                        + " written without. What may be null of it is declared under a name and written `Name?`",
-                    at: place
-                )
-            }
-
             try written(inner, in: context, at: place)
 
         // A procedure type's parameters are slots, each of which may be
@@ -1452,7 +1432,6 @@ struct Validator: Sendable {
             guard let procedure else { return }
 
             for (position, parameter) in procedure.parameters.enumerated() {
-                try marked(parameter, at: place.index(position))
                 try written(parameter.slotUnwrapped, in: context, at: place.index(position))
             }
 
@@ -1511,34 +1490,11 @@ struct Validator: Sendable {
                 let here = place.part(.fields).key(name.spelling)
 
                 try held(name, as: .value, at: here)
-                try marked(field, at: here)
                 try written(field.fieldUnwrapped, in: .struct(declaring: Set(typeParameters)), at: here)
             }
 
         case let .alias(type):
             try written(type, in: .value, at: place)
-        }
-    }
-
-    // A slot mark stands in front of a type's spelling or on the key a
-    // procedure type is written under, and a type written as any other
-    // mapping has no front for one.
-    private func marked(_ type: TypeExpression, at place: Place) throws {
-        switch type {
-        case let .inout(inner), let .variable(inner):
-            if inner.hasSpelling { return }
-
-            if case .procedure(.some, _, _) = inner { return }
-
-            throw ValidationError(
-                "writes `\(type.rendered)`, and a mark stands in front of a type's spelling or on a procedure"
-                    + " type's key, which \(inner.rendered) is written without. Declare it under a name and"
-                    + " mark the name",
-                at: place
-            )
-
-        default:
-            return
         }
     }
 

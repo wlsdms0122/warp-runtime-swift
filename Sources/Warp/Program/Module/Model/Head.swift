@@ -29,7 +29,9 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
         guard !arguments.isEmpty else { return type }
 
         var named: Set<Name> = []
-        let written = arguments.map { argument in spelled(argument, naming: &named) }
+        let written = arguments.map { argument in
+            argument.spelled { name in named.insert(name).inserted ? bounds[name] : nil }
+        }
 
         return Name(normal: "\(type.spelling)<\(written.joined(separator: ", "))>")
     }
@@ -178,38 +180,6 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
 
         case .any, .never, .null, .bool, .int, .double, .string, .procedure(nil, _, _), .composition, .selfType:
             return type
-        }
-    }
-
-    // A type as the spelling writes it, a parameter's bounds beside the first
-    // place it is named.
-    private func spelled(_ type: TypeExpression, naming named: inout Set<Name>) -> String {
-        switch type {
-        case let .parameter(name):
-            let first = named.insert(name).inserted
-
-            guard first, let contracts = bounds[name] else { return type.rendered }
-
-            return "\(type.rendered): \(contracts.sorted().map(\.spelling).joined(separator: " & "))"
-
-        case let .named(name, arguments) where !arguments.isEmpty:
-            let written = arguments.map { argument in spelled(argument, naming: &named) }
-
-            return "\(name.spelling)<\(written.joined(separator: ", "))>"
-
-        case let .array(element):
-            return "\(TypeSpelling.array.spelling)<\(spelled(element, naming: &named))>"
-
-        case let .dictionary(key, value):
-            let key = spelled(key, naming: &named)
-
-            return "\(TypeSpelling.dictionary.spelling)<\(key), \(spelled(value, naming: &named))>"
-
-        case let .nullable(inner):
-            return "\(spelled(inner, naming: &named))?"
-
-        default:
-            return type.rendered
         }
     }
 }

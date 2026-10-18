@@ -161,83 +161,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // How the type reads in a message: a declaration an author wrote comes
     // back to them in the spelling they wrote it in.
     public var rendered: String {
-        switch self {
-        case .any:
-            return TypeSpelling.any.spelling
-
-        case .never:
-            return TypeSpelling.never.spelling
-
-        case .null:
-            return TypeSpelling.null.spelling
-
-        case .bool:
-            return TypeSpelling.bool.spelling
-
-        case .int:
-            return TypeSpelling.int.spelling
-
-        case .double:
-            return TypeSpelling.double.spelling
-
-        case .string:
-            return TypeSpelling.string.spelling
-
-        case let .parameter(name):
-            return "\(TypeSpelling.some) \(name)"
-
-        case let .composition(names):
-            return names.sorted().map(\.spelling).joined(separator: " & ")
-
-        case .selfType:
-            return TypeSpelling.selfType.spelling
-
-        case let .associatedType(of, name) where of.root == TypeSpelling.selfType:
-            return name.spelled(under: of).spelling
-
-        case let .associatedType(of, name):
-            return "\(TypeSpelling.some) \(name.spelled(under: of))"
-
-        case let .variable(inner):
-            return "\(TypeSpelling.variable) \(inner.rendered)"
-
-        case let .inout(inner):
-            return "\(TypeSpelling.inout) \(inner.rendered)"
-
-        case let .procedure(type, constness, isolation):
-            let spelling = [
-                constness == .const ? TypeSpelling.const.spelling : nil,
-                isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
-                TypeSpelling.procedure.spelling
-            ]
-            .compactMap { part in part }
-            .joined(separator: " ")
-
-            guard let type else { return spelling }
-
-            let written = type.parameters.map(\.rendered)
-            let failing = type.failing == .unstated ? "" : " failing \(type.failing.rendered)"
-
-            // Rendered as what it accepts, because a message is about what would
-            // have fit. Which half was written is a fact about the source rather
-            // than about the value being refused.
-            return "\(spelling)<(\(written.joined(separator: ", ")))"
-                + " -> \((type.returns ?? .any).rendered)\(failing)>"
-
-        case let .array(element):
-            return "Array<\(element.rendered)>"
-
-        case let .dictionary(key, value):
-            return "Dictionary<\(key.rendered), \(value.rendered)>"
-
-        case let .named(name, arguments):
-            guard !arguments.isEmpty else { return name.spelling }
-
-            return "\(name.spelling)<\(arguments.map(\.rendered).joined(separator: ", "))>"
-
-        case let .nullable(inner):
-            return "\(inner.rendered)?"
-        }
+        spelled { _ in nil }
     }
 
     // Every declared name this reaches: the types and contracts it names.
@@ -403,29 +327,13 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
         }
     }
 
-    // Whether a document writes this type as a string, which a `?` trails and
-    // a slot mark stands in front of. A procedure type that writes its
-    // signature is written as a mapping under one key, and so is a list or a
-    // map of one.
-    var hasSpelling: Bool {
-        switch self {
-        case .any, .never, .null, .bool, .int, .double, .string, .parameter, .composition,
-            .selfType, .associatedType:
-            return true
+    // Whether a `?` trailing this is written after parentheses around it: a
+    // procedure type writing its signature or a modifier, whose spelling a
+    // `?` would otherwise end inside.
+    private var isGroupedBeforeQuestionMark: Bool {
+        guard case let .procedure(type, constness, isolation) = self else { return false }
 
-        case let .named(_, arguments):
-            return arguments.allSatisfy(\.hasSpelling)
-
-        case let .procedure(type, _, _):
-            return type == nil
-
-        case let .dictionary(key, value):
-            return key.hasSpelling && value.hasSpelling
-
-        case let .array(inner), let .nullable(inner), let .variable(inner),
-            let .inout(inner):
-            return inner.hasSpelling
-        }
+        return type != nil || constness == .const || isolation == .isolated
     }
 
     var isInout: Bool {
@@ -455,6 +363,97 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
 
     // MARK: - Initializer
     // MARK: - Public
+    // The spelling a document writes the type as. `bound` answers the
+    // contracts a type parameter is written beside at a naming, asked of each
+    // naming in the order the spelling writes them, and nil where it is
+    // written bare.
+    public func spelled(bounding bound: (Name) -> Set<Name>?) -> String {
+        switch self {
+        case .any:
+            return TypeSpelling.any.spelling
+
+        case .never:
+            return TypeSpelling.never.spelling
+
+        case .null:
+            return TypeSpelling.null.spelling
+
+        case .bool:
+            return TypeSpelling.bool.spelling
+
+        case .int:
+            return TypeSpelling.int.spelling
+
+        case .double:
+            return TypeSpelling.double.spelling
+
+        case .string:
+            return TypeSpelling.string.spelling
+
+        case let .parameter(name):
+            guard let contracts = bound(name) else { return "\(TypeSpelling.some) \(name)" }
+
+            return "\(TypeSpelling.some) \(name): \(Self.joined(contracts))"
+
+        case let .composition(names):
+            return Self.joined(names)
+
+        case .selfType:
+            return TypeSpelling.selfType.spelling
+
+        case let .associatedType(of, name) where of.root == TypeSpelling.selfType:
+            return name.spelled(under: of).spelling
+
+        case let .associatedType(of, name):
+            return "\(TypeSpelling.some) \(name.spelled(under: of))"
+
+        case let .variable(inner):
+            return "\(TypeSpelling.variable) \(inner.spelled(bounding: bound))"
+
+        case let .inout(inner):
+            return "\(TypeSpelling.inout) \(inner.spelled(bounding: bound))"
+
+        case let .procedure(type, constness, isolation):
+            let modifiers = [
+                constness == .const ? TypeSpelling.const : nil,
+                isolation == .isolated ? TypeSpelling.isolated : nil
+            ]
+            .compactMap { modifier in modifier.map { modifier in "\(modifier) " } }
+            .joined()
+
+            guard let type else { return "\(modifiers)\(TypeSpelling.procedure)" }
+
+            let parameters = type.parameters.map { parameter in parameter.spelled(bounding: bound) }
+            let throwing = switch type.failing {
+            case .anything: " \(TypeSpelling.throws)"
+            case let .these(failures) where failures.isEmpty: ""
+            case let .these(failures): " \(TypeSpelling.throws)(\(failures.sorted().joined(separator: ", ")))"
+            }
+
+            return "\(modifiers)(\(parameters.joined(separator: ", ")))\(throwing)"
+                + " -> \((type.returns ?? .any).spelled(bounding: bound))"
+
+        case let .array(element):
+            return "\(TypeSpelling.array)<\(element.spelled(bounding: bound))>"
+
+        case let .dictionary(key, value):
+            return "\(TypeSpelling.dictionary)<\(key.spelled(bounding: bound)), \(value.spelled(bounding: bound))>"
+
+        case let .named(name, arguments):
+            guard !arguments.isEmpty else { return name.spelling }
+
+            return "\(name.spelling)<\(arguments.map { argument in argument.spelled(bounding: bound) }.joined(separator: ", "))>"
+
+        // Everything after `->` is a procedure's answer, and a modifier stands
+        // in front of the whole type after it, so a `?` meaning either one
+        // whole is written after parentheses around it.
+        case let .nullable(inner):
+            guard inner.isGroupedBeforeQuestionMark else { return "\(inner.spelled(bounding: bound))?" }
+
+            return "(\(inner.spelled(bounding: bound)))?"
+        }
+    }
+
     // The same type with `Self` written as `type` wherever it stands: what a
     // contract's procedure says once a call through the contract reads `Self`
     // as one of its type parameters.
@@ -502,4 +501,8 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     }
 
     // MARK: - Private
+    // Contracts a bound or a composition names, in one order.
+    private static func joined(_ names: Set<Name>) -> String {
+        names.sorted().map(\.spelling).joined(separator: " & ")
+    }
 }

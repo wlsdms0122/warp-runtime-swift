@@ -24,7 +24,7 @@ struct ConstnessTests {
     // so what fits here is exactly what the predicate admits.
     private let asking = Procedure(
         signature: Signature(
-            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))],
+            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
             returns: .string
         ),
         body: [
@@ -121,7 +121,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
         }
     }
 
@@ -152,7 +152,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds () -> String where const () throws -> String is declared")
         }
     }
 
@@ -189,7 +189,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
         }
     }
 
@@ -252,7 +252,7 @@ struct ConstnessTests {
                     access: .public,
                     body: [
                         Statement(
-                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string), .const)),
+                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string, failing: .anything), .const)),
                             expression: .closure(
                                 Procedure(
                                     signature: Signature(returns: .string),
@@ -325,7 +325,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds () throws -> String where const () throws -> String is declared")
         }
     }
 
@@ -336,7 +336,7 @@ struct ConstnessTests {
         // which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string)))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))]
             ),
             body: [],
             result: .apply(reference("body"), arguments: [])
@@ -381,7 +381,7 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds Procedure<() -> String> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds () throws -> String where const () throws -> String is declared")
         }
     }
 

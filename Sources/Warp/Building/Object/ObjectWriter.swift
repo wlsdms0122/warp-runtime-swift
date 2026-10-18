@@ -440,8 +440,8 @@ struct ObjectWriter {
         typealias Tag = ObjectLayout.FailingTag
 
         switch failing {
-        case .unstated:
-            return tagged(Tag.unstated)
+        case .anything:
+            return tagged(Tag.anything)
 
         case let .these(types):
             return tagged(Tag.these, .array(types.sorted().map(Value.string)))

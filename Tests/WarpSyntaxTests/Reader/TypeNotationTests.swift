@@ -62,14 +62,26 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Array<Int>?") == .nullable(.array(.int)))
         #expect(try TypeReader.parse("Task?") == .nullable(.named("Task")))
 
-        // And. `?` wraps the whole spelling, so inside the brackets it is the
-        // element that is nullable, and in front of it a modifier or an `&`
-        // is still the whole type's.
+        // And. `?` wraps the whole spelling before it, so inside the brackets
+        // it is the element that is nullable, and in front of it an `&` or a
+        // mark is still the whole type's.
         #expect(try TypeReader.parse("Array<Int?>") == .array(.nullable(.int)))
-        #expect(try TypeReader.parse("const Procedure?") == .nullable(.procedure(nil, .const)))
-        #expect(try TypeReader.parse("isolated Procedure?") == .nullable(.procedure(nil, .unstated, .isolated)))
         #expect(try TypeReader.parse("App.B & App.A?") == .nullable(.composition(["App.A", "App.B"])))
         #expect(try TypeReader.parse("inout Int?") == .inout(.nullable(.int)))
+
+        // And. After `->` stands a procedure's answer, so a `?` there is the
+        // answer's, and parentheses group, so one after them is the whole
+        // procedure's, as one after a modifier is.
+        let answer = ProcedureType(parameters: [.int], returns: .nullable(.int), failing: .these([]))
+        let whole = ProcedureType(parameters: [.int], returns: .int, failing: .these([]))
+
+        #expect(try TypeReader.parse("(Int) -> Int?") == .procedure(answer))
+        #expect(try TypeReader.parse("((Int) -> Int)?") == .nullable(.procedure(whole)))
+        #expect(try TypeReader.parse("(const Procedure)?") == .nullable(.procedure(nil, .const)))
+        #expect(try TypeReader.parse("(isolated Procedure)?") == .nullable(.procedure(nil, .unstated, .isolated)))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("const Procedure?") }
+        #expect(try TypeReader.parse("(Int)?") == .nullable(.int))
+        #expect(try TypeReader.parse("((Int) -> Int)") == .procedure(whole))
     }
 
     @Test("names joined with & read as the set of them, and write back in name order")
@@ -131,33 +143,13 @@ struct TypeNotationTests {
         #expect(signature?.returns == .parameter(name: "T"))
     }
 
-    @Test("a bound is the names of contracts, and a nested procedure type writes none")
+    @Test("a bound is the names of contracts")
     func aBoundBelongsToTheSignature() throws {
         // When / Then. A bound is a contract's name, never a type.
         #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
                 "parameters": [["name": "of", "type": "some T: Array<Int>"]],
                 "result": ["ref": "of"]
-            ])
-        }
-
-        // And. A nested procedure type carries no `bounds` of its own. Its
-        // parameters are the declaring signature's slots, and the declaring
-        // signature owns their bounds.
-        #expect(throws: ReadingError.self) {
-            try loader.loadProcedure([
-                "parameters": [
-                    ["name": "by",
-                        "type": [
-                            "procedure": [
-                                "bounds": ["T": "Comparable"],
-                                "parameters": ["some T"],
-                                "returns": "Bool"
-                            ]
-                        ]
-                    ]
-                ],
-                "result": ["ref": "by"]
             ])
         }
     }
@@ -169,14 +161,8 @@ struct TypeNotationTests {
         // name
         let sut = try loader.loadProcedure([
             "parameters": [
-                ["name": "by",
-                    "type": [
-                        "procedure": [
-                            "parameters": ["some Element: Comparable"],
-                            "returns": "Bool"
-                        ]
-                    ]
-                ], ["name": "of", "type": "Array<some Element>"]
+                ["name": "by", "type": "(some Element: Comparable) -> Bool"],
+                ["name": "of", "type": "Array<some Element>"]
             ],
             "result": ["ref": "of"]
         ], importing: ["Comparable"])
@@ -231,82 +217,41 @@ struct TypeNotationTests {
         )
     }
 
-    @Test("the array form holds only an element with no spelling of its own")
-    func arrayFormIsForUnspelledElements() throws {
-        // Given / When. An array of procedures that write their signature has
-        // no string spelling, so the form is the one way to write it.
+    @Test("a list or a map of procedures is written by its spelling, and a mapping is no type")
+    func procedureElementsAreSpelled() throws {
+        // Given / When
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "parameters": [["name": "rows", "type": ["array": ["procedure": ["returns": "Int"]]]]],
+                    "parameters": [
+                        ["name": "rows", "type": "Array<() -> Int>"],
+                        ["name": "steps", "type": "Dictionary<String, (Int) throws -> Int>"]
+                    ],
                     "body": [["let": "seen", "value": ["ref": "rows"]]]
                 ]
             ]
         ])
 
         // Then
+        let signature = sut.procedures["entry"]?.signature
+
+        #expect(signature?.parameter(named: "rows")?.type == .array(.procedure(ProcedureType(returns: .int, failing: .these([])))))
         #expect(
-            sut.procedures["entry"]?.signature.parameter(named: "rows")?.type
-                == .array(.procedure(ProcedureType(returns: .int)))
+            signature?.parameter(named: "steps")?.type
+                == .dictionary(key: .string, value: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .anything)))
         )
 
-        // And. A struct is declared under its name in `types` and named
-        // everywhere else, so a slot written as a struct is no type
+        // And. A type is a string, so a mapping where one is written is no type
         #expect(throws: ReadingError.self) {
             try loader.loadDocument([
                 "procedures": [
                     "entry": [
-                        "parameters": [["name": "rows", "type": ["array": ["struct": ["id": "String"]]]]],
+                        "parameters": [["name": "rows", "type": ["array": "String"]]],
                         "body": [["let": "seen", "value": ["ref": "rows"]]]
                     ]
                 ]
             ])
         }
-
-        // And. An element with a spelling is written `Array<String>`. A document
-        // says it that one way, and the form around it is a second spelling
-        #expect {
-            try loader.load(
-                [
-                    "warp": .int(ModuleReader.version),
-                    "imports": [],
-                    "procedures": [
-                        "entry": [
-                            "parameters": [["name": "rows", "type": ["array": "String"]]],
-                            "body": [["let": "seen", "value": ["ref": "rows"]]]
-                        ]
-                    ]
-                ],
-                identity: nil
-            )
-        } throws: { error in
-            "\(error)".contains("The one way writes \"Array<String>\"")
-        }
-    }
-
-    @Test("a map type writes its key's type and its value's, in the spelling or the form")
-    func mapTypeWritesKeyAndValue() throws {
-        // Given / When. A map of procedures has no string spelling, so the
-        // form writes its key's type and its value's under their own keys.
-        let sut = try loader.loadDocument([
-            "procedures": [
-                "entry": [
-                    "parameters": [
-                        [
-                            "name": "steps",
-                            "type": ["dictionary": ["key": "String", "value": ["procedure": ["returns": "Int"]]]]
-                        ]
-                    ],
-                    "body": [["let": "seen", "value": ["ref": "steps"]]]
-                ]
-            ]
-        ])
-
-        // Then
-        #expect(
-            sut.procedures["entry"]?.signature.parameter(named: "steps")?.type
-                == .dictionary(key: .string, value: .procedure(ProcedureType(returns: .int)))
-        )
 
         // And. The spelling writes two types, and one is no map
         #expect(throws: TypeFormError.self) { try TypeReader.parse("Dictionary<Int>") }
