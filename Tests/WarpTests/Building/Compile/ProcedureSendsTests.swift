@@ -203,6 +203,7 @@ struct ProcedureSendsTests {
 
             // MARK: - Property
             var selector: Name { "App.shout" }
+
             var handing: Int { 1 }
 
             // MARK: - Initializer
@@ -754,7 +755,7 @@ struct ProcedureSendsTests {
             )
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("is declared isolated, and it sends 'App.ticket', which is not declared isolated")
+                && "\(error)".contains("says it touches no name another body could touch at the same time, and sends 'App.ticket'")
         }
     }
 
@@ -777,7 +778,7 @@ struct ProcedureSendsTests {
 
         #expect(alone?.message == "sends 'App.ticket', which no module in this link declares")
         #expect(
-            against?.message.contains("is declared isolated, and it sends 'App.ticket', which is not declared isolated")
+            against?.message.contains("says it touches no name another body could touch at the same time, and sends 'App.ticket'")
                 == true
         )
     }
@@ -800,7 +801,7 @@ struct ProcedureSendsTests {
         }
 
         #expect(alone?.message == "sends 'App.shout', which no module in this link declares")
-        #expect(against?.message.contains("is declared const, and it sends 'App.shout', which is not declared const") == true)
+        #expect(against?.message.contains("answers without running and sends 'App.shout', which answers only by running") == true)
     }
 
     @Test("a procedure that says it touches shared state may send one that does")

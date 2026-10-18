@@ -484,7 +484,7 @@ struct InPlaceTests {
 
         guard
             case let .body(body, _) = entry.implementation,
-            case let .apply(_, arguments, _)? = body.instructions.last?.code
+            case let .apply(_, arguments)? = body.instructions.last?.code
         else {
             Issue.record("the entry's last statement is a call of a value")
             return

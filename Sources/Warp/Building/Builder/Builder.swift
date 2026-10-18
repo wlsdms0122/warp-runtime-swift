@@ -35,13 +35,12 @@ import Foundation
 //
 // Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
-// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), its
-// bodies (`TypeChecker`), lowering (`Lowering`) and what each lowered body
-// does against what it declares (`EffectChecker`). It runs the procedures a
+// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), what
+// each body does against what it declares (`EffectChecker`), its bodies
+// (`TypeChecker`) and lowering (`Lowering`). It runs the procedures a
 // constant calls, which is what folding is. Linking takes what that
 // answered, judges what only the whole list can answer, one claim for each
-// type and contract, holds every row to its declaration against the rows its
-// calls reach here, and runs nothing.
+// type and contract, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
@@ -166,17 +165,6 @@ public struct Builder: Sendable {
 
         try compiling.resolveHeldClosures()
         try compiling.resolveEvery()
-
-        // A compile against these folds through their rows on the strength of
-        // what each declares, so each is held to it before one does.
-        try EffectChecker(
-            table: compiling.lowering.table,
-            resolving: .documents(compiling.lowering.documents.map(\.resolved)),
-            contractProcedures: lowered.contractProcedures
-        )
-        .check(Array(compiling.lowering.table.indices)) { row in
-            row.place(in: compiled[row.origin].document, constants: compiled[row.origin].constants)
-        }
 
         var declarers = DeclarerTable()
 
@@ -496,14 +484,6 @@ public struct Builder: Sendable {
         )
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
-
-        // What a row does depends on the declarations its calls reach, which
-        // are this link's, and an object's rows were never held to their own
-        // declarations by a compile here. So every row is held here.
-        try EffectChecker(table: linked.table, resolving: .rows, contractProcedures: lowered.contractProcedures)
-            .check(Array(linked.table.indices)) { row in
-                row.place(in: compiled[row.origin].document, constants: compiled[row.origin].constants)
-            }
 
         return Image(
             linked: linked.table,

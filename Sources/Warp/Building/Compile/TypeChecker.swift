@@ -1817,6 +1817,24 @@ struct TypeChecker {
                 calls = inner.calls
                 judgements = inner.judgements
 
+                // A name this closure captured carries what the slot it came
+                // from said about it, and its own parameters shadow any it
+                // captured. A module variable it reads is read by running.
+                let bound = procedure.signature.environment(in: context.loweredTypes)
+                    .merging(outside) { own, _ in own }
+                    .compactMapValues(\.declaredType)
+
+                if let refusal = EffectChecker().refusal(
+                    of: body,
+                    declared: procedure.signature,
+                    reading: context.variables.subtracting(declared),
+                    bound: bound,
+                    taking: context.signature(of:),
+                    in: context.loweredTypes
+                ) {
+                    throw BuildError("the closure \(refusal)", at: place.child(.closure))
+                }
+
                 rewritten = .closure(
                     Procedure(
                         description: procedure.description,
@@ -1866,10 +1884,6 @@ struct TypeChecker {
                 with: context,
                 ask: ask
             )
-
-            // What the call may do is what the type written for the value
-            // says, which the lowering carries to every reading of the body.
-            let calleeWritten = context.declaredType(of: callee) { name in environment[name]?.declaredType }
 
             // Read once, and every judgement below asks this reading: whether
             // it could be called, what it takes and what it answers.
@@ -2017,7 +2031,7 @@ struct TypeChecker {
                 at: place
             )
 
-            judgements.record(.apply(inPlace: handed, written: calleeWritten), at: place)
+            judgements.record(.apply(inPlace: handed), at: place)
 
             if failsHere(expression, in: environment, given: context) {
                 flow.fail()
@@ -2655,10 +2669,18 @@ struct TypeChecker {
                 )
             }
 
-            // The type written for what the name holds, which a call of the
-            // value leans on.
+            // A name that says what it holds holds that. One that says
+            // nothing holds what the build worked out from what it was given.
+            // What a slot declared it holds is the effect checker's to say, by the
+            // rule its own walk binds a name by.
             let declaredType = written.binding.flatMap { binding in
-                context.declaredType(of: binding, reading: written.expression) { name in environment[name]?.declaredType }
+                EffectChecker().declaredType(
+                    of: binding,
+                    reading: written.expression,
+                    taking: context.signature(of:),
+                    given: { name in environment[name]?.declaredType },
+                    in: context.loweredTypes
+                )
             }
 
             // What this statement's value is held to, and so what a literal in
@@ -2865,32 +2887,18 @@ struct TypeChecker {
         }
     }
 
-    // Whether a run may fail at this node itself, apart from the nodes it
-    // holds: a cast that names a type the value may not arrive as, a call
-    // whose callee declares a failure, and a call of a value whose written
-    // type does, or says nothing.
-    // `EffectChecker` reads lowered rows by the same rule, since an object
-    // has no document to read.
+    // Whether a run may fail at this node itself, by the one judgement of it.
     private func failsHere(
         _ expression: Expression,
         in environment: [Name: Binding],
         given context: TypingContext
     ) -> Bool {
-        switch expression {
-        case let .cast(_, _, optional):
-            return !optional
-
-        case let .call(call):
-            return !(context.signature(of: call.selector)?.failing.failsNothing ?? false)
-
-        case let .apply(callee, _):
-            let declared = context.declaredType(of: callee) { name in environment[name]?.declaredType }
-
-            return !(declared?.procedureFailing.failsNothing ?? false)
-
-        case .literal, .reference, .closure, .array, .struct, .dictionary, .conditional, .loop, .attempt, .leave:
-            return false
-        }
+        !EffectChecker().failingHere(
+            expression,
+            taking: context.signature(of:),
+            bound: { name in environment[name]?.declaredType },
+            in: context.loweredTypes
+        ).failsNothing
     }
 
     // What a call hands in place at these positions, each variable held from

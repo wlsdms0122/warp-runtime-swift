@@ -176,15 +176,6 @@ public final class Linked: Sendable {
     }
 
     // MARK: - Public
-    // Where a refusal about this row stands in the document that wrote it:
-    // a declaration under its name, and a closure under the declaration that
-    // wrote it, a constant or a variable where no procedure did.
-    func place(in document: Place.Document, constants: some Collection<Name>) -> Place {
-        guard case let .binding(name)? = closure?.by else { return .procedure(label.spelling, in: document) }
-
-        return constants.contains(name) ? .constant(name.spelling, in: document) : .variable(name.spelling, in: document)
-    }
-
     // A declaration's row before its body is lowered: a native answers as it
     // is, and a written body stands as the refusal it earns until then, so
     // nothing folds through a body half-made. Until it is lowered such a row
@@ -315,22 +306,6 @@ public final class Linked: Sendable {
         guard arguments == slots.count else {
             throw BuildError(
                 "a call stands \(arguments) argument(s) where the \(slots.count) its callee declares stand",
-                at: place
-            )
-        }
-    }
-
-    // The same, and where it hands in place against where this row takes in
-    // place: a run hands a box at every position the call says, and the row
-    // writes through it only where it declared it would.
-    func refuseCall(standing arguments: Int, handing positions: [Int], at place: Place) throws {
-        try refuseCall(standing: arguments, at: place)
-
-        let taken = slots.indices.filter { position in slots[position].type.isInout }
-
-        guard positions == taken else {
-            throw BuildError(
-                "a call hands in place at \(positions) where its callee takes in place at \(taken)",
                 at: place
             )
         }

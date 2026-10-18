@@ -43,6 +43,10 @@ struct TypingContext: Sendable {
     // declaration, and which declaration runs is the first argument's to say.
     let contractProcedures: [Name: LoweredContractProcedure]
 
+    // The variables of the document being read, by name. A body reading one
+    // answers by the run's state, so constness is read against these.
+    let variables: Set<Name>
+
     // What the procedure being read holds its type parameters to. A closure
     // written in its body reads the same names, so a `some T` inside is the
     // `T` the caller filled, bound the way the declaration bound it.
@@ -89,73 +93,6 @@ struct TypingContext: Sendable {
     // What it answers, as the declaration wrote it.
     func answer(of selector: Name) -> LoweredType? {
         declared(selector)?.returns ?? contractProcedures[selector]?.answers
-    }
-
-    // The type written for the value this reads, and nil where nothing was
-    // written. A closure literal writes its signature, a cast the type it
-    // names, a call the answer its callee declares and a call of a value the
-    // answer the value's written type says, and the value is held to that
-    // type where it is made, cast or answered. A path follows the type
-    // written for its head, which `given` says, past it: brackets read an
-    // element of a list or an entry of a map, and a dot reads a field a
-    // struct type declares. A list or a map of them says it about every
-    // element or entry, and the value was judged against that type when it
-    // was handed over, so what the type says of the part is what the slot
-    // said.
-    func declaredType(of expression: Expression, given declared: (Name) -> LoweredType?) -> LoweredType? {
-        switch expression {
-        case let .closure(procedure):
-            return procedure.signature.procedureType.lowered(in: loweredTypes)
-
-        case let .cast(_, type, optional):
-            let named = type.lowered(in: loweredTypes)
-
-            return optional ? .nullable(named) : named
-
-        case let .call(call):
-            return signature(of: call.selector).map { signature in
-                signature.returns.lowered(in: loweredTypes, bounds: signature.bounds, sameTypes: signature.sameTypes)
-            }
-
-        case let .apply(callee, _):
-            return declaredType(of: callee, given: declared)?.procedureReturns
-
-        default:
-            break
-        }
-
-        guard case let .reference(path) = expression, let head = path.head else { return nil }
-
-        return path.segments.dropFirst().reduce(declared(head)) { reached, segment in
-            switch segment {
-            case .index, .indexRef:
-                return reached?.element
-
-            case let .name(name, _):
-                return reached?.dotted(name, in: loweredTypes)
-            }
-        }
-    }
-
-    // The type written for what the name a statement binds holds. A name
-    // that wrote its type holds that. A fixed name that wrote none holds the
-    // one written for the value it is bound to. A variable that wrote none
-    // holds whatever its writes leave, which nothing wrote, so it holds none.
-    func declaredType(
-        of binding: Statement.Binding,
-        reading expression: Expression,
-        given declared: (Name) -> LoweredType?
-    ) -> LoweredType? {
-        switch binding {
-        case let .constant(_, written):
-            return written?.lowered(in: loweredTypes) ?? declaredType(of: expression, given: declared)
-
-        case let .variable(_, written):
-            return written?.lowered(in: loweredTypes)
-
-        case .assignment:
-            return nil
-        }
     }
 
     // A named type stands for what it was declared as. The type check walks into

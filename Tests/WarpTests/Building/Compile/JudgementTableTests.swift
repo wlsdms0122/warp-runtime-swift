@@ -22,8 +22,8 @@ struct JudgementTableTests {
         var sut = JudgementTable()
 
         // When
-        sut.record(.apply(inPlace: [0], written: nil), at: first)
-        sut.record(.apply(inPlace: [1], written: nil), at: second)
+        sut.record(.apply(inPlace: [0]), at: first)
+        sut.record(.apply(inPlace: [1]), at: second)
 
         // Then
         #expect(handed(at: first, in: sut) == [0])
@@ -38,8 +38,8 @@ struct JudgementTableTests {
         var sut = JudgementTable()
         var other = JudgementTable()
 
-        sut.record(.apply(inPlace: [0], written: nil), at: first)
-        other.record(.apply(inPlace: [], written: nil), at: second)
+        sut.record(.apply(inPlace: [0]), at: first)
+        other.record(.apply(inPlace: []), at: second)
 
         // When
         sut.absorb(other)
@@ -52,7 +52,7 @@ struct JudgementTableTests {
     // MARK: - Public
     // MARK: - Private
     private func handed(at place: Place, in table: JudgementTable) -> [Int]? {
-        guard case let .apply(handed, _)? = table[place] else { return nil }
+        guard case let .apply(handed)? = table[place] else { return nil }
 
         return handed
     }

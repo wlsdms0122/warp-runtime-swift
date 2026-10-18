@@ -33,10 +33,8 @@ indirect enum Operation: Sendable {
 
     // Calling a value. The arguments are positional and handed to the
     // closure's slots as they were read; one the build found handed in place
-    // is the caller's place. Which value is called is the run's answer, so
-    // what the call may do is what the type written for the value says, nil
-    // where nothing was written.
-    case apply(Operation, arguments: [Argument], written: LoweredType?)
+    // is the caller's place.
+    case apply(Operation, arguments: [Argument])
 
     case cast(Operation, as: LoweredType, optional: Bool)
 
@@ -75,7 +73,7 @@ indirect enum Operation: Sendable {
 
         // An argument handed in place is a place and not an operation, and a
         // place is the node's own to read.
-        case let .apply(callee, arguments, _):
+        case let .apply(callee, arguments):
             return callee.walk(visit)
                 && arguments.allSatisfy { argument in
                     guard case let .value(operation) = argument else { return true }
@@ -153,13 +151,12 @@ indirect enum Operation: Sendable {
                 }
             )
 
-        case let .apply(callee, arguments, written):
+        case let .apply(callee, arguments):
             inside = .apply(
                 try callee.rewritten(operation: operation, type: type),
                 arguments: try arguments.map { argument in
                     try argument.rewritten(operation: operation, type: type)
-                },
-                written: try written.map(type)
+                }
             )
 
         case let .cast(read, cast, optional):

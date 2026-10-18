@@ -70,7 +70,7 @@ struct LoweredBodyWalkTests {
                 return [.dictionary([(key: leaf, value: .literal(.null))]), .dictionary([(key: .literal(.null), value: leaf)])]
 
             case .apply:
-                return [.apply(leaf, arguments: [], written: nil)]
+                return [.apply(leaf, arguments: [])]
 
             case .cast:
                 return [.cast(leaf, as: .int, optional: false)]

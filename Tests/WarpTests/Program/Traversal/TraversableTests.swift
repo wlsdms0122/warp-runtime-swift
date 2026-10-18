@@ -118,7 +118,8 @@ struct TraversableTests {
             rows: [:],
             own: [:],
             concealed: [],
-            contractProcedures: [:]
+            contractProcedures: [:],
+            variables: []
         )
 
         // When

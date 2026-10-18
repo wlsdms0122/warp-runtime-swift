@@ -352,7 +352,6 @@ struct Lowering {
 
                 try table[callee].refuseCall(
                     standing: call.arguments,
-                    handing: call.inPlace,
                     at: .procedure(table[row].label.spelling, in: document)
                 )
             }
@@ -748,7 +747,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, written)? = context.judgements[place] else {
+        guard case let .apply(handed)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
@@ -766,8 +765,7 @@ struct Lowering {
                 }
 
                 return .reference(try lower(reference: path, in: scope, on: context, at: here))
-            },
-            written: written
+            }
         )
     }
 

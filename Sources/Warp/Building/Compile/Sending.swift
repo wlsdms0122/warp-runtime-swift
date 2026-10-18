@@ -18,10 +18,14 @@ import Foundation
 // it reaches, and which declaration answers a contract's procedure is a
 // call's first argument to say.
 //
-// Refused here is an effect declared const, since it runs, and a send
-// reaching a parameter handed in place, since a send hands values. What the
-// declarations a native sends say against its own is `EffectChecker`'s, as
-// for a body.
+// Refused here are the claims a declaration makes that its native code can
+// contradict. A const declaration is the claim that it answers without
+// running, and running is not something a caller can catch; an isolated one
+// is the claim that it touches no name another body could touch at the same
+// time, and neither is that. An effect claiming const is refused, since it
+// runs, and so is a declaration making either claim while sending something
+// that breaks it. So is a send reaching a parameter handed in place, since a
+// send hands values.
 struct Sending {
     // MARK: - Property
     private let numbering: Numbering
@@ -57,7 +61,11 @@ struct Sending {
 
         guard let sends = implementation.nativeImports else { return [] }
 
-        if symbol.procedure.signature.constness == .const, case .effect = implementation {
+        let declared = symbol.procedure.signature
+        let answersWithoutRunning = declared.constness == .const
+        let touchesNothingShared = declared.isolation == .isolated
+
+        if answersWithoutRunning, case .effect = implementation {
             throw BuildError(
                 "'\(label)' is declared const and answered by an effect, which answers by running",
                 at: symbol.place
@@ -81,6 +89,22 @@ struct Sending {
                     }
 
                     throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
+                }
+
+                guard !answersWithoutRunning || signature.constness == .const else {
+                    throw BuildError(
+                        "'\(label)' answers without running and sends '\(send.selector)',"
+                            + " which answers only by running",
+                        at: place
+                    )
+                }
+
+                guard !touchesNothingShared || signature.isolation == .isolated else {
+                    throw BuildError(
+                        "'\(label)' says it touches no name another body could touch at"
+                            + " the same time, and sends '\(send.selector)', which does",
+                        at: place
+                    )
                 }
 
                 try handing(of: send, reaching: signature, called: label, at: place)

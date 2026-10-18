@@ -291,11 +291,7 @@ final class Relocating {
     ) throws -> CallOperation {
         let procedure = try row(call.procedure, in: context)
 
-        try table[procedure].refuseCall(
-            standing: call.arguments.count,
-            handing: call.handed.map(\.position),
-            at: context.place
-        )
+        try table[procedure].refuseCall(standing: call.arguments.count, at: context.place)
 
         return CallOperation(
             procedure: procedure,
