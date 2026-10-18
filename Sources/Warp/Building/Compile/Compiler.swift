@@ -56,6 +56,11 @@ struct Compiler {
         // a body is judged in.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
+        // What each constant's value was written as where it was made. A
+        // constant is a fixed name, so a call of the value it holds leans on
+        // that as on any fixed name's.
+        var declaredConstants: [Name: LoweredType] = [:]
+
         func context() -> TypingContext {
             compiling.context(reading: reading, of: origin)
         }
@@ -80,28 +85,6 @@ struct Compiler {
         // What the documents behind this one declare, read the way a body in
         // this one reads them.
         let behind = compiling.context(reading: reading)
-
-        // What a selector this document may reach takes: its own declarations
-        // first, the documents standing before it after.
-        let taking: @Sendable (Name) -> Signature? = { selector in
-            own[selector] ?? behind.signature(of: selector)
-        }
-
-        // What each constant's value was written as where it was made. A
-        // constant is a fixed name, so a call of the value it holds leans on
-        // that as on any fixed name's. Read in the order constants settle,
-        // since one may read another through a path.
-        let declaredConstants = order(module.constants).reduce(into: [Name: LoweredType]()) { declared, constant in
-            let before = declared
-
-            declared[constant.name] = EffectChecker().declaredType(
-                of: .constant(constant.name),
-                reading: constant.expression,
-                taking: taking,
-                given: { read in before[read] },
-                in: loweredTypes
-            )
-        }
 
         // The names in scope before a body's first statement: its parameters,
         // the constants its module declared beside them, and the variables. A
@@ -165,15 +148,10 @@ struct Compiler {
                 // What the body does is held to what its declaration says,
                 // every callee read by its own declaration, so a body is
                 // judged alone.
-                if let refusal = EffectChecker().refusal(
+                if let refusal = EffectChecker(context()).refusal(
                     of: block,
                     declared: declaration.signature,
-                    reading: reading,
-                    bound: declaredVariables.merging(declaredConstants) { _, constant in constant }.merging(
-                        declaration.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
-                    ) { _, parameter in parameter },
-                    taking: taking,
-                    in: loweredTypes
+                    bound: opening(declaration.signature).compactMapValues(\.declaredType)
                 ) {
                     throw BuildError("'\(symbol.declared)' \(refusal)", at: symbol.place)
                 }
@@ -249,6 +227,21 @@ struct Compiler {
         // The bodies the documents behind this one lowered, which this one
         // may run.
         compiling.foldable()
+
+        // Read once the document's rows stand, since a constant's value may be
+        // what one of them answers, and in the order constants settle, since
+        // one may read another through a path.
+        let effects = EffectChecker(context())
+
+        declaredConstants = order(module.constants).reduce(into: [Name: LoweredType]()) { declared, constant in
+            let before = declared
+
+            declared[constant.name] = effects.declaredType(
+                of: .constant(constant.name),
+                reading: constant.expression,
+                given: { read in before[read] }
+            )
+        }
 
         // Settled after the procedures are known, because a constant may call
         // one: a constant that spells a URL out of other constants spells it

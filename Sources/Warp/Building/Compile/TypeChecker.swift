@@ -1749,13 +1749,14 @@ struct TypeChecker {
             // Its body reads the names of the procedure around it, so a
             // closure it writes does too.
             let promised = procedure.signature.loweredReturns(in: context.loweredTypes)
+            let opening = taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                _, own in own
+            }
             let inner = try await inspected(
                 block: block,
                 into: promised,
                 at: place.child(.closure),
-                in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                    _, own in own
-                },
+                in: opening,
                 with: context,
                 ask: ask.answering(promised)
             )
@@ -1817,20 +1818,12 @@ struct TypeChecker {
                 calls = inner.calls
                 judgements = inner.judgements
 
-                // A name this closure captured carries what the slot it came
-                // from said about it, and its own parameters shadow any it
-                // captured. A module variable it reads is read by running.
-                let bound = procedure.signature.environment(in: context.loweredTypes)
-                    .merging(outside) { own, _ in own }
-                    .compactMapValues(\.declaredType)
-
-                if let refusal = EffectChecker().refusal(
+                // Held from the names its body was read in: a name it
+                // captured carries what the slot it came from said about it.
+                if let refusal = EffectChecker(context).refusal(
                     of: body,
                     declared: procedure.signature,
-                    reading: context.variables.subtracting(declared),
-                    bound: bound,
-                    taking: context.signature(of:),
-                    in: context.loweredTypes
+                    bound: opening.compactMapValues(\.declaredType)
                 ) {
                     throw BuildError("the closure \(refusal)", at: place.child(.closure))
                 }
@@ -2674,12 +2667,10 @@ struct TypeChecker {
             // What a slot declared it holds is the effect checker's to say, by the
             // rule its own walk binds a name by.
             let declaredType = written.binding.flatMap { binding in
-                EffectChecker().declaredType(
+                EffectChecker(context).declaredType(
                     of: binding,
                     reading: written.expression,
-                    taking: context.signature(of:),
-                    given: { name in environment[name]?.declaredType },
-                    in: context.loweredTypes
+                    given: { name in environment[name]?.declaredType }
                 )
             }
 
@@ -2893,12 +2884,9 @@ struct TypeChecker {
         in environment: [Name: Binding],
         given context: TypingContext
     ) -> Bool {
-        !EffectChecker().failingHere(
-            expression,
-            taking: context.signature(of:),
-            bound: { name in environment[name]?.declaredType },
-            in: context.loweredTypes
-        ).failsNothing
+        !EffectChecker(context)
+            .failingHere(expression, bound: { name in environment[name]?.declaredType })
+            .failsNothing
     }
 
     // What a call hands in place at these positions, each variable held from
