@@ -41,7 +41,6 @@ struct Compiler {
         // the order the rows and the boxes stand in.
         let declared = holding.map(\.declared)
         let boxes = module.variables.keys.sorted()
-        let reading = Set(module.variables.keys)
 
         // What this document settled.
         var constants: [Name: Value] = [:]
@@ -57,7 +56,7 @@ struct Compiler {
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
 
         func context() -> TypingContext {
-            compiling.context(reading: reading, of: origin)
+            compiling.context(of: origin)
         }
 
         // This document's declarations by its block: what it declares is its
@@ -79,7 +78,7 @@ struct Compiler {
 
         // What the documents behind this one declare, read the way a body in
         // this one reads them.
-        let behind = compiling.context(reading: reading)
+        let behind = compiling.context()
 
         // What each constant's value was written as where it was made, read
         // once this document's rows stand, since a constant may call one.
@@ -92,11 +91,7 @@ struct Compiler {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             signature.environment(in: loweredTypes)
-                .merging(
-                    typedConstants.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = Binding(.fixed(declared: declaredConstants[entry.key]), entry.value.type)
-                    }
-                ) { _, constant in constant }
+                .merging(bindings(of: typedConstants, declaring: declaredConstants)) { _, constant in constant }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = Binding(
@@ -221,10 +216,10 @@ struct Compiler {
         // Read in the order constants settle, since one may read another
         // through a path.
         for (name, expression) in order(module.constants) {
-            let reading = declaredConstants
+            let before = declaredConstants
 
-            declaredConstants[name] = context().declaredType(of: .constant(name), reading: expression) { name in
-                reading[name] ?? declaredVariables[name]
+            declaredConstants[name] = context().declaredType(of: .constant(name), reading: expression) { read in
+                before[read]
             }
         }
 
@@ -241,6 +236,7 @@ struct Compiler {
         typedConstants = try await self.constants(
             of: module,
             at: origin,
+            declaring: declaredConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             in: context()
@@ -254,6 +250,7 @@ struct Compiler {
             at: origin,
             declaring: declaredVariables,
             beside: typedConstants,
+            declaredAs: declaredConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             in: context()
@@ -276,7 +273,7 @@ struct Compiler {
             resolving: .documents(compiling.lowering.documents.map(\.resolved)),
             contractProcedures: compiling.contractProcedures
         )
-        .check(rows, in: compiling.documents)
+        .check(rows) { row in row.place(in: .of(module), constants: module.constants.keys) }
 
         // The types its bodies stand on, written as this document's own
         // numbers.
@@ -317,6 +314,7 @@ struct Compiler {
     private func constants(
         of module: Module,
         at origin: Int,
+        declaring declaredTypes: [Name: LoweredType],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         in context: TypingContext
@@ -345,6 +343,7 @@ struct Compiler {
                 into: nil,
                 at: place,
                 beside: known,
+                declaredAs: declaredTypes,
                 of: origin,
                 folding: resolved,
                 writing: &lowering,
@@ -371,6 +370,7 @@ struct Compiler {
         at origin: Int,
         declaring declaredTypes: [Name: LoweredType],
         beside known: [Name: (value: Value, type: LoweredType)],
+        declaredAs declaredConstants: [Name: LoweredType],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         in context: TypingContext
@@ -395,6 +395,7 @@ struct Compiler {
                 into: declaredType,
                 at: place,
                 beside: known,
+                declaredAs: declaredConstants,
                 of: origin,
                 folding: resolved,
                 writing: &lowering,
@@ -438,6 +439,7 @@ struct Compiler {
         into declared: LoweredType?,
         at place: Place,
         beside known: [Name: (value: Value, type: LoweredType)],
+        declaredAs declaredConstants: [Name: LoweredType],
         of origin: Int,
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
@@ -447,7 +449,7 @@ struct Compiler {
             in: expression,
             into: declared,
             at: place,
-            in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
+            in: bindings(of: known, declaring: declaredConstants),
             with: context,
             folding: nil
         )
@@ -476,6 +478,17 @@ struct Compiler {
     // The types a document's variables declare, lowered once.
     private func declaredTypes(of module: Module, in table: LoweredTypeTable) -> [Name: LoweredType] {
         module.variables.compactMapValues { variable in variable.declared?.lowered(in: table) }
+    }
+
+    // The constants settled so far as names a body or a later constant
+    // reads: each fixed, holding the type written where its value came from.
+    private func bindings(
+        of constants: [Name: (value: Value, type: LoweredType)],
+        declaring declaredTypes: [Name: LoweredType]
+    ) -> [Name: Binding] {
+        constants.reduce(into: [Name: Binding]()) { held, entry in
+            held[entry.key] = Binding(.fixed(declared: declaredTypes[entry.key]), entry.value.type)
+        }
     }
 
     // The order a module's constants settle in: what a constant reads comes

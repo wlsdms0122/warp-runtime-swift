@@ -2438,6 +2438,20 @@ struct TypeChecker {
             // rescue.
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let (failed, past) = try attempted.flow.gathered(where: { reach in reach == .failure }, meeting: meets)
+
+            // What the rescue is there for. A body nothing can fail out of
+            // leaves it a body no run reaches, and the author wrote it
+            // expecting otherwise.
+            if failed == nil {
+                try refuse(
+                    "attempts a body that cannot fail, so its rescue is a body"
+                        + " no run reaches. What a rescue catches is what the"
+                        + " body casts and calls, and this one casts and calls"
+                        + " nothing that fails",
+                    at: place,
+                    when: ask
+                )
+            }
             let rescued = try await inspected(
                 block: rescue,
                 into: declared,
@@ -2855,6 +2869,8 @@ struct TypeChecker {
     // holds: a cast that names a type the value may not arrive as, a call
     // whose callee declares a failure, and a call of a value whose written
     // type does, or says nothing.
+    // `EffectChecker` reads lowered rows by the same rule, since an object
+    // has no document to read.
     private func failsHere(
         _ expression: Expression,
         in environment: [Name: Binding],

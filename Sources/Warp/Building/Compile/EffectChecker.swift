@@ -7,12 +7,12 @@
 
 import Foundation
 
-// What a lowered body reaches, read against what its declaration says: whether
+// What a lowered row reaches, read against what its declaration says: whether
 // it answers without running, whether it touches no name another body could
 // touch at once, and what may come out of it when the work goes wrong. Every
-// callee is read by its own declaration, so one row is read alone, and a row
-// is read the same wherever it came from: a compile reads the rows it lowered,
-// and a link the rows every document it lays brought.
+// callee is read by its own declaration, and a row is read the same wherever
+// it came from: a compile reads the rows it lowered, and a lay or a link the
+// rows every document it lays brought.
 struct EffectChecker {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which declaration holds the fact, which
@@ -31,9 +31,12 @@ struct EffectChecker {
         // MARK: - Private
     }
 
-    private struct Refusal: Error {
+    // A row read once for each set of module variables a body that makes it
+    // fills it with.
+    private struct Reading: Hashable {
         // MARK: - Property
-        let reason: String
+        let row: Int
+        let taken: Set<Int>
 
         // MARK: - Initializer
         // MARK: - Public
@@ -53,51 +56,89 @@ struct EffectChecker {
     }
 
     // MARK: - Public
-    // Every written body among these rows held to what its declaration says,
-    // in the document `documents` names at its origin.
+    // Every row among these held to what its declaration says, a refusal
+    // standing where `place` says the row does.
     //
     // A closure takes what it reads outside itself from the body that makes
     // it, so it is read where that body makes it, knowing which of what it
-    // takes is a module variable. A closure no body makes, one a constant's
-    // value holds, takes nothing and is read alone.
-    func check(_ rows: some Sequence<Int>, in documents: [Place.Document]) throws {
-        var checked = Set<Int>()
+    // takes is a module variable, once for each such reading. A closure no
+    // body makes, one a constant's value holds, is read with what its own
+    // frame says.
+    func check(_ rows: [Int], at place: (Linked) -> Place) throws {
+        var checked = Set<Reading>()
+        var made = Set<Int>()
 
         for row in rows where table[row].closure == nil {
-            try check(row, reading: nil, in: documents, checked: &checked)
+            try check(row, taking: [], at: place, checked: &checked, made: &made)
         }
 
-        for row in rows {
-            try check(row, reading: [], in: documents, checked: &checked)
+        for row in rows where !made.contains(row) {
+            try check(row, taking: [], at: place, checked: &checked, made: &made)
         }
     }
 
     // MARK: - Private
-    // One row, and the closures its body makes. `variables` is the slots
-    // holding a module variable, nil for a declaration's own, which its frame
-    // says.
+    // One row, and the closures its body makes. `taken` is the slots a
+    // closure filled from a module variable of the body that made it.
     private func check(
         _ row: Int,
-        reading variables: Set<Int>?,
-        in documents: [Place.Document],
-        checked: inout Set<Int>
+        taking taken: Set<Int>,
+        at place: (Linked) -> Place,
+        checked: inout Set<Reading>,
+        made: inout Set<Int>
     ) throws {
-        guard checked.insert(row).inserted, case let .body(body, frame) = table[row].implementation else { return }
+        guard checked.insert(Reading(row: row, taken: taken)).inserted else { return }
 
         let linked = table[row]
-        let variables = variables ?? Set(frame.variables.map(\.slot))
 
-        do throws(Refusal) {
-            try check(body, framed: frame, reading: variables, declared: linked.signature, of: linked.origin)
-        } catch {
-            let place: Place = switch linked.closure?.by {
-            case .binding?: Place(in: documents[linked.origin])
-            case .procedure?, nil: .procedure(linked.label.spelling, in: documents[linked.origin])
+        switch linked.implementation {
+        case let .body(body, frame):
+            let variables = taken.union(frame.variables.map(\.slot))
+
+            if let reason = refusal(of: body, framed: frame, reading: variables, declared: linked.signature, of: linked.origin) {
+                throw BuildError("'\(linked.rendered)' \(reason)", at: place(linked))
             }
 
-            throw BuildError("'\(linked.rendered)' \(error.reason)", at: place)
+            for (number, captures) in closures(made: body) {
+                guard let closure = resolving.row(number, from: linked.origin) else { continue }
+
+                made.insert(closure)
+
+                let filled = Set(captures.filter { outer, _ in variables.contains(outer) }.map { _, inner in inner })
+
+                try check(closure, taking: filled, at: place, checked: &checked, made: &made)
+            }
+
+        case let .native(_, sends):
+            if let reason = refusal(of: sends, declared: linked.signature, of: linked.origin) {
+                throw BuildError("'\(linked.rendered)' \(reason)", at: place(linked).part(.imports))
+            }
+        }
+    }
+
+    // What a procedure the host answers sends is what it reaches, so each
+    // send's declaration holds what this one declares.
+    private func refusal(of sends: [Sent], declared signature: Signature, of origin: Int) -> String? {
+        for sent in sends {
+            guard let row = resolving.row(sent.row, from: origin) else { continue }
+
+            let callee = table[row]
+
+            if signature.constness == .const, callee.signature.constness != .const {
+                return "is declared const, and it sends '\(callee.rendered)', which is not declared const"
+            }
+
+            if signature.isolation == .isolated, callee.signature.isolation != .isolated {
+                return "is declared isolated, and it sends '\(callee.rendered)', which is not declared isolated"
+            }
         }
 
+        return nil
+    }
+
+    // The closures a body makes: which row each is, and which of the body's
+    // slots fill which of its own.
+    private func closures(made body: LoweredBody) -> [(number: Int, captures: [(Int, Int)])] {
         var made: [(number: Int, captures: [(Int, Int)])] = []
 
         body.walk { node in
@@ -106,32 +147,27 @@ struct EffectChecker {
             return true
         }
 
-        for (number, captures) in made {
-            guard let closure = resolving.row(number, from: linked.origin) else { continue }
-
-            let taken = Set(captures.filter { outer, _ in variables.contains(outer) }.map { _, inner in inner })
-
-            try check(closure, reading: taken, in: documents, checked: &checked)
-        }
+        return made
     }
 
-    // A body declared const reaches outside the run, one declared isolated
-    // touches what another body could touch at once, or one may fail with
-    // more than its declaration names. A slot a closure fills from what it
-    // took is not the body's own, nor is a module variable's, and a const
-    // body does not own what a caller hands it in place either.
-    private func check(
-        _ body: LoweredBody,
+    // What a body does beyond what its declaration says, or nil where it
+    // keeps to it: one declared const reaches outside the run, one declared
+    // isolated touches what another body could touch at once, or one may
+    // fail with more than its declaration names. A slot a closure fills from
+    // what it took is not the body's own, nor is a module variable's, and a
+    // const body does not own what a caller hands it in place either.
+    private func refusal(
+        of body: LoweredBody,
         framed frame: Frame,
         reading variables: Set<Int>,
         declared signature: Signature,
         of origin: Int
-    ) throws(Refusal) {
+    ) -> String? {
         let outside = variables.union(frame.captures)
         let inPlace = Set(signature.type.inPlacePositions.map { position in frame.parameters[position] })
 
         func name(_ slot: Int) -> String {
-            frame.names.indices.contains(slot) ? frame.names[slot].spelling : "[\(slot)]"
+            frame.names[slot].spelling
         }
 
         if signature.constness == .const {
@@ -144,7 +180,7 @@ struct EffectChecker {
             )
 
             if let broken = breaking(body, fact, naming: name, of: origin) {
-                throw Refusal(reason: "is declared const, and \(broken)")
+                return "is declared const, and \(broken)"
             }
         }
 
@@ -158,15 +194,17 @@ struct EffectChecker {
             )
 
             if let broken = breaking(body, fact, naming: name, of: origin) {
-                throw Refusal(reason: "is declared isolated, and \(broken)")
+                return "is declared isolated, and \(broken)"
             }
         }
 
-        let failing = try self.failing(body, of: origin)
+        let failing = self.failing(body, of: origin)
 
         guard failing.fails(within: signature.failing) else {
-            throw Refusal(reason: "may fail with \(failing.rendered), and its declaration says \(signature.failing.rendered)")
+            return "may fail with \(failing.rendered), and its declaration says \(signature.failing.rendered)"
         }
+
+        return nil
     }
 
     // What a body reaches that the fact does not allow, or nil where it keeps
@@ -237,9 +275,9 @@ struct EffectChecker {
                 }
 
                 // A call through a contract keeps every path it hands as a
-                // place, since which row takes one in place is the row's to
-                // say. What the contract's procedure takes in place is
-                // handed; the rest is read.
+                // place. What the contract's procedure takes in place is
+                // handed, since every row answering it takes in place where
+                // the contract says; the rest is read.
                 let inPlace = asked.signature.type.inPlacePositions
 
                 for (position, argument) in dispatch.arguments.enumerated() {
@@ -272,28 +310,28 @@ struct EffectChecker {
     // What may come out of a body: everything its instructions and its result
     // may fail with. An attempt catches what its body may fail with, and what
     // is left is whatever its rescue may fail with.
-    private func failing(_ body: LoweredBody, of origin: Int) throws(Refusal) -> Failing {
+    private func failing(_ body: LoweredBody, of origin: Int) -> Failing {
         var failing = Failing.these([])
 
         for instruction in body.instructions {
-            failing = failing.joined(try self.failing(instruction.code, of: origin))
+            failing = failing.joined(self.failing(instruction.code, of: origin))
         }
 
         guard let result = body.result else { return failing }
 
-        return failing.joined(try self.failing(result, of: origin))
+        return failing.joined(self.failing(result, of: origin))
     }
 
-    private func failing(_ instructions: [Instruction], of origin: Int) throws(Refusal) -> Failing {
-        try failing(LoweredBody(instructions: instructions, result: nil), of: origin)
+    private func failing(_ instructions: [Instruction], of origin: Int) -> Failing {
+        failing(LoweredBody(instructions: instructions, result: nil), of: origin)
     }
 
-    private func failing(_ operation: Operation, of origin: Int) throws(Refusal) -> Failing {
-        func failing(_ parts: [Operation]) throws(Refusal) -> Failing {
+    private func failing(_ operation: Operation, of origin: Int) -> Failing {
+        func failing(_ parts: [Operation]) -> Failing {
             var failing = Failing.these([])
 
             for part in parts {
-                failing = failing.joined(try self.failing(part, of: origin))
+                failing = failing.joined(self.failing(part, of: origin))
             }
 
             return failing
@@ -304,62 +342,50 @@ struct EffectChecker {
             return .these([])
 
         case let .array(elements):
-            return try failing(elements)
+            return failing(elements)
 
         case let .struct(held):
-            return try failing(held.fields)
+            return failing(held.fields)
 
         case let .dictionary(entries):
-            return try failing(entries.flatMap { entry in [entry.key, entry.value] })
+            return failing(entries.flatMap { entry in [entry.key, entry.value] })
 
         // Which value is called is decided at run time, so what may come out
         // of it is what the type written for it says, and anything where
         // nothing was written.
         case let .apply(callee, arguments, declared):
-            return try failing([callee] + values(arguments)).joined(declared?.procedureFailing ?? .anything)
+            return failing([callee] + values(arguments)).joined(declared?.procedureFailing ?? .anything)
 
         // A cast that names a type the value did not arrive as fails, and
         // that is the one failure the runtime itself raises. The optional
         // spelling reads the same mismatch as null instead, so it raises
         // nothing.
         case let .cast(read, _, optional):
-            return try failing([read]).joined(optional ? .these([]) : .these([CastRefused.type]))
+            return failing([read]).joined(optional ? .these([]) : .these([CastRefused.type]))
 
         case let .conditional(condition, then, otherwise):
-            return try failing([condition])
-                .joined(try self.failing(then, of: origin))
-                .joined(try self.failing(otherwise ?? [], of: origin))
+            return failing([condition])
+                .joined(self.failing(then, of: origin))
+                .joined(self.failing(otherwise ?? [], of: origin))
 
         case let .loop(condition, body, _):
-            return try failing([condition]).joined(try self.failing(body, of: origin))
+            return failing([condition]).joined(self.failing(body, of: origin))
 
-        // What the rescue is there for. A body nothing can fail out of leaves
-        // it a body no run reaches, and the author wrote it expecting
-        // otherwise.
-        case let .attempt(body, rescue, _):
-            guard !(try self.failing(body, of: origin)).failsNothing else {
-                throw Refusal(
-                    reason: "attempts a body that cannot fail, so its rescue is a body"
-                        + " no run reaches. What a rescue catches is what the"
-                        + " body casts and calls, and this one casts and calls"
-                        + " nothing that fails"
-                )
-            }
-
-            return try self.failing(rescue, of: origin)
+        case let .attempt(_, rescue, _):
+            return self.failing(rescue, of: origin)
 
         case let .call(call):
             let callee = resolving.row(call.procedure, from: origin).map { row in table[row].signature.failing }
 
-            return try failing(call.arguments.compactMap { argument in argument }).joined(callee ?? .anything)
+            return failing(call.arguments.compactMap { argument in argument }).joined(callee ?? .anything)
 
         case let .dispatch(dispatch):
             let asked = contractProcedures[dispatch.procedure.spelled(under: dispatch.contract)]?.signature.failing
 
-            return try failing([dispatch.first] + values(dispatch.arguments)).joined(asked ?? .anything)
+            return failing([dispatch.first] + values(dispatch.arguments)).joined(asked ?? .anything)
 
         case let .leave(_, _, read):
-            return try failing(read.map { read in [read] } ?? [])
+            return failing(read.map { read in [read] } ?? [])
         }
     }
 

@@ -352,6 +352,7 @@ struct Lowering {
 
                 try table[callee].refuseCall(
                     standing: call.arguments,
+                    handing: call.inPlace,
                     at: .procedure(table[row].label.spelling, in: document)
                 )
             }

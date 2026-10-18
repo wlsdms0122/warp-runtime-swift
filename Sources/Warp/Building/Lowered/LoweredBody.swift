@@ -48,7 +48,7 @@ struct LoweredBody: Sendable {
                     failure.map { failure in standing.stand(on: failure) }
 
                 case let .call(call):
-                    standing.stand(calling: call.procedure, handing: call.arguments.count)
+                    standing.stand(calling: call.procedure, handing: call.arguments.count, inPlaceAt: call.handed.map(\.position))
                     call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
                 case let .apply(_, arguments, _):
@@ -83,10 +83,11 @@ struct LoweredBody: Sendable {
         // and where what it takes with it stands in the closure's own frame.
         private(set) var closures: [(number: Int, inner: [Int])] = []
 
-        // The numbers its calls reach, as its document gave them. What each
-        // one stands for is the link's answer, so what is asked of them here
-        // is only that this document gave them at all.
-        private(set) var calls: [(number: Int, arguments: Int)] = []
+        // The numbers its calls reach, as its document gave them, with how
+        // many arguments each stands and where it hands in place. What each
+        // number stands for is the link's answer, so what is asked of them
+        // here is only that this document gave them at all.
+        private(set) var calls: [(number: Int, arguments: Int, inPlace: [Int])] = []
 
         // MARK: - Initializer
         // MARK: - Public
@@ -94,8 +95,8 @@ struct LoweredBody: Sendable {
             slots.append(slot)
         }
 
-        mutating func stand(calling number: Int, handing arguments: Int) {
-            calls.append((number: number, arguments: arguments))
+        mutating func stand(calling number: Int, handing arguments: Int, inPlaceAt positions: [Int]) {
+            calls.append((number: number, arguments: arguments, inPlace: positions))
         }
 
         mutating func stand(up number: Int, taking inner: [Int]) {

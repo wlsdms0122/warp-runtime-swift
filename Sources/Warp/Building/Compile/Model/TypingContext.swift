@@ -43,10 +43,6 @@ struct TypingContext: Sendable {
     // declaration, and which declaration runs is the first argument's to say.
     let contractProcedures: [Name: LoweredContractProcedure]
 
-    // The variables of the document being read, by name. A body reading one
-    // answers by the run's state, so constness is read against these.
-    let variables: Set<Name>
-
     // What the procedure being read holds its type parameters to. A closure
     // written in its body reads the same names, so a `some T` inside is the
     // `T` the caller filled, bound the way the declaration bound it.
