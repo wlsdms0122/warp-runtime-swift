@@ -52,7 +52,8 @@ struct TypePlacementTests {
             try Module(
                 types: [
                     "Callback": .alias(.procedure(ProcedureType(
-                        parameters: [.parameter(name: "T")]
+                        parameters: [.parameter(name: "T")],
+                        failing: .unstated
                     )))
                 ],
                 procedures: [
@@ -148,41 +149,21 @@ struct TypePlacementTests {
         }
     }
 
-    @Test("a ? and a slot mark stand only where a type is written as a spelling", arguments: [
-        (TypeExpression.nullable(.procedure(ProcedureType(returns: .int))), "a `?` trails a type's spelling"),
-        (.nullable(.array(.procedure(ProcedureType(returns: .int)))), "a `?` trails a type's spelling"),
-        (.inout(.array(.procedure(ProcedureType(returns: .int)))), "a mark stands in front of a type's spelling")
+    @Test("a ? and a slot mark stand on a procedure type as on any type", arguments: [
+        TypeExpression.nullable(.procedure(ProcedureType(returns: .int, failing: .unstated))),
+        .nullable(.array(.procedure(ProcedureType(returns: .int, failing: .unstated)))),
+        .inout(.array(.procedure(ProcedureType(returns: .int, failing: .unstated)))),
+        .inout(.procedure(ProcedureType(returns: .int, failing: .unstated)))
     ])
-    func aMarkWithNoSpellingIsRefused(type: TypeExpression, refusal: String) throws {
-        // When / Then. A written signature is a mapping under one key, with
-        // nothing for a `?` to trail or a mark to stand before; a module made
-        // in Swift is held to it where it is made
-        #expect {
+    func aMarkOnAProcedureTypeStands(type: TypeExpression) throws {
+        // When / Then. Every type has a spelling, so a module made in Swift
+        // writes these as a document does
+        #expect(throws: Never.self) {
             try Module(
                 procedures: [
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
-                    )
-                ]
-            )
-        } throws: { error in
-            error is ValidationError && "\(error)".hasPrefix("procedures.entry.parameters[0]: ")
-                && "\(error)".contains(refusal)
-        }
-
-        // And a mark on a procedure type's key, and a `?` on a spelling, stand
-        let marked = TypeExpression.inout(.procedure(ProcedureType(returns: .int)))
-
-        #expect(throws: Never.self) {
-            try Module(
-                types: ["App.R": .struct(["a": .variable(.nullable(.array(.int)))])],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        signature: Signature(parameters: [Parameter(name: "x", type: marked)]),
                         body: [],
                         result: .literal(.null)
                     )

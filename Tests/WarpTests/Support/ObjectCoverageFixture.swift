@@ -116,7 +116,7 @@ enum ObjectCoverageFixture {
         "String": .string,
         "array": .array(.int),
         "dictionary": .dictionary(key: .string, value: .string),
-        "procedure": .procedure(ProcedureType(returns: .null), .const, .isolated),
+        "procedure": .procedure(ProcedureType(returns: .null, failing: .unstated), .const, .isolated),
         "variable": .variable(.bool),
         "inout": .inout(.string),
         "nullable": .nullable(.int),

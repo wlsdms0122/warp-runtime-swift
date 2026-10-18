@@ -122,7 +122,7 @@ struct FoldingReachTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
                     result: .closure(Procedure(body: [], result: reference("tally")))
                 )
@@ -155,7 +155,7 @@ struct FoldingReachTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
                     result: .closure(Procedure(body: [], result: reference("tally")))
                 )

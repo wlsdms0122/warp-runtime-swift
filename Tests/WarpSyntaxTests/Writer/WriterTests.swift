@@ -229,7 +229,7 @@ struct WriterTests {
                 "parameters": [
                     ["name": "anything", "type": "Procedure"],
                     ["name": "bounded", "type": "some T: Scalar"],
-                    ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
+                    ["name": "how", "type": "const (Int) -> Bool"],
                     ["name": "of", "type": "String"],
                     ["name": "parameter", "type": "some Element"],
                     ["name": "shaped", "type": "Task"]
@@ -464,7 +464,7 @@ struct WriterTests {
                 "typed": [
                     "parameters": [
                         ["name": "anything", "type": "Procedure"],
-                        ["name": "how", "type": ["const procedure": ["parameters": ["Int"], "returns": "Bool"]]],
+                        ["name": "how", "type": "const (Int) -> Bool"],
                         ["name": "parameter", "type": "some Element"]
                     ],
                     "returns": "Never",

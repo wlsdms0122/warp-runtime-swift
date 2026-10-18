@@ -48,7 +48,7 @@ struct LoweredTypeTests {
         let written: [TypeExpression] = declaredTypes + [
             .nullable(.named("Bank.Owner")),
             .parameter(name: "T"),
-            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const)
+            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int, failing: .unstated), .const)
         ]
 
         // When / Then
@@ -69,7 +69,7 @@ struct LoweredTypeTests {
             .array(.named("Bank.Acct")),
             .nullable(.named("Bank.Owner")),
             .parameter(name: "T"),
-            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int), .const),
+            .procedure(ProcedureType(parameters: [.named("Bank.Account")], returns: .int, failing: .unstated), .const),
             .procedure(nil),
             .named("App.Ordered")
         ]
@@ -201,7 +201,7 @@ struct LoweredTypeTests {
             types: [
                 "App.Maybe": .alias(.nullable(.int)),
                 "App.Kinds": .struct([
-                    "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")]), .unstated, .unstated)
+                    "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")], failing: .unstated), .unstated, .unstated)
                 ])
             ],
             procedures: [
@@ -246,7 +246,7 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .unstated)))]),
                     body: [],
                     result: .apply(.reference([.name("held")]), arguments: [])
                 )
@@ -280,7 +280,7 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int)))]),
+                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .unstated)))]),
                     body: [],
                     result: .apply(.reference([.name("held")]), arguments: [])
                 )

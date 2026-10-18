@@ -1608,21 +1608,24 @@ indirect enum LoweredType: Sendable, Hashable {
             return "\(TypeSpelling.inout) \(inner.rendered(in: table))"
 
         case let .procedure(signature, constness, isolation):
-            let spelling = [
-                constness == .const ? TypeSpelling.const.spelling : nil,
-                isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
-                TypeSpelling.procedure.spelling
+            let modifiers = [
+                constness == .const ? TypeSpelling.const : nil,
+                isolation == .isolated ? TypeSpelling.isolated : nil
             ]
-            .compactMap { part in part }
-            .joined(separator: " ")
+            .compactMap { modifier in modifier.map { modifier in "\(modifier) " } }
+            .joined()
 
-            guard let signature else { return spelling }
+            guard let signature else { return "\(modifiers)\(TypeSpelling.procedure)" }
 
-            let written = signature.parameters.map { parameter in parameter.rendered(in: table) }
-            let failing = signature.failing == .unstated ? "" : " failing \(signature.failing.rendered)"
+            let parameters = signature.parameters.map { parameter in parameter.rendered(in: table) }
+            let throwing = switch signature.failing {
+            case .unstated: " \(TypeSpelling.throws)"
+            case let .these(failures) where failures.isEmpty: ""
+            case let .these(failures): " \(TypeSpelling.throws)(\(failures.sorted().joined(separator: ", ")))"
+            }
 
-            return "\(spelling)<(\(written.joined(separator: ", ")))"
-                + " -> \((signature.returns ?? .any).rendered(in: table))\(failing)>"
+            return "\(modifiers)(\(parameters.joined(separator: ", ")))\(throwing)"
+                + " -> \((signature.returns ?? .any).rendered(in: table))"
 
         case let .array(element):
             return "Array<\(element.rendered(in: table))>"
@@ -1638,30 +1641,14 @@ indirect enum LoweredType: Sendable, Hashable {
 
             return "\(table.labels[row].spelling)<\(arguments.map { argument in argument.rendered(in: table) }.joined(separator: ", "))>"
 
+        // Parentheses around a procedure type writing its signature or a
+        // modifier, as a document writes it.
+        case let .nullable(.procedure(signature, constness, isolation))
+            where signature != nil || constness == .const || isolation == .isolated:
+            return "(\(LoweredType.procedure(signature, constness: constness, isolation: isolation).rendered(in: table)))?"
+
         case let .nullable(inner):
             return "\(inner.rendered(in: table))?"
-        }
-    }
-
-    // The type's string spelling, as a value a program reads holds it. A
-    // procedure type's signature has none, so a procedure type is spelled
-    // by what stands in front of it and `Procedure`.
-    func spelling(in table: LoweredTypeTable) -> String {
-        switch self {
-        case let .procedure(_, constness, isolation):
-            return LoweredType.procedure(nil, constness: constness, isolation: isolation).rendered(in: table)
-
-        case let .array(element):
-            return "Array<\(element.spelling(in: table))>"
-
-        case let .dictionary(key, value):
-            return "Dictionary<\(key.spelling(in: table)), \(value.spelling(in: table))>"
-
-        case let .nullable(inner):
-            return "\(inner.spelling(in: table))?"
-
-        default:
-            return rendered(in: table)
         }
     }
 

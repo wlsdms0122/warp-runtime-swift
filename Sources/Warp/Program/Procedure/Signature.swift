@@ -40,7 +40,7 @@ public struct Signature: Sendable, Equatable {
     // position order and the answer. No names, since a value is applied by
     // position and the names are the declaration's own.
     public var type: ProcedureType {
-        ProcedureType(parameters: parameters.map(\.type), returns: returns)
+        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: .unstated)
     }
 
     // The parameters whose box is the body's own. One handed in place is the

@@ -42,7 +42,7 @@ struct ClosureTests {
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("where Procedure<(Int) -> Any> is declared")
+            error is BuildError && "\(error)".contains("where (Int) throws -> Any is declared")
         }
     }
 
@@ -137,7 +137,7 @@ struct ClosureTests {
         // applies it beside an `outer` of its own saying "called"
         let running = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string)))],
+                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string, failing: .unstated)))],
                 returns: .string
             ),
             body: [
@@ -169,7 +169,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .unstated)))
                 ]
             ),
             body: [
@@ -212,7 +212,7 @@ struct ClosureTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated Procedure<(Int, Int?) -> Int failing nothing> where Procedure<(Int) -> Any> is declared")
+                && "\(error)".contains("which holds const isolated (Int, Int?) -> Int where (Int) throws -> Any is declared")
         }
     }
 
@@ -222,7 +222,7 @@ struct ClosureTests {
         // running. The closure handed to it shouts, and shouting is an effect
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated), .const))]
             ),
             body: [
                 Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
@@ -260,7 +260,7 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated Procedure<() -> String failing nothing> where const Procedure<() -> String> is declared")
+                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
         }
     }
 
@@ -269,7 +269,7 @@ struct ClosureTests {
         // Given. The same declaration, handed a body that only reads
         let twice = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string), .const))],
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated), .const))],
                 returns: .string
             ),
             body: [
@@ -305,7 +305,7 @@ struct ClosureTests {
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
-            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string)))]),
+            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .unstated)))]),
             body: [
                 Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
                 Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))
@@ -415,7 +415,7 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int])))
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .unstated)))
                 ]
             ),
             body: [

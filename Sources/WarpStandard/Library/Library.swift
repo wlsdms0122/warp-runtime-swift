@@ -398,14 +398,7 @@ enum Library {
                     }
                     {
                       name "isIncluded"
-                      type {
-                        "const procedure" {
-                          parameters [
-                            "some Element"
-                          ]
-                          returns "Bool"
-                        }
-                      }
+                      type "const (some Element) throws -> Bool"
                     }
                   ]
                   result {
@@ -547,14 +540,7 @@ enum Library {
                     }
                     {
                       name "transform"
-                      type {
-                        "const procedure" {
-                          parameters [
-                            "some Element"
-                          ]
-                          returns "some Answer"
-                        }
-                      }
+                      type "const (some Element) throws -> some Answer"
                     }
                   ]
                   result {
@@ -691,15 +677,7 @@ enum Library {
                     }
                     {
                       name "nextPartialResult"
-                      type {
-                        "const procedure" {
-                          parameters [
-                            "some Carried"
-                            "some Element"
-                          ]
-                          returns "some Carried"
-                        }
-                      }
+                      type "const (some Carried, some Element) throws -> some Carried"
                     }
                   ]
                   result {
@@ -1363,15 +1341,7 @@ enum Library {
                     }
                     {
                       name "transform"
-                      type {
-                        "isolated procedure" {
-                          parameters [
-                            "some Element"
-                            "Int"
-                          ]
-                          returns "some Answer"
-                        }
-                      }
+                      type "isolated (some Element, Int) throws -> some Answer"
                     }
                   ]
                   result {
@@ -1475,13 +1445,7 @@ enum Library {
                   parameters [
                     {
                       name "conditions"
-                      type {
-                        array {
-                          "const procedure" {
-                            returns "Bool"
-                          }
-                        }
-                      }
+                      type "Array<const () throws -> Bool>"
                     }
                   ]
                   result true
@@ -1609,13 +1573,7 @@ enum Library {
                   parameters [
                     {
                       name "conditions"
-                      type {
-                        array {
-                          "const procedure" {
-                            returns "Bool"
-                          }
-                        }
-                      }
+                      type "Array<const () throws -> Bool>"
                     }
                   ]
                   result false
@@ -1670,19 +1628,11 @@ enum Library {
                     }
                     {
                       name "then"
-                      type {
-                        "const procedure" {
-                          returns "some Answer"
-                        }
-                      }
+                      type "const () throws -> some Answer"
                     }
                     {
                       name "else"
-                      type {
-                        "const procedure" {
-                          returns "some Answer"
-                        }
-                      }
+                      type "const () throws -> some Answer"
                     }
                   ]
                   result {

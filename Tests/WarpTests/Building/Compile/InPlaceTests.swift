@@ -46,7 +46,7 @@ struct InPlaceTests {
 
             // MARK: - Property
             var declared: Parameter {
-                Parameter(name: "body", type: .procedure(ProcedureType(parameters: [.inout(.int)])))
+                Parameter(name: "body", type: .procedure(ProcedureType(parameters: [.inout(.int)], failing: .unstated)))
             }
 
             // MARK: - Initializer
@@ -555,7 +555,7 @@ struct InPlaceTests {
     )
     func aHostProcedureTakingAnInPlaceProcedureRefuses(wrapped: String) async {
         // Given. The same procedure type, held each way a slot may hold it
-        let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)]))
+        let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)], failing: .unstated))
         let held: [String: TypeExpression] = [
             "plain": taking,
             "nullable": .nullable(.named("App.Hook")),

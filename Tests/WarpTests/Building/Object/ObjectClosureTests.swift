@@ -53,7 +53,7 @@ struct ObjectClosureTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [Statement(binding: .constant("x"), expression: .literal(.int(11)))],
                     result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("x")))
                 )
@@ -143,7 +143,7 @@ struct ObjectClosureTests {
             constants: ["made": .closure(answering(6))],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [],
                     result: reference("made")
                 )
@@ -197,7 +197,7 @@ struct ObjectClosureTests {
             ],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [],
                     result: reference("made")
                 )
@@ -257,7 +257,7 @@ struct ObjectClosureTests {
             constants: ["made": .closure(answering(5))],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [],
                     result: reference("made")
                 )
@@ -312,7 +312,7 @@ struct ObjectClosureTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [],
                     result: .closure(answering(3))
                 )
@@ -442,7 +442,7 @@ struct ObjectClosureTests {
         try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .unstated))),
                     body: [Statement(binding: .constant("x"), expression: .literal(.int(11)))],
                     result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("x")))
                 )

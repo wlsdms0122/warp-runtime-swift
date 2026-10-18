@@ -8,8 +8,7 @@
 import Foundation
 import Warp
 
-// How a document spells a type. Two readings, because a type is written two
-// ways:
+// How a document spells a type: as a string, read as its parts.
 //
 //   String / Any / Procedure  . A built-in, by its own name
 //   Array<String>             . A built-in applied to another type
@@ -18,96 +17,17 @@ import Warp
 //   Task                      . A name some module declares
 //   Box<Int>                  . A struct some module declares, applied to
 //                                the types its type parameters stand for
-//   { procedure: { parameters: [], returns:, failing: [] } }
-//                             . A procedure, written as the types it is called
-//                                with, what it answers and what it may fail
-//                                with. Bare `Procedure` says only that it is one
+//   (Int, String) throws(aborted) -> Bool
+//                             . A procedure: the types it is called with,
+//                                what it may fail with, and after `->` what
+//                                it answers. Bare `Procedure` says only that
+//                                it is one
 //
-// A mapping is one of these by its one key. A struct is a structure a
-// module declares under `types`, and a type names it.
+// A struct is a structure a module declares under `types`, and a type names
+// it.
 struct TypeReader: Decodable {
-    // The inside of a procedure type: the types a value is applied with, in
-    // position order, what it answers and what it may fail with. No names,
-    // since a value carries none.
-    struct ProcedureTypeReader: Decodable {
-        enum CodingKeys: String, CodingKey, CaseIterable {
-            case parameters
-            case returns
-            case failing
-        }
-
-        // MARK: - Property
-        let type: ProcedureType
-
-        // The type parameters its types name, the parameters' in order and
-        // then the answer's.
-        let namings: [Naming]
-
-        // MARK: - Initializer
-        init(from decoder: Decoder) throws {
-            try KeyGate().rejectUnknownKeys(
-                in: decoder,
-                known: CodingKeys.self,
-                context: "procedure type"
-            )
-
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            let parameters = try container.decodeIfPresent([TypeReader].self, forKey: .parameters) ?? []
-            let returns = try container.decodeIfPresent(TypeReader.self, forKey: .returns)
-
-            self.type = ProcedureType(
-                parameters: parameters.map(\.written),
-                returns: returns?.written,
-                failing: try container
-                    .decodeIfPresent([String].self, forKey: .failing)
-                    .map { failures in .these(Set(failures)) } ?? .unstated
-            )
-            self.namings = (parameters + [returns].compactMap { returns in returns }).flatMap(\.namings)
-        }
-
-        // MARK: - Public
-        // MARK: - Private
-    }
-
-    // The inside of a map type written as a form: its key's type and its
-    // value's, each under its own key.
-    struct DictionaryTypeReader: Decodable {
-        enum CodingKeys: String, CodingKey, CaseIterable {
-            case key
-            case value
-        }
-
-        // MARK: - Property
-        let type: TypeExpression
-
-        // The type parameters its types name, the key's and then the value's.
-        let namings: [Naming]
-
-        // MARK: - Initializer
-        init(from decoder: Decoder) throws {
-            try KeyGate().rejectUnknownKeys(
-                in: decoder,
-                known: CodingKeys.self,
-                context: "map type"
-            )
-
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            let key = try container.decode(TypeReader.self, forKey: .key)
-            let value = try container.decode(TypeReader.self, forKey: .value)
-
-            self.type = .dictionary(key: key.written, value: value.written)
-            self.namings = key.namings + value.namings
-        }
-
-        // MARK: - Public
-        // MARK: - Private
-    }
-
-    // A built-in taking other types, written under its own key where an
-    // inner type has no spelling of its own. `Array<String>` is a name; an
-    // array of procedures is not, and this is the form that carries it. The
-    // key is the raw value, and the name is spelled like every type's.
-    enum Holding: String, CaseIterable {
+    // A built-in taking other types between its brackets.
+    enum Holding: CaseIterable {
         case array
         case dictionary
 
@@ -150,13 +70,6 @@ struct TypeReader: Decodable {
         // MARK: - Private
     }
 
-    // Where a procedure type's head is written: as a type's name, `Procedure`,
-    // or as the key of the form that carries its signature, `procedure`.
-    enum ProcedureHead {
-        case name
-        case key
-    }
-
     // A type parameter a type names, `some T`, beside the contracts a bound
     // written there holds it to and where it was written.
     struct Naming {
@@ -177,14 +90,10 @@ struct TypeReader: Decodable {
     // What a slot reads: the type, and the type parameters it names.
     var bounded: (type: TypeExpression, namings: [Naming]) { (written, namings) }
 
-    // The key a procedure type is written under.
-    static let procedureKey: Name = "procedure"
-
-    // What a type that is neither a spelling nor a form is refused with.
-    static let unread = "a type is a name like `String`, `Array<String>` or"
-        + " `Task`, or a mapping under one of `procedure`, `array`"
-        + " and `dictionary`. A struct is declared under its name in `types`"
-        + " as `{ struct: { … } }`, and named everywhere else"
+    // What a type written as anything but a string is refused with.
+    static let unread = "a type is written as a string like `String`, `Array<String>`, `Task` or"
+        + " `(Int) -> Bool`. A struct is declared under its name in `types` as `{ struct: { … } }`,"
+        + " and named everywhere else"
 
     // MARK: - Initializer
     // A type's own refusals do not know where in a document they happened, and
@@ -298,50 +207,6 @@ struct TypeReader: Decodable {
         }
     }
 
-    // Whether the reading takes this key as a procedure form's. Asked of the
-    // reading itself rather than of a list beside it, because a list and a
-    // parser drift and what they disagree about is a document one of them
-    // writes and the other refuses.
-    static func readsAsAProcedure(_ key: Name) -> Bool {
-        procedureKeywords(of: key.spelling) != nil
-    }
-
-    // What a procedure form's key says, read front to back: a slot's mark if one
-    // is written, the modifiers in either order, and `procedure`. Nil where the
-    // key is not a procedure form's.
-    //
-    // One mark, because that is what a slot writes. A key carrying two is not
-    // this form's, so a mapping keyed by it is no type form at all.
-    //
-    // The mark comes back as itself rather than as something that applies it,
-    // so that what was read stays a value the caller can ask about.
-    static func procedureKeywords(
-        of key: String
-    ) -> (mark: SlotMark?, constness: Constness, isolation: Isolation)? {
-        let (mark, rest) = SlotMark.leading(of: key).map { read in (Optional(read.mark), read.rest) } ?? (nil, key)
-
-        guard
-            let (constness, isolation, head) = modifiers(of: rest),
-            head == procedureKey.spelling
-        else {
-            return nil
-        }
-
-        return (mark, constness, isolation)
-    }
-
-    // The one spelling of a procedure type's head: `const` before `isolated`,
-    // both before the head.
-    static func procedureSpelling(_ constness: Constness, _ isolation: Isolation, as head: ProcedureHead) -> String {
-        [
-            constness == .const ? TypeSpelling.const.spelling : nil,
-            isolation == .isolated ? TypeSpelling.isolated.spelling : nil,
-            head == .name ? TypeSpelling.procedure.spelling : procedureKey.spelling
-        ]
-        .compactMap { part in part }
-        .joined(separator: " ")
-    }
-
     // The modifiers at the front of a type's text, in either order, and the
     // text left after them. Nil where a modifier is written twice. A modifier
     // is a keyword in front rather than an argument, because it says what a
@@ -404,24 +269,71 @@ struct TypeReader: Decodable {
             return mark.marking(try parse(bare, qualifying: qualifying, bounding: bounding))
         }
 
-        // A trailing `?` reads next because it wraps the whole spelling under
-        // the mark: `Array<Int>?` is a nullable array, `const Procedure?` a
-        // nullable procedure and `A & B?` a nullable composition, and what may
-        // be inside the brackets never carries one.
-        if text.hasSuffix("?") {
-            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying, bounding: bounding))
-        }
-
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
             throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
         }
 
+        // A modifier stands in front of the whole procedure type after it, so a
+        // nullable one is written `(const Procedure)?`.
         if constness == .const || isolation == .isolated {
-            guard case let .procedure(signature, _, _) = try parse(rest, qualifying: qualifying, bounding: bounding) else {
-                throw TypeFormError("only a procedure is written const or isolated")
+            guard
+                case let .procedure(signature, .unstated, .unstated) = try parse(
+                    rest,
+                    qualifying: qualifying,
+                    bounding: bounding
+                )
+            else {
+                throw TypeFormError(
+                    "type '\(text)' writes a modifier in front of what is no procedure type. A modifier stands in"
+                        + " front of a procedure type, and one that may be null is written in parentheses before"
+                        + " the `?`: `(const Procedure)?`"
+                )
             }
 
             return .procedure(signature, constness, isolation)
+        }
+
+        // What follows `->` is a procedure's answer to the end of the
+        // spelling, so the arrow reads before a trailing `?`: `(Int) -> Int?`
+        // answers what may be null.
+        if let arrow = Self.arrow(in: text) {
+            return try procedure(
+                String(text[..<arrow]),
+                answering: String(text[text.index(arrow, offsetBy: 2)...]),
+                qualifying: qualifying,
+                bounding: bounding
+            )
+        }
+
+        // A trailing `?` wraps the whole spelling before it: `Array<Int>?` is
+        // a nullable array and `A & B?` a nullable composition, and what may
+        // be inside the brackets never carries one. Parentheses around a
+        // procedure type say the `?` is the whole procedure's.
+        if text.hasSuffix("?") {
+            let inner = String(text.dropLast()).trimmingCharacters(in: Path.whiteSpace)
+
+            guard let grouped = Self.parenthesized(inner) else {
+                return .nullable(try parse(inner, qualifying: qualifying, bounding: bounding))
+            }
+
+            let type = try parse(grouped, qualifying: qualifying, bounding: bounding)
+
+            guard type.isGroupedBeforeQuestionMark else {
+                throw TypeFormError(
+                    "type '\(text)' writes parentheses around \(type.rendered), and parentheses stand around a"
+                        + " procedure type writing its signature or a modifier, before its `?`. This one is"
+                        + " written `\(type.rendered)?`"
+                )
+            }
+
+            return .nullable(type)
+        }
+
+        if text.hasPrefix("(") {
+            throw TypeFormError(
+                "type '\(text)' opens a parenthesis, and parentheses hold a procedure type's parameters before"
+                    + " `->` and its answer, `(Int) -> Bool`, or stand around one before its `?`"
+            )
         }
 
         // A type parameter rather than a name: `some T` is worked out from the
@@ -552,100 +464,173 @@ struct TypeReader: Decodable {
     }
 
     // The types a spelling's brackets hold, split at each comma that stands
-    // outside every inner bracket.
+    // outside every inner bracket and parenthesis.
     private static func arguments(_ text: String) -> [String] {
-        var depth = 0
-        var parts: [String] = []
-        var start = text.startIndex
-
-        for index in text.indices {
-            switch text[index] {
-            case "<": depth += 1
-            case ">": depth -= 1
-            case "," where depth == 0:
-                parts.append(String(text[start ..< index]))
-                start = text.index(after: index)
-
-            default: break
-            }
-        }
-
-        return parts + [String(text[start...])]
+        split(text, at: ",").map(String.init)
     }
 
     // The parts an `&` at the top of a spelling joins, or nothing where the
     // spelling has no such `&`: one inside brackets belongs to the argument.
     private static func joined(_ text: String) -> [Substring]? {
-        var depth = 0
-        var parts: [Substring] = []
-        var start = text.startIndex
+        let parts = split(text, at: "&")
 
-        for index in text.indices {
-            switch text[index] {
-            case "<": depth += 1
-            case ">": depth -= 1
-            case "&" where depth == 0:
-                parts.append(text[start ..< index])
-                start = text.index(after: index)
+        return parts.count > 1 ? parts : nil
+    }
+
+    // The first `->` standing outside every bracket and parenthesis, which
+    // ends a procedure type's parameters.
+    private static func arrow(in text: String) -> String.Index? {
+        outside(text).first { index in
+            text[index...].hasPrefix("->")
+        }
+    }
+
+    // What stands between a parenthesis opening the text and the one closing
+    // it, where the one closing it is the text's last.
+    private static func parenthesized(_ text: String) -> String? {
+        guard text.hasPrefix("("), let close = closing(text), text.index(after: close) == text.endIndex else {
+            return nil
+        }
+
+        return String(text[text.index(after: text.startIndex) ..< close])
+    }
+
+    // The parenthesis closing the one the text opens with.
+    private static func closing(_ text: String) -> String.Index? {
+        var depth = 0
+
+        for (index, character) in zip(text.indices, text) {
+            switch character {
+            case "(": depth += 1
+            case ")":
+                depth -= 1
+                if depth == 0 { return index }
 
             default: break
             }
         }
 
-        guard !parts.isEmpty else { return nil }
+        return nil
+    }
 
-        parts.append(text[start...])
+    // The text split at each `separator` standing outside every bracket and
+    // parenthesis.
+    private static func split(_ text: String, at separator: Character) -> [Substring] {
+        var parts: [Substring] = []
+        var start = text.startIndex
 
-        return parts
+        for index in outside(text) where text[index] == separator {
+            parts.append(text[start ..< index])
+            start = text.index(after: index)
+        }
+
+        return parts + [text[start...]]
+    }
+
+    // Where the text stands outside every bracket and parenthesis. The `>` of
+    // an arrow closes nothing.
+    private static func outside(_ text: String) -> [String.Index] {
+        var depth = 0
+        var found: [String.Index] = []
+        var previous: Character?
+
+        for (index, character) in zip(text.indices, text) {
+            switch character {
+            case "<", "(":
+                depth += 1
+
+            case ">" where previous != "-", ")":
+                depth -= 1
+
+            default:
+                if depth == 0 { found.append(index) }
+            }
+
+            previous = character
+        }
+
+        return found
     }
 
     private static func read(from decoder: Decoder) throws -> (TypeExpression, [Naming]) {
-        let notation = decoder.notation
-
-        if let written = try? decoder.singleValueContainer().decode(String.self) {
-            let read = try reading(written, in: notation, at: decoder.steps)
-
-            return (read.written, read.namings)
-        }
-
-        guard case .dictionary = try ValueReader(from: decoder).value else {
+        guard let written = try? decoder.singleValueContainer().decode(String.self) else {
             throw ReadingError(Self.unread, at: decoder.steps)
         }
 
-        let keyed = try decoder.container(keyedBy: AnyCodingKey.self)
+        let read = try reading(written, in: decoder.notation, at: decoder.steps)
 
-        // A mapping is a form by its one key. The form is committed by its key
-        // *before* what is under it is read, so a malformed signature refuses
-        // as the procedure type it claimed to be.
-        switch Tagging(keyed.allKeys.map { key in (name: key.name, value: key) }, reading: TypeForm.init) {
-        case let .one(.procedure(mark, constness, isolation), key):
-            let form = try keyed.decode(ProcedureTypeReader.self, forKey: key)
-            let written = TypeExpression.procedure(form.type, constness, isolation)
+        return (read.written, read.namings)
+    }
 
-            return (mark?.marking(written) ?? written, form.namings)
+    // A procedure type from what stands before its `->`, its parameters in
+    // parentheses and then what it may fail with, and what stands after it.
+    // Leaving `throws` out says it fails with nothing, `throws` alone that it
+    // may fail with anything, and `throws(a, b)` with those.
+    private static func procedure(
+        _ head: String,
+        answering answer: String,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression {
+        let head = head.trimmingCharacters(in: Path.whiteSpace)
 
-        // An array or a dictionary of something with no spelling of its own:
-        // an array of procedures has no name, so it is written here.
-        case let .one(.holding(.array), key):
-            let element = try keyed.decode(TypeReader.self, forKey: key)
-
-            return (.array(element.written), element.namings)
-
-        case let .one(.holding(.dictionary), key):
-            let form = try keyed.decode(DictionaryTypeReader.self, forKey: key)
-
-            return (form.type, form.namings)
-
-        case let .among(tags):
-            throw ReadingError(
-                "\(tags.map { tag in "`\(tag)`" }.joined(separator: ", ")) stands alone in its mapping"
-                    + " (found keys: \(keyed.allKeys.map(\.stringValue).sorted()))",
-                at: decoder.steps
+        guard head.hasPrefix("("), let close = closing(head) else {
+            throw TypeFormError(
+                "writes '\(head)' before `->`, and a procedure type writes its parameters in parentheses there:"
+                    + " `(Int) -> Bool`"
             )
-
-        case .none:
-            throw ReadingError(Self.unread, at: decoder.steps)
         }
+
+        let inside = head[head.index(after: head.startIndex) ..< close].trimmingCharacters(in: Path.whiteSpace)
+        let parameters = try (inside.isEmpty ? [] : arguments(inside)).map { parameter in
+            try parse(parameter, qualifying: qualifying, bounding: bounding)
+        }
+
+        return .procedure(
+            ProcedureType(
+                parameters: parameters,
+                returns: try parse(answer, qualifying: qualifying, bounding: bounding),
+                failing: try failing(String(head[head.index(after: close)...]))
+            )
+        )
+    }
+
+    // What a procedure type says it may fail with, from what stands between
+    // its parameters and `->`.
+    private static func failing(_ written: String) throws -> Failing {
+        let text = written.trimmingCharacters(in: Path.whiteSpace)
+
+        guard !text.isEmpty else { return .these([]) }
+
+        guard let rest = dropPrefixed(TypeSpelling.throws.spelling, from: text) else {
+            throw TypeFormError(
+                "writes '\(text)' between a procedure type's parameters and `->`, where `throws` stands, alone"
+                    + " or with what it may fail with: `(Int) throws(aborted) -> Bool`"
+            )
+        }
+
+        let listed = rest.trimmingCharacters(in: Path.whiteSpace)
+
+        guard !listed.isEmpty else { return .unstated }
+
+        guard let names = parenthesized(listed) else {
+            throw TypeFormError("writes `throws\(rest)`, and what a procedure may fail with is listed in parentheses")
+        }
+
+        let failures = arguments(names).map { name in name.trimmingCharacters(in: Path.whiteSpace) }
+
+        if failures.contains(where: \.isEmpty) {
+            throw TypeFormError(
+                "writes `throws(\(names))`, which lists no failure in a place. A procedure failing with nothing"
+                    + " writes no `throws`"
+            )
+        }
+
+        if let twice = failures.first(where: { failure in failures.filter { $0 == failure }.count > 1 }) {
+            throw TypeFormError("writes `throws(\(names))`, which lists '\(twice)' twice. Once says it")
+        }
+
+        return .these(Set(failures))
     }
 
     // Why a bound stands nowhere but where a type parameter is introduced.
