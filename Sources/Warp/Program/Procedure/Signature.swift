@@ -47,17 +47,17 @@ public struct Signature: Sendable, Equatable {
         parameters.map(\.name)
     }
 
-    // The type a value of this declaration carries: the parameter types in
-    // position order, the answer and what may fail. No names, since a value
-    // is applied by position and the names are the declaration's own.
-    public var type: ProcedureType {
-        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: failing)
+    // The type a value of this declaration carries, the way a slot holding
+    // one writes it: its procedure type with the two marks.
+    public var type: TypeExpression {
+        .procedure(procedureType, constness, isolation)
     }
 
-    // The same with the two marks, the way a slot holding a value of this
-    // declaration writes it.
-    public var procedureType: TypeExpression {
-        .procedure(type, constness, isolation)
+    // The parameter types in position order, the answer and what may fail.
+    // No names, since a value is applied by position and the names are the
+    // declaration's own.
+    public var procedureType: ProcedureType {
+        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: failing)
     }
 
     // The parameters whose box is the body's own. One handed in place is the
@@ -73,13 +73,13 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Whether the declaration writes a type parameter anywhere.
-    var isGeneric: Bool { type.isGeneric }
+    var isGeneric: Bool { procedureType.isGeneric }
 
     // Every type parameter this signature names. A nested procedure type's
     // parameters are named too: they are this signature's own slots, so
     // `Array<some Element>` beside a procedure taking the same `some Element`
     // is one parameter filled by one call.
-    var parameterNames: Set<Name> { type.parameterNames }
+    var parameterNames: Set<Name> { procedureType.parameterNames }
 
     // Every declared name this signature reaches, through what it takes, what
     // it answers and the contracts its bounds name.

@@ -306,7 +306,7 @@ struct EffectChecker {
                 return "it calls '\(call.selector)', which is not declared \(fact.word)"
             }
 
-            if let handed = unowned(call.arguments, at: signature.type.inPlacePositions, declaring: names) {
+            if let handed = unowned(call.arguments, at: signature.procedureType.inPlacePositions, declaring: names) {
                 return "it hands '\(handed)', which it does not declare, in place to '\(call.selector)'"
             }
 
@@ -369,7 +369,7 @@ struct EffectChecker {
     private func reached(_ expression: Expression, given declared: (Name) -> LoweredType?) -> LoweredType? {
         switch expression {
         case let .closure(procedure):
-            return procedure.signature.procedureType.lowered(in: context.loweredTypes)
+            return procedure.signature.type.lowered(in: context.loweredTypes)
 
         case let .cast(_, type, optional):
             let named = type.lowered(in: context.loweredTypes)

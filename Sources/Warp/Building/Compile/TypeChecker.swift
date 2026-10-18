@@ -1844,7 +1844,7 @@ struct TypeChecker {
                 rewritten: rewritten,
                 calls: calls,
                 judgements: judgements,
-                reading: procedure.signature.procedureType.lowered(
+                reading: procedure.signature.type.lowered(
                     in: context.loweredTypes,
                     bounds: procedure.signature.bounds,
                     sameTypes: procedure.signature.sameTypes

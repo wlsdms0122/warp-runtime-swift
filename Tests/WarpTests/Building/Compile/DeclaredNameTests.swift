@@ -224,7 +224,7 @@ struct DeclaredNameTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(
-                            binding: .variable("step", declared: .procedure(takes.type)),
+                            binding: .variable("step", declared: .procedure(takes.procedureType)),
                             expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
                         ),
                         Statement(
@@ -236,7 +236,7 @@ struct DeclaredNameTests {
                     result: .apply(reference("step"), arguments: [.literal(.int(2))])
                 ),
                 "swap": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
+                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.procedureType)))]),
                     body: [
                         Statement(
                             binding: .assignment([.name("step")]),
@@ -287,7 +287,7 @@ struct DeclaredNameTests {
                     result: .apply(reference("step"), arguments: [.literal(.int(2))])
                 ),
                 "swap": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.type)))]),
+                    signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.procedureType)))]),
                     body: []
                 )
             ]
