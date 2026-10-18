@@ -278,8 +278,15 @@ struct EffectChecker {
         var declaredTypes = declaredTypes
 
         for statement in block.body.statements {
-            if case let .assignment(path)? = statement.binding, let head = path.head, !declared.contains(head) {
-                return "it writes '\(head)', which it does not declare"
+            if case let .assignment(path)? = statement.binding {
+                if let head = path.head, !declared.contains(head) {
+                    return "it writes '\(head)', which it does not declare"
+                }
+
+                // What the place written is found by is read.
+                if let broken = breaking(.reference(path), fact, declaring: declared, bound: declaredTypes, taking: asked) {
+                    return broken
+                }
             }
 
             if let broken = breaking(statement.expression, fact, declaring: declared, bound: declaredTypes, taking: asked) {
@@ -417,8 +424,9 @@ struct EffectChecker {
 
     // The type written where the value this reads came from, and nil where
     // nothing was written. A closure literal writes its signature, a cast the
-    // type it names and a call the answer its callee declares, and the value
-    // is held to that type where it is made, cast or answered. A name follows
+    // type it names, a call the answer its callee declares and a call of a
+    // value the answer the value's written type says, and the value is held
+    // to that type where it is made, cast or answered. A name follows
     // the type its slot declared past its head: brackets read an element of
     // a list or an entry of a map, and a dot reads a field a struct type
     // declares. A list or a map of them says it about every element or entry,
@@ -443,6 +451,9 @@ struct EffectChecker {
             return asked(call.selector).map { signature in
                 signature.returns.lowered(in: table, bounds: signature.bounds, sameTypes: signature.sameTypes)
             }
+
+        case let .apply(callee, _):
+            return reached(callee, taking: asked, given: declared, in: table)?.procedureReturns
 
         default:
             break

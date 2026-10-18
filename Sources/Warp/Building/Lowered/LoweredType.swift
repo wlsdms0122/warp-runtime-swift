@@ -571,6 +571,14 @@ indirect enum LoweredType: Sendable, Hashable {
         return signature.failing
     }
 
+    // What a slot said the procedure it holds answers: nil where it writes no
+    // signature to say it in.
+    var procedureReturns: LoweredType? {
+        guard case let .procedure(signature?, _, _)? = procedureHeld else { return nil }
+
+        return signature.returns
+    }
+
     // The positions a procedure a slot holding this holds takes in place.
     // Empty where the slot says nothing of the procedure's parameters.
     var inPlacePositions: Set<Int> {

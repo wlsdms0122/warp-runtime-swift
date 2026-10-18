@@ -70,26 +70,6 @@ struct Compiler {
             return row
         }
 
-        // The names in scope before a body's first statement: its parameters,
-        // the constants its module declared beside them, and the variables. A
-        // module variable holds the type it declared, or the type it started
-        // as, through every write, because every body of the document reads
-        // it as that.
-        func opening(_ signature: Signature) -> [Name: Binding] {
-            signature.environment(in: loweredTypes)
-                .merging(typedConstants.mapValues { constant in Binding(.fixed(declared: nil), constant.type) }) { _, constant in
-                    constant
-                }
-                .merging(
-                    variables.reduce(into: [Name: Binding]()) { held, entry in
-                        held[entry.key] = Binding(
-                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .held(entry.value.type),
-                            entry.value.type
-                        )
-                    }
-                ) { _, variable in variable }
-        }
-
         // What this document declares, by the spelling a call in it writes.
         // Its own rows do not stand yet, and this is what says what they take
         // until they do.
@@ -105,6 +85,44 @@ struct Compiler {
         // first, the documents standing before it after.
         let taking: @Sendable (Name) -> Signature? = { selector in
             own[selector] ?? behind.signature(of: selector)
+        }
+
+        // What each constant's value was written as where it was made. A
+        // constant is a fixed name, so a call of the value it holds leans on
+        // that as on any fixed name's. Read in the order constants settle,
+        // since one may read another through a path.
+        let declaredConstants = order(module.constants).reduce(into: [Name: LoweredType]()) { declared, constant in
+            let reading = declared
+
+            declared[constant.name] = EffectChecker().declaredType(
+                of: .constant(constant.name),
+                reading: constant.expression,
+                taking: taking,
+                given: { name in reading[name] ?? declaredVariables[name] },
+                in: loweredTypes
+            )
+        }
+
+        // The names in scope before a body's first statement: its parameters,
+        // the constants its module declared beside them, and the variables. A
+        // module variable holds the type it declared, or the type it started
+        // as, through every write, because every body of the document reads
+        // it as that.
+        func opening(_ signature: Signature) -> [Name: Binding] {
+            signature.environment(in: loweredTypes)
+                .merging(
+                    typedConstants.reduce(into: [Name: Binding]()) { held, entry in
+                        held[entry.key] = Binding(.fixed(declared: declaredConstants[entry.key]), entry.value.type)
+                    }
+                ) { _, constant in constant }
+                .merging(
+                    variables.reduce(into: [Name: Binding]()) { held, entry in
+                        held[entry.key] = Binding(
+                            declaredVariables[entry.key].map(Binding.Holding.declared) ?? .held(entry.value.type),
+                            entry.value.type
+                        )
+                    }
+                ) { _, variable in variable }
         }
 
         // One declaration resolves once, whichever table asks.
@@ -155,7 +173,7 @@ struct Compiler {
                     of: block,
                     declared: declaration.signature,
                     reading: reading,
-                    bound: declaredVariables.merging(
+                    bound: declaredVariables.merging(declaredConstants) { _, constant in constant }.merging(
                         declaration.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
                     ) { _, parameter in parameter },
                     taking: taking,
