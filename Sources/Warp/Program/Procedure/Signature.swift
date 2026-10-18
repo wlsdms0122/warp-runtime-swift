@@ -197,12 +197,7 @@ public struct Signature: Sendable, Equatable {
     func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
         let named = parameterNames.union(associatedTypes.keys.map(\.root))
 
-        return Signature(
-            parameters: parameters,
-            returns: returns,
-            failing: failing,
-            constness: constness,
-            isolation: isolation,
+        return with(
             bounds: declared.filter { name, _ in named.contains(name.root) },
             sameTypes: said.filter { label, _ in named.contains(label.root) }
         )
@@ -214,12 +209,7 @@ public struct Signature: Sendable, Equatable {
     func under(_ head: Head) -> Signature {
         let named = parameterNames
 
-        return Signature(
-            parameters: parameters,
-            returns: returns,
-            failing: failing,
-            constness: constness,
-            isolation: isolation,
+        return with(
             bounds: head.bounds.filter { name, _ in named.contains(name) }.merging(bounds) { theirs, mine in
                 theirs.union(mine)
             },
@@ -233,12 +223,7 @@ public struct Signature: Sendable, Equatable {
     func read(of contract: Name) -> Signature {
         let read = replacingSelf(with: .parameter(name: TypeSpelling.selfType))
 
-        return Signature(
-            parameters: read.parameters,
-            returns: read.returns,
-            failing: read.failing,
-            constness: read.constness,
-            isolation: read.isolation,
+        return read.with(
             bounds: read.bounds.merging([TypeSpelling.selfType: [contract]]) { _, contract in contract },
             sameTypes: read.sameTypes
         )
@@ -264,4 +249,17 @@ public struct Signature: Sendable, Equatable {
     }
 
     // MARK: - Private
+    // This signature holding its type parameters to these bounds and same
+    // types instead.
+    private func with(bounds: [Name: Set<Name>], sameTypes: [Name: TypeExpression]) -> Signature {
+        Signature(
+            parameters: parameters,
+            returns: returns,
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
+            bounds: bounds,
+            sameTypes: sameTypes
+        )
+    }
 }
