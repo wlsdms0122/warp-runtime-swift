@@ -98,13 +98,15 @@ struct VocabularyTests {
                 "Extra.longerThan": Procedure(
                     signature: Signature(
                         of: LongerThanQuery.self,
-                        returns: .bool
+                        returns: .bool,
+                        constness: .const
                     ),
                     implementation: .query(LongerThanQuery())
                 )
             ]
         )
         let sut = try loader.loadProcedure([
+            "returns": "Any",
             "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 ["var": "verdict"],

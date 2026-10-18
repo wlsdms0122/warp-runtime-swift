@@ -397,7 +397,7 @@ public struct Place: Sendable, Hashable {
             return part(.parameters).index(position)
         }
 
-        if signature.returns?.parameterNames.contains(name) == true {
+        if signature.returns.parameterNames.contains(name) {
             return part(.returns)
         }
 

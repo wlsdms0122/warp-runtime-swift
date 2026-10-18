@@ -31,6 +31,7 @@ struct CallTests {
             ],
             "procedures": [
                 "caller": [
+                    "returns": "Any",
                     "body": [
                         [
                             "let": "call",
@@ -96,6 +97,7 @@ struct CallTests {
             "imports": ["some-other-file.greet"],
             "procedures": [
                 "caller": [
+                    "returns": "Any",
                     "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]]],
                     "result": ["dictionary": [["result", ["ref": "call.said"]]]]
                 ]
@@ -128,6 +130,7 @@ struct CallTests {
             "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "parameters": [["name": "word", "type": "String"]],
                     "body": [
                         [

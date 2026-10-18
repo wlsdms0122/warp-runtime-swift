@@ -138,7 +138,7 @@ struct FoldingTests {
             of: [],
             result: expression,
             arguments: bindings,
-            signature: Signature(parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) })
+            signature: Signature(parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) }, returns: .any)
         )
     }
 }

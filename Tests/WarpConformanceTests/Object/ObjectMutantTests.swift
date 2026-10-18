@@ -111,36 +111,65 @@ struct ObjectMutantTests {
         of sut: Case,
         at path: String
     ) async -> Bool {
-        let raced: Result<Value, any Error>?? = await withTaskGroup(of: Result<Value, any Error>?.self) { racing in
-            racing.addTask {
-                do {
-                    return .success(try await Executor().run(image, entry: "entry", arguments: arguments))
-                } catch {
-                    return .failure(error)
-                }
-            }
-            racing.addTask {
-                try? await Task.sleep(for: .milliseconds(50))
+        let clock = RunClock()
+        let run = Task {
+            clock.start()
 
-                return nil
-            }
-
-            let first = await racing.next() ?? nil
-
-            racing.cancelAll()
-
-            return first
+            return try await Executor().run(image, entry: "entry", arguments: arguments)
         }
 
+        clock.stops(run)
+
+        guard case let .failure(error) = await run.result else { return true }
+
         // The clock came first.
-        guard let raced, let answer = raced else { return false }
+        guard !(error is CancellationError) else { return false }
 
-        guard case let .failure(error) = answer else { return true }
-
-        guard !(error is any WarpError), !(error is CancellationError) else { return true }
+        guard !(error is any WarpError) else { return true }
 
         Issue.record("\(sut.name) at \(path): the run refused as \(type(of: error))")
 
         return true
+    }
+}
+
+// The time one run is given. It counts from when the run starts rather than
+// from when it was asked for, since a run still waiting for a thread has used
+// none of it. It rings on a queue of its own: a run that does not finish holds
+// its thread until it is stopped, and enough of them hold every thread of the
+// pool they run on, so a clock waiting for one of those would wait on them.
+private final class RunClock: @unchecked Sendable {
+    // MARK: - Property
+    private static let ringing = DispatchQueue(label: "ObjectMutantTests.RunClock")
+
+    private let lock = NSLock()
+    private var run: Task<Value, any Error>?
+    private var rang = false
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func start() {
+        Self.ringing.asyncAfter(deadline: .now() + .milliseconds(50)) { self.ring() }
+    }
+
+    func stops(_ run: Task<Value, any Error>) {
+        let rang = lock.withLock {
+            self.run = run
+
+            return self.rang
+        }
+
+        if rang { run.cancel() }
+    }
+
+    // MARK: - Private
+    private func ring() {
+        let run = lock.withLock {
+            rang = true
+
+            return self.run
+        }
+
+        run?.cancel()
     }
 }

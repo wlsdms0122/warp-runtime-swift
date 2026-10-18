@@ -56,19 +56,11 @@ public final class Linked: Sendable {
     // Who may name this row: its own document, the link, or the host too.
     public let access: Access
 
-    public let constness: Constness
-    public let isolation: Isolation
-
-    // What may come out of this when the work goes wrong: the procedures its
-    // failures name themselves by. Read off the body's casts, calls and
-    // rescues, or declared by the native procedure.
-    public let failing: Failing
-
     // The parameters a door settles values at, in the same order, and the
     // answer a host's is settled against. The declaration's lowering, born
     // here from the signature beside it.
     let slots: [Slot]
-    let returns: LoweredType?
+    let returns: LoweredType
 
     // The table the slots' rows are numbered by. A row means something in
     // its own link alone, and a closure value carries its row out of a run,
@@ -126,9 +118,6 @@ public final class Linked: Sendable {
         origin: Int,
         signature: Signature,
         access: Access,
-        constness: Constness,
-        isolation: Isolation,
-        failing: Failing,
         implementation: Implementation,
         foldable: Bool,
         closure: (by: Closure.Declaration, nth: Int)? = nil,
@@ -142,11 +131,8 @@ public final class Linked: Sendable {
         self.closure = closure
         self.signature = signature
         self.access = access
-        self.constness = constness
-        self.isolation = isolation
         self.slots = slots
         self.returns = returns
-        self.failing = failing
         self.table = table
         self.implementation = implementation
         self.foldable = foldable
@@ -165,11 +151,8 @@ public final class Linked: Sendable {
         self.closure = row.closure
         self.signature = row.signature
         self.access = row.access
-        self.constness = row.constness
-        self.isolation = row.isolation
         self.slots = row.slots
         self.returns = row.returns
-        self.failing = row.failing
         self.table = table
         self.implementation = row.implementation
         self.foldable = row.foldable
@@ -185,11 +168,8 @@ public final class Linked: Sendable {
         self.closure = row.closure
         self.signature = row.signature
         self.access = row.access
-        self.constness = row.constness
-        self.isolation = row.isolation
         self.slots = row.slots
         self.returns = row.returns
-        self.failing = row.failing
         self.table = row.table
         self.implementation = implementation
         self.foldable = row.foldable
@@ -204,9 +184,6 @@ public final class Linked: Sendable {
         label: Name,
         origin: Int,
         procedure: Procedure,
-        const: Bool,
-        isolated: Bool,
-        failing: Failing,
         builtin: Bool,
         sends: [Sent],
         in table: LoweredTypeTable
@@ -218,9 +195,6 @@ public final class Linked: Sendable {
             origin: origin,
             signature: procedure.signature,
             access: procedure.access,
-            constness: const ? .const : .unstated,
-            isolation: isolated ? .isolated : .unstated,
-            failing: failing,
             implementation: .native(native ?? .query(UnloweredProcedure()), sends: sends),
             foldable: native == nil || builtin,
             in: table
@@ -281,10 +255,9 @@ public final class Linked: Sendable {
 
     // What a procedure the host answers hands back, a value from outside at
     // the door it comes through: fitted to what the row declares and judged
-    // against it, `Any` where it declares nothing, which is what the build
-    // reads such a call's answer as.
+    // against it, which is what the build reads such a call's answer as.
     func settling(answered value: Value, in table: LoweredTypeTable) throws -> Value {
-        try (returns ?? .any).settling(outside: value, at: "returns", in: table)
+        try returns.settling(outside: value, at: "returns", in: table)
     }
 
     // Whether a run reading that table can read this row: the row was made

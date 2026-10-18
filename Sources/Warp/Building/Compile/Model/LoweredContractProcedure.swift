@@ -18,23 +18,18 @@ struct LoweredContractProcedure: Sendable {
     let contract: Name
     let procedure: Name
 
-    // What the contract said the procedure takes and answers, `Self` read as
-    // the type parameter a call fills. It takes `Self` first: whatever
-    // satisfies the contract stands there, which is the whole reason the
-    // procedure is in one.
+    // What the contract asks of every declaration answering it, `Self` read
+    // as the type parameter a call fills, which is what a call through the
+    // contract reads as. It takes `Self` first: whatever satisfies the
+    // contract stands there, which is the whole reason the procedure is in
+    // one.
     let signature: Signature
-
-    // What the contract asks of every declaration answering it beyond the
-    // signature, which is what a call through the contract reads as.
-    let constness: Constness
-    let isolation: Isolation
-    let failing: Set<String>
 
     // The same declaration as the run reads it, lowered once here. A procedure
     // in a contract declares no row, so this is the only place its lowering
     // could live.
     let slots: [Slot]
-    let answers: LoweredType?
+    let answers: LoweredType
 
     // MARK: - Initializer
     // MARK: - Public
@@ -56,15 +51,12 @@ struct LoweredContractProcedure: Sendable {
     static func table(in types: TypeTable) -> [Name: LoweredContractProcedure] {
         types.contracts.reduce(into: [Name: LoweredContractProcedure]()) { table, entry in
             for (procedure, asked) in entry.value.procedures {
-                let signature = asked.signature.read(of: entry.key)
+                let signature = asked.read(of: entry.key)
 
                 table[procedure.spelled(under: entry.key)] = LoweredContractProcedure(
                     contract: entry.key,
                     procedure: procedure,
                     signature: signature,
-                    constness: asked.constness,
-                    isolation: asked.isolation,
-                    failing: asked.failing,
                     slots: signature.lowered(in: types.loweredTypes),
                     answers: signature.loweredReturns(in: types.loweredTypes)
                 )

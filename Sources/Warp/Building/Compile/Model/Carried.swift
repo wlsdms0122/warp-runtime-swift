@@ -10,8 +10,8 @@ import Foundation
 // What documents already compiled leave the one compiled after them.
 //
 // None of it is read against a table. A row's slots were lowered against one,
-// but where a row stands, what number reaches it and what the build read off
-// a body are the documents' own and move for nothing laid after them. The
+// but where a row stands and what number reaches it are the documents' own
+// and move for nothing laid after them. The
 // table is what a compile brings of its own.
 struct Carried: Sendable {
     // MARK: - Property
@@ -27,18 +27,12 @@ struct Carried: Sendable {
     // Each document as it was held, by origin.
     let documents: [Lowering.Document]
 
-    // What the build read off a body whose declaration wrote no `returns`,
-    // by row. Everything else the build derived of a declaration stands on
-    // its row.
-    let answers: [Int: LoweredType]
-
     // Nothing laid down.
     static let none = Carried(
         table: [],
         rows: [:],
         concealed: [],
-        documents: [],
-        answers: [:]
+        documents: []
     )
 
     // MARK: - Initializer

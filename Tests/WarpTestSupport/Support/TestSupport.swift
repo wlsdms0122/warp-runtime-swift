@@ -70,17 +70,24 @@ public func run(
 // A procedure held as a value, made the way a host gets one: a run whose
 // entry answers a closure.
 public func procedureValue() async throws -> Value {
-    try await run(Procedure(body: [], result: .closure(Procedure(body: [], result: .literal(.null)))))
+    try await run(
+        Procedure(
+            signature: Signature(returns: .procedure(ProcedureType(returns: .null, failing: .these([])))),
+            body: [],
+            result: .closure(Procedure(body: [], result: .literal(.null)))
+        )
+    )
 }
 
 // What a body answers with, for the many tests that care about one value rather
-// than a result map.
+// than a result map. Unless a test says otherwise, the body may answer
+// anything and fail with anything.
 public func answer(
     of body: Body,
     result: Warp.Expression,
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],
-    signature: Signature = Signature(),
+    signature: Signature = Signature(returns: .any, failing: .anything),
     vocabulary: [Module] = Module.standard
 ) async throws -> Value? {
     try await run(
@@ -167,7 +174,12 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
             arguments: [
                 .array(
                     conditions.map { condition in
-                        .closure(Procedure(implementation: .body(Block(body: [], result: condition))))
+                        .closure(
+                            Procedure(
+                                signature: Signature(returns: .bool, failing: .anything, constness: .const),
+                                implementation: .body(Block(body: [], result: condition))
+                            )
+                        )
                     }
                 )
             ]

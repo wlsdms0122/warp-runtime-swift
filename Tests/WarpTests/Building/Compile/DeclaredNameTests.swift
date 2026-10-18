@@ -170,6 +170,7 @@ struct DeclaredNameTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .double),
                     body: [
                         Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
                     ],
@@ -215,8 +216,7 @@ struct DeclaredNameTests {
 
     @Test("a closure under a name that says what it holds is handed in place, and the procedure writes it back")
     func aDeclaredClosureIsHandedInPlace() async throws {
-        // Given. The build derives `const isolated` for a closure literal, and an
-        // `inout` slot takes the same type. The name says what it holds, so
+        // Given. An `inout` slot takes the type the name says it holds, so
         // what the slot asks and what the name is are one type
         let sut = try Module(
             procedures: [
@@ -257,18 +257,27 @@ struct DeclaredNameTests {
 
     @Test("a closure under a name that says nothing is refused by the slot it does not equal")
     func aClosureUnderANameSayingNothingDoesNotFitTheSlot() async throws {
-        // Given. The same program with the declaration left off. The build works
-        // out `const isolated Procedure` for the literal, and the slot asks for
-        // `Procedure`
+        // Given. The same program with the declaration left off, and a literal
+        // declaring const and isolated, which the name now is, while the slot
+        // asks for the plain procedure type
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [
                         Statement(
                             binding: .variable("step"),
-                            expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
+                            expression: .closure(Procedure(
+                                signature: Signature(
+                                    parameters: takes.parameters,
+                                    returns: takes.returns,
+                                    constness: .const,
+                                    isolation: .isolated
+                                ),
+                                body: [],
+                                result: reference("x")
+                            ))
                         ),
                         Statement(
                             expression: .call(
@@ -290,7 +299,7 @@ struct DeclaredNameTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated (Int) -> Int where inout (Int) throws -> Int is declared")
+                && "\(error)".contains("which holds const isolated (Int) -> Int where inout (Int) -> Int is declared")
         }
     }
 

@@ -26,7 +26,6 @@ enum ObjectLayout {
         case importedClaims
         case rows
         case lifted
-        case answers
         case numbering
         case typeNumbering
         case variables

@@ -23,6 +23,7 @@ struct LoopTests {
         // Given. The loop writes a variable declared outside it and reads its
         // own round index through ${gate.index}
         let spec = try loader.loadProcedure([
+            "returns": "Any",
             "body": [
                 ["var": "latest", "value": 0],
                 [
@@ -48,6 +49,7 @@ struct LoopTests {
         // Given. The language carries no budget; the world (here, the
         // condition) ends the repetition
         let spec = try loader.loadProcedure([
+            "returns": "Any",
             "body": [
                 ["var": "latest", "value": 0],
                 [

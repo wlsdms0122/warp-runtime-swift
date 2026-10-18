@@ -66,10 +66,14 @@ struct DictionaryProcedureTests {
     // asks of them.
     private static func asking(_ result: Warp.Expression) -> Procedure {
         Procedure(
-            signature: Signature(parameters: [
-                Parameter(name: "held", type: .dictionary(key: .string, value: .int)),
-                Parameter(name: "key", type: .string)
-            ]),
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "held", type: .dictionary(key: .string, value: .int)),
+                    Parameter(name: "key", type: .string)
+                ],
+                returns: .any,
+                failing: .anything
+            ),
             body: [],
             result: result
         )

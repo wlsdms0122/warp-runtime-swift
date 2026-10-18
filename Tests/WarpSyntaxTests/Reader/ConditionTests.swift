@@ -37,7 +37,9 @@ struct ConditionTests {
                             signature: Signature(
                                 parameters: bindings.keys.sorted().map { name in
                                     Parameter(name: name, type: declared(bindings[name] ?? .null))
-                                }
+                                },
+                                returns: .bool,
+                                failing: .anything
                             ),
                             body: [],
                             result: condition

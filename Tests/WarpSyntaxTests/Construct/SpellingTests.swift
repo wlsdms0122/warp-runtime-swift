@@ -42,6 +42,7 @@ struct SpellingTests {
             )
         )
         let sut = try loader.loadProcedure([
+            "returns": "Any",
             "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "pick"],

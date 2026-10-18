@@ -53,7 +53,7 @@ struct ObjectClosureTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [Statement(binding: .constant("x"), expression: .literal(.int(11)))],
                     result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("x")))
                 )
@@ -66,7 +66,7 @@ struct ObjectClosureTests {
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("held"), arguments: [])
                 )
@@ -143,7 +143,7 @@ struct ObjectClosureTests {
             constants: ["made": .closure(answering(6))],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [],
                     result: reference("made")
                 )
@@ -154,7 +154,7 @@ struct ObjectClosureTests {
             constants: ["made": .closure(answering(5))],
             variables: ["held": .call(Call(selector: "App.give"))],
             procedures: [
-                "App.one": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .apply(reference("held"), arguments: []))
+                "App.one": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .apply(reference("held"), arguments: []))
             ]
         )
 
@@ -197,7 +197,7 @@ struct ObjectClosureTests {
             ],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [],
                     result: reference("made")
                 )
@@ -208,7 +208,7 @@ struct ObjectClosureTests {
         let folding = try Module(
             imports: ["App.give"],
             constants: ["got": .call(Call(selector: "App.give"))],
-            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .apply(reference("got"), arguments: []))]
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .apply(reference("got"), arguments: []))]
         )
 
         // When
@@ -228,7 +228,7 @@ struct ObjectClosureTests {
         let first = try await builder.compile(Module.standard + [madeOf(5, entry: "App.one", identity: Identity([1]))])
         let leaning = try Module(
             imports: ["App.one"],
-            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.one")))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .call(Call(selector: "App.one")))],
             identity: Identity([2])
         )
         let second = try await builder.compile([leaning], against: try builder.lay(first, supplying: Supplying(Module.standard)))
@@ -257,7 +257,7 @@ struct ObjectClosureTests {
             constants: ["made": .closure(answering(5))],
             procedures: [
                 "App.give": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [],
                     result: reference("made")
                 )
@@ -270,7 +270,7 @@ struct ObjectClosureTests {
         let folding = try Module(
             imports: ["App.give"],
             constants: ["got": .call(Call(selector: "App.give"))],
-            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .apply(reference("got"), arguments: []))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .apply(reference("got"), arguments: []))],
             identity: Identity([2])
         )
 
@@ -312,7 +312,7 @@ struct ObjectClosureTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [],
                     result: .closure(answering(3))
                 )
@@ -321,7 +321,7 @@ struct ObjectClosureTests {
         let sut = try Module(
             imports: ["App.make"],
             variables: ["held": .call(Call(selector: "App.make"))],
-            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .apply(reference("held"), arguments: []))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .apply(reference("held"), arguments: []))],
             identity: Identity([7])
         )
 
@@ -393,9 +393,6 @@ struct ObjectClosureTests {
                 label: row.label,
                 signature: row.signature,
                 access: row.access,
-                constness: row.constness,
-                isolation: row.isolation,
-                failing: row.failing,
                 judging: .body(
                     LoweredBody(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [])),
                     frame
@@ -413,7 +410,6 @@ struct ObjectClosureTests {
                 declared: one.declared,
                 constants: one.constants,
                 table: table,
-                answers: one.answers,
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: one.variables,
@@ -429,7 +425,7 @@ struct ObjectClosureTests {
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("later"), arguments: [])
                 )
@@ -442,7 +438,7 @@ struct ObjectClosureTests {
         try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [Statement(binding: .constant("x"), expression: .literal(.int(11)))],
                     result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("x")))
                 )
@@ -456,7 +452,7 @@ struct ObjectClosureTests {
             imports: ["App.make"],
             variables: ["held": .call(Call(selector: "App.make"))],
             procedures: [
-                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .apply(reference("held"), arguments: []))
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [], result: .apply(reference("held"), arguments: []))
             ],
             identity: identity
         )
@@ -468,7 +464,7 @@ struct ObjectClosureTests {
             procedures: [
                 entry: Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("made"), arguments: [])
                 )
@@ -494,7 +490,6 @@ struct ObjectClosureTests {
                 declared: one.declared,
                 constants: one.constants,
                 table: one.table,
-                answers: one.answers,
                 numbering: one.numbering,
                 typeNumbering: one.typeNumbering,
                 judging: [(name: held.name, value: .procedure(closure))],

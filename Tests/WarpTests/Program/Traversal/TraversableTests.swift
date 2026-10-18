@@ -78,7 +78,7 @@ struct TraversableTests {
         let call = Statement(expression: .apply(name("bump"), arguments: [name("count")]))
 
         func closure() -> Warp.Expression {
-            .closure(Procedure(body: [call], result: .literal(.null)))
+            .closure(Procedure(signature: Signature(failing: .anything), body: [call], result: .literal(.null)))
         }
 
         let sut = Block(
@@ -89,7 +89,7 @@ struct TraversableTests {
                     binding: .constant("bump"),
                     expression: .closure(
                         Procedure(
-                            signature: Signature(parameters: [Parameter(name: "held", type: .inout(.int))]),
+                            signature: Signature(parameters: [Parameter(name: "held", type: .inout(.int))], failing: .anything),
                             body: [],
                             result: .literal(.null)
                         )
@@ -118,7 +118,6 @@ struct TraversableTests {
             rows: [:],
             own: [:],
             concealed: [],
-            answers: [:],
             contractProcedures: [:],
             variables: []
         )
@@ -129,14 +128,14 @@ struct TraversableTests {
             at: place,
             in: [:],
             declaring: "App.walked",
-            answering: nil,
+            answering: .any,
             with: context,
             folding: nil
         )
 
-        // Then. The table holds one entry for each call of a value and each
-        // closure literal the walk reaches, under the place the walk reaches
-        // it at, and of the kind that stands there
+        // Then. The table holds one entry for each call of a value the walk
+        // reaches, inside a closure literal or not, under the place the walk
+        // reaches it at, and of the kind that stands there
         let found = sut.subexpressions(at: place)
         let calls = found.filter { _, expression in
             if case .apply = expression { return true }
@@ -153,16 +152,10 @@ struct TraversableTests {
 
             return false
         }.keys
-        let judgedClosures = judgements.judgements.filter { _, judgement in
-            if case .closure = judgement { return true }
-
-            return false
-        }.keys
 
         #expect(calls.count == 11)
         #expect(closures.count == 5)
         #expect(Set(judgedCalls) == Set(calls))
-        #expect(Set(judgedClosures) == Set(closures))
     }
 
     @Test("a place names where a thing was found, and a closure names its own")

@@ -62,6 +62,7 @@ struct NotationTests {
             "imports": ["Standard.Logic.equal"],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "parameters": [["name": "word", "type": "String"]],
                     "body": [
                         ["var": "pick"],

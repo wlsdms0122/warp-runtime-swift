@@ -185,13 +185,17 @@ struct Case: Sendable, CustomStringConvertible {
 
         // MARK: - Private
         // The host's side of one asked-for procedure. Which door it answers through
-        // is the claim it makes: the one that answers without running is handed no
-        // way to reach outside, and the other is.
+        // is the claim its declaration makes: one declared const answers without
+        // running and is handed no way to reach outside, and the other is.
         private func supplied(_ one: Case.Supplied, declaring read: Procedure) throws -> Procedure {
             Procedure(
                 access: read.access,
                 signature: read.signature,
-                implementation: door(one, reading: try places(read.signature.parameters.map(\.name)))
+                implementation: door(
+                    one,
+                    running: read.signature.constness != .const,
+                    reading: try places(read.signature.parameters.map(\.name))
+                )
             )
         }
 
@@ -217,25 +221,17 @@ struct Case: Sendable, CustomStringConvertible {
             }
         }
 
-        // Which door it answers through, which is the claim it makes about
-        // reaching outside the run.
-        private func door(_ one: Case.Supplied, reading places: any ParameterSet.Type) -> Implementation {
+        // Which door it answers through, which is the claim its declaration
+        // makes about reaching outside the run.
+        private func door(
+            _ one: Case.Supplied,
+            running: Bool,
+            reading places: any ParameterSet.Type
+        ) -> Implementation {
             func made<Parameters: ParameterSet>(_: Parameters.Type) -> Implementation {
-                one.runs
-                    ? .effect(
-                        SuppliedEffect<Parameters>(
-                            answers: one.answers,
-                            isolated: one.isolated,
-                            failing: .these(Set(one.failing))
-                        )
-                    )
-                    : .query(
-                        SuppliedQuery<Parameters>(
-                            answers: one.answers,
-                            isolated: one.isolated,
-                            failing: .these(Set(one.failing))
-                        )
-                    )
+                running
+                    ? .effect(SuppliedEffect<Parameters>(answers: one.answers))
+                    : .query(SuppliedQuery<Parameters>(answers: one.answers))
             }
 
             return made(places)
@@ -275,14 +271,14 @@ struct Case: Sendable, CustomStringConvertible {
 
     // One procedure a case asks for. Its declaration is written the way any
     // procedure's is, so a runner reads it with the reader it already has; what
-    // is written beside it is what a body would otherwise have shown.
+    // is written beside it is what it answers.
     //
     // The names it may declare are `first` and `second`, in that order, because a
     // procedure the host answers reads its arguments at fixed places and a case
     // cannot invent a place in someone else's runner.
     struct Supplied: Sendable {
         // MARK: - Property
-        static let ownKeys: Set<Name> = ["answers", "runs", "isolated", "failing"]
+        static let ownKeys: Set<Name> = ["answers"]
 
         let name: Name
 
@@ -292,14 +288,6 @@ struct Case: Sendable, CustomStringConvertible {
         // What it answers, whatever it is sent. A case asks about what a
         // declaration permits, not about arithmetic, so one answer is enough.
         let answers: Value
-
-        // Whether it reaches outside the run. One that does not is what a
-        // constant may settle from, what a `const Procedure` slot takes, and
-        // what an operand may call.
-        let runs: Bool
-
-        let isolated: Bool
-        let failing: [String]
 
         // MARK: - Initializer
         // MARK: - Public
@@ -689,10 +677,7 @@ struct Case: Sendable, CustomStringConvertible {
         return Supplied(
             name: name,
             declaration: declaration,
-            answers: mapping["answers"] ?? .null,
-            runs: try Self.flag(mapping, "runs", of: name, or: false),
-            isolated: try Self.flag(mapping, "isolated", of: name, or: true),
-            failing: try Self.failing(mapping["failing"], of: name)
+            answers: mapping["answers"] ?? .null
         )
     }
 
@@ -709,34 +694,6 @@ struct Case: Sendable, CustomStringConvertible {
 
         case let other?:
             throw ConformanceError("'\(name)' writes `arguments` as \(other), and it is a mapping or is not written")
-        }
-    }
-
-    // A key the runner reads beside a declaration is a bool or is not written.
-    // Anything else is refused rather than read as one of the two: a case that
-    // wrote `runs 1` asked a question no runner can answer the same way.
-    private static func flag(_ mapping: Value.Dictionary, _ key: Name, of procedure: Name, or absent: Bool) throws -> Bool {
-        switch mapping[key] {
-        case nil: return absent
-        case let .bool(flag)?: return flag
-        case let other?:
-            throw ConformanceError("'\(procedure)' writes `\(key)` as \(other), and it is a Bool or is not written")
-        }
-    }
-
-    private static func failing(_ written: Value?, of procedure: Name) throws -> [String] {
-        guard let written else { return [] }
-
-        guard case let .array(named) = written else {
-            throw ConformanceError("'\(procedure)' writes `failing` as \(written), and it is an array of names")
-        }
-
-        return try named.map { held in
-            guard case let .string(type) = held else {
-                throw ConformanceError("'\(procedure)' fails with \(held), and what it fails with is named")
-            }
-
-            return type
         }
     }
 }

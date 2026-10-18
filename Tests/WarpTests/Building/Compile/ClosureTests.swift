@@ -66,11 +66,14 @@ struct ClosureTests {
                             binding: .constant("made"),
                             expression: .closure(
                                 Procedure(
-                                    signature: Signature(parameters: [
-                                        Parameter(name: "a", type: .int),
-                                        Parameter(name: "b", type: .int),
-                                        Parameter(name: "c", type: .nullable(.int))
-                                    ]),
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "a", type: .int),
+                                            Parameter(name: "b", type: .int),
+                                            Parameter(name: "c", type: .nullable(.int))
+                                        ],
+                                        returns: .int
+                                    ),
                                     body: [],
                                     result: reference("a")
                                 )
@@ -138,7 +141,8 @@ struct ClosureTests {
         let running = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string, failing: .anything)))],
-                returns: .string
+                returns: .string,
+                failing: .anything
             ),
             body: [
                 Statement(binding: .constant("outer"), expression: .literal(.string("called"))),
@@ -151,7 +155,7 @@ struct ClosureTests {
         let answer = try await answer(
             of: [
                 Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
-                Statement(binding: .constant("made"), expression: .closure(Procedure(body: [], result: reference("outer"))))
+                Statement(binding: .constant("made"), expression: .closure(Procedure(signature: Signature(returns: .string), body: [], result: reference("outer"))))
             ],
             result: .call(Call(selector: "running", arguments: [reference("made")])),
             beside: ["running": running]
@@ -169,8 +173,9 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .anything)))
-                ]
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], returns: .any, failing: .anything)))
+                ],
+                failing: .anything
             ),
             body: [
                 Statement(
@@ -184,15 +189,19 @@ struct ClosureTests {
                 "walking": walking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .anything),
                     body: [
                         Statement(
                             binding: .constant("body"),
                             expression: .closure(
                                 Procedure(
-                                    signature: Signature(parameters: [
-                                        Parameter(name: "item", type: .int),
-                                        Parameter(name: "index", type: .nullable(.int))
-                                    ]),
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "item", type: .int),
+                                            Parameter(name: "index", type: .nullable(.int))
+                                        ],
+                                        returns: .int
+                                    ),
                                     body: [],
                                     result: .literal(.int(1))
                                 )
@@ -212,7 +221,7 @@ struct ClosureTests {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds const isolated (Int, Int?) -> Int where (Int) throws -> Any is declared")
+                && "\(error)".contains("which holds (Int, Int?) -> Int where (Int) throws -> Any is declared")
         }
     }
 
@@ -236,6 +245,7 @@ struct ClosureTests {
                     body: [
                         Statement(binding: .constant("loud"), expression: .closure(
                                 Procedure(
+                                    signature: Signature(returns: .string),
                                     body: [
                                         Statement(binding: .constant("said"), expression: .call(Call(
                                             selector: "App.shout",
@@ -260,7 +270,7 @@ struct ClosureTests {
             try await Builder().build([sut, .shouting] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
+                && "\(error)".contains("which holds () -> String where const () throws -> String is declared")
         }
     }
 
@@ -270,7 +280,8 @@ struct ClosureTests {
         let twice = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
-                returns: .string
+                returns: .string,
+                failing: .anything
             ),
             body: [
                 Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
@@ -282,9 +293,10 @@ struct ClosureTests {
                 "twice": twice,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string, failing: .anything),
                     body: [
                         Statement(binding: .constant("quiet"), expression: .closure(
-                            Procedure(body: [], result: .literal(.string("read")))
+                            Procedure(signature: Signature(returns: .string, constness: .const), body: [], result: .literal(.string("read")))
                         ))
                     ],
                     result: .call(Call(selector: "twice", arguments: [reference("quiet")]))
@@ -305,7 +317,11 @@ struct ClosureTests {
         // procedure that declares a procedure parameter and calls it, which is
         // the whole of what "the author can make constructs" means here.
         let twice = Procedure(
-            signature: Signature(parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))]),
+            signature: Signature(
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))],
+                returns: .array(.string),
+                failing: .anything
+            ),
             body: [
                 Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
                 Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: []))
@@ -321,7 +337,7 @@ struct ClosureTests {
                             selector: "twice",
                             arguments: [
                                 .closure(
-                                    Procedure(body: [], result: .literal(.string("hi")))
+                                    Procedure(signature: Signature(returns: .string), body: [], result: .literal(.string("hi")))
                                 )
                             ]
                         )
@@ -341,11 +357,14 @@ struct ClosureTests {
         // Given. The returned closure holds the argument its maker was given,
         // which is what makes returning one worth anything
         let makeGreeter = Procedure(
-            signature: Signature(parameters: [Parameter(name: "greeting", type: .string)]),
+            signature: Signature(
+                parameters: [Parameter(name: "greeting", type: .string)],
+                returns: .procedure(ProcedureType(parameters: [.string], returns: .string, failing: .these([])))
+            ),
             body: [],
             result: .closure(
                 Procedure(
-                    signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "name", type: .string)], returns: .string),
                     body: [],
                     result: interpolated(spelling(reference("greeting")), literal(", "), spelling(reference("name")))
                 )
@@ -377,8 +396,8 @@ struct ClosureTests {
         // Given
         let sut: Body = [
             Statement(binding: .constant("table"), expression: map([
-                    "yes": .closure(Procedure(body: [], result: .literal(.string("y")))),
-                    "no": .closure(Procedure(body: [], result: .literal(.string("n"))))
+                    "yes": .closure(Procedure(signature: Signature(returns: .string), body: [], result: .literal(.string("y")))),
+                    "no": .closure(Procedure(signature: Signature(returns: .string), body: [], result: .literal(.string("n"))))
                 ])
             ),
             Statement(binding: .constant("picked"), expression: .apply(.reference([.name("table"), .index("yes")]), arguments: []))
@@ -415,8 +434,9 @@ struct ClosureTests {
         let walking = Procedure(
             signature: Signature(
                 parameters: [
-                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], failing: .anything)))
-                ]
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], returns: .any, failing: .anything)))
+                ],
+                failing: .anything
             ),
             body: [
                 Statement(
@@ -431,12 +451,13 @@ struct ClosureTests {
                 "walking": walking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .anything),
                     body: [
                         Statement(
                             binding: .constant("body"),
                             expression: .closure(
                                 Procedure(
-                                    signature: Signature(parameters: declared),
+                                    signature: Signature(parameters: declared, returns: .int),
                                     body: [],
                                     result: .literal(.int(1))
                                 )

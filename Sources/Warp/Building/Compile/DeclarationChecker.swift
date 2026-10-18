@@ -167,7 +167,7 @@ struct DeclarationChecker {
             for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
                 let place = home.part(.procedures).key(name.spelling)
 
-                try judge(asked.signature.read(of: contract), at: place, in: table, answering: answering)
+                try judge(asked.read(of: contract), at: place, in: table, answering: answering)
             }
         }
     }

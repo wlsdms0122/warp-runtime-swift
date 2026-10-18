@@ -11,8 +11,8 @@ import Foundation
 // the types a `RecoverableFailure` names itself by, which is what a rescue
 // reads as `type`.
 //
-// Derived for a body from what it casts, calls and rescues; declared by a
-// native procedure, a contract's procedure and a procedure type.
+// Declared by a signature and a procedure type; a body is held to what its
+// declaration says by what it casts, calls and rescues.
 public enum Failing: Sendable, Equatable {
     // Anything at all.
     case anything

@@ -49,13 +49,18 @@ struct ConcurrentTests {
     func environmentIsolatesEachPiece() async throws {
         // Given
         let spec = try loader.loadProcedure([
+            "returns": "Any",
+            "failing": ["concurrent_failed"],
             "body": [
                 [
                     "let": "par",
                     "value": ["call": [
                         "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
-                            ["dictionary": [["left", ["closure": ["result": 1]]], ["right", ["closure": ["result": 2]]]]]
+                            ["dictionary": [
+                                ["left", ["closure": ["returns": "Int", "isolated": true, "result": 1]]],
+                                ["right", ["closure": ["returns": "Int", "isolated": true, "result": 2]]]
+                            ]]
                         ]
                     ]
                 ]]
@@ -76,6 +81,7 @@ struct ConcurrentTests {
     func allRecoverableFailuresRescue() async throws {
         // Given
         let spec = try loader.loadProcedure([
+            "returns": "Any",
             "body": [
                 [
                     "let": "par",
@@ -86,8 +92,11 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
-                                        ["dictionary": [["fine", ["closure": ["result": "ok"]]], ["fragile", [
+                                        ["dictionary": [["fine", ["closure": ["returns": "String", "isolated": true, "result": "ok"]]], ["fragile", [
                                                 "closure": [
+                                                    "returns": "Any",
+                                                    "failing": ["test"],
+                                                    "isolated": true,
                                                     "body": [["let": "boom", "value": ["fail": true]]],
                                                     "result": ["ref": "boom"]
                                                 ]
@@ -129,11 +138,17 @@ struct ConcurrentTests {
                                     "arguments": [
                                         ["dictionary": [["fragile", [
                                                 "closure": [
+                                                    "returns": "Any",
+                                                    "failing": ["test"],
+                                                    "isolated": true,
                                                     "body": [["let": "boom", "value": ["fail": true]]],
                                                     "result": ["ref": "boom"]
                                                 ]
                                             ]], ["broken", [
                                                 "closure": [
+                                                    "returns": "Any",
+                                                    "failing": ["test"],
+                                                    "isolated": true,
                                                     "body": [["let": "boom", "value": ["fail": false]]],
                                                     "result": ["ref": "boom"]
                                                 ]
@@ -159,6 +174,8 @@ struct ConcurrentTests {
         // Given. The closure asks for the element under `item`, the same name
         // the sequential walk reads it by
         let sut = try loader.loadProcedure([
+            "returns": "Any",
+            "failing": ["concurrent_failed"],
             "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 [
@@ -169,6 +186,8 @@ struct ConcurrentTests {
                             ["ref": "names"],
                             [
                                 "closure": [
+                                    "returns": "String",
+                                    "isolated": true,
                                     "parameters": [["name": "item", "type": "String"], ["name": "index", "type": "Int"]],
                                     "body": [
                                         [
@@ -203,6 +222,8 @@ struct ConcurrentTests {
     func firstAnswersTheFirstSuccess() async throws {
         // Given
         let sut = try loader.loadProcedure([
+            "returns": "Any",
+            "failing": ["concurrent_failed"],
             "body": [
                 [
                     "let": "either",
@@ -212,11 +233,14 @@ struct ConcurrentTests {
                             [
                                 [
                                     "closure": [
+                                        "returns": "Any",
+                                        "failing": ["test"],
+                                        "isolated": true,
                                         "body": [["let": "boom", "value": ["fail": true]]],
                                         "result": ["ref": "boom"]
                                     ]
                                 ],
-                                ["closure": ["result": "answered"]]
+                                ["closure": ["returns": "String", "isolated": true, "result": "answered"]]
                             ]
                         ]
                     ]

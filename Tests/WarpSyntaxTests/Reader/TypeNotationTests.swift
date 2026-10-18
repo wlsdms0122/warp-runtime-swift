@@ -266,6 +266,7 @@ struct TypeNotationTests {
             "types": ["Task": ["struct": ["id": "String"]]],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
                     "body": [["let": "seen", "value": ["ref": "tasks"]]],
                     "result": ["dictionary": [["result", ["ref": "seen"]]]]

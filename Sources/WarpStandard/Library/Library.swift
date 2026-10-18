@@ -46,6 +46,7 @@ enum Library {
                     }
                   ]
                   description "Writes one element onto the end of the array a variable holds, in place."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -56,7 +57,6 @@ enum Library {
                       type "some Element"
                     }
                   ]
-                  returns "Null"
                 }
                 "Standard.Collection.contains" {
                   body [
@@ -124,7 +124,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Whether an array holds a value."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -208,7 +210,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements after the first."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -290,7 +294,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements before the last."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -390,7 +396,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements a procedure answers true for."
+                  failing "anything"
                   parameters [
                     {
                       name "array"
@@ -417,7 +425,9 @@ enum Library {
                   returns "Array<some Element>"
                 }
                 "Standard.Collection.first" {
+                  const true
                   description "The first element."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -453,7 +463,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The last element."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -532,7 +544,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Each element answered by a procedure, in order."
+                  failing "anything"
                   parameters [
                     {
                       name "array"
@@ -580,7 +594,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements with one more at the front."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -665,7 +681,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements folded into one, starting from a value."
+                  failing "anything"
                   parameters [
                     {
                       name "array"
@@ -762,7 +780,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements back to front."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -1119,7 +1139,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The elements in the order lessThan puts them in, for any type that orders."
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -1212,7 +1234,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "What a map holds, by its keys in the key order."
+                  isolated true
                   parameters [
                     {
                       name "dictionary"
@@ -1286,9 +1310,12 @@ enum Library {
                                       }
                                     }
                                   ]
+                                  failing "anything"
+                                  isolated true
                                   result {
                                     ref "answered"
                                   }
+                                  returns "some Answer"
                                 }
                               }
                             }
@@ -1334,6 +1361,10 @@ enum Library {
                     }
                   ]
                   description "Each element answered by a procedure, run at once, in the collection's order."
+                  failing [
+                    "concurrent_failed"
+                  ]
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -1441,7 +1472,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Whether every one answers true, asked until one does not."
+                  failing "anything"
                   parameters [
                     {
                       name "conditions"
@@ -1452,7 +1485,9 @@ enum Library {
                   returns "Bool"
                 }
                 "Standard.Logic.not" {
+                  const true
                   description "The opposite of a truth."
+                  isolated true
                   parameters [
                     {
                       name "value"
@@ -1473,7 +1508,9 @@ enum Library {
                   returns "Bool"
                 }
                 "Standard.Logic.notEqual" {
+                  const true
                   description "Whether two values differ."
+                  isolated true
                   parameters [
                     {
                       name "lhs"
@@ -1569,7 +1606,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Whether one answers true, asked until one does."
+                  failing "anything"
                   parameters [
                     {
                       name "conditions"
@@ -1620,7 +1659,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The value one of two sides answers, chosen by a truth."
+                  failing "anything"
                   parameters [
                     {
                       name "condition"
@@ -1702,7 +1743,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The number without its sign."
+                  isolated true
                   parameters [
                     {
                       name "number"
@@ -1725,7 +1768,9 @@ enum Library {
                   returns "some N"
                 }
                 "Standard.Math.greaterThan" {
+                  const true
                   description "Whether the first is larger, by the one order."
+                  isolated true
                   parameters [
                     {
                       name "lhs"
@@ -1782,7 +1827,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The larger of two of one type, by the one order."
+                  isolated true
                   parameters [
                     {
                       name "lhs"
@@ -1829,7 +1876,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The smaller of two of one type, by the one order."
+                  isolated true
                   parameters [
                     {
                       name "lhs"
@@ -2051,7 +2100,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Whether a string holds another inside it."
+                  isolated true
                   parameters [
                     {
                       name "text"
@@ -2097,7 +2148,12 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Every occurrence of a piece swapped for another."
+                  failing [
+                    "aborted"
+                  ]
+                  isolated true
                   parameters [
                     {
                       name "text"
@@ -2461,7 +2517,12 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "The text cut on a separator."
+                  failing [
+                    "aborted"
+                  ]
+                  isolated true
                   parameters [
                     {
                       name "text"
@@ -2626,7 +2687,9 @@ enum Library {
                       }
                     }
                   ]
+                  const true
                   description "Whether a string begins with another."
+                  isolated true
                   parameters [
                     {
                       name "text"

@@ -10,8 +10,9 @@ import Warp
 
 // What a signature is written as beside the keys a procedure and a
 // contract's procedure each write of their own: `parameters`, `returns`,
-// `bounds` and `sameTypes`. Absent `parameters` is an empty signature, not an
-// absent one.
+// `failing`, `const`, `isolated`, `bounds` and `sameTypes`. Each one left out
+// says the least: no parameters, an answer of `Null`, no failure, and neither
+// claim.
 //
 // A type parameter is bounded where its slots first name it, the parameters
 // in order and then the answer, `some N: Standard.Numeric`, the way a head
@@ -20,6 +21,9 @@ struct SignatureFieldsReader {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case parameters
         case returns
+        case failing
+        case const
+        case isolated
         case bounds
         case sameTypes
     }
@@ -42,7 +46,10 @@ struct SignatureFieldsReader {
 
         self.signature = Signature(
             parameters: parameters.map(\.parameter),
-            returns: returns?.type,
+            returns: returns?.type ?? .null,
+            failing: try container.decodeIfPresent(FailingReader.self, forKey: .failing)?.failing ?? .these([]),
+            constness: try container.decodeIfPresent(Bool.self, forKey: .const) == true ? .const : .unstated,
+            isolation: try container.decodeIfPresent(Bool.self, forKey: .isolated) == true ? .isolated : .unstated,
             bounds: try Self.bounds(of: parameters.flatMap(\.namings) + (returns?.namings ?? []))
                 .merging(labeled) { introduced, _ in introduced },
             sameTypes: try decoder.descendingIfPresent(to: CodingKeys.sameTypes)?

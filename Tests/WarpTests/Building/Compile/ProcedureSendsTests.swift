@@ -108,13 +108,7 @@ struct ProcedureSendsTests {
         }
 
         // MARK: - Property
-        let isolated: Bool
-
         // MARK: - Initializer
-        init(isolated: Bool) {
-            self.isolated = isolated
-        }
-
         // MARK: - Public
         func evaluate(_ question: Question<Self>) async throws -> Value {
             try await question.send(.ticket)
@@ -457,8 +451,9 @@ struct ProcedureSendsTests {
         types: ["Bank.Account": .struct(["balance": .int])],
         contracts: [
             "App.Describable": [
-                "describe": ContractProcedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string),
+                "describe": Signature(
+                    parameters: [Parameter(name: "of", type: .selfType)],
+                    returns: .string,
                     constness: .const,
                     isolation: .isolated
                 )
@@ -469,7 +464,12 @@ struct ProcedureSendsTests {
         procedures: [
             "Bank.Account.describe": Procedure(
                 access: .public,
-                signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
+                signature: Signature(
+                    parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
+                    returns: .string,
+                    constness: .const,
+                    isolation: .isolated
+                ),
                 body: [],
                 result: .literal(.string("an account"))
             )
@@ -479,7 +479,7 @@ struct ProcedureSendsTests {
     private static let contradicting = try! Module(
         procedures: [
             "App.shouting": Procedure(
-                signature: Signature(of: ShoutingQuery.self, returns: .null),
+                signature: Signature(of: ShoutingQuery.self, returns: .null, constness: .const),
                 implementation: .query(ShoutingQuery())
             )
         ],
@@ -491,8 +491,8 @@ struct ProcedureSendsTests {
     private static let claims = try! Module(
         procedures: [
             "App.counted": Procedure(
-                signature: Signature(of: CountedQuery.self, returns: .int),
-                implementation: .query(CountedQuery(isolated: true))
+                signature: Signature(of: CountedQuery.self, returns: .int, isolation: .isolated),
+                implementation: .query(CountedQuery())
             )
         ]
     )
@@ -501,7 +501,7 @@ struct ProcedureSendsTests {
         procedures: [
             "App.counted": Procedure(
                 signature: Signature(of: CountedQuery.self, returns: .int),
-                implementation: .query(CountedQuery(isolated: false))
+                implementation: .query(CountedQuery())
             )
         ]
     )
@@ -615,6 +615,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
             )])] + [Self.sending, .shouting] + Module.standard
@@ -633,6 +634,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .string),
                 body: [],
                 result: .call(Call(selector: "App.announce", arguments: [.literal(.string("hi"))]))
             )])] + [Self.sending, .shouting] + Module.standard
@@ -781,6 +783,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "App.counted"))
             )])] + [Self.counting, .ticketing]
@@ -825,6 +828,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "App.picking"))
             )])] + [Self.picking, Self.picked]
@@ -884,6 +888,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .int),
                 body: [],
                 result: .call(Call(selector: "App.overhanding"))
             )])] + [Self.overhanding, Self.picked]
@@ -904,6 +909,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .string),
                 body: [],
                 result: .call(Call(selector: "App.mistyping"))
             )])] + [Self.mistyping, Self.spoken]
@@ -923,6 +929,7 @@ struct ProcedureSendsTests {
         let image = try await Builder().build(
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
+                signature: Signature(returns: .string),
                 body: [],
                 result: .call(Call(selector: "App.nullingToAParameter"))
             )])] + [Self.nullingToAParameter, Self.reporting]

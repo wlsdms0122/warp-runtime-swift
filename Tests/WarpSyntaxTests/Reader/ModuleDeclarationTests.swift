@@ -28,10 +28,12 @@ struct ModuleDeclarationTests {
         let first = try loader.loadDocument([
             "procedures": [
                 "First.entry": [
+                    "returns": "Any",
                     "body": [["let": "said", "value": ["call": ["procedure": "First.helper"]]]],
                     "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
                 "First.helper": [
+                    "returns": "Any",
                     "body": [["let": "done", "value": "from first"]],
                     "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
@@ -40,6 +42,7 @@ struct ModuleDeclarationTests {
         let second = try loader.loadDocument([
             "procedures": [
                 "Second.helper": [
+                    "returns": "Any",
                     "body": [["let": "done", "value": "from second"]],
                     "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
@@ -89,10 +92,12 @@ struct ModuleDeclarationTests {
             "imports": ["Second.helper"],
             "procedures": [
                 "First.entry": [
+                    "returns": "Any",
                     "body": [["let": "said", "value": ["call": ["procedure": "Second.helper"]]]],
                     "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
                 "First.helper": [
+                    "returns": "Any",
                     "body": [["let": "done", "value": "from first"]],
                     "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
@@ -101,6 +106,7 @@ struct ModuleDeclarationTests {
         let second = try loader.loadDocument([
             "procedures": [
                 "Second.helper": [
+                    "returns": "Any",
                     "body": [["let": "done", "value": "from second"]],
                     "result": ["dictionary": [["said", ["ref": "done"]]]]
                 ]
@@ -121,6 +127,7 @@ struct ModuleDeclarationTests {
             "const": ["greeting": "hello", "limit": 3],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "body": [["let": "said", "value": ["ref": "greeting"]]],
                     "result": ["dictionary": [["result", ["ref": "said"]], ["cap", ["ref": "limit"]]]]
                 ]
@@ -146,6 +153,7 @@ struct ModuleDeclarationTests {
             ],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "body": [["let": "seen", "value": ["ref": "url"]]],
                     "result": ["dictionary": [["result", ["ref": "seen"]]]]
                 ]
@@ -218,6 +226,8 @@ struct ModuleDeclarationTests {
             ],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
+                    "failing": ["cast_refused"],
                     "body": [
                         [
                             "let": "card",

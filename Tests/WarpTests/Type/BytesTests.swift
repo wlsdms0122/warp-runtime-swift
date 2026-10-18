@@ -124,7 +124,8 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .array(.int))]
+                        parameters: [Parameter(name: "data", type: .array(.int))],
+                        returns: .int
                     ),
                     body: [],
                     result: .reference([.name("data"), .index(1)])
@@ -152,7 +153,8 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .array(.string))]
+                        parameters: [Parameter(name: "data", type: .array(.string))],
+                        returns: .string
                     ),
                     body: [],
                     result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("data"), .literal(.string(""))]))
@@ -179,7 +181,8 @@ struct BytesTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "data", type: .array(.int))]
+                        parameters: [Parameter(name: "data", type: .array(.int))],
+                        returns: .int
                     ),
                     body: [
                         Statement(binding: .variable("sum"), expression: .literal(.int(0))),
@@ -222,6 +225,7 @@ struct BytesTests {
                 ),
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.array(.int))),
                     body: [],
                     result: .call(Call(
                         selector: "keep",
@@ -294,6 +298,7 @@ struct BytesTests {
                 ),
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.int)),
                     body: [],
                     result: .call(Call(selector: "keep", arguments: [.literal(.bytes([104, 105]))]))
                 )

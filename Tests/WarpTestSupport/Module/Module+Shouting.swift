@@ -14,7 +14,7 @@ public extension Module {
     static let shouting = try! Module(
         procedures: [
             "App.shout": Procedure(
-                signature: Signature(of: ShoutEffect.self, returns: .string),
+                signature: Signature(of: ShoutEffect.self, returns: .string, isolation: .isolated),
                 implementation: .effect(ShoutEffect())
             )
         ]

@@ -23,8 +23,6 @@ public struct FailEffect: Effect {
     }
 
     // MARK: - Property
-    public let failing = Failing.these([TestRecoverableFailure.type])
-
     // MARK: - Initializer
     public init() {
     }

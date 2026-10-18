@@ -24,6 +24,7 @@ struct TextTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Text.text",
@@ -53,7 +54,7 @@ struct TextTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "line", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "line", type: .string)], returns: .string, failing: .these(["aborted"])),
                     body: [
                         Statement(binding: .constant("parts"), expression: .call(Call(
                             selector: "Standard.Text.split",
@@ -89,10 +90,14 @@ struct TextTests {
         // where it runs
         func codec(_ selector: Name, taking subject: TypeExpression) -> Procedure {
             Procedure(
-                signature: Signature(parameters: [
-                    Parameter(name: "subject", type: subject),
-                    Parameter(name: "encoding", type: .string)
-                ]),
+                signature: Signature(
+                    parameters: [
+                        Parameter(name: "subject", type: subject),
+                        Parameter(name: "encoding", type: .string)
+                    ],
+                    returns: .any,
+                    failing: .anything
+                ),
                 body: [],
                 result: .call(Call(selector: selector, arguments: [reference("subject"), reference("encoding")]))
             )
@@ -127,6 +132,7 @@ struct TextTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .any, failing: .anything),
                         body: [],
                         result: .call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))]))
                     )
@@ -155,6 +161,7 @@ struct TextTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Text.decoded",
@@ -182,6 +189,7 @@ struct TextTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.int)),
                     body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
                     result: .call(Call(
                         selector: "Standard.Text.encoded",
@@ -210,6 +218,7 @@ struct TextTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Text.decoded",

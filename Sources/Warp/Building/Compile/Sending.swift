@@ -18,23 +18,17 @@ import Foundation
 // it reaches, and which declaration answers a contract's procedure is a
 // call's first argument to say.
 //
-// Refused here are the two claims a procedure makes that sending can
-// contradict. A query is the claim that it answers without running, and running
-// is not something a caller can catch; an isolated procedure is the claim that
-// it touches no name another body could touch at the same time, and neither is
-// that. A procedure making either claim while sending something that breaks it
-// is refused. So is a send reaching a parameter handed in place, since a send
-// hands values.
+// Refused here are the claims a declaration makes that its native code can
+// contradict. A const declaration is the claim that it answers without
+// running, and running is not something a caller can catch; an isolated one
+// is the claim that it touches no name another body could touch at the same
+// time, and neither is that. An effect claiming const is refused, since it
+// runs, and so is a declaration making either claim while sending something
+// that breaks it. So is a send reaching a parameter handed in place, since a
+// send hands values.
 struct Sending {
     // MARK: - Property
     private let numbering: Numbering
-
-    // Which declarations answer without running.
-    private let const: @Sendable (Name) -> Bool
-
-    // Which declarations touch nothing another body could touch at the same
-    // time.
-    private let isolated: @Sendable (Name) -> Bool
 
     // What a declaration this document may send takes. Nil for a spelling
     // no declaration standing wears.
@@ -49,15 +43,11 @@ struct Sending {
     // MARK: - Initializer
     init(
         numbering: Numbering,
-        const: @escaping @Sendable (Name) -> Bool,
-        isolated: @escaping @Sendable (Name) -> Bool,
         taking: @escaping @Sendable (Name) -> Signature?,
         contractProcedures: Set<Name>,
         concealing concealed: Set<Name>
     ) {
         self.numbering = numbering
-        self.const = const
-        self.isolated = isolated
         self.taking = taking
         self.contractProcedures = contractProcedures
         self.concealed = concealed
@@ -71,10 +61,16 @@ struct Sending {
 
         guard let sends = implementation.nativeImports else { return [] }
 
-        // Only a query claims to answer without running. An effect runs, so
-        // what it sends may run too.
-        let answersWithoutRunning = implementation.isNativelyConst == true
-        let touchesNothingShared = implementation.isNativelyIsolated == true
+        let declared = symbol.procedure.signature
+        let answersWithoutRunning = declared.constness == .const
+        let touchesNothingShared = declared.isolation == .isolated
+
+        if answersWithoutRunning, case .effect = implementation {
+            throw BuildError(
+                "'\(label)' is declared const and answered by an effect, which answers by running",
+                at: symbol.place
+            )
+        }
 
         do {
             return try numbering.sent(sends) { send in
@@ -95,7 +91,7 @@ struct Sending {
                     throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
                 }
 
-                guard !answersWithoutRunning || const(send.selector) else {
+                guard !answersWithoutRunning || signature.constness == .const else {
                     throw BuildError(
                         "'\(label)' answers without running and sends '\(send.selector)',"
                             + " which answers only by running",
@@ -103,7 +99,7 @@ struct Sending {
                     )
                 }
 
-                guard !touchesNothingShared || isolated(send.selector) else {
+                guard !touchesNothingShared || signature.isolation == .isolated else {
                     throw BuildError(
                         "'\(label)' says it touches no name another body could touch at"
                             + " the same time, and sends '\(send.selector)', which does",

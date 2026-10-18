@@ -56,7 +56,7 @@ struct FoldingReachTests {
         let brought = try Module(
             procedures: [
                 "App.seat": Procedure(
-                    signature: Signature(of: SeatQuery.self, returns: .int),
+                    signature: Signature(of: SeatQuery.self, returns: .int, constness: .const),
                     implementation: .query(SeatQuery())
                 )
             ]
@@ -84,7 +84,7 @@ struct FoldingReachTests {
         let brought = try Module(
             procedures: [
                 "App.seat": Procedure(
-                    signature: Signature(of: SeatQuery.self, returns: .int),
+                    signature: Signature(of: SeatQuery.self, returns: .int, constness: .const),
                     implementation: .query(SeatQuery())
                 )
             ]
@@ -93,7 +93,7 @@ struct FoldingReachTests {
             imports: ["App.seat"],
             procedures: [
                 "App.row": Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, constness: .const),
                     body: [],
                     result: .call(Call(selector: "App.seat"))
                 )
@@ -122,9 +122,9 @@ struct FoldingReachTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
-                    result: .closure(Procedure(body: [], result: reference("tally")))
+                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("tally")))
                 )
             ]
         )
@@ -134,7 +134,7 @@ struct FoldingReachTests {
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("held"), arguments: [])
                 )
@@ -155,9 +155,9 @@ struct FoldingReachTests {
         let maker = try Module(
             procedures: [
                 "App.make": Procedure(
-                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything))),
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
                     body: [Statement(binding: .variable("tally"), expression: .literal(.int(0)))],
-                    result: .closure(Procedure(body: [], result: reference("tally")))
+                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: reference("tally")))
                 )
             ]
         )
@@ -167,7 +167,7 @@ struct FoldingReachTests {
             procedures: [
                 "App.entry": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("held"), arguments: [])
                 )
@@ -188,7 +188,7 @@ struct FoldingReachTests {
         let document = try Module(
             constants: ["row": .call(Call(selector: "App.row"))],
             procedures: [
-                "App.row": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7))),
+                "App.row": Procedure(signature: Signature(returns: .int, constness: .const), body: [], result: .literal(.int(7))),
                 "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("row"))
             ]
         )
@@ -210,7 +210,7 @@ struct FoldingReachTests {
         let brought = try Module(
             procedures: [
                 "App.seat": Procedure(
-                    signature: Signature(of: SeatQuery.self, returns: .int),
+                    signature: Signature(of: SeatQuery.self, returns: .int, constness: .const),
                     implementation: .query(SeatQuery())
                 )
             ]
@@ -272,11 +272,9 @@ struct FoldingReachTests {
             imports: ["Z.Thing"],
             contracts: [
                 "App.Joinable": [
-                    "join": ContractProcedure(
-                        signature: Signature(
-                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "other", type: .selfType)],
-                            returns: .selfType
-                        ),
+                    "join": Signature(
+                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "other", type: .selfType)],
+                        returns: .selfType,
                         constness: .const,
                         isolation: .isolated
                     )
@@ -292,7 +290,12 @@ struct FoldingReachTests {
             members: ["Int": ["join"]],
             procedures: [
                 "Int.join": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .int), Parameter(name: "other", type: .int)], returns: .int),
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .int), Parameter(name: "other", type: .int)],
+                        returns: .int,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     body: [],
                     result: reference("of")
                 )

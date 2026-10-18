@@ -79,16 +79,6 @@ public struct Compiled: Sendable, Declaring {
     var standing: Range<Int> { 0 ..< declared.count }
     var lifted: Range<Int> { declared.count ..< table.count }
 
-    // What the build read off a body whose declaration wrote no `returns`,
-    // by the spelling it was declared under and in this document's own
-    // type numbers. A declaration that wrote its answer is not here:
-    // what an author wrote stands on the row.
-    //
-    // Read off a body rather than out of a signature, so it is the one
-    // thing a document compiled against this cannot work out for itself
-    // without reading the body again.
-    let answers: [Name: LoweredType]
-
     // Where this document's lowered bodies number their calls and their
     // types from. A body carries the document's own numbers, so this is
     // what a link reads to turn them into rows.
@@ -228,7 +218,6 @@ public struct Compiled: Sendable, Declaring {
         declared: [Name],
         constants: [Name],
         table: [Judged],
-        answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
         variables: [(name: Name, value: Value)],
@@ -252,7 +241,6 @@ public struct Compiled: Sendable, Declaring {
                 .filter { offset, _ in !table[offset].access.reachesOtherDocuments }
                 .map(\.element)
         )
-        self.answers = answers
         self.numbering = numbering
         self.typeNumbering = typeNumbering
         self.variables = variables
@@ -278,7 +266,6 @@ public struct Compiled: Sendable, Declaring {
         declared: [Name],
         constants: [Name],
         table: [Judged],
-        answers: [Name: LoweredType],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
         judging variables: [(name: Name, value: Value)],
@@ -302,7 +289,6 @@ public struct Compiled: Sendable, Declaring {
             declared: declared,
             constants: constants,
             table: table,
-            answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
             variables: variables,
@@ -387,7 +373,6 @@ public struct Compiled: Sendable, Declaring {
             declared: declared,
             constants: constants,
             table: table,
-            answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
             variables: variables,

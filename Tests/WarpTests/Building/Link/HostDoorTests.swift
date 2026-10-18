@@ -105,8 +105,6 @@ struct HostDoorTests {
         // MARK: - Property
         let held: Value
 
-        let failing = Failing.these([CarryingFailure.type])
-
         // MARK: - Initializer
         // MARK: - Public
         func run(_ invocation: Invocation<Self>) async throws -> Value {
@@ -197,7 +195,7 @@ struct HostDoorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "x")]),
+                    signature: Signature(parameters: [Parameter(name: "x")], returns: .any),
                     body: [],
                     result: .reference([.name("x")])
                 )
@@ -252,12 +250,13 @@ struct HostDoorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [],
                     result: .call(Call(
                         selector: "App.handing",
                         arguments: [
                             .closure(Procedure(
-                                signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string),
+                                signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string, constness: .const),
                                 body: [],
                                 result: .reference([.name("x"), .name("id")])
                             ))
@@ -288,6 +287,7 @@ struct HostDoorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
                         Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])])))
@@ -479,7 +479,7 @@ struct HostDoorTests {
             types: ["App.P": .struct(["a": .int]), "App.Q": .alias(.named("App.P"))],
             procedures: [
                 "App.carry": Procedure(
-                    signature: Signature(of: CarryingEffect.self),
+                    signature: Signature(of: CarryingEffect.self, failing: .these([CarryingFailure.type])),
                     implementation: .effect(CarryingEffect(held: held))
                 )
             ]
@@ -489,6 +489,7 @@ struct HostDoorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [
                         Statement(
                             binding: .constant("failed"),
@@ -512,9 +513,6 @@ struct HostDoorTests {
             label: "entry",
             origin: 0,
             procedure: Procedure(signature: signature, body: []),
-            const: false,
-            isolated: false,
-            failing: .these([]),
             builtin: false,
             sends: [],
             in: .empty

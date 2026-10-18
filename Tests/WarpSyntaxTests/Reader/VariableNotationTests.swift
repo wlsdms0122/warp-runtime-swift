@@ -25,6 +25,7 @@ struct VariableNotationTests {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
+            "returns": "Any",
             "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
@@ -49,6 +50,7 @@ struct VariableNotationTests {
     func untakenBranchLeavesVariableAlone() async throws {
         // Given
         let sut = try loader.loadProcedure([
+            "returns": "Any",
             "parameters": [["name": "kind", "type": "String"]],
             "body": [
                 ["var": "verdict", "value": "untouched"],
@@ -97,6 +99,7 @@ struct VariableNotationTests {
         // Given. `var` always introduces, so the inner name is a different name
         // with a box of its own. Writing the outer one is `set`.
         let sut = try loader.loadProcedure([
+            "returns": "Any",
             "body": [
                 ["var": "verdict", "value": "outer"],
                 [
@@ -175,6 +178,8 @@ struct VariableNotationTests {
     func closureOwnsItsVariables() async throws {
         // Given. What is forbidden is reaching outward, not variables
         let sut = try loader.loadProcedure([
+            "returns": "Any",
+            "failing": ["concurrent_failed"],
             "body": [
                 [
                     "let": "both",
@@ -183,13 +188,15 @@ struct VariableNotationTests {
                         "arguments": [
                             ["dictionary": [["left", [
                                     "closure": [
+                                        "returns": "Int",
+                                        "isolated": true,
                                         "body": [
                                             ["var": "tally", "value": 0],
                                             ["set": "tally", "value": 1]
                                         ],
                                         "result": ["ref": "tally"]
                                     ]
-                                ]], ["right", ["closure": ["result": 2]]]]]
+                                ]], ["right", ["closure": ["returns": "Int", "isolated": true, "result": 2]]]]]
                         ]
                     ]
                 ]]

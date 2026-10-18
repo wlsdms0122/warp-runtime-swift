@@ -8,13 +8,13 @@
 import Foundation
 
 // What a value's type must have to stand under a contract: the procedures it
-// answers, each by its member of that name, and the types it gives, each by
-// its type member of that name. A type the contract asks is held to the
+// answers, each by its member of that name and held to the signature asked,
+// and the types it gives, each by its type member of that name. A type the contract asks is held to the
 // contracts `bounds` names for it, so a signature reading it through a type
 // parameter, `some T.Item`, may ask of it what they ask.
 public struct Contract: Sendable, Equatable, ExpressibleByDictionaryLiteral {
     // MARK: - Property
-    public let procedures: [Name: ContractProcedure]
+    public let procedures: [Name: Signature]
     public let types: Set<Name>
 
     // The contracts each type it asks is held to, by its name. A type bounded
@@ -25,13 +25,13 @@ public struct Contract: Sendable, Equatable, ExpressibleByDictionaryLiteral {
     // what its procedures do.
     var mentions: Set<Name> {
         procedures.values.reduce(into: Set(bounds.values.joined())) { mentioned, procedure in
-            mentioned.formUnion(procedure.signature.mentions)
+            mentioned.formUnion(procedure.mentions)
         }
     }
 
     // MARK: - Initializer
     public init(
-        procedures: [Name: ContractProcedure] = [:],
+        procedures: [Name: Signature] = [:],
         types: Set<Name> = [],
         bounds: [Name: Set<Name>] = [:]
     ) {
@@ -41,7 +41,7 @@ public struct Contract: Sendable, Equatable, ExpressibleByDictionaryLiteral {
     }
 
     // A contract asking procedures alone, written as them.
-    public init(dictionaryLiteral procedures: (Name, ContractProcedure)...) {
+    public init(dictionaryLiteral procedures: (Name, Signature)...) {
         self.init(procedures: Dictionary(uniqueKeysWithValues: procedures))
     }
 

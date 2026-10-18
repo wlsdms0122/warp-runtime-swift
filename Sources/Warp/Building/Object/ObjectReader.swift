@@ -67,7 +67,6 @@ struct ObjectReader {
         var importedClaims: Set<ClaimPair> = []
         var declaredRows: [Judged] = []
         var liftedRows: [Value] = []
-        var answers: [Name: LoweredType] = [:]
         var numbered: Value = .null
         var typeNumbering = LoweredTypeNumbering(types: [])
         var variables: [(name: Name, value: Value)] = []
@@ -150,9 +149,6 @@ struct ObjectReader {
             case .lifted:
                 liftedRows = try Field(part, of: "lifted").list { written in written }
 
-            case .answers:
-                answers = try keyed(part, of: "answers", lowered)
-
             // What the document sends and how many closures each declaration
             // wrote, which is what its bodies number their calls from.
             case .numbering:
@@ -209,7 +205,6 @@ struct ObjectReader {
             declared: declared,
             constants: constants,
             table: table,
-            answers: answers,
             numbering: numbering,
             typeNumbering: typeNumbering,
             judging: variables,
@@ -540,25 +535,6 @@ struct ObjectReader {
         try Field(value, of: "a text").text()
     }
 
-    private func contractProcedure(_ value: Value) throws -> ContractProcedure {
-        var cursor = try FieldCursor(value, of: "contract procedure")
-        let signature = try signature(cursor.next())
-        let constness = try constness(cursor.next())
-        let isolation = try isolation(cursor.next())
-
-        // A contract's procedure names what it may fail with, nothing
-        // included.
-        guard case let .these(failing) = try failing(cursor.next()) else {
-            throw ObjectRefused("a contract's procedure's 'failing' says which failures")
-        }
-
-        let read = ContractProcedure(signature: signature, constness: constness, isolation: isolation, failing: failing)
-
-        try cursor.end()
-
-        return read
-    }
-
     // A contract: the types it asks, the bounds of those it bounds, and the
     // procedures it asks. Each bound holds a type the contract asks, to one
     // contract at least.
@@ -574,7 +550,7 @@ struct ObjectReader {
 
             return Set(contracts)
         }
-        let procedures = try keyed(cursor.next(), of: "contract", contractProcedure)
+        let procedures = try keyed(cursor.next(), of: "contract", signature)
 
         try cursor.end()
 
@@ -589,7 +565,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "procedure type")
         let read = ProcedureType(
             parameters: try Field(cursor.next(), of: "parameters").list(expression),
-            returns: try cursor.field().maybe(expression),
+            returns: try expression(cursor.next()),
             failing: try failing(cursor.next())
         )
 
@@ -602,7 +578,10 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "signature")
         let read = Signature(
             parameters: try Field(cursor.next(), of: "parameters").list(parameter),
-            returns: try cursor.field().maybe(expression),
+            returns: try expression(cursor.next()),
+            failing: try failing(cursor.next()),
+            constness: try constness(cursor.next()),
+            isolation: try isolation(cursor.next()),
             bounds: try keyed(cursor.next(), of: "bounds") { written in
                 let contracts = try Field(written, of: "bounds").ordered(name)
 
@@ -725,19 +704,18 @@ struct ObjectReader {
             let returns = try cursor.field().maybe(lowered)
             let claimed = try cursor.field().maybe(failing)
 
-            guard parameters != nil || returns == nil else {
-                throw ObjectRefused("a procedure type writes what it answers and nothing of what it takes")
-            }
-
-            // A signature says what may fail out of it, anything included,
-            // and a type writing none says nothing of it.
-            guard (parameters == nil) == (claimed == nil) else {
-                throw ObjectRefused("a procedure type writes what it may fail with exactly where it writes what it takes")
+            // A signature says what it answers and what may fail out of it,
+            // and a type writing none says nothing of either.
+            guard (parameters == nil) == (returns == nil), (parameters == nil) == (claimed == nil) else {
+                throw ObjectRefused(
+                    "a procedure type writes what it answers and what it may fail with exactly where it"
+                        + " writes what it takes"
+                )
             }
 
             read = .procedure(
                 parameters.map { parameters in
-                    LoweredProcedureType(parameters: parameters, returns: returns, failing: claimed ?? .anything)
+                    LoweredProcedureType(parameters: parameters, returns: returns ?? .any, failing: claimed ?? .anything)
                 },
                 constness: try constness(cursor.next()),
                 isolation: try isolation(cursor.next())
@@ -784,9 +762,6 @@ struct ObjectReader {
             label: label,
             signature: signature,
             access: try access(cursor.next()),
-            constness: try constness(cursor.next()),
-            isolation: try isolation(cursor.next()),
-            failing: try failing(cursor.next()),
             judging: try implementation(cursor.next())
         )
 

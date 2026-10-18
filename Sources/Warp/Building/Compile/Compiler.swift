@@ -7,8 +7,8 @@
 
 import Foundation
 
-// One document compiled: its declarations judged and lowered, its facts
-// derived, and its constants and variables settled, against what stands
+// One document compiled: its declarations judged against what they say and
+// lowered, and its constants and variables settled, against what stands
 // before it.
 struct Compiler {
     // MARK: - Property
@@ -42,10 +42,6 @@ struct Compiler {
         let declared = holding.map(\.declared)
         let boxes = module.variables.keys.sorted()
         let reading = Set(module.variables.keys)
-
-        // What the build read off this document's bodies whose declarations
-        // wrote no `returns`.
-        var read: [Name: LoweredType] = [:]
 
         // What this document settled.
         var constants: [Name: Value] = [:]
@@ -94,6 +90,23 @@ struct Compiler {
                 ) { _, variable in variable }
         }
 
+        // What this document declares, by the spelling a call in it writes.
+        // Its own rows do not stand yet, and this is what says what they take
+        // until they do.
+        let own = holding.reduce(into: [Name: Signature]()) { asked, symbol in
+            asked[symbol.declared] = symbol.procedure.signature
+        }
+
+        // What the documents behind this one declare, read the way a body in
+        // this one reads them.
+        let behind = compiling.context(reading: reading)
+
+        // What a selector this document may reach takes: its own declarations
+        // first, the documents standing before it after.
+        let taking: @Sendable (Name) -> Signature? = { selector in
+            own[selector] ?? behind.signature(of: selector)
+        }
+
         // One declaration resolves once, whichever table asks.
         var resolvedBodies: [Name: Procedure] = [:]
 
@@ -135,6 +148,22 @@ struct Compiler {
                     folding: folding
                 )
 
+                // What the body does is held to what its declaration says,
+                // every callee read by its own declaration, so a body is
+                // judged alone.
+                if let refusal = Derivation().refusal(
+                    of: block,
+                    declared: declaration.signature,
+                    reading: reading,
+                    bound: declaredVariables.merging(
+                        declaration.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
+                    ) { _, parameter in parameter },
+                    taking: taking,
+                    in: loweredTypes
+                ) {
+                    throw BuildError("'\(symbol.declared)' \(refusal)", at: symbol.place)
+                }
+
                 answer = (
                     procedure: Procedure(
                         description: declaration.description,
@@ -161,71 +190,6 @@ struct Compiler {
             return answer.procedure
         }
 
-        // The facts nobody declared. All three are fixed points over what a
-        // body reaches, so a document's answer is decided once the documents
-        // it reaches have theirs, and the standing refused a cycle where that
-        // is not so. Read over every declaration the document holds.
-        //
-        // What this document declares, by the spelling a call in it writes.
-        // Its own rows do not stand yet, and this is what says what they take
-        // until they do.
-        let own = holding.reduce(into: [Name: Signature]()) { asked, symbol in
-            asked[symbol.declared] = symbol.procedure.signature
-        }
-
-        // What the documents behind this one declare, read the way a body in
-        // this one reads them.
-        let behind = compiling.context(reading: reading)
-
-        // What a selector this document may reach takes: its own declarations
-        // first, the documents standing before it after. One rule, so the two
-        // judgements standing on it read the same declaration.
-        let taking: @Sendable (Name) -> Signature? = { selector in
-            own[selector] ?? behind.signature(of: selector)
-        }
-
-        // Derived over this document's declarations, and read off the rows
-        // for every other: what the build derives of a declaration stands on
-        // its row, so a document's own facts are its own until its rows stand.
-        var const: Set<Name> = []
-        var isolated: Set<Name> = []
-        var failing: [Name: Failing] = [:]
-        let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in behind.isConst(selector) }
-        let touchesNothingShared: @Sendable (Name) -> Bool = { selector in behind.isIsolated(selector) }
-
-        Derivation().const(
-            among: holding,
-            deriving: &const,
-            reading: reading,
-            beside: declaredVariables,
-            taking: taking,
-            beyond: answersWithoutRunning,
-            in: loweredTypes
-        )
-        Derivation().isolated(
-            among: holding,
-            deriving: &isolated,
-            beside: declaredVariables,
-            taking: taking,
-            beyond: touchesNothingShared,
-            in: loweredTypes
-        )
-        Derivation().failing(
-            among: holding,
-            deriving: &failing,
-            beside: declaredVariables,
-            beyond: { selector in behind.failing(of: selector) },
-            in: loweredTypes
-        )
-
-        let ownNames = Set(holding.map(\.declared))
-        let constant: @Sendable (Name) -> Bool = { [const] selector in
-            ownNames.contains(selector) ? const.contains(selector) : answersWithoutRunning(selector)
-        }
-        let untouched: @Sendable (Name) -> Bool = { [isolated] selector in
-            ownNames.contains(selector) ? isolated.contains(selector) : touchesNothingShared(selector)
-        }
-
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // document alone, so a body lowers to the same numbers whatever
@@ -237,8 +201,6 @@ struct Compiler {
         )
         let sending = Sending(
             numbering: numbering,
-            const: constant,
-            isolated: untouched,
             taking: { selector in own[selector] ?? behind.declared(selector)?.signature },
             contractProcedures: Set(behind.contractProcedures.keys),
             concealing: behind.concealed
@@ -257,9 +219,6 @@ struct Compiler {
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
-                    const: const.contains(symbol.declared),
-                    isolated: isolated.contains(symbol.declared),
-                    failing: failing[symbol.declared] ?? .anything,
                     builtin: module.builtin,
                     sends: try sending.rows(of: symbol),
                     in: loweredTypes
@@ -304,30 +263,6 @@ struct Compiler {
             in: context()
         )
 
-        // What every declaration of this document whose `returns` nobody
-        // wrote answers, read off its body.
-        await TypeChecker().answers(
-            of: holding.compactMap { symbol -> TypeChecker.Unsaid? in
-                guard
-                    symbol.procedure.signature.returns == nil,
-                    let block = symbol.procedure.block
-                else { return nil }
-
-                return TypeChecker.Unsaid(
-                    symbol: symbol,
-                    block: block,
-                    environment: opening(symbol.procedure.signature),
-                    sends: TypeChecker().sent(in: block)
-                )
-            },
-            reading: context,
-            recording: { qualified, answer in
-                read[qualified] = answer
-
-                compiling.read(answer, as: qualified, of: origin)
-            }
-        )
-
         // Every declaration this document makes, in name order, which is
         // the order its rows stand in. What a document says has to hold
         // whether or not a run walks that way, so which declarations are
@@ -336,16 +271,15 @@ struct Compiler {
             _ = try await resolved(symbol)
         }
 
-        // The types its bodies and the answers read off them stand on, written
-        // as this document's own numbers.
+        // The types its bodies stand on, written as this document's own
+        // numbers.
         // Lowering read the link's table to judge, so what it wrote is that
         // link's rows; what leaves here is the document's.
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            Array(block) + compiling.lowering.documents[origin].closureRows,
-            answering: read
+            Array(block) + compiling.lowering.documents[origin].closureRows
         )
 
         return Compiled(
@@ -359,7 +293,6 @@ struct Compiler {
             declared: declared,
             constants: module.constants.keys.sorted(),
             table: lowered.table.map(Judged.init),
-            answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
             variables: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
@@ -444,14 +377,11 @@ struct Compiler {
         for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
             let place = Place.variable(name.spelling, in: .of(module))
 
-            // A start written as a literal, or as a closure literal that
-            // writes no answer, is read as what the variable declares.
+            // A start written as a literal is read as what the variable
+            // declares.
             let declaredType = declaredTypes[name]
             let start = declaredType.map { declaredType in
-                declaredType.written(
-                    declaredType.completing(variable.start, in: context.loweredTypes),
-                    in: context.loweredTypes
-                )
+                declaredType.written(variable.start, in: context.loweredTypes)
             } ?? variable.start
 
             let (settled, written) = try await self.settled(

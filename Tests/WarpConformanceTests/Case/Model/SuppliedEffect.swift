@@ -13,8 +13,6 @@ import Warp
 struct SuppliedEffect<Parameters: ParameterSet>: Effect {
     // MARK: - Property
     let answers: Value
-    let isolated: Bool
-    let failing: Failing
 
     // MARK: - Initializer
     // MARK: - Public

@@ -162,7 +162,7 @@ public struct Head: Sendable, Hashable, Comparable, ExpressibleByStringLiteral {
             return .procedure(
                 ProcedureType(
                     parameters: procedure.parameters.map { parameter in renamed(parameter, by: names) },
-                    returns: procedure.returns.map { returns in renamed(returns, by: names) },
+                    returns: renamed(procedure.returns, by: names),
                     failing: procedure.failing
                 ),
                 constness,

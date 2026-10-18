@@ -19,18 +19,17 @@ import Foundation
 public enum Implementation: Sendable {
     case body(Block)
 
-    // Answers without running anything. Const, which is what lets it be asked
-    // inside a condition and while a constant settles.
+    // Answers without running anything, so its declaration may say it is
+    // const.
     case query(any Query)
 
-    // Answers by reaching outside the run, so it is not const and cannot be
-    // asked where a value is merely read.
+    // Answers by reaching outside the run, so its declaration cannot say it
+    // is const.
     case effect(any Effect)
 
     // MARK: - Property
-    // The procedure behind this where it is written in native code, which is what
-    // declares its own constness, isolation and failing. Nil for a body, whose
-    // claims are what its code turns out to do.
+    // The procedure behind this where it is written in native code. Nil for a
+    // body.
     var native: Native? {
         switch self {
         case .body:
@@ -42,20 +41,6 @@ public enum Implementation: Sendable {
         case let .effect(effect):
             return .effect(effect)
         }
-    }
-
-    // What a native declares about itself, in the answers a builder works out
-    // for a body. Nil where nothing was declared, which is what a body is.
-    var isNativelyConst: Bool? {
-        native.map { procedure in procedure.constness == .const }
-    }
-
-    var isNativelyIsolated: Bool? {
-        native.map { procedure in procedure.isolation == .isolated }
-    }
-
-    var nativelyFailing: Failing? {
-        native?.failing
     }
 
     // The places a native procedure reads its arguments at, with the name each

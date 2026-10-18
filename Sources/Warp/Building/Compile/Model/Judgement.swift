@@ -14,10 +14,6 @@ enum Judgement: Sendable {
     // ones the slot's type marks `inout`.
     case apply(inPlace: [Int])
 
-    // A closure literal: what its row carries that the literal does not
-    // write, derived from its body.
-    case closure(constness: Constness, isolation: Isolation, failing: Failing)
-
     // A reference: the path it reads, as the walk that judged it placed it.
     case reference(LoweredPath)
 

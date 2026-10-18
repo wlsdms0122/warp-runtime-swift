@@ -45,6 +45,7 @@ struct SwiftAuthoringTests {
         // Given
         let builder = Builder()
         let procedure = Procedure(
+            signature: Signature(returns: .any),
             body: [
                 Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
             ],
@@ -67,7 +68,7 @@ struct SwiftAuthoringTests {
         let builder = Builder()
         let index = Expression.reference([.name("counted"), .name("index")])
         let procedure = Procedure(
-            signature: Signature(parameters: [Parameter(name: "rounds", type: .int)]),
+            signature: Signature(parameters: [Parameter(name: "rounds", type: .int)], returns: .any),
             body: [
                 Statement(binding: .variable("seen"), expression: .literal(.int(-1))),
                 Statement(binding: .constant("counted"), expression: .loop(
@@ -116,6 +117,7 @@ struct SwiftAuthoringTests {
         // Given
         let builder = Builder()
         let procedure = Procedure(
+            signature: Signature(returns: .any),
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
                     Call(selector: "App.shout", arguments: [.literal(.string("hey"))])
@@ -140,6 +142,7 @@ struct SwiftAuthoringTests {
         // written identically. Where each is found is the runtime's business.
         let builder = Builder()
         let procedure = Procedure(
+            signature: Signature(returns: .any),
             body: [
                 Statement(binding: .constant("names"), expression: .literal(.array([.string("a")]))),
                 Statement(binding: .constant("counted"), expression: .call(
@@ -194,6 +197,7 @@ struct SwiftAuthoringTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [],
                     result: map([
                         "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))

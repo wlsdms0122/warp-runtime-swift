@@ -41,10 +41,6 @@ struct Judged: Sendable {
     // names it, so it is private.
     let access: Access
 
-    let constness: Constness
-    let isolation: Isolation
-    let failing: Failing
-
     let implementation: Implementation
 
     // MARK: - Initializer
@@ -55,17 +51,11 @@ struct Judged: Sendable {
         label: Name,
         signature: Signature,
         access: Access,
-        constness: Constness,
-        isolation: Isolation,
-        failing: Failing,
         implementation: Implementation
     ) {
         self.label = label
         self.signature = signature
         self.access = access
-        self.constness = constness
-        self.isolation = isolation
-        self.failing = failing
         self.implementation = implementation
     }
 
@@ -75,9 +65,6 @@ struct Judged: Sendable {
         label: Name,
         signature: Signature,
         access: Access,
-        constness: Constness,
-        isolation: Isolation,
-        failing: Failing,
         judging implementation: Implementation
     ) throws {
         try Self.judge(implementation, against: signature)
@@ -86,9 +73,6 @@ struct Judged: Sendable {
             label: label,
             signature: signature,
             access: access,
-            constness: constness,
-            isolation: isolation,
-            failing: failing,
             implementation: implementation
         )
     }
@@ -116,9 +100,6 @@ struct Judged: Sendable {
         self.label = row.label
         self.signature = row.signature
         self.access = row.access
-        self.constness = row.constness
-        self.isolation = row.isolation
-        self.failing = row.failing
         self.implementation = implementation
     }
 
@@ -305,24 +286,22 @@ struct Judged: Sendable {
                 guard standing else { throw self.brought(nothing: document) }
 
                 // The door it answers through is the row's own: a native
-                // query is what a compile derived as const, and a stand-in on
-                // the other door would be read the wrong way by a run.
-                let standIn: Native = constness == .const
+                // query is what a declaration may say is const, and a
+                // stand-in on the other door would be read the wrong way by a
+                // run.
+                let standIn: Native = signature.constness == .const
                     ? .query(UnbroughtQuery(label))
                     : .effect(UnbroughtEffect(label))
 
                 return row(.native(standIn, sends: sends), of: origin, foldable: true, in: table)
             }
 
-            // A procedure declares its own constness, isolation, failing and the
-            // places it sends at, and the module bringing it declares what it
-            // takes and answers. This row carries what the procedure a compile was
-            // handed declared, so a host bringing a procedure saying something else
-            // brings a row standing on claims nothing here makes.
+            // A procedure declares the places it sends at, and the module
+            // bringing it declares what a call may expect of it. This row
+            // carries what the procedure a compile was handed declared, so a
+            // host bringing a procedure saying something else brings a row
+            // standing on claims nothing here makes.
             guard
-                constness == brought.native.constness,
-                isolation == brought.native.isolation,
-                failing == brought.native.failing,
                 signature == brought.signature,
                 sending == brought.sending
             else {
@@ -345,9 +324,6 @@ struct Judged: Sendable {
             origin: origin,
             signature: signature,
             access: access,
-            constness: constness,
-            isolation: isolation,
-            failing: failing,
             implementation: implementation,
             foldable: foldable,
             closure: closure,
@@ -372,9 +348,6 @@ struct Judged: Sendable {
         in document: Place.Document
     ) -> BuildError {
         let differing = [
-            constness == brought.native.constness ? nil : "constness",
-            isolation == brought.native.isolation ? nil : "isolation",
-            failing == brought.native.failing ? nil : "failing",
             signature == brought.signature ? nil : "declaration",
             sending == brought.sending ? nil : "sends"
         ].compactMap { axis in axis }

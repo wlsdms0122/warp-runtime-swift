@@ -13,18 +13,20 @@ import WarpTestSupport
 
 // What "answers without running" holds a body to.
 //
-// The line is what a body reaches, not what it is written with. A branch, a
-// round and a name of its own all stay inside the body, so a body holding them
-// still answers from what it was handed. Reaching the run's own state does not,
-// and neither does calling a value nothing said the constness of.
+// A declaration says it answers without running, and the build holds its body
+// to that. The line is what a body reaches, not what it is written with. A
+// branch, a round and a name of its own all stay inside the body, so a body
+// holding them still answers from what it was handed. Reaching the run's own
+// state does not, and neither does calling a value nothing said the constness
+// of.
 @Suite("What answers without running")
 struct ConstnessTests {
     // MARK: - Property
     // A declaration whose slot asks for a body that answers without running,
-    // so what fits here is exactly what the predicate admits.
+    // so what fits here is exactly what a closure declared const may do.
     private let asking = Procedure(
         signature: Signature(
-            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
+            parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .these([])), .const))],
             returns: .string
         ),
         body: [
@@ -33,6 +35,9 @@ struct ConstnessTests {
         result: reference("answered")
     )
 
+    // What every closure handed to `asking` declares.
+    private let answering = Signature(returns: .string, constness: .const)
+
     // MARK: - Initializer
     // MARK: - Test
     @Test("a body that branches answers without running")
@@ -40,6 +45,7 @@ struct ConstnessTests {
         // Given. A branch that answers from one arm and falls through to the
         // other. Nothing in it reaches past the body.
         let branching = Procedure(
+            signature: answering,
             body: [
                 Statement(expression: .conditional(
                     .literal(.bool(true)),
@@ -62,6 +68,7 @@ struct ConstnessTests {
         // Given. A round counted out and left from. A loop is grammar, and
         // grammar reaches nothing.
         let looping = Procedure(
+            signature: answering,
             body: [
                 Statement(expression: .loop(
                     while: .literal(.bool(true)),
@@ -85,6 +92,7 @@ struct ConstnessTests {
         // Given. A name the body declares and writes. It is the body's own, so
         // nothing outside the body can tell it happened.
         let writing = Procedure(
+            signature: answering,
             body: [
                 Statement(binding: .variable("held"), expression: .literal(.string("first"))),
                 Statement(binding: .assignment([.name("held")]), expression: .literal(.string("second")))
@@ -99,17 +107,18 @@ struct ConstnessTests {
         #expect(answer == .string("second"))
     }
 
-    @Test("a body reaching the module's own state does not answer without running")
+    @Test("a closure declared const reaching the module's own state refuses")
     func aBodyReadingAModuleVariableIsRefused() async throws {
         // Given. The same shape, reading a name the module holds rather than
         // one the body declared. What that answers is the run's, not the text's.
-        let reading = Procedure(body: [], result: reference("standing"))
+        let reading = Procedure(signature: answering, body: [], result: reference("standing"))
         let handed = try Module(
             variables: ["standing": .literal(.string("held"))],
             procedures: [
                 "asking": asking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [Statement(binding: .constant("given"), expression: .closure(reading))],
                     result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
@@ -120,16 +129,16 @@ struct ConstnessTests {
         await #expect {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
-            error is BuildError
-                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
+            error is BuildError && "\(error)".contains("declared const, and it reads the module variable 'standing'")
         }
     }
 
-    @Test("a closure writing a variable it captured does not answer without running")
+    @Test("a closure declared const writing a variable it captured refuses")
     func aClosureWritingACapturedVariableIsRefused() async throws {
         // Given. A closure that writes a variable the body around it declared.
         // The box is outside the closure, so the write reaches the run's state.
         let writing = Procedure(
+            signature: answering,
             body: [Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))],
             result: .literal(.string("written"))
         )
@@ -138,6 +147,7 @@ struct ConstnessTests {
                 "asking": asking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [
                         Statement(binding: .variable("tally"), expression: .literal(.int(0))),
                         Statement(binding: .constant("given"), expression: .closure(writing))
@@ -151,12 +161,11 @@ struct ConstnessTests {
         await #expect {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
-            error is BuildError
-                && "\(error)".contains("which holds () -> String where const () throws -> String is declared")
+            error is BuildError && "\(error)".contains("declared const, and it writes 'tally', which it does not declare")
         }
     }
 
-    @Test("a body writing through a parameter handed in place does not answer without running, and neither does one sending it")
+    @Test("a declaration writing through a parameter handed in place cannot be const, and a closure sending it cannot")
     func aBodyWritingInPlaceIsRefused() async throws {
         // Given. A declaration writing its in-place parameter, and a closure
         // handing a variable of its own to it. The parameter is the caller's
@@ -166,6 +175,7 @@ struct ConstnessTests {
             body: [Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))]
         )
         let sending = Procedure(
+            signature: answering,
             body: [
                 Statement(binding: .variable("own"), expression: .literal(.int(0))),
                 Statement(expression: .call(Call(selector: "bumping", arguments: [reference("own")])))
@@ -178,6 +188,7 @@ struct ConstnessTests {
                 "bumping": bumping,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [Statement(binding: .constant("given"), expression: .closure(sending))],
                     result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )
@@ -188,38 +199,62 @@ struct ConstnessTests {
         await #expect {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
-            error is BuildError
-                && "\(error)".contains("which holds isolated () -> String where const () throws -> String is declared")
+            error is BuildError && "\(error)".contains("declared const, and it calls 'bumping', which is not declared const")
+        }
+    }
+
+    @Test("a body declared const writing through a parameter handed in place refuses")
+    func aConstBodyWritingInPlaceRefuses() async throws {
+        // Given. The parameter is the caller's box, whatever the declaration
+        // says of itself
+        let bumping = Procedure(
+            signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], constness: .const),
+            body: [Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))]
+        )
+        let handed = try Module(
+            procedures: [
+                "bumping": bumping,
+                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([handed] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("declared const, and it writes 'count', which it does not declare")
         }
     }
 
     @Test("a body applying a name a slot said holds a const Procedure answers without running")
     func aBodyApplyingAConstProcedureSlotAnswers() async throws {
         // Given. `asking` applies what it was handed, and its slot asks for a
-        // procedure that answers without running. A closure calling `asking`
-        // therefore answers without running too, and standing in that same
-        // slot is where that is asked.
+        // procedure that answers without running, and says so of itself. A
+        // closure calling `asking` may therefore be const too, and standing in
+        // that same slot is where that is asked.
         let handed = try Module(
             procedures: [
-                "asking": asking,
+                "asking": Procedure(
+                    signature: Signature(
+                        parameters: asking.signature.parameters,
+                        returns: .string,
+                        constness: .const
+                    ),
+                    implementation: asking.implementation
+                ),
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [
                         Statement(
                             binding: .constant("answering"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .literal(.string("answered"))
-                                )
-                            )
+                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
                                 Procedure(
-                                    signature: Signature(returns: .string),
+                                    signature: answering,
                                     body: [],
                                     result: .call(
                                         Call(selector: "asking", arguments: [reference("answering")])
@@ -250,25 +285,19 @@ struct ConstnessTests {
                 "asking": asking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [
                         Statement(
-                            binding: .variable("answering", declared: .procedure(ProcedureType(returns: .string, failing: .anything), .const)),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .literal(.string("answered"))
-                                )
-                            )
+                            binding: .variable(
+                                "answering",
+                                declared: .procedure(ProcedureType(returns: .string, failing: .these([])), .const)
+                            ),
+                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .apply(reference("answering"), arguments: [])
-                                )
+                                Procedure(signature: answering, body: [], result: .apply(reference("answering"), arguments: []))
                             )
                         )
                     ],
@@ -293,25 +322,16 @@ struct ConstnessTests {
                 "asking": asking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [
                         Statement(
                             binding: .variable("answering"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .literal(.string("answered"))
-                                )
-                            )
+                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .apply(reference("answering"), arguments: [])
-                                )
+                                Procedure(signature: answering, body: [], result: .apply(reference("answering"), arguments: []))
                             )
                         )
                     ],
@@ -324,55 +344,28 @@ struct ConstnessTests {
         await #expect {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
-            error is BuildError
-                && "\(error)".contains("which holds () throws -> String where const () throws -> String is declared")
+            error is BuildError && "\(error)".contains("declared const, and it calls a value nothing written says is const")
         }
     }
 
-    @Test("a body applying a name no slot said anything about is refused")
+    @Test("a body applying a name no slot said anything about cannot be const")
     func aBodyApplyingAnUndeclaredNameIsRefused() async throws {
         // Given. The same apply, on a name whose slot says what the procedure
         // answers and nothing of whether it runs. Nothing before the run says
         // which procedure that holds.
         let relaying = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))]
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .these([]))))],
+                returns: .string,
+                constness: .const
             ),
             body: [],
             result: .apply(reference("body"), arguments: [])
         )
         let handed = try Module(
             procedures: [
-                "asking": asking,
                 "relaying": relaying,
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(
-                            binding: .constant("answering"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .literal(.string("answered"))
-                                )
-                            )
-                        ),
-                        Statement(
-                            binding: .constant("given"),
-                            expression: .closure(
-                                Procedure(
-                                    signature: Signature(returns: .string),
-                                    body: [],
-                                    result: .call(
-                                        Call(selector: "relaying", arguments: [reference("answering")])
-                                    )
-                                )
-                            )
-                        )
-                    ],
-                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
-                )
+                entryName: Procedure(access: .public, body: [], result: .literal(.null))
             ]
         )
 
@@ -381,13 +374,14 @@ struct ConstnessTests {
             try await Builder().build([handed] + Module.standard)
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("which holds () throws -> String where const () throws -> String is declared")
+                && "\(error)".contains("'relaying' is declared const, and it calls a value nothing written says is const")
         }
     }
 
-    @Test("what answers without running is worked out at the build, not declared")
-    func constnessIsABuildFact() async throws {
-        // Given
+    @Test("what answers without running is declared, not worked out at the build")
+    func constnessIsDeclared() async throws {
+        // Given. `clean` computes and says nothing of itself; `dirty` reaches
+        // an effect
         let sut = try Module(
             procedures: [
                 "clean": Procedure(
@@ -396,6 +390,7 @@ struct ConstnessTests {
                     ]
                 ),
                 "dirty": Procedure(
+                    signature: Signature(failing: .anything),
                     body: [
                         Statement(binding: .constant("done"), expression: .call(Call(
                             selector: "App.fail",
@@ -405,6 +400,7 @@ struct ConstnessTests {
                 ),
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(failing: .anything),
                     body: [
                         Statement(binding: .constant("a"), expression: .call(Call(selector: "clean"))),
                         Statement(binding: .constant("b"), expression: .call(Call(selector: "dirty")))
@@ -416,26 +412,21 @@ struct ConstnessTests {
         // When
         let image = try await Builder().build([sut] + Module.standard + [.failing])
 
-        // Then. `clean` computes; `dirty` reaches an effect, and everything
-        // that reaches it goes with it
-        let dirty = try #require(image["dirty"])
-        let entry = try #require(image["entry"])
-
-        #expect(image["clean"]?.constness == .const)
-        #expect(dirty.constness != .const)
-        #expect(entry.constness != .const)
-        #expect(image["String.count"]?.constness == .const)
+        // Then. Nothing here is const but what its declaration says is
+        #expect(image["clean"]?.signature.constness == .unstated)
+        #expect(image["dirty"]?.signature.constness == .unstated)
+        #expect(image["entry"]?.signature.constness == .unstated)
+        #expect(image["String.count"]?.signature.constness == .const)
     }
 
-    @Test("a body that sends a const Procedure is const")
+    @Test("a body declared const that sends a const procedure builds")
     func aBodyThatSendsIsStillConst() async throws {
-        // Given. Constness is judged over the name a body wrote, and what that
-        // name means depends on where it was written. `label` sends `joined`,
-        // which is const, so `label` is const
+        // Given. `label` sends `joined`, which is declared const
         let label = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "of", type: .array(.string))],
-                returns: .string
+                returns: .string,
+                constness: .const
             ),
             body: [],
             result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("of"), .literal(.string(""))]))
@@ -446,7 +437,8 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "names", type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))],
+                        returns: .string
                     ),
                     body: [],
                     result: .call(Call(selector: "label", arguments: [reference("names")]))
@@ -458,7 +450,7 @@ struct ConstnessTests {
         let image = try await Builder().build([sut] + Module.standard)
 
         // Then
-        #expect(image["label"]?.constness == .const)
+        #expect(image["label"]?.signature.constness == .const)
     }
 
     // MARK: - Public
@@ -470,6 +462,7 @@ struct ConstnessTests {
                 "asking": asking,
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string),
                     body: [Statement(binding: .constant("given"), expression: .closure(body))],
                     result: .call(Call(selector: "asking", arguments: [reference("given")]))
                 )

@@ -74,6 +74,7 @@ struct ReachTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .string, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("account"),
@@ -111,7 +112,7 @@ struct ReachTests {
                     body: [],
                     result: .literal(.string("card"))
                 ),
-                "App.aside": Procedure(body: [], result: .literal(.int(1)))
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -129,15 +130,16 @@ struct ReachTests {
         // module constant; each calls a procedure nothing else names
         let sut = try Module(
             constants: [
-                "folded": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "folded": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [
                         Statement(
-                            binding: .constant("written"),
-                            expression: .closure(Procedure(body: [], result: .call(Call(selector: "App.leaf"))))
+                            binding: .constant("written", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.leaf"))))
                         ),
                         Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [])),
                         Statement(binding: .constant("second"), expression: .apply(reference("folded"), arguments: []))
@@ -164,11 +166,12 @@ struct ReachTests {
         // writes it; the entry applies what it reads out of the variable
         let sut = try Module(
             variables: [
-                "held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("held"), arguments: [])
                 ),
@@ -190,12 +193,12 @@ struct ReachTests {
         // Given. `App.aside` alone reads the variable, and nothing reaches it
         let sut = try Module(
             variables: [
-                "held": .closure(Procedure(body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
             ],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
                 "App.aside": Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [],
                     result: .apply(reference("held"), arguments: [])
                 ),
@@ -217,6 +220,7 @@ struct ReachTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
                 )

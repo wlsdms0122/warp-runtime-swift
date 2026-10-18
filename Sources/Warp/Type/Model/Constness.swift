@@ -7,11 +7,9 @@
 
 import Foundation
 
-// What a slot requires of a procedure that stands in it.
-//
-// Which procedures answer without running is worked out for bodies and
-// declared by a native. This is how a slot asks for one: a procedure that runs
-// its argument inside a condition or a path needs an argument that can be run
+// Whether a procedure answers without running. A declaration says it of
+// itself and a slot asks it of what stands in it: a procedure that runs its
+// argument inside a condition or a path needs an argument that can be run
 // there, and `Procedure` alone does not say so.
 public enum Constness: Sendable, Equatable {
     // No claim. Either kind fits, the way `Any` fits any value.

@@ -10,11 +10,10 @@ import Foundation
 // What the documents already compiled proved, which is what the next one is
 // compiled against.
 //
-// A document is compiled against the seven things it asks of what stands
-// before it: what a declaration takes and answers, whether it is const,
-// isolated and failing, what the build read off a body that declared no
-// answer, and a body it can run while folding a constant. All seven are here,
-// and a document reaches nothing else outside itself.
+// A document is compiled against the two things it asks of what stands
+// before it: a declaration's signature, which says everything a call may
+// expect, and a body it can run while folding a constant. Both are here, and
+// a document reaches nothing else outside itself.
 //
 // It grows as each document is laid down, and the growing is the whole reason
 // it is one value rather than a dozen. A table handed to a second holder is
@@ -32,12 +31,6 @@ struct Compiling {
 
     // What a closure each document writes is spelled with.
     let naming: [Closure.Document]
-
-    // What the build read off a body whose declaration wrote no `returns`.
-    // Only those: what a declaration wrote is on its row already, and a table
-    // holding every spelling would hash every declared name to say what the
-    // row says.
-    var answers: [Int: LoweredType] = [:]
 
     // The rows, and where every number a body carries stands.
     var lowering: Lowering
@@ -60,8 +53,7 @@ struct Compiling {
             table: lowering.table,
             rows: lowering.rows,
             concealed: lowering.concealed,
-            documents: lowering.documents,
-            answers: answers
+            documents: lowering.documents
         )
     }
 
@@ -112,7 +104,6 @@ struct Compiling {
             contractProcedures: contractProcedures,
             loweredTypes: types.loweredTypes
         )
-        self.answers = carried.answers
 
         // Every body laid down is lowered already, so all of them are
         // something the next document may fold through.
@@ -130,19 +121,9 @@ struct Compiling {
     // One document already compiled laid down, as the document itself wrote
     // it.
     //
-    // Its rows and what it worked out are cut by where the document says its
-    // declarations stand, which is the one place that boundary is drawn.
-    //
-    // What the build read off a body that declared no answer is read off what
-    // it worked out rather than off the rows it stands as. A row is a
-    // declaration lowered against a link's types, and none of those is a
-    // type.
-    mutating func lay(
-        _ document: Compiled,
-        at origin: Int,
-        rows: [Linked],
-        answering read: [Name: LoweredType]
-    ) {
+    // Its rows are cut by where the document says its declarations stand,
+    // which is the one place that boundary is drawn.
+    mutating func lay(_ document: Compiled, at origin: Int, rows: [Linked]) {
         let held = lowering.hold(
             standing: Array(rows[document.standing]),
             closures: Array(rows[document.lifted]),
@@ -151,10 +132,6 @@ struct Compiling {
         )
 
         assert(held.origin == origin, "a document is laid at the origin it is held at")
-
-        for (name, answer) in read {
-            self.read(answer, as: name, of: origin)
-        }
     }
 
     // The same for every document laid down, said once they all stand. This
@@ -195,14 +172,6 @@ struct Compiling {
 
                 throw BuildError.concealed(declared, at: Place(in: documents[origin]))
             }
-        }
-    }
-
-    // A type the build read off a body rather than out of a signature, held to
-    // the document that wrote the body: it stands by the body's row.
-    mutating func read(_ answer: LoweredType, as declared: Name, of origin: Int) {
-        if let row = lowering.own(origin)[declared] {
-            answers[row] = answer
         }
     }
 
@@ -280,7 +249,6 @@ struct Compiling {
             rows: lowering.rows,
             own: own,
             concealed: lowering.concealed,
-            answers: answers,
             contractProcedures: contractProcedures,
             variables: variables
         )

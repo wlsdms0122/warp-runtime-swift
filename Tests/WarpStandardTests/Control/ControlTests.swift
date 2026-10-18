@@ -26,7 +26,7 @@ struct ControlTests {
         await #expect {
             try await run(
                 Procedure(
-                    signature: Signature(parameters: [Parameter(name: "reason", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "reason", type: .string)], failing: .these(["aborted"])),
                     body: [Statement(expression: sut)]
                 ),
                 arguments: ["reason": .string("out of room")]

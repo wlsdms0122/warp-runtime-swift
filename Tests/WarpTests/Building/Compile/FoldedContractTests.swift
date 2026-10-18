@@ -90,18 +90,19 @@ struct FoldedContractTests {
                     signature: Signature(
                         parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
                         returns: .int,
+                        constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .literal(.int(1))
                 ),
                 "App.giveEarly": Procedure(
-                    signature: Signature(returns: .any),
+                    signature: Signature(returns: .any, failing: .these(["cast_refused"]), constness: .const),
                     body: [],
                     result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false)
                 ),
                 "App.giveLate": Procedure(
-                    signature: Signature(returns: .any),
+                    signature: Signature(returns: .any, failing: .these(["cast_refused"]), constness: .const),
                     body: [],
                     result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
                 )
@@ -186,13 +187,14 @@ struct FoldedContractTests {
                     signature: Signature(
                         parameters: [Parameter(name: "it", type: .parameter(name: "T"))],
                         returns: .int,
+                        constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],
                     result: .literal(.int(1))
                 ),
                 "App.give": Procedure(
-                    signature: Signature(returns: type),
+                    signature: Signature(returns: type, failing: .these(["cast_refused"]), constness: .const),
                     body: [],
                     result: giving
                 )

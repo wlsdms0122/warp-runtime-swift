@@ -53,6 +53,7 @@ struct TypePlacementTests {
                 types: [
                     "Callback": .alias(.procedure(ProcedureType(
                         parameters: [.parameter(name: "T")],
+                        returns: .any,
                         failing: .anything
                     )))
                 ],

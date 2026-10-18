@@ -46,7 +46,7 @@ struct InPlaceTests {
 
             // MARK: - Property
             var declared: Parameter {
-                Parameter(name: "body", type: .procedure(ProcedureType(parameters: [.inout(.int)], failing: .anything)))
+                Parameter(name: "body", type: .procedure(ProcedureType(parameters: [.inout(.int)], returns: .any, failing: .anything)))
             }
 
             // MARK: - Initializer
@@ -232,7 +232,7 @@ struct InPlaceTests {
                     result: reference("xs")
                 ),
                 "poke": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never),
+                    signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never, failing: .these(["aborted"])),
                     body: [
                         Statement(binding: .assignment([.name("count")]), expression: .literal(.int(9))),
                         Statement(
@@ -450,6 +450,7 @@ struct InPlaceTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .anything),
                     body: [
                         Statement(binding: .variable("n"), expression: .literal(.int(1))),
                         Statement(binding: .variable("m"), expression: .literal(.int(2))),
@@ -555,7 +556,7 @@ struct InPlaceTests {
     )
     func aHostProcedureTakingAnInPlaceProcedureRefuses(wrapped: String) async {
         // Given. The same procedure type, held each way a slot may hold it
-        let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)], failing: .anything))
+        let taking = TypeExpression.procedure(ProcedureType(parameters: [.inout(.int)], returns: .any, failing: .anything))
         let held: [String: TypeExpression] = [
             "plain": taking,
             "nullable": .nullable(.named("App.Hook")),

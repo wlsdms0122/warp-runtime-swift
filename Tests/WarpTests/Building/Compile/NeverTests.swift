@@ -79,6 +79,7 @@ struct NeverTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(expression: .conditional(
                             .literal(.bool(true)),
@@ -99,6 +100,7 @@ struct NeverTests {
         // Given. The call the build lowered must reach the image whether the
         // body finishes or leaves
         let sut = Procedure(
+            signature: Signature(returns: .int),
             body: [
                 Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
                 Statement(expression: .conditional(
@@ -131,6 +133,7 @@ struct NeverTests {
         )
 
         let sut = Procedure(
+            signature: Signature(returns: .string, failing: .these(["aborted"])),
             body: [
                 Statement(binding: .constant("kept"), expression: loop),
                 Statement(binding: .constant("after"), expression: .literal(.string("done")))

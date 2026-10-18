@@ -37,7 +37,8 @@ struct NullableTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "task", type: .nullable(.named("App.Task")))
-                        ]
+                        ],
+                        returns: .int
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .reference([.name("task"), .name("size", optional: true)]))
