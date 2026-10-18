@@ -1,5 +1,5 @@
 //
-//  Derivation.swift
+//  EffectChecker.swift
 //  Warp
 //
 //  Created by JSilver on 9/27/26.
@@ -11,7 +11,7 @@ import Foundation
 // answers without running, whether it touches no name another body could
 // touch at once, and what may come out of it when the work goes wrong. Every
 // callee is read by its own declaration, so one body is read alone.
-struct Derivation {
+struct EffectChecker {
     // What a body is walked for. Constness and isolation are read by one walk
     // and differ only in these: which callee holds the fact, which slot says a
     // procedure it holds does, which names a body loses it by reading, and

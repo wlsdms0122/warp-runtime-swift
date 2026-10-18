@@ -1826,7 +1826,7 @@ struct TypeChecker {
                     .merging(outside) { own, _ in own }
                     .compactMapValues(\.declaredType)
 
-                if let refusal = Derivation().refusal(
+                if let refusal = EffectChecker().refusal(
                     of: body,
                     declared: procedure.signature,
                     reading: context.variables.subtracting(declared),
@@ -2445,7 +2445,7 @@ struct TypeChecker {
             // leaves it a body no run reaches, and the author wrote it
             // expecting otherwise: what they are told is which failures the
             // build found, which is none.
-            let failures = Derivation().failing(
+            let failures = EffectChecker().failing(
                 block,
                 taking: context.signature(of:),
                 bound: environment.compactMapValues(\.declaredType),
@@ -2681,10 +2681,10 @@ struct TypeChecker {
 
             // A name that says what it holds holds that. One that says
             // nothing holds what the build worked out from what it was given.
-            // What a slot declared it holds is the derivation's to say, by the
+            // What a slot declared it holds is the effect checker's to say, by the
             // rule its own walk binds a name by.
             let declaredType = written.binding.flatMap { binding in
-                Derivation().declaredType(
+                EffectChecker().declaredType(
                     of: binding,
                     reading: written.expression,
                     taking: context.signature(of:),
@@ -2903,7 +2903,7 @@ struct TypeChecker {
         in environment: [Name: Binding],
         given context: TypingContext
     ) -> Bool {
-        !Derivation().failingHere(
+        !EffectChecker().failingHere(
             expression,
             taking: context.signature(of:),
             bound: { name in environment[name]?.declaredType },

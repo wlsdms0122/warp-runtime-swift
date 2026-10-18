@@ -151,7 +151,7 @@ struct Compiler {
                 // What the body does is held to what its declaration says,
                 // every callee read by its own declaration, so a body is
                 // judged alone.
-                if let refusal = Derivation().refusal(
+                if let refusal = EffectChecker().refusal(
                     of: block,
                     declared: declaration.signature,
                     reading: reading,
