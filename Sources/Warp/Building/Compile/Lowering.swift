@@ -748,7 +748,7 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        guard case let .apply(handed, declared)? = context.judgements[place] else {
+        guard case let .apply(handed, written)? = context.judgements[place] else {
             throw BuildError.unjudged("a call of a value the build did not judge", at: place)
         }
 
@@ -767,7 +767,7 @@ struct Lowering {
 
                 return .reference(try lower(reference: path, in: scope, on: context, at: here))
             },
-            declared: declared
+            written: written
         )
     }
 

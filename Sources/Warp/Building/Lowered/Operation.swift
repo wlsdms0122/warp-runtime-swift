@@ -36,7 +36,7 @@ indirect enum Operation: Sendable {
     // is the caller's place. Which value is called is the run's answer, so
     // what the call may do is what the type written for the value says, nil
     // where nothing was written.
-    case apply(Operation, arguments: [Argument], declared: LoweredType?)
+    case apply(Operation, arguments: [Argument], written: LoweredType?)
 
     case cast(Operation, as: LoweredType, optional: Bool)
 
@@ -153,13 +153,13 @@ indirect enum Operation: Sendable {
                 }
             )
 
-        case let .apply(callee, arguments, declared):
+        case let .apply(callee, arguments, written):
             inside = .apply(
                 try callee.rewritten(operation: operation, type: type),
                 arguments: try arguments.map { argument in
                     try argument.rewritten(operation: operation, type: type)
                 },
-                declared: try declared.map(type)
+                written: try written.map(type)
             )
 
         case let .cast(read, cast, optional):

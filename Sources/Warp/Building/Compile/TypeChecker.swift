@@ -1869,7 +1869,7 @@ struct TypeChecker {
 
             // What the call may do is what the type written for the value
             // says, which the lowering carries to every reading of the body.
-            let calleeDeclared = context.declaredType(of: callee) { name in environment[name]?.declaredType }
+            let calleeWritten = context.declaredType(of: callee) { name in environment[name]?.declaredType }
 
             // Read once, and every judgement below asks this reading: whether
             // it could be called, what it takes and what it answers.
@@ -2017,7 +2017,7 @@ struct TypeChecker {
                 at: place
             )
 
-            judgements.record(.apply(inPlace: handed, declared: calleeDeclared), at: place)
+            judgements.record(.apply(inPlace: handed, written: calleeWritten), at: place)
 
             if failsHere(expression, in: environment, given: context) {
                 flow.fail()

@@ -290,8 +290,8 @@ struct EffectChecker {
                     if broken != nil { break }
                 }
 
-            case let .operation(.apply(_, arguments, declared)):
-                guard let declared, fact.claim(declared) else {
+            case let .operation(.apply(_, arguments, written)):
+                guard let written, fact.claim(written) else {
                     return finding("it calls a value nothing written says is \(fact.word)")
                 }
 
@@ -353,8 +353,8 @@ struct EffectChecker {
         // Which value is called is decided at run time, so what may come out
         // of it is what the type written for it says, and anything where
         // nothing was written.
-        case let .apply(callee, arguments, declared):
-            return failing([callee] + values(arguments)).joined(declared?.procedureFailing ?? .anything)
+        case let .apply(callee, arguments, written):
+            return failing([callee] + values(arguments)).joined(written?.procedureFailing ?? .anything)
 
         // A cast that names a type the value did not arrive as fails, and
         // that is the one failure the runtime itself raises. The optional

@@ -185,7 +185,7 @@ enum ObjectCoverageFixture {
                 code: .apply(
                     .local(Address(slot: 6, steps: [])),
                     arguments: [.value(.literal(.int(2))), .reference(Address(slot: 6, steps: []))],
-                    declared: everyLoweredType
+                    written: everyLoweredType
                 ),
                 label: "apply"
             ),

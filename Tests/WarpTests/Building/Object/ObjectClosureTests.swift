@@ -394,7 +394,7 @@ struct ObjectClosureTests {
                 signature: row.signature,
                 access: row.access,
                 judging: .body(
-                    LoweredBody(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [], declared: nil)),
+                    LoweredBody(instructions: [], result: .apply(.literal(.procedure(closure)), arguments: [], written: nil)),
                     frame
                 )
             )

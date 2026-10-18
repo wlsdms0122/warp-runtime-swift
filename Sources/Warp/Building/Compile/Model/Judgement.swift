@@ -13,7 +13,7 @@ enum Judgement: Sendable {
     // A call of a value: the positions it hands a variable in place, the
     // ones the slot's type marks `inout`, and the type written for the value
     // called, nil where nothing was written.
-    case apply(inPlace: [Int], declared: LoweredType?)
+    case apply(inPlace: [Int], written: LoweredType?)
 
     // A reference: the path it reads, as the walk that judged it placed it.
     case reference(LoweredPath)

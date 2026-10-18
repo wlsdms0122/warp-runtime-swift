@@ -649,12 +649,12 @@ struct ObjectWriter {
                 .array(captures.map { capture in .array([.int(capture.0), .int(capture.1)]) })
             )
 
-        case let .apply(callee, arguments, declared):
+        case let .apply(callee, arguments, written):
             return tagged(
                 Tag.apply,
                 try self.operation(callee),
                 .array(try arguments.map(argument)),
-                try ObjectWriter.maybe(declared, lowered)
+                try ObjectWriter.maybe(written, lowered)
             )
 
         case let .cast(read, as: type, optional: optional):

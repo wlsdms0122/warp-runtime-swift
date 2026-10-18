@@ -22,8 +22,8 @@ struct JudgementTableTests {
         var sut = JudgementTable()
 
         // When
-        sut.record(.apply(inPlace: [0], declared: nil), at: first)
-        sut.record(.apply(inPlace: [1], declared: nil), at: second)
+        sut.record(.apply(inPlace: [0], written: nil), at: first)
+        sut.record(.apply(inPlace: [1], written: nil), at: second)
 
         // Then
         #expect(handed(at: first, in: sut) == [0])
@@ -38,8 +38,8 @@ struct JudgementTableTests {
         var sut = JudgementTable()
         var other = JudgementTable()
 
-        sut.record(.apply(inPlace: [0], declared: nil), at: first)
-        other.record(.apply(inPlace: [], declared: nil), at: second)
+        sut.record(.apply(inPlace: [0], written: nil), at: first)
+        other.record(.apply(inPlace: [], written: nil), at: second)
 
         // When
         sut.absorb(other)
