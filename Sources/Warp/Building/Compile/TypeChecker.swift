@@ -1818,10 +1818,11 @@ struct TypeChecker {
                 calls = inner.calls
                 judgements = inner.judgements
 
-                // Held from the names its body was read in: a name it
-                // captured carries what the slot it came from said about it.
+                // Held as it was written, as a declaration's body is, from
+                // the names its body was read in: a name it captured carries
+                // what the slot it came from said about it.
                 if let refusal = EffectChecker(context).refusal(
-                    of: body,
+                    of: block,
                     declared: procedure.signature,
                     bound: opening.compactMapValues(\.declaredType)
                 ) {
