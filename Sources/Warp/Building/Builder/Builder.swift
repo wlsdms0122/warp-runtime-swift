@@ -40,7 +40,8 @@ import Foundation
 // does against what it declares (`EffectChecker`). It runs the procedures a
 // constant calls, which is what folding is. Linking takes what that
 // answered, judges what only the whole list can answer, one claim for each
-// type and contract, and runs nothing.
+// type and contract, holds every body to its declaration again, since an
+// object's rows are what the documents beside it lean on, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
@@ -485,6 +486,11 @@ public struct Builder: Sendable {
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
 
+        // An object says what each of its procedures declares, and a document
+        // calling one leans on that, so every body is held to it here as a
+        // compile holds the ones it lowers.
+        try EffectChecker(table: linked.table, resolving: .rows, contractProcedures: lowered.contractProcedures)
+            .check(linked.table.indices, in: compiled.map(\.document))
 
         return Image(
             linked: linked.table,
