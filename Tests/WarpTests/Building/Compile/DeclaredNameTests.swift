@@ -70,9 +70,8 @@ struct DeclaredNameTests {
 
     @Test("a declaration is held where a body is read rather than where one is reached")
     func aDeclarationIsHeldInABodyNothingReaches() async throws {
-        // Given. A procedure that runs an effect, so it is not in the const set,
-        // and that nothing calls, so it is not on the frontier. Its text still
-        // has to compile
+        // Given. A procedure that runs an effect and that nothing calls. Its
+        // text still has to compile
         let sut = try Module(
             imports: ["App.Missing", "Standard.Control.abort"],
             procedures: [

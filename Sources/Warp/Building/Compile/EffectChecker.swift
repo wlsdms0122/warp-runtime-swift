@@ -38,7 +38,7 @@ struct EffectChecker {
     // declared isolated touches what another body could touch at once, or
     // one may fail with more than its declaration names. Every callee is
     // read by what `asked` says it declares. `reading` is the module's
-    // variables and `bound` the type a slot declared each name in scope
+    // variables and `bound` the type written for what each name in scope
     // holds, before the first statement.
     func refusal(
         of block: Block,
@@ -81,7 +81,7 @@ struct EffectChecker {
     }
 
     // What may come out of a block: everything its statements and its result
-    // may fail with. `bound` is the type a slot declared each name in scope
+    // may fail with. `bound` is the type written for what each name in scope
     // holds, which a call of a value is judged on; a name a statement binds
     // holds it for the rest of the block, by the rule `declaredType` reads.
     func failing(
@@ -195,9 +195,8 @@ struct EffectChecker {
     // running. `reading` is the module's variables: a body reading one answers
     // by the run's state. `declaring` is the names the body may write; a
     // write landing anywhere else, or handing such a name in place to a call,
-    // reaches the run's state the same way. `bound` is the type a slot
-    // declared each name in scope holds, which a call of a value is judged
-    // on.
+    // reaches the run's state the same way. `bound` is the type written for
+    // what each name in scope holds, which a call of a value is judged on.
     func runs(
         _ block: Block,
         declaring names: Set<Name>,
@@ -398,7 +397,6 @@ struct EffectChecker {
             return breaking(body) ?? breaking(rescue)
         }
     }
-
 
     // The type a name a statement binds holds for the rest of its block. A
     // later name of the same spelling is a different name, so the table is

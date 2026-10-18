@@ -304,7 +304,7 @@ struct DeclarationChecker {
         }
 
         try mentioned(
-            in: signature.returns ?? .any,
+            in: signature.returns,
             at: place.part(.returns),
             bounds: signature.bounds,
             sameTypes: signature.sameTypes,
@@ -460,7 +460,7 @@ struct DeclarationChecker {
                 try part(parameter.slotUnwrapped, at: place.index(position))
             }
 
-            try part(type.returns ?? .any, at: place.part(.returns))
+            try part(type.returns, at: place.part(.returns))
 
         // A value of whatever type answers every name: each has to be a
         // contract's, since a type is one thing and not a bound on some

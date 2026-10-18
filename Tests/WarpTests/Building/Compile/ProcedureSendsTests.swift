@@ -647,6 +647,31 @@ struct ProcedureSendsTests {
         #expect(answer == .string("HI"))
     }
 
+    @Test("an effect declared const is refused at the build")
+    func anEffectDeclaredConstIsRefused() async {
+        // Given. An effect answers by running, so a declaration saying it
+        // answers without running is one its implementation breaks.
+        let declaredConst = try! Module(
+            procedures: [
+                "App.announce": Procedure(
+                    signature: Signature(of: AnnounceEffect.self, returns: .string, constness: .const),
+                    implementation: .effect(AnnounceEffect())
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build(
+                [try Module(procedures: ["entry": Procedure(access: .public, body: [])])] + [declaredConst, .shouting]
+                    + Module.standard
+            )
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'App.announce' is declared const and answered by an effect, which answers by running")
+        }
+    }
+
     @Test("a procedure sending a spelling nothing declares is refused at the build")
     func anUndeclaredSendIsRefused() async {
         // Given / When / Then

@@ -431,7 +431,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             }
 
             return "\(modifiers)(\(parameters.joined(separator: ", ")))\(throwing)"
-                + " -> \((type.returns ?? .any).spelled(bounding: bound))"
+                + " -> \(type.returns.spelled(bounding: bound))"
 
         case let .array(element):
             return "\(TypeSpelling.array)<\(element.spelled(bounding: bound))>"

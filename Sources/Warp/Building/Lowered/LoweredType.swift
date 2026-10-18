@@ -268,9 +268,8 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // What a box a write may fill again holds where its start reads as this:
     // a literal whole number an Int, wherever in it one stands, and every
-    // procedure in it without the constness, isolation or failing the build
-    // derived for the one value judged, since a write may put another
-    // procedure there.
+    // procedure in it without the constness, isolation or failing the one
+    // value judged declared, since a write may put another procedure there.
     var boxed: LoweredType {
         switch self {
         case .wholeLiteral:
@@ -393,7 +392,7 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .procedure(signature, _, _):
             guard let signature else { return .any }
 
-            let answer = (signature.returns ?? .any).boundedAlone
+            let answer = signature.returns.boundedAlone
 
             guard answer != .any else { return .any }
 
@@ -658,17 +657,17 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
-    // A constant's type: its settled value's, with each procedure it holds
-    // read by the type the value's expression was judged at in that position
-    // (an element, an entry), the constness, isolation and failing the build
-    // derived for that one value included. A struct's fields are its
-    // declaration's. A procedure value says nothing about its signature, and
-    // the expression that made it wrote one; everything else is the value's. Null, `Any`, and a list or a map
-    // showing no element, say nothing the judged type does not, so what
-    // holds one is what the expression was judged as, a cast's type among
-    // them. A map whose keys the value joins to `Any` is no map type, so it
-    // takes the judged key, and where the judged type keys no map it reads
-    // as that type, `Any` where nothing is written.
+    // A constant's type: its settled value's, with each procedure it holds read
+    // by the type the value's expression was judged at in that position (an
+    // element, an entry), the constness, isolation and failing its signature
+    // declares included. A struct's fields are its declaration's. A procedure
+    // value says nothing about its signature, and the expression that made it
+    // wrote one; everything else is the value's. Null, `Any`, and a list or a
+    // map showing no element, say nothing the judged type does not, so what
+    // holds one is what the expression was judged as, a cast's type among them.
+    // A map whose keys the value joins to `Any` is no map type, so it takes the
+    // judged key, and where the judged type keys no map it reads as that type,
+    // `Any` where nothing is written.
     func refined(by judged: LoweredType) -> LoweredType {
         guard self != .null, self != .any, !holdsNoElement else { return judged }
 
@@ -803,7 +802,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return given.failing.fails(within: asked.failing)
                 && given.parameters.count == asked.parameters.count
                 && zip(given.parameters, asked.parameters).allSatisfy { mine, theirs in mine.reads(as: theirs) }
-                && (given.returns ?? .any).reads(as: asked.returns ?? .any)
+                && given.returns.reads(as: asked.returns)
 
         case let (.array(mine), .array(theirs)), let (.nullable(mine), .nullable(theirs)):
             return mine.reads(as: theirs)
@@ -1001,7 +1000,7 @@ indirect enum LoweredType: Sendable, Hashable {
                 guard taken.takes(parameter, in: table) else { return false }
             }
 
-            return (required.returns ?? .any).accepts(given.returns ?? .any, in: table)
+            return required.returns.accepts(given.returns, in: table)
 
         // A whole number written as a literal is an Int, or the fraction it
         // names where the place declares a Double.
@@ -1238,8 +1237,8 @@ indirect enum LoweredType: Sendable, Hashable {
 
             taking.read(takenBy: takenInside)
 
-            (mine.returns ?? .any).binding(
-                against: theirs.returns ?? .any,
+            mine.returns.binding(
+                against: theirs.returns,
                 into: &substitution,
                 taking: &taking,
                 holding: &holding,
@@ -2016,7 +2015,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
         if constness == .const, linked.signature.constness != .const {
             throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), got a procedure that runs"
+                "\(path()): expected \(rendered(in: table)), got a procedure not declared const"
             )
         }
 

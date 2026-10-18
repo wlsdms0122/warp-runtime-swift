@@ -1197,7 +1197,7 @@ struct Validator: Sendable {
         // an associated type of one, which stands on the parameter its label
         // begins with.
         let named = signature.parameterNames
-        let riding = (signature.parameters.map(\.type) + [signature.returns].compactMap { $0 })
+        let riding = (signature.parameters.map(\.type) + [signature.returns])
             .reduce(into: named) { riding, type in riding.formUnion(type.associatedTypes.keys.map(\.root)) }
         let unwritten = signature.bounds.keys.filter { name in !riding.contains(name.root) }.sorted()
 

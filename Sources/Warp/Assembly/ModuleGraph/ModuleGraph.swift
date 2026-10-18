@@ -11,11 +11,10 @@ import Foundation
 // before it.
 //
 // A module is compiled against what it needs, so what it needs has to be
-// compiled first: the procedures it sends answer with types, the facts nobody
-// declared (constness, isolation, failure) are read off what a body reaches, and
-// a constant settles by running the procedures it calls. All three are answers a
-// module asks its neighbours for, and asking for one that is not ready yet
-// has no answer to give.
+// compiled first: the procedures it sends are read by what their compiled
+// declarations say, and a constant settles by running the procedures it
+// calls. Both are answers a module asks its neighbours for, and asking for one
+// that is not ready yet has no answer to give.
 //
 // Two modules that need each other have no such order, so this refuses them.
 // The names each side needs of the other are what makes the cycle, and neither

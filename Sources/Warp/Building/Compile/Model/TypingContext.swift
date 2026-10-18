@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What inference needs beyond the body it is reading: what every declaration in
+// What the type check needs beyond the body it is reading: what every declaration in
 // the link answers with, and what every name in it stands for.
 //
 // One value rather than two arguments threaded through every walk, because they
@@ -95,7 +95,7 @@ struct TypingContext: Sendable {
         declared(selector)?.returns ?? contractProcedures[selector]?.answers
     }
 
-    // A named type stands for what it was declared as. Inference walks into
+    // A named type stands for what it was declared as. The type check walks into
     // types, so it has to look through a name to find one. The table lowered
     // every declaration once, so following a name is reading a row.
     func resolve(_ type: LoweredType) -> LoweredType {

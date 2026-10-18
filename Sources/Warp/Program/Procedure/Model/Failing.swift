@@ -53,20 +53,15 @@ public enum Failing: Sendable, Equatable {
         return .these(mine.union(theirs))
     }
 
-    // Whether everything this may fail with is among `allowed`. Anything is
-    // within no list.
-    public func fails(within allowed: Set<String>) -> Bool {
-        guard case let .these(failures) = self else { return false }
-
-        return failures.isSubset(of: allowed)
-    }
-
-    // Whether this stands where a slot says `allowed` may come out: anywhere
-    // a slot allows anything, and within what it names otherwise.
+    // Whether this stands where `allowed` may come out: anywhere that allows
+    // anything, and within what it names otherwise. Anything is within no
+    // list.
     func fails(within allowed: Failing) -> Bool {
         guard case let .these(names) = allowed else { return true }
 
-        return fails(within: names)
+        guard case let .these(failures) = self else { return false }
+
+        return failures.isSubset(of: names)
     }
 
     // MARK: - Private

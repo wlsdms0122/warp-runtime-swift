@@ -237,12 +237,10 @@ struct TypeChecker {
     // carries.
     private func refuseAnswer(
         _ written: LiteralShape,
-        to promised: LoweredType?,
+        to promised: LoweredType,
         at place: Place,
         in table: LoweredTypeTable
     ) throws {
-        guard let promised else { return }
-
         guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
                 "answers \(written.rendered(in: table)), and its"
@@ -941,7 +939,7 @@ struct TypeChecker {
     private func refuseAnswers(
         written answer: LiteralShape,
         answered: [Flow.Answer],
-        to promised: LoweredType?,
+        to promised: LoweredType,
         result: Expression?,
         at place: Place,
         in table: LoweredTypeTable
