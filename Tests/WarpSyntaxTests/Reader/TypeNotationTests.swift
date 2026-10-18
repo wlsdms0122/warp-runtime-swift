@@ -69,9 +69,9 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("App.B & App.A?") == .nullable(.composition(["App.A", "App.B"])))
         #expect(try TypeReader.parse("inout Int?") == .inout(.nullable(.int)))
 
-        // And. After `->` stands a procedure's answer to the end, so a `?`
-        // there is the answer's, and one that is the whole procedure's follows
-        // parentheses around it, as one after a modifier does.
+        // And. After `->` stands a procedure's answer, so a `?` there is the
+        // answer's, and parentheses group, so one after them is the whole
+        // procedure's, as one after a modifier is.
         let answer = ProcedureType(parameters: [.int], returns: .nullable(.int), failing: .these([]))
         let whole = ProcedureType(parameters: [.int], returns: .int, failing: .these([]))
 
@@ -80,9 +80,8 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("(const Procedure)?") == .nullable(.procedure(nil, .const)))
         #expect(try TypeReader.parse("(isolated Procedure)?") == .nullable(.procedure(nil, .unstated, .isolated)))
         #expect(throws: TypeFormError.self) { try TypeReader.parse("const Procedure?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("(Procedure)?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("(Int)?") }
-        #expect(throws: TypeFormError.self) { try TypeReader.parse("((Int) -> Int)") }
+        #expect(try TypeReader.parse("(Int)?") == .nullable(.int))
+        #expect(try TypeReader.parse("((Int) -> Int)") == .procedure(whole))
     }
 
     @Test("names joined with & read as the set of them, and write back in name order")

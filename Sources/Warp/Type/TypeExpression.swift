@@ -330,7 +330,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // Whether a `?` trailing this is written after parentheses around it: a
     // procedure type writing its signature or a modifier, whose spelling a
     // `?` would otherwise end inside.
-    public var isGroupedBeforeQuestionMark: Bool {
+    private var isGroupedBeforeQuestionMark: Bool {
         guard case let .procedure(type, constness, isolation) = self else { return false }
 
         return type != nil || constness == .const || isolation == .isolated

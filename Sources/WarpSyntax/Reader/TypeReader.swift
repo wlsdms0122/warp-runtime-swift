@@ -307,32 +307,21 @@ struct TypeReader: Decodable {
 
         // A trailing `?` wraps the whole spelling before it: `Array<Int>?` is
         // a nullable array and `A & B?` a nullable composition, and what may
-        // be inside the brackets never carries one. Parentheses around a
-        // procedure type say the `?` is the whole procedure's.
+        // be inside the brackets never carries one.
         if text.hasSuffix("?") {
-            let inner = String(text.dropLast()).trimmingCharacters(in: Path.whiteSpace)
+            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying, bounding: bounding))
+        }
 
-            guard let grouped = Self.parenthesized(inner) else {
-                return .nullable(try parse(inner, qualifying: qualifying, bounding: bounding))
-            }
-
-            let type = try parse(grouped, qualifying: qualifying, bounding: bounding)
-
-            guard type.isGroupedBeforeQuestionMark else {
-                throw TypeFormError(
-                    "type '\(text)' writes parentheses around \(type.rendered), and parentheses stand around a"
-                        + " procedure type writing its signature or a modifier, before its `?`. This one is"
-                        + " written `\(type.rendered)?`"
-                )
-            }
-
-            return .nullable(type)
+        // Parentheses group, so a `?` after them is the whole procedure
+        // type's: `((Int) -> Int)?`, `(const Procedure)?`.
+        if let grouped = Self.parenthesized(text) {
+            return try parse(grouped, qualifying: qualifying, bounding: bounding)
         }
 
         if text.hasPrefix("(") {
             throw TypeFormError(
                 "type '\(text)' opens a parenthesis, and parentheses hold a procedure type's parameters before"
-                    + " `->` and its answer, `(Int) -> Bool`, or stand around one before its `?`"
+                    + " `->` and its answer, `(Int) -> Bool`, or group a type, `((Int) -> Int)?`"
             )
         }
 
@@ -613,21 +602,16 @@ struct TypeReader: Decodable {
 
         guard !listed.isEmpty else { return .unstated }
 
-        guard let names = parenthesized(listed) else {
+        guard let names = parenthesized(listed)?.trimmingCharacters(in: Path.whiteSpace) else {
             throw TypeFormError("writes `throws\(rest)`, and what a procedure may fail with is listed in parentheses")
         }
 
-        let failures = arguments(names).map { name in name.trimmingCharacters(in: Path.whiteSpace) }
-
-        if failures.contains(where: \.isEmpty) {
-            throw TypeFormError(
-                "writes `throws(\(names))`, which lists no failure in a place. A procedure failing with nothing"
-                    + " writes no `throws`"
-            )
+        let failures = (names.isEmpty ? [] : arguments(names)).map { name in
+            name.trimmingCharacters(in: Path.whiteSpace)
         }
 
-        if let twice = failures.first(where: { failure in failures.filter { $0 == failure }.count > 1 }) {
-            throw TypeFormError("writes `throws(\(names))`, which lists '\(twice)' twice. Once says it")
+        if failures.contains(where: \.isEmpty) {
+            throw TypeFormError("writes `throws(\(names))`, which leaves a place in the list empty")
         }
 
         return .these(Set(failures))
