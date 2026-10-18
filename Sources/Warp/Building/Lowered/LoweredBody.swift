@@ -51,7 +51,7 @@ struct LoweredBody: Sendable {
                     standing.stand(calling: call.procedure, handing: call.arguments.count)
                     call.handed.forEach { handed in handed.address.stand(in: &standing) }
 
-                case let .apply(_, arguments):
+                case let .apply(_, arguments, _):
                     arguments.forEach { argument in argument.stand(in: &standing) }
 
                 case let .dispatch(dispatch):

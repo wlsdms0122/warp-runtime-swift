@@ -35,9 +35,9 @@ import Foundation
 //
 // Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
-// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), what
-// each body does against what it declares (`EffectChecker`), its bodies
-// (`TypeChecker`) and lowering (`Lowering`). It runs the procedures a
+// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), its
+// bodies (`TypeChecker`), lowering (`Lowering`) and what each lowered body
+// does against what it declares (`EffectChecker`). It runs the procedures a
 // constant calls, which is what folding is. Linking takes what that
 // answered, judges what only the whole list can answer, one claim for each
 // type and contract, and runs nothing.
@@ -484,6 +484,7 @@ public struct Builder: Sendable {
         )
         let linked = try relocating.linked()
         let variables = try relocating.started(assembled.variables)
+
 
         return Image(
             linked: linked.table,

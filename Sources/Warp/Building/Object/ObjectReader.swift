@@ -934,7 +934,8 @@ struct ObjectReader {
         case .apply:
             read = .apply(
                 try operation(cursor.next()),
-                arguments: try Field(cursor.next(), of: "arguments").list(argument)
+                arguments: try Field(cursor.next(), of: "arguments").list(argument),
+                declared: try cursor.field().maybe(lowered)
             )
 
         case .cast:

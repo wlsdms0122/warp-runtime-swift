@@ -81,27 +81,9 @@ struct Compiler {
         // this one reads them.
         let behind = compiling.context(reading: reading)
 
-        // What a selector this document may reach takes: its own declarations
-        // first, the documents standing before it after.
-        let taking: @Sendable (Name) -> Signature? = { selector in
-            own[selector] ?? behind.signature(of: selector)
-        }
-
-        // What each constant's value was written as where it was made. A
-        // constant is a fixed name, so a call of the value it holds leans on
-        // that as on any fixed name's. Read in the order constants settle,
-        // since one may read another through a path.
-        let declaredConstants = order(module.constants).reduce(into: [Name: LoweredType]()) { declared, constant in
-            let reading = declared
-
-            declared[constant.name] = EffectChecker().declaredType(
-                of: .constant(constant.name),
-                reading: constant.expression,
-                taking: taking,
-                given: { name in reading[name] ?? declaredVariables[name] },
-                in: loweredTypes
-            )
-        }
+        // What each constant's value was written as where it was made, read
+        // once this document's rows stand, since a constant may call one.
+        var declaredConstants: [Name: LoweredType] = [:]
 
         // The names in scope before a body's first statement: its parameters,
         // the constants its module declared beside them, and the variables. A
@@ -165,22 +147,6 @@ struct Compiler {
                     with: context().reading(declaration.signature),
                     folding: folding
                 )
-
-                // What the body does is held to what its declaration says,
-                // every callee read by its own declaration, so a body is
-                // judged alone.
-                if let refusal = EffectChecker().refusal(
-                    of: block,
-                    declared: declaration.signature,
-                    reading: reading,
-                    bound: declaredVariables.merging(declaredConstants) { _, constant in constant }.merging(
-                        declaration.signature.environment(in: loweredTypes).compactMapValues(\.declaredType)
-                    ) { _, parameter in parameter },
-                    taking: taking,
-                    in: loweredTypes
-                ) {
-                    throw BuildError("'\(symbol.declared)' \(refusal)", at: symbol.place)
-                }
 
                 answer = (
                     procedure: Procedure(
@@ -250,6 +216,18 @@ struct Compiler {
 
         compiling.lowering.resolve(origin)
 
+        // A constant is a fixed name, so a call of the value it holds leans on
+        // what was written where the value was made, as on any fixed name's.
+        // Read in the order constants settle, since one may read another
+        // through a path.
+        for (name, expression) in order(module.constants) {
+            let reading = declaredConstants
+
+            declaredConstants[name] = context().declaredType(of: .constant(name), reading: expression) { name in
+                reading[name] ?? declaredVariables[name]
+            }
+        }
+
         // The bodies the documents behind this one lowered, which this one
         // may run.
         compiling.foldable()
@@ -289,6 +267,17 @@ struct Compiler {
             _ = try await resolved(symbol)
         }
 
+        // What each body does is held to what its declaration says, read off
+        // the rows as a link reads them.
+        let rows = Array(block) + compiling.lowering.documents[origin].closureRows
+
+        try EffectChecker(
+            table: compiling.lowering.table,
+            resolving: .documents(compiling.lowering.documents.map(\.resolved)),
+            contractProcedures: compiling.contractProcedures
+        )
+        .check(rows, in: compiling.documents)
+
         // The types its bodies stand on, written as this document's own
         // numbers.
         // Lowering read the link's table to judge, so what it wrote is that
@@ -296,9 +285,7 @@ struct Compiler {
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
-        let lowered = try compiling.lowering.numbered(
-            Array(block) + compiling.lowering.documents[origin].closureRows
-        )
+        let lowered = try compiling.lowering.numbered(rows)
 
         return Compiled(
             document: .of(module),

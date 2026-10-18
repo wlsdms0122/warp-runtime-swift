@@ -7,23 +7,33 @@
 
 import Foundation
 
-// What a body reaches, read against what its declaration says: whether it
-// answers without running, whether it touches no name another body could
+// What a lowered body reaches, read against what its declaration says: whether
+// it answers without running, whether it touches no name another body could
 // touch at once, and what may come out of it when the work goes wrong. Every
-// callee is read by its own declaration, so one body is read alone.
+// callee is read by its own declaration, so one row is read alone, and a row
+// is read the same wherever it came from: a compile reads the rows it lowered,
+// and a link the rows every document it lays brought.
 struct EffectChecker {
     // What a body is walked for. Constness and isolation are read by one walk
-    // and differ only in these: which callee holds the fact, which slot says a
-    // procedure it holds does, which names a body loses it by reading, and
-    // the word a refusal says. A slot is judged on the type it lowers to, in
-    // the table the walk reads.
+    // and differ only in these: which declaration holds the fact, which
+    // written type says a value called does, which slots a body loses it by
+    // reading or writing, and the word a refusal says.
     private struct Fact {
         // MARK: - Property
-        let callee: (Name) -> Bool
+        let held: (Signature) -> Bool
         let claim: (LoweredType) -> Bool
-        let unread: Set<Name>
+        let unread: Set<Int>
+        let unowned: Set<Int>
         let word: String
-        let table: LoweredTypeTable
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    private struct Refusal: Error {
+        // MARK: - Property
+        let reason: String
 
         // MARK: - Initializer
         // MARK: - Public
@@ -31,460 +41,342 @@ struct EffectChecker {
     }
 
     // MARK: - Property
+    private let table: [Linked]
+    private let resolving: Resolving
+    private let contractProcedures: [Name: LoweredContractProcedure]
+
     // MARK: - Initializer
+    init(table: [Linked], resolving: Resolving, contractProcedures: [Name: LoweredContractProcedure]) {
+        self.table = table
+        self.resolving = resolving
+        self.contractProcedures = contractProcedures
+    }
+
     // MARK: - Public
-    // What a body does beyond what its declaration says, or nil where it
-    // keeps to it: a body declared const reaches outside the run, one
-    // declared isolated touches what another body could touch at once, or
-    // one may fail with more than its declaration names. Every callee is
-    // read by what `asked` says it declares. `reading` is the module's
-    // variables and `bound` the type written for what each name in scope
-    // holds, before the first statement.
-    func refusal(
-        of block: Block,
-        declared signature: Signature,
-        reading variables: Set<Name>,
-        bound declared: [Name: LoweredType],
-        taking asked: @escaping (Name) -> Signature?,
-        in table: LoweredTypeTable
-    ) -> String? {
-        if signature.constness == .const, let reached = runs(
-            block,
-            declaring: signature.ownedParameters,
-            given: { selector in asked(selector)?.constness == .const },
-            reading: variables,
-            bound: declared,
-            taking: asked,
-            in: table
-        ) {
-            return "is declared const, and \(reached)"
+    // Every written body among these rows held to what its declaration says,
+    // in the document `documents` names at its origin.
+    //
+    // A closure takes what it reads outside itself from the body that makes
+    // it, so it is read where that body makes it, knowing which of what it
+    // takes is a module variable. A closure no body makes, one a constant's
+    // value holds, takes nothing and is read alone.
+    func check(_ rows: some Sequence<Int>, in documents: [Place.Document]) throws {
+        var checked = Set<Int>()
+
+        for row in rows where table[row].closure == nil {
+            try check(row, reading: nil, in: documents, checked: &checked)
         }
 
-        if signature.isolation == .isolated, let touched = touches(
-            block,
-            declaring: Set(signature.names),
-            given: { selector in asked(selector)?.isolation == .isolated },
-            bound: declared,
-            taking: asked,
-            in: table
-        ) {
-            return "is declared isolated, and \(touched)"
-        }
-
-        let failing = self.failing(block, taking: asked, bound: declared, in: table)
-
-        guard failing.fails(within: signature.failing) else {
-            return "may fail with \(failing.rendered), and its declaration says \(signature.failing.rendered)"
-        }
-
-        return nil
-    }
-
-    // What may come out of a block: everything its statements and its result
-    // may fail with. `bound` is the type written for what each name in scope
-    // holds, which a call of a value is judged on; a name a statement binds
-    // holds it for the rest of the block, by the rule `declaredType` reads.
-    func failing(
-        _ block: Block,
-        taking asked: (Name) -> Signature?,
-        bound declaredTypes: [Name: LoweredType],
-        in table: LoweredTypeTable
-    ) -> Failing {
-        var declaredTypes = declaredTypes
-        var carried = Failing.these([])
-
-        for statement in block.body.statements {
-            carried = carried.joined(self.failing(statement.expression, taking: asked, bound: declaredTypes, in: table))
-            declaring(statement, into: &declaredTypes, taking: asked, in: table)
-        }
-
-        return carried.joined(
-            block.result.map { result in self.failing(result, taking: asked, bound: declaredTypes, in: table) }
-                ?? .these([])
-        )
-    }
-
-    func failing(
-        _ expression: Expression,
-        taking asked: (Name) -> Signature?,
-        bound declared: [Name: LoweredType],
-        in table: LoweredTypeTable
-    ) -> Failing {
-        func read(_ inner: Expression) -> Failing {
-            self.failing(inner, taking: asked, bound: declared, in: table)
-        }
-
-        func read(_ block: Block) -> Failing {
-            self.failing(block, taking: asked, bound: declared, in: table)
-        }
-
-        let here = failingHere(expression, taking: asked, bound: { name in declared[name] }, in: table)
-
-        switch expression {
-        case .literal, .reference, .closure:
-            return here
-
-        case let .cast(value, _, _):
-            return read(value).joined(here)
-
-        case let .array(array):
-            return array.reduce(here) { carried, element in carried.joined(read(element)) }
-
-        case let .struct(literal):
-            return literal.values.reduce(here) { carried, field in carried.joined(read(field)) }
-
-        case let .dictionary(entries):
-            return entries.reduce(here) { carried, entry in carried.joined(read(entry.key)).joined(read(entry.value)) }
-
-        case let .call(call):
-            return call.arguments.reduce(here) { carried, argument in carried.joined(read(argument)) }
-
-        case let .apply(callee, arguments):
-            return arguments.reduce(read(callee).joined(here)) { carried, argument in carried.joined(read(argument)) }
-
-        case let .conditional(condition, then, otherwise):
-            return read(condition)
-                .joined(read(Block(body: then)))
-                .joined(otherwise.map { arm in read(Block(body: arm)) } ?? .these([]))
-
-        case let .loop(condition, body):
-            return read(condition).joined(read(Block(body: body)))
-
-        // The rescue is what the body's failures become: they are caught here,
-        // and what is left is whatever the rescue itself may fail with.
-        case let .attempt(_, rescue):
-            return read(rescue)
-
-        case let .leave(leave):
-            return leave.value.map(read) ?? .these([])
-        }
-    }
-
-    // What may come out of this node itself, apart from the nodes it holds:
-    // the one judgement of where a run may fail, which `failing` gathers over
-    // a tree and the type check asks where a way may end by failing.
-    func failingHere(
-        _ expression: Expression,
-        taking asked: (Name) -> Signature?,
-        bound declared: (Name) -> LoweredType?,
-        in table: LoweredTypeTable
-    ) -> Failing {
-        switch expression {
-        // A cast that names a type the value did not arrive as fails, and
-        // that is the one failure the runtime itself raises. The optional
-        // spelling reads the same mismatch as null instead, so it raises
-        // nothing.
-        case let .cast(_, _, optional):
-            return optional ? .these([]) : .these([CastRefused.type])
-
-        // Which value is called is decided at run time, so what may come out
-        // of it is what the type written where it came from says, and
-        // anything where nothing was written.
-        case let .apply(callee, _):
-            return reached(callee, taking: asked, given: declared, in: table)?.procedureFailing ?? .anything
-
-        case let .call(call):
-            return asked(call.selector)?.failing ?? .anything
-
-        case .literal, .reference, .closure, .array, .struct, .dictionary, .conditional, .loop, .attempt, .leave:
-            return .these([])
-        }
-    }
-
-    // What a block reaches outside the run, or nil where it answers without
-    // running. `reading` is the module's variables: a body reading one answers
-    // by the run's state. `declaring` is the names the body may write; a
-    // write landing anywhere else, or handing such a name in place to a call,
-    // reaches the run's state the same way. `bound` is the type written for
-    // what each name in scope holds, which a call of a value is judged on.
-    func runs(
-        _ block: Block,
-        declaring names: Set<Name>,
-        given const: @escaping (Name) -> Bool,
-        reading variables: Set<Name>,
-        bound declared: [Name: LoweredType],
-        taking asked: (Name) -> Signature?,
-        in table: LoweredTypeTable
-    ) -> String? {
-        breaking(
-            block,
-            Fact(callee: const, claim: \.isConstProcedure, unread: variables, word: "const", table: table),
-            declaring: names,
-            bound: declared,
-            taking: asked
-        )
-    }
-
-    // What a block touches that another body could touch at once, or nil
-    // where it writes only names it declares and calls only isolated
-    // declarations. A name written that was not declared here is one the body
-    // reached from outside: a module variable, or one a closure captured.
-    func touches(
-        _ block: Block,
-        declaring parameters: Set<Name>,
-        given isolated: @escaping (Name) -> Bool,
-        bound declared: [Name: LoweredType],
-        taking asked: (Name) -> Signature?,
-        in table: LoweredTypeTable
-    ) -> String? {
-        breaking(
-            block,
-            Fact(callee: isolated, claim: \.isIsolatedProcedure, unread: [], word: "isolated", table: table),
-            declaring: parameters,
-            bound: declared,
-            taking: asked
-        )
-    }
-
-    // The type written for the value the name a statement binds holds,
-    // which is what a call of that value leans on. A name that wrote its type
-    // holds that. A fixed name that wrote none holds the one written where
-    // its value came from, by the rule `reached` reads. A variable that wrote
-    // none holds whatever its writes leave, which nothing wrote, so it holds
-    // none.
-    func declaredType(
-        of binding: Statement.Binding,
-        reading expression: Expression,
-        taking asked: (Name) -> Signature?,
-        given declared: (Name) -> LoweredType?,
-        in table: LoweredTypeTable
-    ) -> LoweredType? {
-        switch binding {
-        case let .constant(_, written):
-            return written?.lowered(in: table) ?? reached(expression, taking: asked, given: declared, in: table)
-
-        case let .variable(_, written):
-            return written?.lowered(in: table)
-
-        case .assignment:
-            return nil
+        for row in rows {
+            try check(row, reading: [], in: documents, checked: &checked)
         }
     }
 
     // MARK: - Private
-    // A block in order. Each statement is judged against what was declared
-    // before it, and a variable it introduces is declared for the rest. The
-    // names a block binds are its own and leave with it, so introducing one
-    // reaches nothing.
-    private func breaking(
-        _ block: Block,
-        _ fact: Fact,
-        declaring names: Set<Name>,
-        bound declaredTypes: [Name: LoweredType],
-        taking asked: (Name) -> Signature?
-    ) -> String? {
-        var declared = names
-        var declaredTypes = declaredTypes
+    // One row, and the closures its body makes. `variables` is the slots
+    // holding a module variable, nil for a declaration's own, which its frame
+    // says.
+    private func check(
+        _ row: Int,
+        reading variables: Set<Int>?,
+        in documents: [Place.Document],
+        checked: inout Set<Int>
+    ) throws {
+        guard checked.insert(row).inserted, case let .body(body, frame) = table[row].implementation else { return }
 
-        for statement in block.body.statements {
-            if case let .assignment(path)? = statement.binding {
-                if let head = path.head, !declared.contains(head) {
-                    return "it writes '\(head)', which it does not declare"
-                }
+        let linked = table[row]
+        let variables = variables ?? Set(frame.variables.map(\.slot))
 
-                // What the place written is found by is read.
-                if let broken = breaking(.reference(path), fact, declaring: declared, bound: declaredTypes, taking: asked) {
-                    return broken
-                }
+        do throws(Refusal) {
+            try check(body, framed: frame, reading: variables, declared: linked.signature, of: linked.origin)
+        } catch {
+            let place: Place = switch linked.closure?.by {
+            case .binding?: Place(in: documents[linked.origin])
+            case .procedure?, nil: .procedure(linked.label.spelling, in: documents[linked.origin])
             }
 
-            if let broken = breaking(statement.expression, fact, declaring: declared, bound: declaredTypes, taking: asked) {
-                return broken
-            }
-
-            if case let .variable(name, _)? = statement.bindingAfter {
-                declared.insert(name)
-            }
-
-            declaring(statement, into: &declaredTypes, taking: asked, in: fact.table)
+            throw BuildError("'\(linked.rendered)' \(error.reason)", at: place)
         }
 
-        return block.result.flatMap { result in
-            breaking(result, fact, declaring: declared, bound: declaredTypes, taking: asked)
+        var made: [(number: Int, captures: [(Int, Int)])] = []
+
+        body.walk { node in
+            if case let .operation(.closure(number, captures)) = node { made.append((number, captures)) }
+
+            return true
+        }
+
+        for (number, captures) in made {
+            guard let closure = resolving.row(number, from: linked.origin) else { continue }
+
+            let taken = Set(captures.filter { outer, _ in variables.contains(outer) }.map { _, inner in inner })
+
+            try check(closure, reading: taken, in: documents, checked: &checked)
         }
     }
 
+    // A body declared const reaches outside the run, one declared isolated
+    // touches what another body could touch at once, or one may fail with
+    // more than its declaration names. A slot a closure fills from what it
+    // took is not the body's own, nor is a module variable's, and a const
+    // body does not own what a caller hands it in place either.
+    private func check(
+        _ body: LoweredBody,
+        framed frame: Frame,
+        reading variables: Set<Int>,
+        declared signature: Signature,
+        of origin: Int
+    ) throws(Refusal) {
+        let outside = variables.union(frame.captures)
+        let inPlace = Set(signature.type.inPlacePositions.map { position in frame.parameters[position] })
+
+        func name(_ slot: Int) -> String {
+            frame.names.indices.contains(slot) ? frame.names[slot].spelling : "[\(slot)]"
+        }
+
+        if signature.constness == .const {
+            let fact = Fact(
+                held: { signature in signature.constness == .const },
+                claim: \.isConstProcedure,
+                unread: variables,
+                unowned: outside.union(inPlace),
+                word: "const"
+            )
+
+            if let broken = breaking(body, fact, naming: name, of: origin) {
+                throw Refusal(reason: "is declared const, and \(broken)")
+            }
+        }
+
+        if signature.isolation == .isolated {
+            let fact = Fact(
+                held: { signature in signature.isolation == .isolated },
+                claim: \.isIsolatedProcedure,
+                unread: [],
+                unowned: outside,
+                word: "isolated"
+            )
+
+            if let broken = breaking(body, fact, naming: name, of: origin) {
+                throw Refusal(reason: "is declared isolated, and \(broken)")
+            }
+        }
+
+        let failing = try self.failing(body, of: origin)
+
+        guard failing.fails(within: signature.failing) else {
+            throw Refusal(reason: "may fail with \(failing.rendered), and its declaration says \(signature.failing.rendered)")
+        }
+    }
+
+    // What a body reaches that the fact does not allow, or nil where it keeps
+    // to it. Which part of a construct runs is decided inside the body, so a
+    // construct holds the fact as far as the parts it holds.
     private func breaking(
-        _ expression: Expression,
+        _ body: LoweredBody,
         _ fact: Fact,
-        declaring names: Set<Name>,
-        bound declared: [Name: LoweredType],
-        taking asked: (Name) -> Signature?
+        naming name: (Int) -> String,
+        of origin: Int
     ) -> String? {
-        func breaking(_ inner: Expression) -> String? {
-            self.breaking(inner, fact, declaring: names, bound: declared, taking: asked)
+        var broken: String?
+
+        func finding(_ reason: String) -> Bool {
+            broken = reason
+
+            return false
         }
 
-        func breaking(_ block: Block) -> String? {
-            self.breaking(block, fact, declaring: names, bound: declared, taking: asked)
-        }
+        func read(_ address: Address) -> String? {
+            if fact.unread.contains(address.slot) { return "it reads the module variable '\(name(address.slot))'" }
 
-        func breaking(_ body: Body) -> String? {
-            breaking(Block(body: body))
-        }
-
-        func first(_ parts: [Expression]) -> String? {
-            for part in parts {
-                if let broken = breaking(part) { return broken }
+            for case let .at(inner, _) in address.steps {
+                if let reached = read(inner) { return reached }
             }
 
             return nil
         }
 
-        switch expression {
-        case .literal, .closure:
+        func handing(_ places: [Address], to callee: String) -> String? {
+            for address in places {
+                guard !fact.unowned.contains(address.slot) else {
+                    return "it hands '\(name(address.slot))', which it does not declare, in place to \(callee)"
+                }
+
+                if let reached = read(address) { return reached }
+            }
+
             return nil
+        }
 
-        case let .reference(path):
-            return path.expandingIndexReferences.lazy
-                .compactMap { inner in inner.head.flatMap { head in fact.unread.contains(head) ? head : nil } }
-                .first
-                .map { head in "it reads the module variable '\(head)'" }
+        body.walk { node in
+            switch node {
+            case let .instruction(instruction):
+                guard case let .assign(address)? = instruction.binding else { return true }
 
-        // Where a leave goes is inside the body, so what it reaches is what it
-        // carries.
-        case let .leave(leave):
-            return leave.value.flatMap(breaking)
+                broken = fact.unowned.contains(address.slot)
+                    ? "it writes '\(name(address.slot))', which it does not declare"
+                    : read(address)
 
-        case let .cast(value, _, _):
-            return breaking(value)
+            case let .operation(.local(address)):
+                broken = read(address)
 
-        case let .array(array):
-            return first(array)
+            case let .operation(.call(call)):
+                let callee = resolving.row(call.procedure, from: origin).map { row in table[row] }
 
-        case let .struct(literal):
-            return first(literal.keys.sorted().compactMap { field in literal[field] })
+                guard let callee, fact.held(callee.signature) else {
+                    return finding("it calls '\(callee?.rendered ?? "[\(call.procedure)]")', which is not declared \(fact.word)")
+                }
+
+                broken = handing(call.handed.map(\.address), to: "'\(callee.rendered)'")
+
+            case let .operation(.dispatch(dispatch)):
+                let selector = dispatch.procedure.spelled(under: dispatch.contract)
+
+                guard let asked = contractProcedures[selector], fact.held(asked.signature) else {
+                    return finding("it calls '\(selector)', which is not declared \(fact.word)")
+                }
+
+                // A call through a contract keeps every path it hands as a
+                // place, since which row takes one in place is the row's to
+                // say. What the contract's procedure takes in place is
+                // handed; the rest is read.
+                let inPlace = asked.signature.type.inPlacePositions
+
+                for (position, argument) in dispatch.arguments.enumerated() {
+                    guard case let .reference(address) = argument else { continue }
+
+                    broken = inPlace.contains(position + 1)
+                        ? handing([address], to: "'\(selector)'")
+                        : read(address)
+
+                    if broken != nil { break }
+                }
+
+            case let .operation(.apply(_, arguments, declared)):
+                guard let declared, fact.claim(declared) else {
+                    return finding("it calls a value nothing written says is \(fact.word)")
+                }
+
+                broken = handing(places(arguments), to: "a value it calls")
+
+            case .operation:
+                break
+            }
+
+            return broken == nil
+        }
+
+        return broken
+    }
+
+    // What may come out of a body: everything its instructions and its result
+    // may fail with. An attempt catches what its body may fail with, and what
+    // is left is whatever its rescue may fail with.
+    private func failing(_ body: LoweredBody, of origin: Int) throws(Refusal) -> Failing {
+        var failing = Failing.these([])
+
+        for instruction in body.instructions {
+            failing = failing.joined(try self.failing(instruction.code, of: origin))
+        }
+
+        guard let result = body.result else { return failing }
+
+        return failing.joined(try self.failing(result, of: origin))
+    }
+
+    private func failing(_ instructions: [Instruction], of origin: Int) throws(Refusal) -> Failing {
+        try failing(LoweredBody(instructions: instructions, result: nil), of: origin)
+    }
+
+    private func failing(_ operation: Operation, of origin: Int) throws(Refusal) -> Failing {
+        func failing(_ parts: [Operation]) throws(Refusal) -> Failing {
+            var failing = Failing.these([])
+
+            for part in parts {
+                failing = failing.joined(try self.failing(part, of: origin))
+            }
+
+            return failing
+        }
+
+        switch operation {
+        case .literal, .local, .closure:
+            return .these([])
+
+        case let .array(elements):
+            return try failing(elements)
+
+        case let .struct(held):
+            return try failing(held.fields)
 
         case let .dictionary(entries):
-            return first(entries.flatMap { entry in [entry.key, entry.value] })
+            return try failing(entries.flatMap { entry in [entry.key, entry.value] })
 
-        case let .call(call):
-            guard fact.callee(call.selector) else {
-                return "it calls '\(call.selector)', which is not declared \(fact.word)"
-            }
+        // Which value is called is decided at run time, so what may come out
+        // of it is what the type written for it says, and anything where
+        // nothing was written.
+        case let .apply(callee, arguments, declared):
+            return try failing([callee] + values(arguments)).joined(declared?.procedureFailing ?? .anything)
 
-            if let signature = asked(call.selector), let handed = unowned(call.arguments, at: signature.type.inPlacePositions, declaring: names) {
-                return "it hands '\(handed)', which it does not declare, in place to '\(call.selector)'"
-            }
+        // A cast that names a type the value did not arrive as fails, and
+        // that is the one failure the runtime itself raises. The optional
+        // spelling reads the same mismatch as null instead, so it raises
+        // nothing.
+        case let .cast(read, _, optional):
+            return try failing([read]).joined(optional ? .these([]) : .these([CastRefused.type]))
 
-            return first(call.arguments)
-
-        // Which value is called is the run's answer, so what it reaches is
-        // said by the type written where the value came from and nowhere
-        // else, and so are the positions it takes in place.
-        case let .apply(callee, arguments):
-            if let broken = breaking(callee) { return broken }
-
-            guard let reached = reached(callee, taking: asked, given: { name in declared[name] }, in: fact.table), fact.claim(reached) else {
-                return "it calls a value nothing written says is \(fact.word)"
-            }
-
-            if let handed = unowned(arguments, at: reached.inPlacePositions, declaring: names) {
-                return "it hands '\(handed)', which it does not declare, in place to a value it calls"
-            }
-
-            return first(arguments)
-
-        // Which part of a construct runs is decided inside the body, so a
-        // construct holds the fact as far as the parts it holds.
         case let .conditional(condition, then, otherwise):
-            return breaking(condition) ?? breaking(then) ?? otherwise.flatMap(breaking)
+            return try failing([condition])
+                .joined(try self.failing(then, of: origin))
+                .joined(try self.failing(otherwise ?? [], of: origin))
 
-        case let .loop(condition, body):
-            return breaking(condition) ?? breaking(body)
+        case let .loop(condition, body, _):
+            return try failing([condition]).joined(try self.failing(body, of: origin))
 
-        case let .attempt(body, rescue):
-            return breaking(body) ?? breaking(rescue)
-        }
-    }
+        // What the rescue is there for. A body nothing can fail out of leaves
+        // it a body no run reaches, and the author wrote it expecting
+        // otherwise.
+        case let .attempt(body, rescue, _):
+            guard !(try self.failing(body, of: origin)).failsNothing else {
+                throw Refusal(
+                    reason: "attempts a body that cannot fail, so its rescue is a body"
+                        + " no run reaches. What a rescue catches is what the"
+                        + " body casts and calls, and this one casts and calls"
+                        + " nothing that fails"
+                )
+            }
 
-    // The type a name a statement binds holds for the rest of its block. A
-    // later name of the same spelling is a different name, so the table is
-    // read forward.
-    private func declaring(
-        _ statement: Statement,
-        into declaredTypes: inout [Name: LoweredType],
-        taking asked: (Name) -> Signature?,
-        in table: LoweredTypeTable
-    ) {
-        guard let binding = statement.bindingAfter, let name = binding.introduced else { return }
-
-        let reading = declaredTypes
-
-        declaredTypes[name] = declaredType(
-            of: binding,
-            reading: statement.expression,
-            taking: asked,
-            given: { name in reading[name] },
-            in: table
-        )
-    }
-
-    // The type written where the value this reads came from, and nil where
-    // nothing was written. A closure literal writes its signature, a cast the
-    // type it names, a call the answer its callee declares and a call of a
-    // value the answer the value's written type says, and the value is held
-    // to that type where it is made, cast or answered. A name follows
-    // the type its slot declared past its head: brackets read an element of
-    // a list or an entry of a map, and a dot reads a field a struct type
-    // declares. A list or a map of them says it about every element or entry,
-    // and the value was judged against that type when it was handed over, so
-    // what the type says of the part is what the slot said.
-    private func reached(
-        _ expression: Expression,
-        taking asked: (Name) -> Signature?,
-        given declared: (Name) -> LoweredType?,
-        in table: LoweredTypeTable
-    ) -> LoweredType? {
-        switch expression {
-        case let .closure(procedure):
-            return procedure.signature.procedureType.lowered(in: table)
-
-        case let .cast(_, type, optional):
-            let named = type.lowered(in: table)
-
-            return optional ? .nullable(named) : named
+            return try self.failing(rescue, of: origin)
 
         case let .call(call):
-            return asked(call.selector).map { signature in
-                signature.returns.lowered(in: table, bounds: signature.bounds, sameTypes: signature.sameTypes)
-            }
+            let callee = resolving.row(call.procedure, from: origin).map { row in table[row].signature.failing }
 
-        case let .apply(callee, _):
-            return reached(callee, taking: asked, given: declared, in: table)?.procedureReturns
+            return try failing(call.arguments.compactMap { argument in argument }).joined(callee ?? .anything)
 
-        default:
-            break
-        }
+        case let .dispatch(dispatch):
+            let asked = contractProcedures[dispatch.procedure.spelled(under: dispatch.contract)]?.signature.failing
 
-        guard case let .reference(path) = expression, let head = path.head else { return nil }
+            return try failing([dispatch.first] + values(dispatch.arguments)).joined(asked ?? .anything)
 
-        return path.segments.dropFirst().reduce(declared(head)) { reached, segment in
-            switch segment {
-            case .index, .indexRef:
-                return reached?.element
-
-            case let .name(name, _):
-                return reached?.dotted(name, in: table)
-            }
+        case let .leave(_, _, read):
+            return try failing(read.map { read in [read] } ?? [])
         }
     }
 
-    // The first name a call hands in place at these positions that the body
-    // does not own. A name handed in place is written by the callee, so the
-    // call writes it here, and one the body does not own reaches the run's
-    // state.
-    private func unowned(_ arguments: [Expression], at positions: Set<Int>, declaring names: Set<Name>) -> Name? {
-        positions.sorted().lazy.compactMap { position -> Name? in
-            guard
-                arguments.indices.contains(position),
-                case let .reference(path) = arguments[position],
-                let head = path.head,
-                !names.contains(head)
-            else { return nil }
+    // The arguments read as values, and the places handed in place.
+    private func values(_ arguments: [Argument]) -> [Operation] {
+        arguments.compactMap { argument in
+            guard case let .value(operation) = argument else { return nil }
 
-            return head
+            return operation
         }
-        .first
+    }
+
+    private func places(_ arguments: [Argument]) -> [Address] {
+        arguments.compactMap { argument in
+            guard case let .reference(address) = argument else { return nil }
+
+            return address
+        }
     }
 }

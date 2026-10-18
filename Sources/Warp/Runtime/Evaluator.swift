@@ -341,7 +341,7 @@ struct Evaluator: Sendable {
 
             return try await self.call(call, reaching: row, first: first, in: &activation, at: trace)
 
-        case let .apply(callee, arguments):
+        case let .apply(callee, arguments, _):
             return try await apply(callee, arguments: arguments, in: &activation, at: trace)
 
         // A conditional answers nothing: the condition chooses a way through the
