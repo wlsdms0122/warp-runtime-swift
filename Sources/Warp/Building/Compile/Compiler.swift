@@ -452,17 +452,18 @@ struct Compiler {
         writing lowering: inout Lowering,
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
+        let environment = bindings(of: known, declaring: declaredConstants)
         let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
             in: expression,
             into: declared,
             at: place,
-            in: bindings(of: known, declaring: declaredConstants),
+            in: environment,
             with: context,
             folding: nil
         )
 
         try TypeChecker().checked(calls, in: context)
-        try TypeChecker().refuseRunning(in: judged, at: place, given: context)
+        try TypeChecker().refuseRunning(in: judged, at: place, bound: environment, given: context)
 
         do {
             let value = try await Folding(

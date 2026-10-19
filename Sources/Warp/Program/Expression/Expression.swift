@@ -236,10 +236,6 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and is written only as a statement's value."
             + " A statement before this one runs the body and its name is read here,"
             + " or a closure carries the body"
-    static let valueCallInOperand =
-        "calls a value, and which procedure that is, is the run's"
-            + " answer, so an operand cannot be read without running"
-            + " it. A statement calls it and the operand reads its name"
     // What never finishes, said once for the load, which sees a leave, and
     // the build, which sees a call answering `Never`.
     static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
@@ -280,34 +276,6 @@ public indirect enum Expression: Sendable {
 
         case .conditional, .loop, .attempt, .leave:
             return true
-        }
-    }
-
-    // Whether a value call sits anywhere in this expression read as data. A
-    // closure is data, so the walk does not enter it, and a construct is
-    // `holdsConstruct`'s to say.
-    var callsValue: Bool {
-        switch self {
-        case .literal, .reference, .closure, .conditional, .loop, .attempt, .leave:
-            return false
-
-        case let .array(array):
-            return array.contains { element in element.callsValue }
-
-        case let .struct(literal):
-            return literal.values.contains { field in field.callsValue }
-
-        case let .dictionary(entries):
-            return entries.contains { entry in entry.key.callsValue || entry.value.callsValue }
-
-        case .apply:
-            return true
-
-        case let .call(call):
-            return call.arguments.contains { argument in argument.callsValue }
-
-        case let .cast(value, _, _):
-            return value.callsValue
         }
     }
 

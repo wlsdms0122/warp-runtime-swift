@@ -304,30 +304,23 @@ struct ValidationTests {
         #expect(throws: ValidationError.self) { try Module(variables: ["v": construct]) }
     }
 
-    @Test("a value call is refused in an operand, a constant and a variable's start")
-    func aValueCallInAnOperandIsRefused() throws {
-        // Given. Which procedure a value is, is the run's answer, and the text
-        // alone shows the call
+    @Test("a value call in an operand, a constant and a variable's start is the build's to judge")
+    func aValueCallInAnOperandLoads() throws {
+        // Given. Whether a value call answers without running is said by the
+        // type written for the value, which the load does not read
         let called = Warp.Expression.apply(reference("f"), arguments: [])
         let read = Statement(binding: .constant("f"), expression: .closure(Procedure(body: [], result: .literal(.int(1)))))
 
         // When / Then. A call's operand, a condition, and a value call held
         // inside a list an operand holds
-        #expect(!validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [called])))]))
-        #expect(!validates(body: [read, Statement(expression: .conditional(called, then: [], else: nil))]))
-        #expect(!validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [.array([called])])))]))
-        #expect(throws: ValidationError.self) {
-            try Module(constants: ["f": .closure(Procedure(body: [])), "c": .apply(reference("f"), arguments: [])])
-        }
-        #expect(throws: ValidationError.self) {
-            try Module(
-                constants: ["f": .closure(Procedure(body: []))],
-                variables: ["v": .apply(reference("f"), arguments: [])]
-            )
-        }
-
-        // And written as a statement it stands
-        #expect(validates(body: [read, Statement(binding: .constant("one"), expression: called)]))
+        #expect(validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [called])))]))
+        #expect(validates(body: [read, Statement(expression: .conditional(called, then: [], else: nil))]))
+        #expect(validates(body: [read, Statement(expression: .call(Call(selector: "App.g", arguments: [.array([called])])))]))
+        _ = try Module(constants: ["f": .closure(Procedure(body: [])), "c": .apply(reference("f"), arguments: [])])
+        _ = try Module(
+            constants: ["f": .closure(Procedure(body: []))],
+            variables: ["v": .apply(reference("f"), arguments: [])]
+        )
     }
 
     @Test("a construct that binds the name says what it holds, and the author does not")
