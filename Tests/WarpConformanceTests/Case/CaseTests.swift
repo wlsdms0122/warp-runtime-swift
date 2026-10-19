@@ -21,35 +21,18 @@ struct CaseTests {
     @Test("is refused where a document laid beside its program does not read")
     func aLaidDocumentThatDoesNotRead() throws {
         // Given. A case expecting the build to refuse, beside a document that
-        // writes a key no document has.
-        let sut = try TextEncoding().value(from: """
-            warpt 1
-            {
-              documents [
-                {
-                  bogus 1
-                  imports []
-                  warp 1
-                }
-              ]
-              expect {
-                refuses "build"
-              }
-              name "broken"
-              note "a document beside the program that does not read"
-              program {
-                imports []
-                procedures {
-                  entry {
-                    access "public"
-                    result 1
-                  }
-                }
-                warp 1
-              }
-              test 1
-            }
-            """)
+        // writes a key no document has, which no text writes.
+        let sut = try Self.writing(
+            "documents",
+            with: .array([.dictionary(["bogus": .int(1), "imports": .array([]), "warp": .int(1)])]),
+            into: try TextEncoding().value(from: """
+                (test 1)
+                (name "broken")
+                (note "a document beside the program that does not read")
+                (program (warp 1) (procedure entry (access public) (result 1)))
+                (expect (refuses build))
+                """)
+        )
 
         // When / Then
         #expect {
@@ -64,50 +47,12 @@ struct CaseTests {
         // Given. A procedure the runner brings whose one parameter is not
         // called `first`.
         let sut = try Case(from: try TextEncoding().value(from: """
-            warpt 1
-            {
-              expect {
-                answers 1
-              }
-              name "broken"
-              note "a brought procedure naming a place no runner has"
-              program {
-                imports [
-                  "App.one"
-                ]
-                procedures {
-                  entry {
-                    access "public"
-                    result {
-                      call {
-                        arguments [
-                          1
-                        ]
-                        procedure "App.one"
-                      }
-                    }
-                  }
-                }
-                warp 1
-              }
-              test 1
-              vocabulary {
-                imports []
-                procedures {
-                  "App.one" {
-                    access "public"
-                    answers 1
-                    parameters [
-                      {
-                        name "it"
-                        type "Int"
-                      }
-                    ]
-                    returns "Int"
-                  }
-                }
-              }
-            }
+            (test 1)
+            (name "broken")
+            (note "a brought procedure naming a place no runner has")
+            (vocabulary (procedure App.one (access public) (parameter it (type Int)) (returns Int) (answers 1)))
+            (program (warp 1) (import App.one) (procedure entry (access public) (result (call App.one 1))))
+            (expect (answers 1))
             """), in: "broken")
 
         guard case let .program(program) = sut.asked else {
@@ -125,7 +70,7 @@ struct CaseTests {
     }
 
     @Test("is refused where its vocabulary writes what a vocabulary does not declare", arguments: [
-        "warp 1", "const {\n      k 1\n    }", "var {\n      v 2\n    }", "description \"d\""
+        "(warp 1)", "(const k 1)", "(var v 2)", "(description \"d\")"
     ])
     func aVocabularyKeyItDoesNotDeclare(key: String) throws {
         // When / Then. The runner builds the host's module from what a
@@ -133,28 +78,12 @@ struct CaseTests {
         // than dropped
         #expect {
             try Case(from: try TextEncoding().value(from: """
-                warpt 1
-                {
-                  expect {
-                    answers 1
-                  }
-                  name "broken"
-                  note "a vocabulary writing a key it does not declare"
-                  program {
-                    imports []
-                    procedures {
-                      entry {
-                        access "public"
-                        result 1
-                      }
-                    }
-                    warp 1
-                  }
-                  test 1
-                  vocabulary {
-                    \(key)
-                  }
-                }
+                (test 1)
+                (name "broken")
+                (note "a vocabulary writing a key it does not declare")
+                (vocabulary \(key))
+                (program (warp 1) (procedure entry (access public) (result 1)))
+                (expect (answers 1))
                 """), in: "broken")
         } throws: { error in
             error is ConformanceError && "\(error)".contains("A vocabulary writes `imports` and declares `types`")
@@ -162,28 +91,22 @@ struct CaseTests {
     }
 
     @Test("is refused where it writes a key its subject cannot use", arguments: [
-        ("object {}", "documents [\n    {}\n  ]", "a case about an object writes `documents`"),
-        ("bytes x\"57415250010700\"", "documents [\n    {}\n  ]", "a case about an encoding writes `documents`"),
-        ("text \"warpt 1\\n{}\\n\"", "document x\"00\"", "a case about an encoding writes `document`"),
-        ("program {\n    imports []\n    warp 1\n  }", "document x\"00\"", "a case about a program writes `document`"),
-        ("program {\n    imports []\n    warp 1\n  }", "argument {}", "a case about a program writes `argument`")
+        ("(object (dictionary))", "documents", Value.array([.dictionary([:])]), "a case about an object writes `documents`"),
+        ("(bytes x\"57415250010700\")", "documents", Value.array([.dictionary([:])]), "a case about an encoding writes `documents`"),
+        ("(text \"(warp 1)\")", "document", Value.bytes([0]), "a case about an encoding writes `document`"),
+        ("(program (warp 1))", "document", Value.bytes([0]), "a case about a program writes `document`"),
+        ("(program (warp 1))", "argument", Value.dictionary([:]), "a case about a program writes `argument`")
     ])
-    func aKeyItsSubjectCannotUse(subject: String, key: String, refusal: String) throws {
+    func aKeyItsSubjectCannotUse(subject: String, key: Name, held: Value, refusal: String) throws {
         // Given. A case whose subject is read and nothing more, beside a key
         // only another subject is asked with.
-        let sut = try TextEncoding().value(from: """
-            warpt 1
-            {
-              \(key)
-              expect {
-                refuses "load"
-              }
-              name "broken"
-              note "a key its subject cannot use"
-              \(subject)
-              test 1
-            }
-            """)
+        let sut = try Self.writing(key, with: held, into: try TextEncoding().value(from: """
+            (test 1)
+            (name "broken")
+            (note "a key its subject cannot use")
+            \(subject)
+            (expect (refuses load))
+            """))
 
         // When / Then
         #expect {
@@ -195,42 +118,24 @@ struct CaseTests {
 
     @Test("is failed where a failure escapes the entry, and a refusal still matches", arguments: [
         ("Standard.Control.abort", "\"on purpose\"", Case.Stage?.none),
-        ("Standard.Numeric.dividedBy", "1\n                          0", Case.Stage.run)
+        ("Standard.Numeric.dividedBy", "1 0", Case.Stage.run)
     ])
     func aFailureThatEscapes(procedure: String, arguments: String, reached: Case.Stage?) async throws {
         // Given. A case expecting the run to refuse, whose entry either raises
         // a failure nothing rescues or is refused by the run.
         let sut = try Case(from: try TextEncoding().value(from: """
-            warpt 1
-            {
-              expect {
-                refuses "run"
-              }
-              name "escaping"
-              note "a failure escaping the entry"
-              program {
-                imports [
-                  "\(procedure)"
-                ]
-                procedures {
-                  entry {
-                    access "public"
-                    failing "anything"
-                    result {
-                      call {
-                        arguments [
-                          \(arguments)
-                        ]
-                        procedure "\(procedure)"
-                      }
-                    }
-                    returns "Double"
-                  }
-                }
-                warp 1
-              }
-              test 1
-            }
+            (test 1)
+            (name "escaping")
+            (note "a failure escaping the entry")
+            (program
+              (warp 1)
+              (import \(procedure))
+              (procedure entry
+                (access public)
+                (returns Double)
+                (failing (anything))
+                (result (call \(procedure) \(arguments)))))
+            (expect (refuses run))
             """), in: "escaping")
 
         guard case let .program(program) = sut.asked else {
@@ -255,4 +160,11 @@ struct CaseTests {
 
     // MARK: - Public
     // MARK: - Private
+    private static func writing(_ key: Name, with held: Value, into tree: Value) throws -> Value {
+        guard case let .dictionary(fields) = tree else {
+            throw ConformanceError("a case is a mapping")
+        }
+
+        return .dictionary(fields.writing(key, with: held))
+    }
 }
