@@ -204,11 +204,13 @@ struct TypeChecker {
     func refuseRunning(
         in expression: Expression,
         at place: Place,
+        bound environment: [Name: Binding],
         given context: TypingContext
     ) throws {
         try refuseRunning(
             expression,
             asOperand: place,
+            in: environment,
             given: context,
             when: .judging(folding: nil, answering: nil)
         )
@@ -885,50 +887,6 @@ struct TypeChecker {
         return .reads(current, placed: placed)
     }
 
-    // The declaration an operand or a condition calls that answers only by
-    // running, if any. An operand is data: the run reads it rather than
-    // running it, so a call in it reaches a declaration that answers without
-    // running. A value call and a construct in one are the load's to refuse,
-    // since the text alone says where they stand.
-    //
-    // A module variable a const body may not read is read here. Reading one
-    // is what reading a name is; what it costs a body is the promise of
-    // answering the same thing twice, and an operand makes no such promise.
-    private func runs(in expression: Expression, given context: TypingContext) -> Name? {
-        switch expression {
-        case .literal, .reference, .closure, .apply, .conditional, .loop, .attempt, .leave:
-            return nil
-
-        case let .cast(value, _, _):
-            return runs(in: value, given: context)
-
-        case let .array(array):
-            return array.lazy.compactMap { element in runs(in: element, given: context) }.first
-
-        case let .struct(literal):
-            return literal.values.lazy.compactMap { field in runs(in: field, given: context) }.first
-
-        case let .dictionary(entries):
-            return entries.lazy.compactMap { entry in
-                runs(in: entry.key, given: context) ?? runs(in: entry.value, given: context)
-            }.first
-
-        // A contract's procedure is answered by whatever type the value turns
-        // out to be, so what a call through one reads as is what the contract
-        // asked of every declaration answering it.
-        case let .call(call):
-            guard
-                context.signature(of: call.selector) != nil,
-                context.signature(of: call.selector)?.constness != .const
-            else {
-                return call.arguments.lazy
-                    .compactMap { argument in runs(in: argument, given: context) }.first
-            }
-
-            return call.selector
-        }
-    }
-
     // What a body answers, held to the `returns` written beside it: what the
     // result and every `return` that carried something out hold written into
     // the answer, each at its own place. A declaration and a closure literal
@@ -1177,21 +1135,26 @@ struct TypeChecker {
         }
     }
 
-    // An operand is data: the run reads it rather than running it. A call to a
-    // declaration that answers only by running is refused here, where the
-    // operand is written, rather than found when the reading reaches it.
+    // An operand is data: the run reads it rather than running it. What
+    // would run is refused here, where the operand is written, rather than
+    // found when the reading reaches it.
     private func refuseRunning(
         _ expression: Expression,
         asOperand place: Place,
+        in environment: [Name: Binding],
         given context: TypingContext,
         when ask: Ask
     ) throws {
-        guard let selector = runs(in: expression, given: context) else { return }
+        guard
+            let running = EffectChecker(context).running(
+                expression,
+                bound: { name in environment[name]?.declaredType }
+            )
+        else { return }
 
         try refuse(
-            "reads '\(selector)', which answers only by running, and an"
-                + " operand is read rather than run. A procedure that runs"
-                + " is called by a statement, whose name the operand reads",
+            "\(running), and an operand is read rather than run. A procedure"
+                + " that runs is called by a statement, whose name the operand reads",
             at: place,
             when: ask
         )
@@ -1862,10 +1825,10 @@ struct TypeChecker {
             // One by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             if case .judging = ask {
-                try refuseRunning(callee, asOperand: place.child(.callee), given: context, when: ask)
+                try refuseRunning(callee, asOperand: place.child(.callee), in: environment, given: context, when: ask)
 
                 for (position, argument) in arguments.enumerated() {
-                    try refuseRunning(argument, asOperand: place.child(.argument(position)), given: context, when: ask)
+                    try refuseRunning(argument, asOperand: place.child(.argument(position)), in: environment, given: context, when: ask)
                 }
             }
 
@@ -2101,7 +2064,7 @@ struct TypeChecker {
             // one by one, because a loop over the values alone reports the
             // third operand from the place the first was.
             for (position, argument) in call.arguments.enumerated() {
-                try refuseRunning(argument, asOperand: argumentPlaces[position], given: context, when: ask)
+                try refuseRunning(argument, asOperand: argumentPlaces[position], in: environment, given: context, when: ask)
             }
 
             // A selector this document cannot name is refused where the walk
@@ -2266,7 +2229,7 @@ struct TypeChecker {
                 ask: ask
             )
 
-            try refuseRunning(condition, asOperand: place.child(.condition(of: .conditional)), given: context, when: ask)
+            try refuseRunning(condition, asOperand: place.child(.condition(of: .conditional)), in: environment, given: context, when: ask)
             try refuseCondition(head.reading, at: place.child(.condition(of: .conditional)), in: context, when: ask)
 
             let inside = environment
@@ -2383,7 +2346,7 @@ struct TypeChecker {
                 ask: ask
             )
 
-            try refuseRunning(condition, asOperand: place.child(.condition(of: .loop)), given: context, when: ask)
+            try refuseRunning(condition, asOperand: place.child(.condition(of: .loop)), in: seeded, given: context, when: ask)
             try refuseCondition(head.reading, at: place.child(.condition(of: .loop)), in: context, when: ask)
 
             // The statements run where the condition left things.

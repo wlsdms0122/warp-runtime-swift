@@ -40,7 +40,7 @@ struct Validator: Sendable {
         // else.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
-            try held(expression, asOperand: .constant(name.spelling, in: .of(module)))
+            try held(expression, asValueAt: .constant(name.spelling, in: .of(module)))
 
             try validate(
                 expression,
@@ -68,7 +68,7 @@ struct Validator: Sendable {
                 )
             }
 
-            try held(variable.start, asOperand: .variable(name.spelling, in: .of(module)))
+            try held(variable.start, asValueAt: .variable(name.spelling, in: .of(module)))
             try validate(
                 variable.start,
                 naming: nil,
@@ -883,7 +883,7 @@ struct Validator: Sendable {
             try answersOneWay(block, at: inside)
 
         case let .apply(callee, arguments):
-            try held(callee, asOperand: place.child(.callee))
+            try held(callee, asValueAt: place.child(.callee))
             try validate(
                 callee,
                 naming: nil,
@@ -896,7 +896,7 @@ struct Validator: Sendable {
             for (position, argument) in arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try held(argument, asOperand: here)
+                try held(argument, asValueAt: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -908,7 +908,7 @@ struct Validator: Sendable {
             }
 
         case let .conditional(condition, then, otherwise):
-            try held(condition, asOperand: place.child(.condition(of: .conditional)))
+            try held(condition, asValueAt: place.child(.condition(of: .conditional)))
             try validate(
                 condition,
                 naming: nil,
@@ -941,7 +941,7 @@ struct Validator: Sendable {
             let round = name
             let inner = visible.union(round.map { round in [round] } ?? [])
 
-            try held(condition, asOperand: place.child(.condition(of: .loop)))
+            try held(condition, asValueAt: place.child(.condition(of: .loop)))
             try validate(
                 condition,
                 naming: nil,
@@ -989,7 +989,7 @@ struct Validator: Sendable {
             for (position, argument) in call.arguments.enumerated() {
                 let here = place.child(.argument(position))
 
-                try held(argument, asOperand: here)
+                try held(argument, asValueAt: here)
                 try validate(
                     argument,
                     naming: nil,
@@ -1004,21 +1004,11 @@ struct Validator: Sendable {
 
     // A construct runs a body, so it stands as a statement's value and nowhere
     // a value is wanted: an operand, an element, a field, what a cast reads,
-    // what `return` carries and a block's result.
+    // what `return` carries, a block's result, a constant and a variable's
+    // start.
     private func held(_ expression: Expression, asValueAt place: Place) throws {
         guard !expression.holdsConstruct else {
             throw ValidationError(Expression.constructWhereAValueIsWanted, at: place)
-        }
-    }
-
-    // An operand is data the run reads rather than runs: a call's and a value
-    // call's operands, a condition, a constant and a variable's start. Which
-    // procedure a value is, is the run's answer, so calling one is running.
-    private func held(_ expression: Expression, asOperand place: Place) throws {
-        try held(expression, asValueAt: place)
-
-        guard !expression.callsValue else {
-            throw ValidationError(Expression.valueCallInOperand, at: place)
         }
     }
 
