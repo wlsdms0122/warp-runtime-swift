@@ -60,13 +60,13 @@ struct NestingBoundTests {
                             "procedure": "Standard.Logic.select",
                             "arguments": [
                                 ["ref": "yes"],
-                                ["closure": ["returns": "Int", "failing": "anything", "const": true, "result": inner]],
-                                ["closure": ["returns": "Int", "failing": "anything", "const": true, "result": ["ref": "zero"]]]
+                                ["closure": ["returns": "Int", "const": true, "isolated": true, "result": inner]],
+                                ["closure": ["returns": "Int", "const": true, "isolated": true, "result": ["ref": "zero"]]]
                             ]
                         ]
                     ]
                 }
-                entry = ["access": "public", "returns": "Int", "failing": "anything", "result": expression]
+                entry = ["access": "public", "returns": "Int", "result": expression]
             }
 
             return [

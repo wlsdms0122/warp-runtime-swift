@@ -21,12 +21,12 @@ struct CollectionTests {
         // Given. Map, filter and reduce are declarations rather than
         // constructs. Nothing in the grammar knows they exist
         let doubling = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int, constness: .const),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int, constness: .const, isolation: .isolated),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))]))
         )
         let odd = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool, constness: .const),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool, constness: .const, isolation: .isolated),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
                     selector: "Standard.Numeric.remainder",
@@ -43,7 +43,8 @@ struct CollectionTests {
                     Parameter(name: "item", type: .int)
                 ],
                 returns: .int,
-                constness: .const
+                constness: .const,
+                isolation: .isolated
             ),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")]))
@@ -53,7 +54,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .any, failing: .anything),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .any),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
                             selector: "Standard.Collection.map",
@@ -105,7 +106,8 @@ struct CollectionTests {
             signature: Signature(
                 parameters: [Parameter(name: "carried", type: .int), Parameter(name: "item", type: .int)],
                 returns: .int,
-                constness: .const
+                constness: .const,
+                isolation: .isolated
             ),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))]))
@@ -114,7 +116,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .int, failing: .anything),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .int),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Collection.reduce",
@@ -136,8 +138,8 @@ struct CollectionTests {
 
     @Test("a walk refuses a procedure that reaches outside")
     func aWalkRefusesAProcedureThatRuns() async throws {
-        // Given. `map` declares `const Procedure`, so a body that shouts is
-        // refused at the build
+        // Given. `map` takes a procedure that answers without running, so a
+        // body that shouts is refused at the build
         let loud = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .string)], returns: .string),
             body: [],
@@ -178,7 +180,8 @@ struct CollectionTests {
                             signature: Signature(
                                 parameters: [Parameter(name: "item", type: .any)],
                                 returns: .any,
-                                constness: .const
+                                constness: .const,
+                                isolation: .isolated
                             ),
                             body: [],
                             result: reference("item")

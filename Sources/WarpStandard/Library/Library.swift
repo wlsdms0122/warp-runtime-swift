@@ -398,7 +398,7 @@ enum Library {
                   ]
                   const true
                   description "The elements a procedure answers true for."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -406,7 +406,7 @@ enum Library {
                     }
                     {
                       name "isIncluded"
-                      type "const (some Element) throws -> Bool"
+                      type "const isolated (some Element) -> Bool"
                     }
                   ]
                   result {
@@ -546,7 +546,7 @@ enum Library {
                   ]
                   const true
                   description "Each element answered by a procedure, in order."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -554,7 +554,7 @@ enum Library {
                     }
                     {
                       name "transform"
-                      type "const (some Element) throws -> some Answer"
+                      type "const isolated (some Element) -> some Answer"
                     }
                   ]
                   result {
@@ -683,7 +683,7 @@ enum Library {
                   ]
                   const true
                   description "The elements folded into one, starting from a value."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "array"
@@ -695,7 +695,7 @@ enum Library {
                     }
                     {
                       name "nextPartialResult"
-                      type "const (some Carried, some Element) throws -> some Carried"
+                      type "const isolated (some Carried, some Element) -> some Carried"
                     }
                   ]
                   result {
@@ -1163,6 +1163,284 @@ enum Library {
                   }
                   returns "Array<some Element>"
                 }
+                "Standard.Collection.tryFilter" {
+                  body [
+                    {
+                      value []
+                      var "places"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "kept"
+                              value {
+                                call {
+                                  arguments [
+                                    {
+                                      ref "array[walk.index]"
+                                    }
+                                  ]
+                                  procedure {
+                                    ref "isIncluded"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      set "places"
+                                      value {
+                                        call {
+                                          arguments [
+                                            {
+                                              ref "places"
+                                            }
+                                            {
+                                              ref "walk.index"
+                                            }
+                                          ]
+                                          procedure "Standard.Collection.appending"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    ref "kept"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "array"
+                                      }
+                                    ]
+                                    procedure "Standard.Collection.count"
+                                  }
+                                }
+                              ]
+                              procedure "Standard.Comparable.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "The elements a procedure that may fail answers true for."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "array"
+                      type "Array<some Element>"
+                    }
+                    {
+                      name "isIncluded"
+                      type "const isolated (some Element) throws -> Bool"
+                    }
+                  ]
+                  result {
+                    call {
+                      arguments [
+                        {
+                          ref "array"
+                        }
+                        {
+                          ref "places"
+                        }
+                      ]
+                      procedure "Standard.Collection.gathering"
+                    }
+                  }
+                  returns "Array<some Element>"
+                }
+                "Standard.Collection.tryMap" {
+                  body [
+                    {
+                      value []
+                      var "answers"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "answered"
+                              value {
+                                call {
+                                  arguments [
+                                    {
+                                      ref "array[walk.index]"
+                                    }
+                                  ]
+                                  procedure {
+                                    ref "transform"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "answers"
+                              value {
+                                call {
+                                  arguments [
+                                    {
+                                      ref "answers"
+                                    }
+                                    {
+                                      ref "answered"
+                                    }
+                                  ]
+                                  procedure "Standard.Collection.appending"
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "array"
+                                      }
+                                    ]
+                                    procedure "Standard.Collection.count"
+                                  }
+                                }
+                              ]
+                              procedure "Standard.Comparable.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "Each element answered by a procedure that may fail, in order."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "array"
+                      type "Array<some Element>"
+                    }
+                    {
+                      name "transform"
+                      type "const isolated (some Element) throws -> some Answer"
+                    }
+                  ]
+                  result {
+                    ref "answers"
+                  }
+                  returns "Array<some Answer>"
+                }
+                "Standard.Collection.tryReduce" {
+                  body [
+                    {
+                      value {
+                        ref "initialResult"
+                      }
+                      var "carried"
+                    }
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "answered"
+                              value {
+                                call {
+                                  arguments [
+                                    {
+                                      ref "carried"
+                                    }
+                                    {
+                                      ref "array[walk.index]"
+                                    }
+                                  ]
+                                  procedure {
+                                    ref "nextPartialResult"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              set "carried"
+                              value {
+                                ref "answered"
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "array"
+                                      }
+                                    ]
+                                    procedure "Standard.Collection.count"
+                                  }
+                                }
+                              ]
+                              procedure "Standard.Comparable.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "The elements folded into one by a procedure that may fail, starting from a value."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "array"
+                      type "Array<some Element>"
+                    }
+                    {
+                      name "initialResult"
+                      type "some Carried"
+                    }
+                    {
+                      name "nextPartialResult"
+                      type "const isolated (some Carried, some Element) throws -> some Carried"
+                    }
+                  ]
+                  result {
+                    ref "carried"
+                  }
+                  returns "some Carried"
+                }
                 "Standard.Collection.values" {
                   body [
                     {
@@ -1474,11 +1752,11 @@ enum Library {
                   ]
                   const true
                   description "Whether every one answers true, asked until one does not."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "conditions"
-                      type "Array<const () throws -> Bool>"
+                      type "Array<const isolated () -> Bool>"
                     }
                   ]
                   result true
@@ -1608,11 +1886,11 @@ enum Library {
                   ]
                   const true
                   description "Whether one answers true, asked until one does."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "conditions"
-                      type "Array<const () throws -> Bool>"
+                      type "Array<const isolated () -> Bool>"
                     }
                   ]
                   result false
@@ -1661,7 +1939,7 @@ enum Library {
                   ]
                   const true
                   description "The value one of two sides answers, chosen by a truth."
-                  failing "anything"
+                  isolated true
                   parameters [
                     {
                       name "condition"
@@ -1669,11 +1947,236 @@ enum Library {
                     }
                     {
                       name "then"
-                      type "const () throws -> some Answer"
+                      type "const isolated () -> some Answer"
                     }
                     {
                       name "else"
-                      type "const () throws -> some Answer"
+                      type "const isolated () -> some Answer"
+                    }
+                  ]
+                  result {
+                    ref "left"
+                  }
+                  returns "some Answer"
+                }
+                "Standard.Logic.tryAnd" {
+                  body [
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "side"
+                              value {
+                                ref "conditions[walk.index]"
+                              }
+                            }
+                            {
+                              let "answered"
+                              value {
+                                call {
+                                  procedure {
+                                    ref "side"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      value {
+                                        return false
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    call {
+                                      arguments [
+                                        {
+                                          ref "answered"
+                                        }
+                                      ]
+                                      procedure "Standard.Logic.not"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "conditions"
+                                      }
+                                    ]
+                                    procedure "Standard.Collection.count"
+                                  }
+                                }
+                              ]
+                              procedure "Standard.Comparable.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "Whether every side, each of which may fail, answers true, asked until one does not."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "conditions"
+                      type "Array<const isolated () throws -> Bool>"
+                    }
+                  ]
+                  result true
+                  returns "Bool"
+                }
+                "Standard.Logic.tryOr" {
+                  body [
+                    {
+                      let "walk"
+                      value {
+                        loop {
+                          body [
+                            {
+                              let "side"
+                              value {
+                                ref "conditions[walk.index]"
+                              }
+                            }
+                            {
+                              let "answered"
+                              value {
+                                call {
+                                  procedure {
+                                    ref "side"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                conditional {
+                                  then [
+                                    {
+                                      value {
+                                        return true
+                                      }
+                                    }
+                                  ]
+                                  when {
+                                    ref "answered"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                          while {
+                            call {
+                              arguments [
+                                {
+                                  ref "walk.index"
+                                }
+                                {
+                                  call {
+                                    arguments [
+                                      {
+                                        ref "conditions"
+                                      }
+                                    ]
+                                    procedure "Standard.Collection.count"
+                                  }
+                                }
+                              ]
+                              procedure "Standard.Comparable.lessThan"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "Whether one side, each of which may fail, answers true, asked until one does."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "conditions"
+                      type "Array<const isolated () throws -> Bool>"
+                    }
+                  ]
+                  result false
+                  returns "Bool"
+                }
+                "Standard.Logic.trySelect" {
+                  body [
+                    {
+                      value {
+                        conditional {
+                          then [
+                            {
+                              let "taken"
+                              value {
+                                call {
+                                  procedure {
+                                    ref "then"
+                                  }
+                                }
+                              }
+                            }
+                            {
+                              value {
+                                return {
+                                  ref "taken"
+                                }
+                              }
+                            }
+                          ]
+                          when {
+                            ref "condition"
+                          }
+                        }
+                      }
+                    }
+                    {
+                      let "left"
+                      value {
+                        call {
+                          procedure {
+                            ref "else"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                  const true
+                  description "The value one of two sides, each of which may fail, answers, chosen by a truth."
+                  failing "anything"
+                  isolated true
+                  parameters [
+                    {
+                      name "condition"
+                      type "Bool"
+                    }
+                    {
+                      name "then"
+                      type "const isolated () throws -> some Answer"
+                    }
+                    {
+                      name "else"
+                      type "const isolated () throws -> some Answer"
                     }
                   ]
                   result {

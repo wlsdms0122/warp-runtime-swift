@@ -201,7 +201,12 @@ struct ControlFlowTests {
         // Given. The same early leave, reached through a native procedure that
         // calls the body once per element rather than through `apply`.
         let judging = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool, constness: .const),
+            signature: Signature(
+                parameters: [Parameter(name: "item", type: .int)],
+                returns: .bool,
+                constness: .const,
+                isolation: .isolated
+            ),
             body: [
                 Statement(expression: .conditional(
                     equals(reference("item"), .literal(.int(2))),
@@ -212,7 +217,7 @@ struct ControlFlowTests {
             result: .literal(.bool(false))
         )
         let asking = Procedure(
-            signature: Signature(returns: .array(.int), failing: .anything),
+            signature: Signature(returns: .array(.int)),
             body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
             result: .call(
                 Call(

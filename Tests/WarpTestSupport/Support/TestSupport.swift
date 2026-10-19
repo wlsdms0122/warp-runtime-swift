@@ -176,7 +176,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
                     conditions.map { condition in
                         .closure(
                             Procedure(
-                                signature: Signature(returns: .bool, failing: .anything, constness: .const),
+                                signature: Signature(returns: .bool, constness: .const, isolation: .isolated),
                                 implementation: .body(Block(body: [], result: condition))
                             )
                         )
