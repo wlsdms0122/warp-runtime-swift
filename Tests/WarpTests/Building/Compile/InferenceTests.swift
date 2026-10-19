@@ -106,7 +106,8 @@ struct InferenceTests {
             signature: Signature(
                 parameters: [Parameter(name: "item", type: .string)],
                 returns: .int,
-                constness: .const
+                constness: .const,
+                isolation: .isolated
             ),
             body: [],
             result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("item")]))
@@ -121,8 +122,7 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "names", type: .array(.string))],
-                        failing: .anything
+                        parameters: [Parameter(name: "names", type: .array(.string))]
                     ),
                     body: [
                         Statement(binding: .constant("sizes"), expression: .call(Call(
