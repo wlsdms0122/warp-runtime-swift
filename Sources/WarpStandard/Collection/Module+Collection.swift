@@ -19,7 +19,9 @@ public extension Module {
                     description: "The elements with one more at the end.",
                     signature: Signature(
                         of: AppendingQuery.self,
-                        returns: .array(.parameter(name: "Element"))
+                        returns: .array(.parameter(name: "Element")),
+                        constness: .const,
+                        isolation: .isolated
                     ),
                     implementation: .query(AppendingQuery())
                 ),
@@ -27,7 +29,9 @@ public extension Module {
                     description: "The collection's own elements, at the positions given.",
                     signature: Signature(
                         of: GatheringQuery.self,
-                        returns: .array(.parameter(name: "Element"))
+                        returns: .array(.parameter(name: "Element")),
+                        constness: .const,
+                        isolation: .isolated
                     ),
                     implementation: .query(GatheringQuery())
                 ),
@@ -36,6 +40,8 @@ public extension Module {
                     signature: Signature(
                         of: KeysQuery.self,
                         returns: .array(key),
+                        constness: .const,
+                        isolation: .isolated,
                         bounds: keyed
                     ),
                     implementation: .query(KeysQuery())
@@ -45,6 +51,8 @@ public extension Module {
                     signature: Signature(
                         of: SettingQuery.self,
                         returns: .dictionary(key: key, value: .parameter(name: "Value")),
+                        constness: .const,
+                        isolation: .isolated,
                         bounds: keyed
                     ),
                     implementation: .query(SettingQuery())

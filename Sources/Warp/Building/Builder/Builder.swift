@@ -35,12 +35,12 @@ import Foundation
 //
 // Two stages. Compiling (`Compiler`, one document at a time) judges
 // everything a document says against the interfaces it reaches: its
-// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), the
-// facts nobody declared (`Derivation`), its bodies (`TypeChecker`) and
-// lowering (`Lowering`). It runs the procedures a constant calls, which is
-// what folding is. Linking takes what that answered, judges what only the
-// whole list can answer, one claim for each type and contract, and runs
-// nothing.
+// declarations (`DeclarationChecker`), what it claims (`ClaimChecker`), what
+// each body does against what it declares (`EffectChecker`), its bodies
+// (`TypeChecker`) and lowering (`Lowering`). It runs the procedures a
+// constant calls, which is what folding is. Linking takes what that
+// answered, judges what only the whole list can answer, one claim for each
+// type and contract, and runs nothing.
 public struct Builder: Sendable {
     // MARK: - Property
     // How an object's fingerprint is worked out, where a host wants its
@@ -128,7 +128,7 @@ public struct Builder: Sendable {
 
         try DeclarationChecker().judge(compiled, in: declaring)
 
-        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
+        let signatures = signatures(of: assembled)
 
         // Which types answer which contracts among these documents, each of
         // whose claims was held where its document was compiled.
@@ -160,14 +160,7 @@ public struct Builder: Sendable {
                 }
             }
 
-            let answered = try document.answers.reduce(into: [Name: LoweredType]()) { read, answer in
-                read[answer.key] = try numbered.read(
-                    answer.value,
-                    at: .procedure(answer.key.spelling, in: document.document)
-                )
-            }
-
-            compiling.lay(document, at: origin, rows: rows, answering: answered)
+            compiling.lay(document, at: origin, rows: rows)
         }
 
         try compiling.resolveHeldClosures()
@@ -404,11 +397,10 @@ public struct Builder: Sendable {
             // to be.
             let own = handed[position]
 
-            for (name, declared) in try Self.declarations(
+            for (name, declared) in Self.declarations(
                 of: object,
                 at: own,
-                answering: givenHere[own] ?? [],
-                in: answering.loweredTypes
+                answering: givenHere[own] ?? []
             ) where signatures[name] != nil {
                 signatures[name] = declared
             }
@@ -475,7 +467,7 @@ public struct Builder: Sendable {
 
         try DeclarationChecker().judge(compiled, in: declaring)
 
-        let signatures = try signatures(of: assembled, in: declaring.loweredTypes)
+        let signatures = signatures(of: assembled)
 
         // Which types answer which contracts across the documents, one claim
         // each, every one of them held where its document was compiled.
@@ -531,39 +523,25 @@ public struct Builder: Sendable {
         })
     }
 
-    // What one object's members say of themselves, with what the build
-    // worked out of each, under the spelling each was declared by: what a
-    // claim is held to. What the build read off a body is in the object's own
-    // type numbers, so it is read as the rows of `loweredTypes`.
+    // What one object's members say of themselves, under the spelling each
+    // was declared by: what a claim is held to.
     private static func declarations(
         of object: Compiled,
         at handed: Int,
-        answering members: Set<Name>,
-        in loweredTypes: LoweredTypeTable
-    ) throws -> [Name: Placed<Declared>] {
+        answering members: Set<Name>
+    ) -> [Name: Placed<Declared>] {
         guard !members.isEmpty else { return [:] }
 
-        let rows = object.typeNumbering.rows(in: loweredTypes)
-
-        return try object.declared.enumerated().reduce(into: [:]) { declarations, entry in
+        return object.declared.enumerated().reduce(into: [:]) { declarations, entry in
             let (offset, name) = entry
 
             guard members.contains(name) else { return }
+
             let judged = object.table[offset]
-            let place = Place.procedure(name.spelling, in: object.document)
 
             declarations[name] = Placed(
-                Declared(
-                    signature: judged.signature,
-                    access: judged.access,
-                    facts: (
-                        judged.constness,
-                        judged.isolation,
-                        judged.failing,
-                        try object.answers[name].map { answer in try rows.read(answer, at: place) }
-                    )
-                ),
-                at: place,
+                Declared(signature: judged.signature, access: judged.access),
+                at: Place.procedure(name.spelling, in: object.document),
                 of: handed
             )
         }
@@ -612,35 +590,15 @@ public struct Builder: Sendable {
     // was declared by and at the place it was written. What a document
     // declares is its own; where it stands among the documents is the
     // host's order.
-    //
-    // What the build read off a body is written in its document's type
-    // numbers, so it is read as the rows of `loweredTypes`.
-    private func signatures(
-        of assembled: Assembled,
-        in loweredTypes: LoweredTypeTable
-    ) throws -> [Name: Placed<Declared>] {
+    private func signatures(of assembled: Assembled) -> [Name: Placed<Declared>] {
         var signatures: [Name: Placed<Declared>] = [:]
-        var numbered: [Int: LoweredTypeNumbering.Renumbering] = [:]
 
         for (name, number) in assembled.rows {
             let row = assembled.table[number]
-            let place = Place.procedure(name.spelling, in: assembled.documents[row.origin])
-            var answer: LoweredType?
-
-            if let read = assembled.answers[number] {
-                let rows = numbered[row.origin] ?? assembled.typeNumbering[row.origin].rows(in: loweredTypes)
-
-                numbered[row.origin] = rows
-                answer = try rows.read(read, at: place)
-            }
 
             signatures[name] = Placed(
-                Declared(
-                    signature: row.judged.signature,
-                    access: row.judged.access,
-                    facts: (row.judged.constness, row.judged.isolation, row.judged.failing, answer)
-                ),
-                at: place,
+                Declared(signature: row.judged.signature, access: row.judged.access),
+                at: Place.procedure(name.spelling, in: assembled.documents[row.origin]),
                 of: row.origin
             )
         }

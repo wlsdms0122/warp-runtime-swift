@@ -126,15 +126,15 @@ struct Validator: Sendable {
                 // A bound is declared by the procedure whose call fills the
                 // name, and a contract's procedure is answered by declarations
                 // that each declare their own.
-                if let bounded = asked.signature.bounds.keys.min() {
+                if let bounded = asked.bounds.keys.min() {
                     throw ValidationError(
                         "a contract's procedure writes no bounds. A type parameter is bounded by the signature"
                             + " of the procedure that declares it",
-                        at: place.bound(bounded, of: asked.signature)
+                        at: place.bound(bounded, of: asked)
                     )
                 }
 
-                guard asked.signature.sameTypes.isEmpty else {
+                guard asked.sameTypes.isEmpty else {
                     throw ValidationError(
                         "a contract's procedure writes no same types. What a type gives under a name the"
                             + " contract asks is the type's to say",
@@ -144,7 +144,7 @@ struct Validator: Sendable {
 
                 // `Self.Item` is a type this contract asks, since `Self` is
                 // whatever answers it.
-                if let unasked = asked.signature.associatedTypes.values
+                if let unasked = asked.associatedTypes.values
                     .filter({ member in member.of == TypeSpelling.selfType && !declared.types.contains(member.name) })
                     .map(\.name).sorted().first {
                     throw ValidationError(
@@ -158,16 +158,16 @@ struct Validator: Sendable {
                 // value is written `Self`, the type that answers the contract.
                 // A value and not a place: a call through the contract picks
                 // the declaration by the value standing there.
-                guard asked.signature.parameters.first?.type == .selfType else {
+                guard asked.parameters.first?.type == .selfType else {
                     throw ValidationError(
-                        "takes \(asked.signature.parameters.first?.type.rendered ?? "nothing") first."
+                        "takes \(asked.parameters.first?.type.rendered ?? "nothing") first."
                             + " A contract's procedure takes `Self` first: the value it is"
                             + " answered about, of the type that answers it",
                         at: place.part(.parameters)
                     )
                 }
 
-                try validate(asked.signature, in: .contract, at: place)
+                try validate(asked, in: .contract, at: place)
             }
         }
 
@@ -1181,6 +1181,8 @@ struct Validator: Sendable {
     // a parameter, at whatever depth; a closure's are the procedure's around
     // it.
     private func validate(_ signature: Signature, in context: TypeContext, at place: Place) throws {
+        try held(signature.failing, at: place)
+
         for (parameter, contracts) in signature.bounds.sorted(by: { one, other in one.key < other.key }) {
             let here = place.bound(parameter, of: signature)
 
@@ -1195,7 +1197,7 @@ struct Validator: Sendable {
         // an associated type of one, which stands on the parameter its label
         // begins with.
         let named = signature.parameterNames
-        let riding = (signature.parameters.map(\.type) + [signature.returns].compactMap { $0 })
+        let riding = (signature.parameters.map(\.type) + [signature.returns])
             .reduce(into: named) { riding, type in riding.formUnion(type.associatedTypes.keys.map(\.root)) }
         let unwritten = signature.bounds.keys.filter { name in !riding.contains(name.root) }.sorted()
 
@@ -1303,9 +1305,7 @@ struct Validator: Sendable {
             try written(parameter.type.slotUnwrapped, in: context, at: here)
         }
 
-        if let returns = signature.returns {
-            try written(returns, in: context, at: place.part(.returns))
-        }
+        try written(signature.returns, in: context, at: place.part(.returns))
     }
 
     // A type held to where it is written: every name in it holding its
@@ -1435,7 +1435,8 @@ struct Validator: Sendable {
                 try written(parameter.slotUnwrapped, in: context, at: place.index(position))
             }
 
-            try written(procedure.returns ?? .any, in: context, at: place.part(.returns))
+            try written(procedure.returns, in: context, at: place.part(.returns))
+            try held(procedure.failing, at: place)
 
         case .inout:
             throw ValidationError(
@@ -1503,6 +1504,20 @@ struct Validator: Sendable {
         guard !grammar.holds(name) else { return }
 
         throw ValidationError(grammar.refusal(of: name), at: place)
+    }
+
+    // Each failure a signature or a procedure type says may come out of it,
+    // by a failure's name.
+    private func held(_ failing: Failing, at place: Place) throws {
+        guard case let .these(failures) = failing else { return }
+
+        for failure in failures.sorted() {
+            guard let name = try? Name(failure) else {
+                throw ValidationError("a failure's name is written, and this one is empty", at: place)
+            }
+
+            try held(name, as: .failure, at: place)
+        }
     }
 
     // A key of `bounds` or `sameTypes`: a type parameter's name, or an

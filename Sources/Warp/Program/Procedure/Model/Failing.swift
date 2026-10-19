@@ -11,8 +11,8 @@ import Foundation
 // the types a `RecoverableFailure` names itself by, which is what a rescue
 // reads as `type`.
 //
-// Derived for a body from what it casts, calls and rescues; declared by a
-// native procedure, a contract's procedure and a procedure type.
+// Declared by a signature and a procedure type; a body is held to what its
+// declaration says by what it casts, calls and rescues.
 public enum Failing: Sendable, Equatable {
     // Anything at all.
     case anything
@@ -21,6 +21,9 @@ public enum Failing: Sendable, Equatable {
     case these(Set<String>)
 
     // MARK: - Property
+    // The word a document writes for anything.
+    public static let anythingSpelling = "anything"
+
     // Whether this says nothing can fail out of it.
     public var failsNothing: Bool {
         self == .these([])
@@ -30,7 +33,7 @@ public enum Failing: Sendable, Equatable {
     public var rendered: String {
         switch self {
         case .anything:
-            return "anything"
+            return Self.anythingSpelling
 
         case let .these(failures) where failures.isEmpty:
             return "nothing"
@@ -50,20 +53,15 @@ public enum Failing: Sendable, Equatable {
         return .these(mine.union(theirs))
     }
 
-    // Whether everything this may fail with is among `allowed`. Anything is
-    // within no list.
-    public func fails(within allowed: Set<String>) -> Bool {
-        guard case let .these(failures) = self else { return false }
-
-        return failures.isSubset(of: allowed)
-    }
-
-    // Whether this stands where a slot says `allowed` may come out: anywhere
-    // a slot allows anything, and within what it names otherwise.
+    // Whether this stands where `allowed` may come out: anywhere that allows
+    // anything, and within what it names otherwise. Anything is within no
+    // list.
     func fails(within allowed: Failing) -> Bool {
         guard case let .these(names) = allowed else { return true }
 
-        return fails(within: names)
+        guard case let .these(failures) = self else { return false }
+
+        return failures.isSubset(of: names)
     }
 
     // MARK: - Private

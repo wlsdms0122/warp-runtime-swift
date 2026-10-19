@@ -170,7 +170,7 @@ struct TypeTests {
         // declaration is text, so this is the half of checking the builder can
         // do
         let counts = Procedure(
-            signature: Signature(returns: .int),
+            signature: Signature(returns: .int, constness: .const),
             body: [],
             result: .literal(.int(1))
         )
@@ -194,51 +194,6 @@ struct TypeTests {
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("sending 'wants' with text, which holds Int where String is declared")
-        }
-    }
-
-    @Test("an answer no declaration writes is read off the body, and held to the same rule")
-    func anUnwrittenAnswerIsReadOffTheBody() async throws {
-        // Given. `counts` declares nothing, and its body answers a whole
-        // number. The declaration stays as the author left it; what the build
-        // reads a call as is what the body hands back, so the same disagreement
-        // a declared answer earns is earned here.
-        let counts = Procedure(body: [], result: .literal(.int(1)))
-        let wants = Procedure(
-            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
-            body: []
-        )
-        let entry = Procedure(
-            body: [
-                Statement(binding: .constant("said"), expression: .call(
-                    Call(selector: "wants", arguments: [.call(Call(selector: "counts"))])
-                ))
-            ]
-        )
-
-        // When / Then
-        await #expect {
-            try await Builder().build(
-                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": counts])]
-            )
-        } throws: { error in
-            error is BuildError && "\(error)".contains("holds Int where String is declared")
-        }
-
-        // And a body whose answer nothing can be read from reads `Any`, since
-        // an answer worked out from its own is not one the text states, and a
-        // slot of a type takes a value read as `Any` only through a cast.
-        let cycling = Procedure(
-            body: [],
-            result: .call(Call(selector: "counts"))
-        )
-
-        await #expect {
-            try await Builder().build(
-                [try Module(procedures: ["entry": entry.with(access: .public), "wants": wants, "counts": cycling])]
-            )
-        } throws: { error in
-            error is BuildError && "\(error)".contains("holds Any where String is declared")
         }
     }
 
@@ -370,11 +325,8 @@ struct TypeTests {
             linked: Linked(
                 label: "assembled",
                 origin: 0,
-                signature: Signature(),
+                signature: Signature(returns: .any, failing: .anything),
                 access: .internal,
-                constness: .unstated,
-                isolation: .unstated,
-                failing: .anything,
                 implementation: .body(
                     LoweredBody(instructions: [], result: result.map(Operation.literal)),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])

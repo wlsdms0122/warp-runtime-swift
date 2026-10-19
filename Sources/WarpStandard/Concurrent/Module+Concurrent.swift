@@ -27,27 +27,49 @@ public extension Module {
                 "Standard.Concurrent.all": Procedure(
                     description: "Runs every closure, and answers every answer in the closures' order."
                         + " A failure fails the whole procedure, with every piece's failure reported.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: .array(answer)),
+                    signature: Signature(
+                        parameters: [pieces(in: TypeExpression.array)],
+                        returns: .array(answer),
+                        failing: failing,
+                        isolation: .isolated
+                    ),
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.all"))
                 ),
                 "Standard.Concurrent.allKeyed": Procedure(
                     description: "Runs every closure, and answers every answer under the closure's key."
                         + " A failure fails the whole procedure, with every piece's failure reported.",
-                    signature: Signature(parameters: [pieces(in: keyed)], returns: keyed(answer), bounds: keys),
+                    signature: Signature(
+                        parameters: [pieces(in: keyed)],
+                        returns: keyed(answer),
+                        failing: failing,
+                        isolation: .isolated,
+                        bounds: keys
+                    ),
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.allKeyed"))
                 ),
                 "Standard.Concurrent.first": Procedure(
                     description: "Runs every closure, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(parameters: [pieces(in: TypeExpression.array)], returns: answer),
+                    signature: Signature(
+                        parameters: [pieces(in: TypeExpression.array)],
+                        returns: answer,
+                        failing: failing,
+                        isolation: .isolated
+                    ),
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.first"))
                 ),
                 "Standard.Concurrent.firstKeyed": Procedure(
                     description: "Runs every closure under a key, answers the first success and"
                         + " asks the rest to stop. Which one wins is the one fact"
                         + " here timing decides.",
-                    signature: Signature(parameters: [pieces(in: keyed)], returns: answer, bounds: keys),
+                    signature: Signature(
+                        parameters: [pieces(in: keyed)],
+                        returns: answer,
+                        failing: failing,
+                        isolation: .isolated,
+                        bounds: keys
+                    ),
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.firstKeyed"))
                 )
             ]
@@ -66,6 +88,9 @@ public extension Module {
     }
 
     private static let keys: [Name: Set<Name>] = ["Key": [TypeSpelling.hashable]]
+
+    // Every recoverable failure a piece raises is gathered into one.
+    private static let failing = Failing.these([ConcurrentFailed.type])
 
     // The pieces a fan-out runs, held in a list or under keys: closures that
     // touch nothing another piece could touch at once, each answering the

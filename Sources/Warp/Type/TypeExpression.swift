@@ -54,9 +54,9 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
     // takes any procedure, and a value of it stands where a procedure type
     // is read once a cast says what it is.
     //
-    // Constness and isolation are requirements rather than claims. A declaration
-    // never states its own (the builder derives both from what a body does) so
-    // what is written here is what a slot asks of whatever fills it.
+    // Constness and isolation are what a slot asks of whatever fills it, and
+    // what a declaration's signature says of itself where it is read as a
+    // value.
     case procedure(ProcedureType?, Constness = .unstated, Isolation = .unstated)
 
     // A field that a path may write through. Only a declared type's field is
@@ -431,7 +431,7 @@ public indirect enum TypeExpression: Sendable, Equatable, CustomStringConvertibl
             }
 
             return "\(modifiers)(\(parameters.joined(separator: ", ")))\(throwing)"
-                + " -> \((type.returns ?? .any).spelled(bounding: bound))"
+                + " -> \(type.returns.spelled(bounding: bound))"
 
         case let .array(element):
             return "\(TypeSpelling.array)<\(element.spelled(bounding: bound))>"

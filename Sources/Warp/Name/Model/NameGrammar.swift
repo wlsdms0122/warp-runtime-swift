@@ -34,6 +34,9 @@ import Foundation
 // - a type member's name: the name a contract asks a type under and a type
 //   gives one under. One identifier, since `some T.Item` writes it after
 //   the type parameter's name and a dot.
+// - a failure's name: what `failing` lists and `throws(…)` writes. One
+//   identifier, and not `anything`, which says any failure and so names
+//   none.
 //
 // No type's name and no type parameter's name is a word the language writes
 // itself: the names it gives its own types, the words a type's spelling
@@ -48,6 +51,7 @@ public enum NameGrammar: Sendable {
     case contractProcedure
     case member
     case typeMember
+    case failure
 
     // MARK: - Property
     static let reserved: Set<Name> = Set(TypeExpression.keywords.keys)
@@ -105,6 +109,9 @@ public enum NameGrammar: Sendable {
 
         case .contractProcedure, .member, .typeMember:
             return name.isIdentifier
+
+        case .failure:
+            return name.isIdentifier && name.spelling != Failing.anythingSpelling
         }
     }
 
@@ -147,6 +154,10 @@ public enum NameGrammar: Sendable {
         case .typeMember:
             return "'\(name)' is no type member's name. A type writes a type parameter's name, a dot and"
                 + " the member's, `some T.Item`, so a type member is named by one identifier"
+
+        case .failure:
+            return "'\(name)' is no failure's name. A failure is named by one identifier, and"
+                + " `\(Failing.anythingSpelling)` says any failure, so it names none"
         }
     }
 

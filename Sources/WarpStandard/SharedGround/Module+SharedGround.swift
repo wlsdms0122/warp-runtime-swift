@@ -66,8 +66,9 @@ public extension Module {
                     ],
                     // What has a count.
                     ContractSpelling.collection: [
-                        "count": ContractProcedure(
-                            signature: Signature(parameters: [Parameter(name: "collection", type: .selfType)], returns: .int),
+                        "count": Signature(
+                            parameters: [Parameter(name: "collection", type: .selfType)],
+                            returns: .int,
                             constness: .const,
                             isolation: .isolated
                         )

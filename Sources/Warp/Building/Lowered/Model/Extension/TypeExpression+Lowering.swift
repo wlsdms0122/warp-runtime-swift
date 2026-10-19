@@ -61,7 +61,7 @@ extension TypeExpression {
                 type.map { type in
                     LoweredProcedureType(
                         parameters: type.parameters.map(part),
-                        returns: type.returns.map(part),
+                        returns: part(type.returns),
                         failing: type.failing
                     )
                 },

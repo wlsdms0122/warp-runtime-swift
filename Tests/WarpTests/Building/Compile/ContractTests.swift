@@ -156,7 +156,7 @@ struct ContractTests {
                     ),
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(returns: .int),
+                        signature: Signature(returns: .int, failing: .these(["cast_refused"])),
                         body: [
                             Statement(
                                 binding: .constant("account"),
@@ -316,7 +316,7 @@ struct ContractTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("account"),
@@ -509,14 +509,19 @@ struct ContractTests {
         try Module(
             imports: ["Standard.Text.uppercased"],
             types: ["Bank.Account": .struct(["balance": .int])],
-            contracts: ["App.Describable": ["describe": ContractProcedure(signature: Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string), constness: constness)]],
+            contracts: [
+                "App.Describable": [
+                    "describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string, constness: constness)
+                ]
+            ],
             claims: ["Bank.Account": ["App.Describable"]],
             members: ["Bank.Account": ["describe"]],
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
-                        returns: .string
+                        returns: .string,
+                        constness: constness
                     ),
                     body: [],
                     result: .literal(.string("an account"))
@@ -543,7 +548,7 @@ struct ContractTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .string),
+                    signature: Signature(returns: .string, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("held"),
@@ -579,7 +584,7 @@ struct ContractTests {
             ),
             entryName: Procedure(
                 access: .public,
-                signature: Signature(returns: .string),
+                signature: Signature(returns: .string, failing: .these(["cast_refused"])),
                 body: [
                     Statement(
                         binding: .constant("held"),
@@ -614,7 +619,7 @@ struct ContractTests {
                 "Bank.Card": ["describe"]
             ],
             procedures: [
-                entryName: Procedure(access: .public, body: body, result: result),
+                entryName: Procedure(access: .public, signature: Signature(returns: .any, failing: .these(["cast_refused"])), body: body, result: result),
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [

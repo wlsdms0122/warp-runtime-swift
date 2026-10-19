@@ -320,7 +320,7 @@ struct DeclaredSpellingTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Numeric.plus",

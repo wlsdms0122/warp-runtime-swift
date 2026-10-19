@@ -57,10 +57,6 @@ struct Assembled: Sendable {
     let typeNumbering: [LoweredTypeNumbering]
     let variables: [[(name: Name, value: Value)]]
 
-    // What the build read off a body whose declaration wrote no `returns`, by
-    // row, in the type numbers of the document that wrote it.
-    let answers: [Int: LoweredType]
-
     // Which row a closure a value holds stands at, by its spelling.
     let spelled: ClosureRowTable
 
@@ -81,7 +77,6 @@ struct Assembled: Sendable {
         var numbering: [Numbering] = []
         var typeNumbering: [LoweredTypeNumbering] = []
         var variables: [[(name: Name, value: Value)]] = []
-        var answers: [Int: LoweredType] = [:]
 
         table.reserveCapacity(held)
         rows.reserveCapacity(held)
@@ -129,12 +124,6 @@ struct Assembled: Sendable {
                 rows[name] = start + offset
             }
 
-            for (name, answer) in documents[origin].answers {
-                guard let row = own[name] else { continue }
-
-                answers[row] = answer
-            }
-
             owned.append(own)
             closures[origin] = documents[origin].lifted.map { row in start + row }
 
@@ -162,7 +151,6 @@ struct Assembled: Sendable {
         self.numbering = numbering
         self.typeNumbering = typeNumbering
         self.variables = variables
-        self.answers = answers
     }
 
     // MARK: - Public

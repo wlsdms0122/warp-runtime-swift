@@ -12,8 +12,6 @@ final class TicketQuery: Query, @unchecked Sendable {
     typealias Parameters = NoParameters
 
     // MARK: - Property
-    let isolated = false
-
     private let lock = NSLock()
     private var issued = 0
 

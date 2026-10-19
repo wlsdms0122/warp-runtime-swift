@@ -13,8 +13,6 @@ struct FirstEffect: Effect {
     typealias Parameters = FanoutOperand
 
     // MARK: - Property
-    let failing = Failing.these([ConcurrentFailed.type])
-
     private let fanout: Fanout
 
     // MARK: - Initializer

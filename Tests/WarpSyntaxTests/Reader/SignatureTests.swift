@@ -35,8 +35,8 @@ struct SignatureTests {
         #expect(signature.parameter(named: "subject")?.type == .any)
     }
 
-    @Test("a procedure written without a return type declares nothing")
-    func untypedReturnDeclaresNothing() throws {
+    @Test("a procedure written without a return type answers Null")
+    func untypedReturnAnswersNull() throws {
         // Given / When
         let sut = try Loader.testing.loadDocument([
             "procedures": [
@@ -46,7 +46,7 @@ struct SignatureTests {
         ])
 
         // Then
-        #expect(try #require(sut.procedures["quiet"]).signature.returns == nil)
+        #expect(try #require(sut.procedures["quiet"]).signature.returns == .null)
         #expect(try #require(sut.procedures["loud"]).signature.returns == .any)
     }
 

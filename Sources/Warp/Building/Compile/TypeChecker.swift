@@ -131,26 +131,6 @@ struct TypeChecker {
         locals: Set<Name>
     )
 
-    // A declaration whose answer nobody wrote, with what it takes to read one
-    // off the body: the body itself, the names in scope before its first
-    // statement, and which other unwritten answers its own may come from.
-    struct Unsaid {
-        // MARK: - Property
-        // The declaration itself, rather than the two things this walk asks of
-        // it. What it is called across the link and where it is written in the
-        // document are both the symbol's to say, and copying either out here
-        // would be a second place the rule for it lives.
-        let symbol: Symbol
-
-        let block: Block
-        let environment: [Name: Binding]
-        let sends: Set<Name>
-
-        // MARK: - Initializer
-        // MARK: - Public
-        // MARK: - Private
-    }
-
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
@@ -163,16 +143,13 @@ struct TypeChecker {
         at place: Place,
         in environment: [Name: Binding],
         declaring selector: Name,
-        answering returns: TypeExpression?,
+        answering returns: TypeExpression,
         with context: TypingContext,
         folding: Folding?
     ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
-        let promised = returns?.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
-
-        // A closure literal the body answers, at any depth, is completed by
-        // the type the declaration answers.
+        let promised = returns.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
         let inner = try await inspected(
-            block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
+            block: block,
             into: promised,
             at: place,
             in: environment,
@@ -189,9 +166,7 @@ struct TypeChecker {
             in: context.loweredTypes
         )
 
-        let written = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
-
-        return (written, inner.calls, inner.judgements)
+        return (promised.written(inner.block, in: context.loweredTypes), inner.calls, inner.judgements)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -239,83 +214,6 @@ struct TypeChecker {
         )
     }
 
-    // What a declaration answers when nobody wrote it down, read off its body
-    // and kept beside the declaration, which the image carries as the author
-    // wrote it. It reaches exactly as far as the readings do.
-    //
-    // A body's answer may be another body's, so the order is the call graph's. Each
-    // declaration read after everything its answer could come from. Bodies that
-    // reach one another's answers in a cycle, a recursive one included, are read
-    // as `Any`: an answer worked out from itself is not one the text states.
-    // Writing `returns` is what says more, and it removes the cycle by saying it.
-    //
-    // Every unwritten answer, read off its body, one at a time in the order the
-    // call graph allows. Each handed back as it is worked out, and the context
-    // asked for again, so the next body is read against it.
-    //
-    // Handed back one at a time: one answer changes one entry in each of the
-    // build's tables a context is made of, and rebuilding them per declaration
-    // copies the whole graph once per node.
-    func answers(
-        of unsaid: [Unsaid],
-        reading context: () -> TypingContext,
-        recording: (Name, LoweredType) -> Void
-    ) async {
-        let declared = Dictionary(
-            unsaid.map { one in (one.symbol.declared, one) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        let edges = Dictionary(
-            unsaid.map { one in (one.symbol.declared, one.sends.sorted()) },
-            uniquingKeysWith: { first, _ in first }
-        )
-
-        for component in StronglyConnected(among: edges).components() {
-            // One declaration that does not reach its own answer is the only
-            // type a body can be read for. Everything else is a cycle, and
-            // a cycle says nothing.
-            guard
-                component.count == 1,
-                let only = component.first.flatMap({ name in declared[name] }),
-                !only.sends.contains(only.symbol.declared)
-            else {
-                for name in component { recording(name, .any) }
-
-                continue
-            }
-
-            // A refusal is the judging pass's to state, in its own terms and
-            // at its own place, so what this pass cannot read it treats as
-            // unread.
-            let read = try? await reading(
-                from: only.block,
-                at: only.symbol.place,
-                in: only.environment,
-                with: context().reading(only.symbol.procedure.signature)
-            )
-
-            // A reading naming a type parameter is handed on as it is. What a
-            // parameter means is decided at the call, by the same filling a
-            // declared `returns: some T` goes through, so a body answering its
-            // own parameter answers what the caller put there, and a body
-            // answering a type only it could name (what a walk *through* a
-            // parameter reaches, named for the path that reached it) fills with
-            // nothing, which is `Any`.
-            recording(only.symbol.declared, read ?? .any)
-        }
-    }
-
-    // Which declarations a body may read an answer from: every selector it
-    // sends. Read off the one walk `Expression` owns.
-    func sent(in block: Block) -> Set<Name> {
-        block.subexpressions.reduce(into: Set<Name>()) { sent, expression in
-            guard case let .call(call) = expression else { return }
-
-            sent.insert(call.selector)
-        }
-    }
-
     // The one gate every gathered call passes, wherever its body sits, and
     // whether its selector names a declaration or a contract's procedure. The
     // call is judged against the signature its selector names.
@@ -333,41 +231,16 @@ struct TypeChecker {
     }
 
     // MARK: - Private
-    // What a body hands its caller: the result it reads, and every `return`
-    // that carried something out. The two ways a procedure answers, joined.
-    // Read rather than judged, because this is asked of a body the walk may
-    // read again, and a refusal here would be one the judging pass is about to
-    // state in its own place.
-    private func reading(
-        from block: Block,
-        at place: Place,
-        in environment: [Name: Binding],
-        with context: TypingContext
-    ) async throws -> LoweredType {
-        let walked = try await inspected(
-            block: block,
-            into: nil,
-            at: place,
-            in: environment,
-            with: context,
-            ask: .probing
-        )
-
-        return walked.flow.answer(resulting: walked.reading)
-    }
-
     // One answer, held to the `returns`. The refusal stands where the author
     // can act on it: at the `result` when one is written, at the `returns`
     // when the body answers nothing at all, and at a `return` for what it
     // carries.
     private func refuseAnswer(
         _ written: LiteralShape,
-        to promised: LoweredType?,
+        to promised: LoweredType,
         at place: Place,
         in table: LoweredTypeTable
     ) throws {
-        guard let promised else { return }
-
         guard written.isHeld(by: promised, inPlace: false, in: table) else {
             throw BuildError(
                 "answers \(written.rendered(in: table)), and its"
@@ -1018,10 +891,9 @@ struct TypeChecker {
     // running. A value call and a construct in one are the load's to refuse,
     // since the text alone says where they stand.
     //
-    // The module variables constness strikes a body for reading are not struck
-    // here. Reading one is what reading a name is; what it costs a body is the
-    // promise of answering the same thing twice, and an operand makes no such
-    // promise.
+    // A module variable a const body may not read is read here. Reading one
+    // is what reading a name is; what it costs a body is the promise of
+    // answering the same thing twice, and an operand makes no such promise.
     private func runs(in expression: Expression, given context: TypingContext) -> Name? {
         switch expression {
         case .literal, .reference, .closure, .apply, .conditional, .loop, .attempt, .leave:
@@ -1047,7 +919,7 @@ struct TypeChecker {
         case let .call(call):
             guard
                 context.signature(of: call.selector) != nil,
-                !context.isConst(call.selector)
+                context.signature(of: call.selector)?.constness != .const
             else {
                 return call.arguments.lazy
                     .compactMap { argument in runs(in: argument, given: context) }.first
@@ -1067,7 +939,7 @@ struct TypeChecker {
     private func refuseAnswers(
         written answer: LiteralShape,
         answered: [Flow.Answer],
-        to promised: LoweredType?,
+        to promised: LoweredType,
         result: Expression?,
         at place: Place,
         in table: LoweredTypeTable
@@ -1419,10 +1291,10 @@ struct TypeChecker {
             }
 
             // What a `return` carries stands where the body declares its
-            // answer, a closure literal included.
+            // answer.
             let answer = leave.reach == .procedure ? ask.answer : nil
             let carried = try await inspected(
-                answer.map { answer in answer.completing(value, in: context.loweredTypes) } ?? value,
+                value,
                 naming: nil,
                 into: answer,
                 at: place.child(.held),
@@ -1575,12 +1447,11 @@ struct TypeChecker {
         case let .cast(value, type, optional):
             // The type the cast names is a place a literal in what it reads
             // is written into, as a slot is: a struct literal is read as the
-            // struct it names, a whole literal as the fraction it names where
-            // it declares a Double, and a closure literal is completed by the
-            // procedure type it names, at every depth.
+            // struct it names, and a whole literal as the fraction it names
+            // where it declares a Double, at every depth.
             let claim = type.lowered(in: context.loweredTypes)
             let inner = try await inspected(
-                claim.completing(value, in: context.loweredTypes),
+                value,
                 naming: nil,
                 into: claim,
                 at: place.child(.subject(optional: optional)),
@@ -1838,9 +1709,8 @@ struct TypeChecker {
         // called, and the flow here is the flow of the making. Judging still
         // follows the body even though nothing can say whether it is ever
         // called: the warrant is compilation, and a body that never runs still
-        // has to compile. It sees what surrounds it plus what it declares.
-        // Constness is read the same way a declaration's is. From what the body
-        // calls.
+        // has to compile. It sees what surrounds it plus what it declares, and
+        // is held to its signature the way a declaration's body is.
         case let .closure(written):
             // The Validator refuses a closure literal that is not a body.
             guard case let .body(block) = written.implementation else {
@@ -1852,7 +1722,7 @@ struct TypeChecker {
             // A closure's `some T` is the name the procedure around it filled,
             // held to the bounds that procedure declared; its own signature
             // writes none.
-            var procedure = written.with(
+            let procedure = written.with(
                 signature: written.signature.bounded(by: context.bounds, sameTypes: context.sameTypes)
             )
             var rewritten = expression
@@ -1876,37 +1746,20 @@ struct TypeChecker {
 
             // The body read under the ask this walk answers: what it reaches
             // from outside is what the closure takes, which either ask needs.
-            // A closure literal the body answers, at any depth, is completed
-            // by the type the closure answers. Its body reads the names of
-            // the procedure around it, so a closure it writes does too.
+            // Its body reads the names of the procedure around it, so a
+            // closure it writes does too.
             let promised = procedure.signature.loweredReturns(in: context.loweredTypes)
+            let opening = taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
+                _, own in own
+            }
             let inner = try await inspected(
-                block: promised.map { promised in promised.completing(block, in: context.loweredTypes) } ?? block,
+                block: block,
                 into: promised,
                 at: place.child(.closure),
-                in: taken.merging(procedure.signature.environment(in: context.loweredTypes)) {
-                    _, own in own
-                },
+                in: opening,
                 with: context,
                 ask: ask.answering(promised)
             )
-
-            // A closure that writes no `returns`, written where nothing
-            // completes it, answers what its body hands back, each way out
-            // read as a name holds it, the way a declaration that writes none
-            // does. The answer is written into its signature, so the run
-            // reads the closure as the build did.
-            if procedure.signature.returns == nil {
-                let answered = inner.flow.answer(resulting: inner.reading)
-
-                procedure = procedure.with(
-                    signature: Signature(
-                        parameters: procedure.signature.parameters,
-                        returns: answered.spelled(in: context.loweredTypes)
-                    )
-                    .bounded(by: context.bounds, sameTypes: context.sameTypes)
-                )
-            }
 
             // A box the closure takes is one it reads and writes when it is
             // called, as the type it reads as here. What it reaches it hands
@@ -1961,62 +1814,27 @@ struct TypeChecker {
                     in: context.loweredTypes
                 )
 
-                body = promised.map { promised in promised.written(inner.block, in: context.loweredTypes) } ?? inner.block
+                body = promised.written(inner.block, in: context.loweredTypes)
                 calls = inner.calls
                 judgements = inner.judgements
-            }
 
-            // A module variable the body reads strikes constness under either
-            // ask, so the probing walk and the judging one read one closure
-            // as one type.
-            let reading = context.variables.subtracting(declared)
+                // Held as it was written, as a declaration's body is, from
+                // the names its body was read in: a name it captured carries
+                // what the slot it came from said about it.
+                if let refusal = EffectChecker(context).refusal(
+                    of: block,
+                    declared: procedure.signature,
+                    bound: opening.compactMapValues(\.declaredType)
+                ) {
+                    throw BuildError("the closure \(refusal)", at: place.child(.closure))
+                }
 
-            // A name this closure captured carries what the slot it came from
-            // said about it, and its own parameters shadow any it captured.
-            let bound = procedure.signature.environment(in: context.loweredTypes)
-                .merging(outside) { own, _ in own }
-                .compactMapValues(\.declaredType)
-
-            let const = Derivation().isConst(
-                body,
-                declaring: procedure.signature.ownedParameters,
-                given: context.isConst,
-                reading: reading,
-                bound: bound,
-                taking: context.signature(of:),
-                in: context.loweredTypes
-            )
-            let isolated = Derivation().isIsolated(
-                body,
-                declaring: declared,
-                given: context.isIsolated,
-                bound: bound,
-                taking: context.signature(of:),
-                in: context.loweredTypes
-            )
-            let failing = Derivation().failing(
-                body,
-                given: context.failing(of:),
-                bound: bound,
-                in: context.loweredTypes
-            )
-
-            if case .judging = ask {
                 rewritten = .closure(
                     Procedure(
                         description: procedure.description,
                         signature: procedure.signature,
                         implementation: .body(body)
                     )
-                )
-
-                judgements.record(
-                    .closure(
-                        constness: const ? .const : .unstated,
-                        isolation: isolated ? .isolated : .unstated,
-                        failing: failing
-                    ),
-                    at: place.child(.closure)
                 )
             } else if procedure.signature != written.signature {
                 rewritten = .closure(procedure)
@@ -2026,12 +1844,7 @@ struct TypeChecker {
                 rewritten: rewritten,
                 calls: calls,
                 judgements: judgements,
-                reading: TypeExpression.procedure(
-                    procedure.signature.type.with(failing: failing),
-                    const ? .const : .unstated,
-                    isolated ? .isolated : .unstated
-                )
-                .lowered(
+                reading: procedure.signature.type.lowered(
                     in: context.loweredTypes,
                     bounds: procedure.signature.bounds,
                     sameTypes: procedure.signature.sameTypes
@@ -2040,8 +1853,8 @@ struct TypeChecker {
             )
 
         // Which value is called is decided at the run, and what it answers is
-        // the slot's to say under either ask: a procedure type that wrote
-        // `returns` answers that, and one that wrote none opens to `Any`. Its
+        // the slot's to say under either ask: a procedure type answers what it
+        // wrote after `->`, and a bare `Procedure` opens to `Any`. Its
         // operands are data, held as operands below, and write nothing. What
         // the call carries out is the boxes it took: a variable it hands in
         // place, and what a closure among its operands took.
@@ -2071,8 +1884,8 @@ struct TypeChecker {
             let callee = called.reading.slotUnwrapped
             let answers: LoweredType
 
-            if case let .procedure(signature?, _, _) = callee, let returns = signature.returns {
-                answers = returns
+            if case let .procedure(signature?, _, _) = callee {
+                answers = signature.returns
             } else {
                 answers = .any
             }
@@ -2085,12 +1898,6 @@ struct TypeChecker {
                 }
 
                 return signature.parameters[position]
-            }
-
-            // A closure literal written here, at any depth, is completed by
-            // the type it is written into.
-            let arguments = zip(arguments, taken).map { argument, slot in
-                slot.map { slot in slot.completing(argument, in: context.loweredTypes) } ?? argument
             }
 
             // The positions the call hands a variable in place: the ones the
@@ -2319,26 +2126,20 @@ struct TypeChecker {
                 at: place
             )
 
-            // A closure literal written here, at any depth, is completed by
-            // the type it is written into.
-            let written = call.arguments.indices.map { position in
-                slots[position].type.completing(call.arguments[position], in: context.loweredTypes)
-            }
-
             // A struct literal at a type parameter is the declared struct the
             // other arguments fill it with, so an argument holding one is read
             // once the readings join. Until then it holds no value of its
             // own and fills nothing, and what it reads as there is what it
             // fills the call with.
             let waiting = Set(call.arguments.indices.filter { position in
-                slots[position].type.namesParameter && holdsStructLiteral(written[position])
+                slots[position].type.namesParameter && holdsStructLiteral(call.arguments[position])
             })
             var inspections: [Int: Inspection] = [:]
             var sent: [LoweredType] = []
 
             for position in call.arguments.indices {
                 let inner = try await inspected(
-                    written[position],
+                    call.arguments[position],
                     naming: nil,
                     into: slots[position].type,
                     at: argumentPlaces[position],
@@ -2364,7 +2165,7 @@ struct TypeChecker {
 
             for position in waiting.sorted() {
                 inspections[position] = try await inspected(
-                    written[position],
+                    call.arguments[position],
                     naming: nil,
                     into: taking[position],
                     at: argumentPlaces[position],
@@ -2632,28 +2433,6 @@ struct TypeChecker {
         case let .attempt(block, rescue):
             let failure = name
 
-            // What the rescue is there for. A body nothing can fail out of
-            // leaves it a body no run reaches, and the author wrote it
-            // expecting otherwise: what they are told is which failures the
-            // build found, which is none.
-            let failures = Derivation().failing(
-                block,
-                given: context.failing(of:),
-                bound: environment.compactMapValues(\.declaredType),
-                in: context.loweredTypes
-            )
-
-            if failures.failsNothing {
-                try refuse(
-                    "attempts a body that cannot fail, so its rescue is a body"
-                        + " no run reaches. What a rescue catches is what the"
-                        + " body casts and calls, and this one casts and calls"
-                        + " nothing that fails",
-                    at: place,
-                    when: ask
-                )
-            }
-
             let attempted = try await inspected(
                 block: block,
                 into: declared,
@@ -2667,6 +2446,20 @@ struct TypeChecker {
             // rescue.
             let meets = meeting(at: place, in: context.loweredTypes, when: ask)
             let (failed, past) = try attempted.flow.gathered(where: { reach in reach == .failure }, meeting: meets)
+
+            // What the rescue is there for. A body nothing can fail out of
+            // leaves it a body no run reaches, and the author wrote it
+            // expecting otherwise.
+            if failed == nil {
+                try refuse(
+                    "attempts a body that cannot fail, so its rescue is a body"
+                        + " no run reaches. What a rescue catches is what the"
+                        + " body casts and calls, and this one casts and calls"
+                        + " nothing that fails",
+                    at: place,
+                    when: ask
+                )
+            }
             let rescued = try await inspected(
                 block: rescue,
                 into: declared,
@@ -2804,16 +2597,10 @@ struct TypeChecker {
         for (position, written) in body.statements.enumerated() {
             let here = place.statement(written, at: position)
 
-            // A closure literal written here, at any depth, is completed by
-            // the type it is written into.
             let target = try writtenInto(by: written.binding, in: environment, with: context, at: here, when: ask)
-            let statement = target.map { into in
-                Statement(binding: written.binding, expression: into.completing(written.expression, in: context.loweredTypes))
-            } ?? written
-
             let inner = try await inspected(
-                statement.expression,
-                naming: statement.binding?.introduced,
+                written.expression,
+                naming: written.binding?.introduced,
                 into: target,
                 at: here,
                 in: environment,
@@ -2832,7 +2619,7 @@ struct TypeChecker {
             flowed = flowed.followed(by: inner.flow.outside(locals))
 
             // A write reads the names its path indexes with.
-            if case let .assignment(path)? = statement.binding {
+            if case let .assignment(path)? = written.binding {
                 for name in path.expandingIndexReferences.compactMap(\.head) where !locals.contains(name) {
                     flowed.read.insert(name)
                 }
@@ -2846,11 +2633,11 @@ struct TypeChecker {
             // What the syntactic leaves get at the load, a call gets here, where
             // the signature is known.
             if inner.flow.leaves || inner.reading == .never {
-                rewritten.append(Statement(binding: statement.binding, expression: inner.rewritten))
+                rewritten.append(Statement(binding: written.binding, expression: inner.rewritten))
 
                 // What never finishes binds nothing, so a name on it
                 // promises a binding that cannot happen.
-                if statement.bindingAfter != nil {
+                if written.bindingAfter != nil {
                     try refuse(Expression.nameOnWhatNeverFinishes, at: here, when: ask)
                 }
 
@@ -2878,14 +2665,13 @@ struct TypeChecker {
 
             // A name that says what it holds holds that. One that says
             // nothing holds what the build worked out from what it was given.
-            // What a slot declared it holds is the derivation's to say, by the
+            // What a slot declared it holds is the effect checker's to say, by the
             // rule its own walk binds a name by.
-            let declaredType = statement.binding.flatMap { binding in
-                Derivation().declaredType(
+            let declaredType = written.binding.flatMap { binding in
+                EffectChecker(context).declaredType(
                     of: binding,
-                    reading: statement.expression,
-                    given: { name in environment[name]?.declaredType },
-                    in: context.loweredTypes
+                    reading: written.expression,
+                    given: { name in environment[name]?.declaredType }
                 )
             }
 
@@ -2897,7 +2683,7 @@ struct TypeChecker {
             // A write's path, as the walk where it lands placed it.
             var placed: LoweredPath?
 
-            switch statement.bindingAfter {
+            switch written.bindingAfter {
             case let .constant(id, _)?:
                 locals.insert(id)
                 environment[id] = Binding(
@@ -2977,7 +2763,7 @@ struct TypeChecker {
             }
 
             let standing = Statement(
-                binding: placed.map { placed in .assignment(placed.path) } ?? statement.binding,
+                binding: placed.map { placed in .assignment(placed.path) } ?? written.binding,
                 expression: value
             )
 
@@ -3099,12 +2885,9 @@ struct TypeChecker {
         in environment: [Name: Binding],
         given context: TypingContext
     ) -> Bool {
-        !Derivation().failingHere(
-            expression,
-            given: context.failing(of:),
-            bound: { name in environment[name]?.declaredType },
-            in: context.loweredTypes
-        ).failsNothing
+        !EffectChecker(context)
+            .failingHere(expression, bound: { name in environment[name]?.declaredType })
+            .failsNothing
     }
 
     // What a call hands in place at these positions, each variable held from

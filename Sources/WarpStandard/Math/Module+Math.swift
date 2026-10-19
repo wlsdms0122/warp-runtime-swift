@@ -17,12 +17,22 @@ public extension Module {
             procedures: [
                 "Standard.Math.floored": Procedure(
                     description: "The whole number at or below a fraction.",
-                    signature: Signature(of: FlooredQuery.self, returns: .int),
+                    signature: Signature(
+                        of: FlooredQuery.self,
+                        returns: .int,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(FlooredQuery())
                 ),
                 "Standard.Math.rounded": Procedure(
                     description: "The nearest whole number.",
-                    signature: Signature(of: RoundedQuery.self, returns: .int),
+                    signature: Signature(
+                        of: RoundedQuery.self,
+                        returns: .int,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(RoundedQuery())
                 )
             ]

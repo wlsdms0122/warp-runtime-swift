@@ -105,7 +105,7 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case let .procedure(signature, _, _):
             return (signature?.parameters ?? []).contains { parameter in parameter.namesParameter }
-                || (signature?.returns?.namesParameter ?? false)
+                || (signature?.returns.namesParameter ?? false)
 
         // A mention of a struct names what it is applied to. The struct's
         // own parameters are its declaration's, which a mention fills.
@@ -268,9 +268,8 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // What a box a write may fill again holds where its start reads as this:
     // a literal whole number an Int, wherever in it one stands, and every
-    // procedure in it without the constness, isolation or failing the build
-    // derived for the one value judged, since a write may put another
-    // procedure there.
+    // procedure in it without the constness, isolation or failing the one
+    // value judged declared, since a write may put another procedure there.
     var boxed: LoweredType {
         switch self {
         case .wholeLiteral:
@@ -393,7 +392,7 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .procedure(signature, _, _):
             guard let signature else { return .any }
 
-            let answer = (signature.returns ?? .any).boundedAlone
+            let answer = signature.returns.boundedAlone
 
             guard answer != .any else { return .any }
 
@@ -571,6 +570,14 @@ indirect enum LoweredType: Sendable, Hashable {
         return signature.failing
     }
 
+    // What a slot said the procedure it holds answers: nil where it writes no
+    // signature to say it in.
+    var procedureReturns: LoweredType? {
+        guard case let .procedure(signature?, _, _)? = procedureHeld else { return nil }
+
+        return signature.returns
+    }
+
     // The positions a procedure a slot holding this holds takes in place.
     // Empty where the slot says nothing of the procedure's parameters.
     var inPlacePositions: Set<Int> {
@@ -650,17 +657,17 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
-    // A constant's type: its settled value's, with each procedure it holds
-    // read by the type the value's expression was judged at in that position
-    // (an element, an entry), the constness, isolation and failing the build
-    // derived for that one value included. A struct's fields are its
-    // declaration's. A procedure value says nothing about its signature, and
-    // the expression that made it wrote one; everything else is the value's. Null, `Any`, and a list or a map
-    // showing no element, say nothing the judged type does not, so what
-    // holds one is what the expression was judged as, a cast's type among
-    // them. A map whose keys the value joins to `Any` is no map type, so it
-    // takes the judged key, and where the judged type keys no map it reads
-    // as that type, `Any` where nothing is written.
+    // A constant's type: its settled value's, with each procedure it holds read
+    // by the type the value's expression was judged at in that position (an
+    // element, an entry), the constness, isolation and failing its signature
+    // declares included. A struct's fields are its declaration's. A procedure
+    // value says nothing about its signature, and the expression that made it
+    // wrote one; everything else is the value's. Null, `Any`, and a list or a
+    // map showing no element, say nothing the judged type does not, so what
+    // holds one is what the expression was judged as, a cast's type among them.
+    // A map whose keys the value joins to `Any` is no map type, so it takes the
+    // judged key, and where the judged type keys no map it reads as that type,
+    // `Any` where nothing is written.
     func refined(by judged: LoweredType) -> LoweredType {
         guard self != .null, self != .any, !holdsNoElement else { return judged }
 
@@ -778,7 +785,7 @@ indirect enum LoweredType: Sendable, Hashable {
     // and no declaration writes is read as what is declared: a whole literal
     // as the number it names, `Never`, what holds no value, as any type, and
     // a procedure as its positions and answer, the constness, isolation and
-    // failing derived for it meeting what the declaration asks, as a write
+    // failing it declares meeting what the declaration asks, as a write
     // handed in place is judged.
     func reads(as declared: LoweredType) -> Bool {
         switch (self, declared) {
@@ -795,7 +802,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return given.failing.fails(within: asked.failing)
                 && given.parameters.count == asked.parameters.count
                 && zip(given.parameters, asked.parameters).allSatisfy { mine, theirs in mine.reads(as: theirs) }
-                && (given.returns ?? .any).reads(as: asked.returns ?? .any)
+                && given.returns.reads(as: asked.returns)
 
         case let (.array(mine), .array(theirs)), let (.nullable(mine), .nullable(theirs)):
             return mine.reads(as: theirs)
@@ -993,7 +1000,7 @@ indirect enum LoweredType: Sendable, Hashable {
                 guard taken.takes(parameter, in: table) else { return false }
             }
 
-            return (required.returns ?? .any).accepts(given.returns ?? .any, in: table)
+            return required.returns.accepts(given.returns, in: table)
 
         // A whole number written as a literal is an Int, or the fraction it
         // names where the place declares a Double.
@@ -1230,8 +1237,8 @@ indirect enum LoweredType: Sendable, Hashable {
 
             taking.read(takenBy: takenInside)
 
-            (mine.returns ?? .any).binding(
-                against: theirs.returns ?? .any,
+            mine.returns.binding(
+                against: theirs.returns,
                 into: &substitution,
                 taking: &taking,
                 holding: &holding,
@@ -1449,9 +1456,9 @@ indirect enum LoweredType: Sendable, Hashable {
         case let .variable(inner), let .inout(inner):
             return try inner.settling(value, at: path(), in: table)
 
-        // A closure carries what the build derived about its text, its
-        // constness, its isolation and what it may fail with, and a slot that
-        // asks for any of them reads the carried fact. A closure that reached
+        // A closure carries what its signature declares, its constness, its
+        // isolation and what it may fail with, and a slot that asks for any
+        // of them reads the carried fact. A closure that reached
         // here through a cast or from outside is judged here for the first
         // time.
         case let .procedure(required, constness, isolation):
@@ -1658,34 +1665,6 @@ indirect enum LoweredType: Sendable, Hashable {
         Block(body: block.body, result: block.result.map { result in written(result, in: table) })
     }
 
-    // A closure literal written where this is read, its signature completed
-    // by the place: one that writes no `returns`, written where a procedure
-    // type says what it answers, answers that, so its body is judged against
-    // it and a literal it answers is read as the place reads it. It reaches
-    // every depth a literal is written at, so where a closure is written does
-    // not decide when what it answers is judged. An answer a call fills is no
-    // place's to say, and anything else stands as written.
-    func completing(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
-        reaching(expression, in: table) { place, standing in
-            guard case let .closure(written) = standing else { return nil }
-
-            guard written.signature.returns == nil, case let .procedure(signature, _, _) = place, let returns = signature?.returns else {
-                return standing
-            }
-
-            let answer = returns.spelled(in: table)
-
-            guard !answer.isGeneric else { return standing }
-
-            return .closure(written.with(signature: Signature(parameters: written.signature.parameters, returns: answer)))
-        }
-    }
-
-    // The same for a block whose answer stands where this is read.
-    func completing(_ block: Block, in table: LoweredTypeTable) -> Block {
-        Block(body: block.body, result: block.result.map { result in completing(result, in: table) })
-    }
-
     // This type as a declaration writes it: lowering run backwards. A
     // declared name goes back to its label, so what it stands for, a mark
     // lowering dropped included, is read again where the spelling is
@@ -1731,7 +1710,7 @@ indirect enum LoweredType: Sendable, Hashable {
             return .procedure(
                 ProcedureType(
                     parameters: signature.parameters.map { parameter in parameter.spelled(in: table) },
-                    returns: signature.returns?.spelled(in: table),
+                    returns: signature.returns.spelled(in: table),
                     failing: signature.failing
                 ),
                 constness,
@@ -2034,13 +2013,13 @@ indirect enum LoweredType: Sendable, Hashable {
             throw ArgumentError("\(path()): \(Linked.unreadable)")
         }
 
-        if constness == .const, linked.constness != .const {
+        if constness == .const, linked.signature.constness != .const {
             throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), got a procedure that runs"
+                "\(path()): expected \(rendered(in: table)), got a procedure not declared const"
             )
         }
 
-        if isolation == .isolated, linked.isolation != .isolated {
+        if isolation == .isolated, linked.signature.isolation != .isolated {
             throw ArgumentError(
                 "\(path()): expected \(rendered(in: table)), got a procedure that writes"
                     + " what another body could touch"
@@ -2049,9 +2028,9 @@ indirect enum LoweredType: Sendable, Hashable {
 
         // It is read as answering what its own signature says it answers.
         let given = LoweredType.procedure(
-            LoweredProcedureType(parameters: linked.slots.map(\.type), returns: linked.returns, failing: linked.failing),
-            constness: linked.constness,
-            isolation: linked.isolation
+            LoweredProcedureType(parameters: linked.slots.map(\.type), returns: linked.returns, failing: linked.signature.failing),
+            constness: linked.signature.constness,
+            isolation: linked.signature.isolation
         )
 
         // A type parameter the procedure's own signature names is one a

@@ -58,6 +58,7 @@ struct VariableTests {
                             map([
                                 "left": .closure(
                                     Procedure(
+                                        signature: Signature(returns: .int, isolation: .isolated),
                                         body: [
                                             Statement(binding: .variable("tally"), expression: .literal(.int(0))),
                                             Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))
@@ -65,7 +66,7 @@ struct VariableTests {
                                         result: reference("tally")
                                     )
                                 ),
-                                "right": .closure(Procedure(body: [], result: .literal(.int(2))))
+                                "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2))))
                             ])
                         ]
                     )

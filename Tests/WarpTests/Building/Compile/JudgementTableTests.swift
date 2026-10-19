@@ -23,11 +23,11 @@ struct JudgementTableTests {
 
         // When
         sut.record(.apply(inPlace: [0]), at: first)
-        sut.record(.closure(constness: .const, isolation: .unstated, failing: .anything), at: second)
+        sut.record(.apply(inPlace: [1]), at: second)
 
         // Then
         #expect(handed(at: first, in: sut) == [0])
-        #expect(constness(at: second, in: sut) == .const)
+        #expect(handed(at: second, in: sut) == [1])
     }
 
     @Test("two tables naming different places hold both")
@@ -55,11 +55,5 @@ struct JudgementTableTests {
         guard case let .apply(handed)? = table[place] else { return nil }
 
         return handed
-    }
-
-    private func constness(at place: Place, in table: JudgementTable) -> Constness? {
-        guard case let .closure(constness, _, _)? = table[place] else { return nil }
-
-        return constness
     }
 }

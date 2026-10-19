@@ -17,45 +17,82 @@ public extension Module {
             procedures: [
                 "Standard.Text.decoded": Procedure(
                     description: "The bytes read as text in a named encoding.",
-                    signature: Signature(of: DecodedQuery.self, returns: .string),
+                    signature: Signature(
+                        of: DecodedQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(DecodedQuery())
                 ),
                 "Standard.Text.encoded": Procedure(
                     description: "The text written out as bytes in a named encoding.",
-                    signature: Signature(of: EncodedQuery.self, returns: .array(.int)),
+                    signature: Signature(
+                        of: EncodedQuery.self,
+                        returns: .array(.int),
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(EncodedQuery())
                 ),
                 "Standard.Text.text": Procedure(
                     description: "How a value reads as text.",
-                    signature: Signature(of: TextQuery.self, returns: .string),
+                    signature: Signature(
+                        of: TextQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(TextQuery())
                 ),
                 "Standard.Text.characters": Procedure(
                     description: "The text as an array of its characters.",
                     signature: Signature(
                         of: CharactersQuery.self,
-                        returns: .array(.string)
+                        returns: .array(.string),
+                        constness: .const,
+                        isolation: .isolated
                     ),
                     implementation: .query(CharactersQuery())
                 ),
                 "Standard.Text.uppercased": Procedure(
                     description: "The text in upper case.",
-                    signature: Signature(of: UppercasedQuery.self, returns: .string),
+                    signature: Signature(
+                        of: UppercasedQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(UppercasedQuery())
                 ),
                 "Standard.Text.lowercased": Procedure(
                     description: "The text in lower case.",
-                    signature: Signature(of: LowercasedQuery.self, returns: .string),
+                    signature: Signature(
+                        of: LowercasedQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(LowercasedQuery())
                 ),
                 "Standard.Text.trimmed": Procedure(
                     description: "The text without surrounding whitespace.",
-                    signature: Signature(of: TrimmedQuery.self, returns: .string),
+                    signature: Signature(
+                        of: TrimmedQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(TrimmedQuery())
                 ),
                 "Standard.Text.joined": Procedure(
                     description: "The strings written one after another.",
-                    signature: Signature(of: JoinedQuery.self, returns: .string),
+                    signature: Signature(
+                        of: JoinedQuery.self,
+                        returns: .string,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(JoinedQuery())
                 )
             ]

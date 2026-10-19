@@ -461,18 +461,11 @@ struct Lowering {
     // A document's numbering is its names in name order, and no name is in
     // order until every one of them is known, so this runs once the
     // document's last body is lowered and not while one is.
-    func numbered(
-        _ rows: [Int],
-        answering answers: [Name: LoweredType]
-    ) throws -> (
-        table: [Linked],
-        numbering: LoweredTypeNumbering,
-        answers: [Name: LoweredType]
-    ) {
+    func numbered(_ rows: [Int]) throws -> (table: [Linked], numbering: LoweredTypeNumbering) {
         // What the document stands on is what it numbers: every type in its
-        // rows' bodies and the answers read off them. Read through the walks
-        // that rewrite them, so which cases hold a type is answered in one
-        // place; what those walks rebuild is dropped.
+        // rows' bodies. Read through the walks that rewrite them, so which
+        // cases hold a type is answered in one place; what those walks
+        // rebuild is dropped.
         var types: Set<Int> = []
 
         func stand(_ type: LoweredType) -> LoweredType {
@@ -485,10 +478,6 @@ struct Lowering {
             guard case let .body(body, _) = table[row].implementation else { continue }
 
             _ = body.rewritten(operation: { operation in operation }, type: stand)
-        }
-
-        for answer in answers.values {
-            _ = stand(answer)
         }
 
         let numbering = LoweredTypeNumbering(types: Set(types.map { row in loweredTypes.labels[row] }))
@@ -508,15 +497,7 @@ struct Lowering {
             }
         }
 
-        // What the build read off a body, in the numbers of the document that
-        // body came out of. Read against the same numbering the bodies are, so
-        // a call judged against one of these reads the type its document
-        // stands on.
-        let read = try answers.reduce(into: [Name: LoweredType]()) { read, answer in
-            read[answer.key] = try renumbered(answer.value, in: place, of: answer.key)
-        }
-
-        return (numbered, numbering, read)
+        return (numbered, numbering)
     }
 
     // MARK: - Private
@@ -692,12 +673,8 @@ struct Lowering {
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        // The type check judges every closure literal it rewrote with its
-        // judged body, so a literal it judged is a body.
-        guard
-            case let .closure(constness, isolation, failing)? = context.judgements[place.child(.closure)],
-            case let .body(block) = procedure.implementation
-        else {
+        // The Validator refuses a closure literal that is not a body.
+        guard case let .body(block) = procedure.implementation else {
             throw BuildError.unjudged("a closure literal", at: place)
         }
 
@@ -742,9 +719,6 @@ struct Lowering {
                 origin: context.slots.origin,
                 signature: procedure.signature,
                 access: .private,
-                constness: constness,
-                isolation: isolation,
-                failing: failing,
                 implementation: .body(body, inner.frame),
                 foldable: true,
                 closure: (by: context.writer, nth: count),

@@ -24,6 +24,7 @@ struct LogicTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .bool, failing: .anything),
                     body: [
                         Statement(binding: .constant("verdict"), expression: every(
                                 equals(.literal(.int(1)), .literal(.int(2))),

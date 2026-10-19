@@ -8,11 +8,9 @@
 import Foundation
 
 // A procedure implemented in native code: one that answers without running
-// anything, or one that reaches outside the run.
-//
-// What such a procedure declares about itself is read here. A body's constness,
-// isolation and failing are what its code turns out to do and a link works
-// them out; a native says, and the row a compile writes records what it said.
+// anything, or one that reaches outside the run. What it reads and sends is
+// its own type's to say, and read here; what a call may expect of it is its
+// declaration's.
 enum Native: Sendable {
     case query(any Query)
     case effect(any Effect)
@@ -31,40 +29,6 @@ enum Native: Sendable {
     }
 
     // MARK: - Property
-    // Answers without running, which is what lets it be asked inside a
-    // condition and while a constant settles.
-    var constness: Constness {
-        switch self {
-        case .query:
-            return .const
-
-        case .effect:
-            return .unstated
-        }
-    }
-
-    // Touches no name another body could touch at the same time.
-    var isolation: Isolation {
-        switch self {
-        case let .query(query):
-            return query.isolated ? .isolated : .unstated
-
-        case let .effect(effect):
-            return effect.isolated ? .isolated : .unstated
-        }
-    }
-
-    // What may come out of it when the work goes wrong.
-    var failing: Failing {
-        switch self {
-        case let .query(query):
-            return query.failing
-
-        case let .effect(effect):
-            return effect.failing
-        }
-    }
-
     // The places it reads its arguments at, with the name each place stands
     // under. Its own, so a declaration whose parameters stand elsewhere is a
     // procedure reading an argument nobody sent it.

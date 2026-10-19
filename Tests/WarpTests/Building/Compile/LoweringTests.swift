@@ -50,6 +50,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.int)),
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
                         Statement(binding: .variable("inner"), expression: .literal(.int(0))),
@@ -89,10 +90,12 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.int)),
                     body: [
                         Statement(binding: .constant("x"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("held"), expression: .closure(
+                        Statement(binding: .constant("held", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))), expression: .closure(
                             Procedure(
+                                signature: Signature(returns: .int),
                                 body: [Statement(binding: .constant("x"), expression: .literal(.int(2)))],
                                 result: .reference([.name("x")])
                             )
@@ -118,13 +121,15 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("a"), expression: .literal(.int(1))),
                         Statement(binding: .constant("b"), expression: .literal(.int(2))),
                         Statement(binding: .constant("c"), expression: .literal(.int(3))),
-                        Statement(binding: .constant("held"), expression: .closure(
-                            Procedure(body: [], result: .reference([.name("b")]))
-                        ))
+                        Statement(
+                            binding: .constant("held", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .reference([.name("b")])))
+                        )
                     ],
                     result: .apply(.reference([.name("held")]), arguments: [])
                 )
@@ -161,7 +166,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "key", type: .string)]),
+                    signature: Signature(parameters: [Parameter(name: "key", type: .string)], returns: .int),
                     body: [Statement(binding: .constant("found"), expression: .reference([.name("digits"), .indexRef([.name("key")])]))],
                     result: .reference([.name("found")])
                 )
@@ -197,6 +202,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .array(.int)),
                     body: [],
                     result: .call(Call(
                         selector: "pair",
@@ -240,29 +246,26 @@ struct LoweringTests {
         #expect(try await Executor().run(image) == .array([.int(1), .int(2), .int(3)]))
     }
 
-    @Test("a body reading a module variable does not answer without running")
-    func aBodyReadingAVariableIsNotConst() async throws {
-        // Given. The variable's value is the run's, so folding the procedure at the
-        // build would fix a value nothing at the run could change
+    @Test("a body declared const reading a module variable refuses")
+    func aConstBodyReadingAVariableRefuses() async throws {
+        // Given. The variable's value is the run's, so a body reading it
+        // answers by running, whatever its declaration says
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "App.tally": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int, constness: .const),
                     body: [],
                     result: .reference([.name("count")])
                 )
             ]
         )
 
-        // When
-        let image = try await builder.build([module] + Module.standard)
-
-        // Then
-        let tally = try #require(image["App.tally"])
-
-        #expect(tally.constness != .const)
+        // When, Then
+        await #expect(throws: BuildError.self) {
+            try await builder.build([module] + Module.standard)
+        }
     }
 
     @Test("a name is what it names, wherever a variable is handed in place")
@@ -275,6 +278,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
                     result: .call(Call(selector: "App.bump", arguments: [.reference([.name("n")])]))
                 ),
@@ -308,7 +312,11 @@ struct LoweringTests {
                     body: [
                         Statement(binding: .variable("body"), expression: .closure(
                             Procedure(
-                                signature: Signature(parameters: [Parameter(name: "x", type: .int)]),
+                                signature: Signature(
+                                    parameters: [Parameter(name: "x", type: .int)],
+                                    constness: .const,
+                                    isolation: .isolated
+                                ),
                                 body: [],
                                 result: .literal(.null)
                             )
@@ -352,6 +360,7 @@ struct LoweringTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .bool, failing: .these(["cast_refused"])),
                         body: [Statement(binding: .variable("held"), expression: held)],
                         result: .call(Call(
                             selector: "Standard.Logic.equal",
@@ -364,7 +373,8 @@ struct LoweringTests {
                     "App.tag": Procedure(
                         signature: Signature(
                             parameters: [Parameter(name: "of", type: .inout(.named("Tag")))],
-                            returns: .named("Tag")
+                            returns: .named("Tag"),
+                            constness: .const
                         ),
                         body: [],
                         result: .reference([.name("of")])
@@ -405,7 +415,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(access: .public, body: [], result: .literal(.null)),
                 "App.alpha": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int),
+                    signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int, constness: .const),
                     body: [],
                     result: .reference([.name("of")])
                 )
@@ -428,6 +438,7 @@ struct LoweringTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .variable("held"), expression: .literal(.int(5)))
                     ],

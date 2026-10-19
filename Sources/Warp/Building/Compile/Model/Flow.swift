@@ -138,12 +138,6 @@ struct Flow {
 
     // MARK: - Initializer
     // MARK: - Public
-    // What a body that writes no `returns` hands its caller: its result and
-    // every `return`, each a way out, where they meet.
-    func answer(resulting result: LoweredType) -> LoweredType {
-        answered.reduce(result.asHeld) { met, answered in met.meeting(answered.reading) }
-    }
-
     // A write on the way that goes on.
     mutating func land(_ later: (type: LoweredType, definite: Bool), on name: Name) {
         going?.land(later, on: name)

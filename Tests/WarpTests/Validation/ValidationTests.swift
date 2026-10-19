@@ -701,7 +701,7 @@ struct ValidationTests {
                         Statement(binding: .constant("charged"), expression: .call(Call(selector: "Wallet.fee")))
                     ]
                 ),
-                "Wallet.fee": Procedure(body: [], result: .literal(.int(1)))
+                "Wallet.fee": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
             ]
         )
 
@@ -935,11 +935,9 @@ struct ValidationTests {
             try Module(
                 contracts: [
                     "App.Kept": [
-                        "keep": ContractProcedure(
-                            signature: Signature(
-                                parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
-                                bounds: ["T": ["App.Kept"]]
-                            )
+                        "keep": Signature(
+                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                            bounds: ["T": ["App.Kept"]]
                         )
                     ]
                 ],

@@ -7,7 +7,7 @@
 
 import Foundation
 
-// What inference needs beyond the body it is reading: what every declaration in
+// What the type check needs beyond the body it is reading: what every declaration in
 // the link answers with, and what every name in it stands for.
 //
 // One value rather than two arguments threaded through every walk, because they
@@ -32,10 +32,6 @@ struct TypingContext: Sendable {
 
     // The spellings only another document's private declarations wear.
     let concealed: Set<Name>
-
-    // What the build read off a body whose declaration wrote no `returns`.
-    // Only those, for the same reason: what a declaration wrote is on its row.
-    let answers: [Int: LoweredType]
 
     // The same declarations as the run reads them, lowered once. Every
     // judgement the walk asks goes here, so the walk and the run judge by one
@@ -94,30 +90,12 @@ struct TypingContext: Sendable {
         declared(selector)?.slots ?? contractProcedures[selector]?.slots ?? []
     }
 
-    // What it answers: what the build read off a body that declared none,
-    // else what the declaration wrote.
+    // What it answers, as the declaration wrote it.
     func answer(of selector: Name) -> LoweredType? {
-        guard let row = row(of: selector) else { return contractProcedures[selector]?.answers }
-
-        return answers[row] ?? linked[row].returns
+        declared(selector)?.returns ?? contractProcedures[selector]?.answers
     }
 
-    // What the build derived of the declaration a selector names, read off
-    // its row, or what a contract asks of every declaration answering its
-    // procedure.
-    func isConst(_ selector: Name) -> Bool {
-        declared(selector)?.constness == .const || contractProcedures[selector]?.constness == .const
-    }
-
-    func isIsolated(_ selector: Name) -> Bool {
-        declared(selector)?.isolation == .isolated || contractProcedures[selector]?.isolation == .isolated
-    }
-
-    func failing(of selector: Name) -> Failing? {
-        declared(selector)?.failing ?? contractProcedures[selector].map { asked in .these(asked.failing) }
-    }
-
-    // A named type stands for what it was declared as. Inference walks into
+    // A named type stands for what it was declared as. The type check walks into
     // types, so it has to look through a name to find one. The table lowered
     // every declaration once, so following a name is reading a row.
     func resolve(_ type: LoweredType) -> LoweredType {

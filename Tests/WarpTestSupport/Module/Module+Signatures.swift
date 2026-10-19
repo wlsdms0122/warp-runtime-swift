@@ -29,7 +29,7 @@ public extension Module {
             imports: imports,
             types: types,
             contracts: contracts.mapValues { procedures in
-                Contract(procedures: procedures.mapValues { signature in ContractProcedure(signature: signature) })
+                Contract(procedures: procedures)
             },
             claims: claims,
             members: members,

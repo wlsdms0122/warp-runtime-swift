@@ -60,6 +60,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("first"), expression: .literal(.int(1))),
                         Statement(binding: .constant("second"), expression: .literal(.int(2)))
@@ -91,6 +92,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("outer"), expression: .loop(
                                 while: .literal(.bool(true)),
@@ -163,6 +165,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["concurrent_failed"])),
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
@@ -175,7 +178,9 @@ struct ObservationTests {
                                                     parameters: [
                                                         Parameter(name: "item", type: .any),
                                                         Parameter(name: "index", type: .any)
-                                                    ]
+                                                    ],
+                                                    returns: .any,
+                                                    isolation: .isolated
                                                 ),
                                                 body: [
                                                     Statement(binding: .constant("step"), expression: reference("item"))
@@ -218,6 +223,7 @@ struct ObservationTests {
                     ]
                 ),
                 "helper": Procedure(
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("inner"), expression: .literal(.int(7)))
                     ],
@@ -242,6 +248,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["aborted"])),
                     body: [
                         // Nameless on both sides. `helper` declares no answer
                         // and its body never finishes, so the build reads the
@@ -253,6 +260,7 @@ struct ObservationTests {
                     ]
                 ),
                 "helper": Procedure(
+                    signature: Signature(failing: .these(["aborted"])),
                     body: [
                         Statement(
                             expression: aborting(literal("no"))
@@ -282,16 +290,17 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["aborted"])),
                     body: [
                         Statement(
                             binding: .constant("first"),
-                            expression: .closure(Procedure(body: [], result: .literal(.int(1))))
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
                         ),
                         Statement(
-                            binding: .constant("second"),
+                            binding: .constant("second", declared: .procedure(ProcedureType(returns: .int, failing: .these(["aborted"])))),
                             expression: .closure(
                                 Procedure(
-                                    signature: Signature(returns: .int),
+                                    signature: Signature(returns: .int, failing: .these(["aborted"])),
                                     body: [
                                         Statement(expression: aborting(literal("no")))
                                     ]
@@ -322,6 +331,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["test"])),
                     body: [
                         Statement(binding: .constant("doomed"), expression: .call(Call(selector: "App.fail", arguments: [.literal(.bool(false))])))
                     ]
@@ -354,6 +364,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("walk"), expression: .loop(
                                 while: .literal(.bool(true)),
@@ -391,6 +402,7 @@ struct ObservationTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .nullable(.string)),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(
                                 Block(

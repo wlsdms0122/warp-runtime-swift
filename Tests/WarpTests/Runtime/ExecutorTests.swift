@@ -26,7 +26,8 @@ struct ExecutorTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "who", type: .string)
-                        ]
+                        ],
+                        returns: .any
                     ),
                     body: [
                         Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
@@ -53,6 +54,7 @@ struct ExecutorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
@@ -88,6 +90,7 @@ struct ExecutorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
@@ -129,6 +132,7 @@ struct ExecutorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["test"])),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .call(Call(
                             selector: "App.fail",
@@ -194,7 +198,8 @@ struct ExecutorTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "data", type: .dictionary(key: .string, value: .any))
-                        ]
+                        ],
+                        returns: .any
                     ),
                     body: [
                         Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
@@ -256,7 +261,8 @@ struct ExecutorTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "kind", type: .string)
-                        ]
+                        ],
+                        returns: .any
                     ),
                     body: [
                         Statement(binding: .variable("maybe"), expression: .literal(.null)),
@@ -305,7 +311,8 @@ struct ExecutorTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "reason", type: .string)
-                        ]
+                        ],
+                        failing: .these(["aborted"])
                     ),
                     body: [
                         // Nameless on purpose. A statement that never finishes
@@ -336,6 +343,7 @@ struct ExecutorTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [
                         Statement(binding: .constant("bail"), expression: .attempt(Block(body: [
                                         Statement(

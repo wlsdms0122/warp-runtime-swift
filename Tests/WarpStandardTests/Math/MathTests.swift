@@ -33,6 +33,7 @@ struct MathTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .int),
                         body: [],
                         result: .call(Call(selector: procedure, arguments: [.literal(subject)]))
                     )

@@ -59,12 +59,13 @@ struct BuilderTests {
         func module(closure: Name, reading constant: Name) throws -> Module {
             try Module(
                 constants: [
-                    closure: .closure(Procedure(body: [], result: reference(constant))),
+                    closure: .closure(Procedure(signature: Signature(returns: .int, failing: .anything), body: [], result: reference(constant))),
                     constant: .literal(.int(3))
                 ],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .int, failing: .anything),
                         body: [
                             Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: []))
                         ],
@@ -108,6 +109,7 @@ struct BuilderTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [
                         Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: []))
                     ],
@@ -147,6 +149,7 @@ struct BuilderTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .int, failing: .anything),
                     body: [
                         Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: []))
                     ],
@@ -182,7 +185,7 @@ struct BuilderTests {
                     )
                 )
             ],
-            procedures: [entryName: Procedure(access: .public, body: [], result: reference("url"))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .string), body: [], result: reference("url"))]
         )
 
         // When
@@ -381,13 +384,14 @@ struct BuilderTests {
             procedures: [
                 "caller": Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["concurrent_failed"])),
                     body: [
                         Statement(binding: .constant("both"), expression: .call(
                                 Call(
                                     selector: "Standard.Concurrent.all",
                                     arguments: [
                                         .array([
-                                            .closure(Procedure(body: [], result: .literal(.int(1))))
+                                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1))))
                                         ])
                                     ]
                                 )
@@ -509,7 +513,7 @@ struct BuilderTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .int),
                     body: [],
                     result: .literal(.int(1))
                 )

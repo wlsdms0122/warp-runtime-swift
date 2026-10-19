@@ -13,18 +13,18 @@ import Foundation
 // every write, and one that did not holds what its last write put in it until
 // a closure or a call takes it.
 //
-// How the name is held says what a slot declared it holds, where one did,
-// which is what a call of the value the name holds leans on. A type the build
-// worked out is a reading and declares nothing.
+// How the name is held says the type written for what it holds, where one
+// was, which is what a call of the value the name holds leans on. A type the
+// build worked out is a reading and declares nothing.
 //
 // `Statement.Binding` is what a statement does to its name; this is what the
 // name stands as afterwards.
 struct Binding: Equatable, Sendable {
     // How a write meets the name, and what a slot declared it holds.
     enum Holding: Equatable, Sendable {
-        // No write lands on it. A parameter, and a constant that declared its
-        // type or was read from a name a slot declared, hold what that slot
-        // declared.
+        // No write lands on it. A parameter, and a fixed name that declared
+        // its type or whose value came from where one is written, hold what
+        // was written there.
         case fixed(declared: LoweredType?)
 
         // A box every write is held to the type a slot declared: a variable
@@ -48,7 +48,7 @@ struct Binding: Equatable, Sendable {
     // What the name reads as.
     let type: LoweredType
 
-    // The type a slot declared the name holds, or nil where none did.
+    // The type written for what the name holds, or nil where none was.
     var declaredType: LoweredType? {
         switch holding {
         case let .fixed(declared):

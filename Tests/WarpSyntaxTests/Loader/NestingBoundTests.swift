@@ -42,6 +42,7 @@ struct NestingBoundTests {
         func document(deep: Int) -> Value {
             let expression: Value
             let imports: Value
+            let entry: Value
 
             switch self {
             case .call:
@@ -49,6 +50,7 @@ struct NestingBoundTests {
                 expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
                     ["call": ["procedure": "Standard.Numeric.plus", "arguments": [inner, ["ref": "one"]]]]
                 }
+                entry = ["access": "public", "returns": "Int", "result": expression]
 
             case .closure:
                 imports = ["Standard.Logic.select"]
@@ -58,19 +60,20 @@ struct NestingBoundTests {
                             "procedure": "Standard.Logic.select",
                             "arguments": [
                                 ["ref": "yes"],
-                                ["closure": ["result": inner]],
-                                ["closure": ["result": ["ref": "zero"]]]
+                                ["closure": ["returns": "Int", "failing": "anything", "const": true, "result": inner]],
+                                ["closure": ["returns": "Int", "failing": "anything", "const": true, "result": ["ref": "zero"]]]
                             ]
                         ]
                     ]
                 }
+                entry = ["access": "public", "returns": "Int", "failing": "anything", "result": expression]
             }
 
             return [
                 "warp": .int(1),
                 "imports": imports,
                 "const": ["one": .int(1), "zero": .int(0), "yes": .bool(true)],
-                "procedures": ["entry": ["access": "public", "result": expression]]
+                "procedures": ["entry": entry]
             ]
         }
 

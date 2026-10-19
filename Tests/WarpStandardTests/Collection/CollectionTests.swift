@@ -21,12 +21,12 @@ struct CollectionTests {
         // Given. Map, filter and reduce are declarations rather than
         // constructs. Nothing in the grammar knows they exist
         let doubling = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int, constness: .const),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))]))
         )
         let odd = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool),
+            signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool, constness: .const),
             body: [
                 Statement(binding: .constant("left"), expression: .call(Call(
                     selector: "Standard.Numeric.remainder",
@@ -42,7 +42,8 @@ struct CollectionTests {
                     Parameter(name: "carried", type: .int),
                     Parameter(name: "item", type: .int)
                 ],
-                returns: .int
+                returns: .int,
+                constness: .const
             ),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")]))
@@ -52,7 +53,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .any, failing: .anything),
                     body: [
                         Statement(binding: .constant("doubled"), expression: .call(Call(
                             selector: "Standard.Collection.map",
@@ -103,7 +104,8 @@ struct CollectionTests {
         let counting = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "carried", type: .int), Parameter(name: "item", type: .int)],
-                returns: .int
+                returns: .int,
+                constness: .const
             ),
             body: [],
             result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))]))
@@ -112,7 +114,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))]),
+                    signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .int, failing: .anything),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Collection.reduce",
@@ -137,7 +139,7 @@ struct CollectionTests {
         // Given. `map` declares `const Procedure`, so a body that shouts is
         // refused at the build
         let loud = Procedure(
-            signature: Signature(parameters: [Parameter(name: "item", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "item", type: .string)], returns: .string),
             body: [],
             result: .call(Call(selector: "App.shout", arguments: [reference("item")]))
         )
@@ -145,7 +147,11 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "names", type: .array(.string))]),
+                    signature: Signature(
+                        parameters: [Parameter(name: "names", type: .array(.string))],
+                        returns: .array(.string),
+                        failing: .anything
+                    ),
                     body: [],
                     result: .call(Call(selector: "Standard.Collection.map", arguments: [reference("names"), .closure(loud)]))
                 )
@@ -170,7 +176,9 @@ struct CollectionTests {
                     .closure(
                         Procedure(
                             signature: Signature(
-                                parameters: [Parameter(name: "item", type: .any)]
+                                parameters: [Parameter(name: "item", type: .any)],
+                                returns: .any,
+                                constness: .const
                             ),
                             body: [],
                             result: reference("item")
@@ -204,7 +212,8 @@ struct CollectionTests {
                             Parameter(name: "head", type: .int),
                             Parameter(name: "side", type: .int),
                             Parameter(name: "trail", type: .array(.int))
-                        ]
+                        ],
+                        returns: .any
                     ),
                     body: [
                         Statement(binding: .constant("stepped"), expression: .call(Call(
@@ -262,7 +271,7 @@ struct CollectionTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(key: .string, value: .int))]),
+                    signature: Signature(parameters: [Parameter(name: "counts", type: .dictionary(key: .string, value: .int))], returns: .any),
                     body: [
                         Statement(binding: .constant("named"), expression: .call(Call(
                             selector: "Standard.Collection.keys",
@@ -357,7 +366,8 @@ struct CollectionTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(
-                            parameters: [Parameter(name: "data", type: .array(.int))]
+                            parameters: [Parameter(name: "data", type: .array(.int))],
+                            returns: .any
                         ),
                         body: [],
                         result: expression

@@ -18,8 +18,8 @@ public struct ProcedureType: Sendable, Equatable {
     // slot a value is applied through.
     public let parameters: [TypeExpression]
 
-    // What an application answers, or nil where nothing was declared.
-    public let returns: TypeExpression?
+    // What an application answers.
+    public let returns: TypeExpression
 
     // What an application may fail with: anything, written `throws`, or the
     // failures listed, none written as no `throws`.
@@ -28,7 +28,7 @@ public struct ProcedureType: Sendable, Equatable {
     // Every declared name this type reaches, through what it takes and what
     // it answers.
     var mentions: Set<Name> {
-        parameters.reduce(into: returns?.mentions ?? []) { mentioned, parameter in
+        parameters.reduce(into: returns.mentions) { mentioned, parameter in
             mentioned.formUnion(parameter.mentions)
         }
     }
@@ -41,18 +41,18 @@ public struct ProcedureType: Sendable, Equatable {
     // Whether a type parameter stands anywhere in its parameters or answer.
     var isGeneric: Bool {
         parameters.contains { parameter in parameter.isGeneric }
-            || (returns?.isGeneric ?? false)
+            || returns.isGeneric
     }
 
     // Every type parameter named in its parameters or answer.
     var parameterNames: Set<Name> {
-        parameters.reduce(into: returns?.parameterNames ?? []) { named, parameter in
+        parameters.reduce(into: returns.parameterNames) { named, parameter in
             named.formUnion(parameter.parameterNames)
         }
     }
 
     // MARK: - Initializer
-    public init(parameters: [TypeExpression] = [], returns: TypeExpression? = nil, failing: Failing) {
+    public init(parameters: [TypeExpression] = [], returns: TypeExpression, failing: Failing) {
         self.parameters = parameters
         self.returns = returns
         self.failing = failing
@@ -68,7 +68,7 @@ public struct ProcedureType: Sendable, Equatable {
     func replacingSelf(with type: TypeExpression) -> ProcedureType {
         ProcedureType(
             parameters: parameters.map { parameter in parameter.replacingSelf(with: type) },
-            returns: returns?.replacingSelf(with: type),
+            returns: returns.replacingSelf(with: type),
             failing: failing
         )
     }

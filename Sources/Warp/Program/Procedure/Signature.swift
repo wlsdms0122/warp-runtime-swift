@@ -7,8 +7,11 @@
 
 import Foundation
 
-// What a call is checked against, in both directions: what it takes and what
-// comes back.
+// What a call is checked against, in both directions: what it takes, what
+// comes back, what may come out of it when the work goes wrong, and whether it
+// answers without running and touches no name another body could touch at
+// once. A body is held to its signature, and every call reads the signature
+// alone.
 public struct Signature: Sendable, Equatable {
     // MARK: - Property
     // What the declaration takes, in the order it wrote them. The order is the
@@ -16,10 +19,18 @@ public struct Signature: Sendable, Equatable {
     // and the order the run keeps them in.
     public let parameters: [Parameter]
 
-    // What a call returns, or nil where nothing was declared. A call reads a
-    // declaration writing none as what its body answers, and one writing
-    // `Any` as `Any`.
-    public let returns: TypeExpression?
+    // What a call returns. `Null` where the declaration wrote nothing: a call
+    // of it answers null.
+    public let returns: TypeExpression
+
+    // What may come out of a call when the work goes wrong. Nothing where the
+    // declaration wrote nothing.
+    public let failing: Failing
+
+    // Whether a call answers without running, and whether it touches no name
+    // another body could touch at the same time.
+    public let constness: Constness
+    public let isolation: Isolation
 
     // The contracts each type parameter is bounded by, by its name. The
     // signature owns the bound, so one name is held to one set however many
@@ -36,11 +47,17 @@ public struct Signature: Sendable, Equatable {
         parameters.map(\.name)
     }
 
-    // The type a value of this declaration carries: the parameter types in
-    // position order and the answer. No names, since a value is applied by
-    // position and the names are the declaration's own.
-    public var type: ProcedureType {
-        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: .anything)
+    // The type a value of this declaration carries, the way a slot holding
+    // one writes it: its procedure type with the two marks.
+    public var type: TypeExpression {
+        .procedure(procedureType, constness, isolation)
+    }
+
+    // The parameter types in position order, the answer and what may fail.
+    // No names, since a value is applied by position and the names are the
+    // declaration's own.
+    public var procedureType: ProcedureType {
+        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: failing)
     }
 
     // The parameters whose box is the body's own. One handed in place is the
@@ -56,13 +73,13 @@ public struct Signature: Sendable, Equatable {
     }
 
     // Whether the declaration writes a type parameter anywhere.
-    var isGeneric: Bool { type.isGeneric }
+    var isGeneric: Bool { procedureType.isGeneric }
 
     // Every type parameter this signature names. A nested procedure type's
     // parameters are named too: they are this signature's own slots, so
     // `Array<some Element>` beside a procedure taking the same `some Element`
     // is one parameter filled by one call.
-    var parameterNames: Set<Name> { type.parameterNames }
+    var parameterNames: Set<Name> { procedureType.parameterNames }
 
     // Every declared name this signature reaches, through what it takes, what
     // it answers and the contracts its bounds name.
@@ -71,7 +88,7 @@ public struct Signature: Sendable, Equatable {
             mentioned.formUnion(type.mentions)
         }
 
-        return parameters.reduce(into: (returns?.mentions ?? []).union(said)) { mentioned, parameter in
+        return parameters.reduce(into: returns.mentions.union(said)) { mentioned, parameter in
             mentioned.formUnion(parameter.type.mentions)
         }
     }
@@ -80,7 +97,7 @@ public struct Signature: Sendable, Equatable {
     // parameter and the name: in what it takes and answers, what its same
     // types say and the ones its bounds and same types are written under.
     var associatedTypes: [Name: (of: Name, name: Name)] {
-        let written = ([returns].compactMap { $0 } + parameters.map(\.type) + Array(sameTypes.values))
+        let written = ([returns] + parameters.map(\.type) + Array(sameTypes.values))
             .reduce(into: [Name: (of: Name, name: Name)]()) { found, type in
                 found.merge(type.associatedTypes) { first, _ in first }
             }
@@ -95,12 +112,18 @@ public struct Signature: Sendable, Equatable {
     // stands nowhere in `bounds`.
     public init(
         parameters: [Parameter] = [],
-        returns: TypeExpression? = nil,
+        returns: TypeExpression = .null,
+        failing: Failing = .these([]),
+        constness: Constness = .unstated,
+        isolation: Isolation = .unstated,
         bounds: [Name: Set<Name>] = [:],
         sameTypes: [Name: TypeExpression] = [:]
     ) {
         self.parameters = parameters
         self.returns = returns
+        self.failing = failing
+        self.constness = constness
+        self.isolation = isolation
         self.bounds = bounds.filter { _, contracts in !contracts.isEmpty }
         self.sameTypes = sameTypes
     }
@@ -111,13 +134,19 @@ public struct Signature: Sendable, Equatable {
     // its type parameters are held to, as a document's signature writes them.
     public init<P: NativeProcedure>(
         of procedure: P.Type,
-        returns: TypeExpression? = nil,
+        returns: TypeExpression = .null,
+        failing: Failing = .these([]),
+        constness: Constness = .unstated,
+        isolation: Isolation = .unstated,
         bounds: [Name: Set<Name>] = [:],
         sameTypes: [Name: TypeExpression] = [:]
     ) {
         self.init(
             parameters: P.Parameters.allCases.map(\.declared),
             returns: returns,
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
             bounds: bounds,
             sameTypes: sameTypes
         )
@@ -141,10 +170,9 @@ public struct Signature: Sendable, Equatable {
         parameters.map { parameter in parameter.lowered(in: table, bounds: bounds, sameTypes: sameTypes) }
     }
 
-    // What this declaration answers as the run reads it, or nil where it
-    // writes no `returns`.
-    func loweredReturns(in table: LoweredTypeTable) -> LoweredType? {
-        returns?.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+    // What this declaration answers as the run reads it.
+    func loweredReturns(in table: LoweredTypeTable) -> LoweredType {
+        returns.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
     }
 
     // Each associated type this says is a type, as the declaration reads that type.
@@ -169,9 +197,7 @@ public struct Signature: Sendable, Equatable {
     func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
         let named = parameterNames.union(associatedTypes.keys.map(\.root))
 
-        return Signature(
-            parameters: parameters,
-            returns: returns,
+        return with(
             bounds: declared.filter { name, _ in named.contains(name.root) },
             sameTypes: said.filter { label, _ in named.contains(label.root) }
         )
@@ -183,9 +209,7 @@ public struct Signature: Sendable, Equatable {
     func under(_ head: Head) -> Signature {
         let named = parameterNames
 
-        return Signature(
-            parameters: parameters,
-            returns: returns,
+        return with(
             bounds: head.bounds.filter { name, _ in named.contains(name) }.merging(bounds) { theirs, mine in
                 theirs.union(mine)
             },
@@ -199,9 +223,7 @@ public struct Signature: Sendable, Equatable {
     func read(of contract: Name) -> Signature {
         let read = replacingSelf(with: .parameter(name: TypeSpelling.selfType))
 
-        return Signature(
-            parameters: read.parameters,
-            returns: read.returns,
+        return read.with(
             bounds: read.bounds.merging([TypeSpelling.selfType: [contract]]) { _, contract in contract },
             sameTypes: read.sameTypes
         )
@@ -217,11 +239,27 @@ public struct Signature: Sendable, Equatable {
                     description: parameter.description
                 )
             },
-            returns: returns?.replacingSelf(with: type),
+            returns: returns.replacingSelf(with: type),
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
             bounds: bounds,
             sameTypes: sameTypes.mapValues { same in same.replacingSelf(with: type) }
         )
     }
 
     // MARK: - Private
+    // This signature holding its type parameters to these bounds and same
+    // types instead.
+    private func with(bounds: [Name: Set<Name>], sameTypes: [Name: TypeExpression]) -> Signature {
+        Signature(
+            parameters: parameters,
+            returns: returns,
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
+            bounds: bounds,
+            sameTypes: sameTypes
+        )
+    }
 }

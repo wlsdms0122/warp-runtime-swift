@@ -7,8 +7,8 @@
 
 import Foundation
 
-// One document compiled: its declarations judged and lowered, its facts
-// derived, and its constants and variables settled, against what stands
+// One document compiled: its declarations judged against what they say and
+// lowered, and its constants and variables settled, against what stands
 // before it.
 struct Compiler {
     // MARK: - Property
@@ -43,10 +43,6 @@ struct Compiler {
         let boxes = module.variables.keys.sorted()
         let reading = Set(module.variables.keys)
 
-        // What the build read off this document's bodies whose declarations
-        // wrote no `returns`.
-        var read: [Name: LoweredType] = [:]
-
         // What this document settled.
         var constants: [Name: Value] = [:]
         var variables: [Name: (value: Value, type: LoweredType)] = [:]
@@ -59,6 +55,11 @@ struct Compiler {
         // The constants with what each reads as, which seeds the environment
         // a body is judged in.
         var typedConstants: [Name: (value: Value, type: LoweredType)] = [:]
+
+        // What each constant's value was written as where it was made. A
+        // constant is a fixed name, so a call of the value it holds leans on
+        // that as on any fixed name's.
+        var declaredConstants: [Name: LoweredType] = [:]
 
         func context() -> TypingContext {
             compiling.context(reading: reading, of: origin)
@@ -74,6 +75,17 @@ struct Compiler {
             return row
         }
 
+        // What this document declares, by the spelling a call in it writes.
+        // Its own rows do not stand yet, and this is what says what they take
+        // until they do.
+        let own = holding.reduce(into: [Name: Signature]()) { asked, symbol in
+            asked[symbol.declared] = symbol.procedure.signature
+        }
+
+        // What the documents behind this one declare, read the way a body in
+        // this one reads them.
+        let behind = compiling.context(reading: reading)
+
         // The names in scope before a body's first statement: its parameters,
         // the constants its module declared beside them, and the variables. A
         // module variable holds the type it declared, or the type it started
@@ -81,9 +93,7 @@ struct Compiler {
         // it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
             signature.environment(in: loweredTypes)
-                .merging(typedConstants.mapValues { constant in Binding(.fixed(declared: nil), constant.type) }) { _, constant in
-                    constant
-                }
+                .merging(bindings(of: typedConstants, declaring: declaredConstants)) { _, constant in constant }
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = Binding(
@@ -135,6 +145,17 @@ struct Compiler {
                     folding: folding
                 )
 
+                // What the body does is held to what its declaration says,
+                // every callee read by its own declaration, so a body is
+                // judged alone.
+                if let refusal = EffectChecker(context()).refusal(
+                    of: block,
+                    declared: declaration.signature,
+                    bound: opening(declaration.signature).compactMapValues(\.declaredType)
+                ) {
+                    throw BuildError("'\(symbol.declared)' \(refusal)", at: symbol.place)
+                }
+
                 answer = (
                     procedure: Procedure(
                         description: declaration.description,
@@ -161,71 +182,6 @@ struct Compiler {
             return answer.procedure
         }
 
-        // The facts nobody declared. All three are fixed points over what a
-        // body reaches, so a document's answer is decided once the documents
-        // it reaches have theirs, and the standing refused a cycle where that
-        // is not so. Read over every declaration the document holds.
-        //
-        // What this document declares, by the spelling a call in it writes.
-        // Its own rows do not stand yet, and this is what says what they take
-        // until they do.
-        let own = holding.reduce(into: [Name: Signature]()) { asked, symbol in
-            asked[symbol.declared] = symbol.procedure.signature
-        }
-
-        // What the documents behind this one declare, read the way a body in
-        // this one reads them.
-        let behind = compiling.context(reading: reading)
-
-        // What a selector this document may reach takes: its own declarations
-        // first, the documents standing before it after. One rule, so the two
-        // judgements standing on it read the same declaration.
-        let taking: @Sendable (Name) -> Signature? = { selector in
-            own[selector] ?? behind.signature(of: selector)
-        }
-
-        // Derived over this document's declarations, and read off the rows
-        // for every other: what the build derives of a declaration stands on
-        // its row, so a document's own facts are its own until its rows stand.
-        var const: Set<Name> = []
-        var isolated: Set<Name> = []
-        var failing: [Name: Failing] = [:]
-        let answersWithoutRunning: @Sendable (Name) -> Bool = { selector in behind.isConst(selector) }
-        let touchesNothingShared: @Sendable (Name) -> Bool = { selector in behind.isIsolated(selector) }
-
-        Derivation().const(
-            among: holding,
-            deriving: &const,
-            reading: reading,
-            beside: declaredVariables,
-            taking: taking,
-            beyond: answersWithoutRunning,
-            in: loweredTypes
-        )
-        Derivation().isolated(
-            among: holding,
-            deriving: &isolated,
-            beside: declaredVariables,
-            taking: taking,
-            beyond: touchesNothingShared,
-            in: loweredTypes
-        )
-        Derivation().failing(
-            among: holding,
-            deriving: &failing,
-            beside: declaredVariables,
-            beyond: { selector in behind.failing(of: selector) },
-            in: loweredTypes
-        )
-
-        let ownNames = Set(holding.map(\.declared))
-        let constant: @Sendable (Name) -> Bool = { [const] selector in
-            ownNames.contains(selector) ? const.contains(selector) : answersWithoutRunning(selector)
-        }
-        let untouched: @Sendable (Name) -> Bool = { [isolated] selector in
-            ownNames.contains(selector) ? isolated.contains(selector) : touchesNothingShared(selector)
-        }
-
         // Where this document numbers its calls from: what it looks for
         // outside itself first, its own declarations after. Built from the
         // document alone, so a body lowers to the same numbers whatever
@@ -237,8 +193,6 @@ struct Compiler {
         )
         let sending = Sending(
             numbering: numbering,
-            const: constant,
-            isolated: untouched,
             taking: { selector in own[selector] ?? behind.declared(selector)?.signature },
             contractProcedures: Set(behind.contractProcedures.keys),
             concealing: behind.concealed
@@ -257,9 +211,6 @@ struct Compiler {
                     label: symbol.declared,
                     origin: symbol.origin,
                     procedure: symbol.procedure,
-                    const: const.contains(symbol.declared),
-                    isolated: isolated.contains(symbol.declared),
-                    failing: failing[symbol.declared] ?? .anything,
                     builtin: module.builtin,
                     sends: try sending.rows(of: symbol),
                     in: loweredTypes
@@ -277,6 +228,21 @@ struct Compiler {
         // may run.
         compiling.foldable()
 
+        // Read once the document's rows stand, since a constant's value may be
+        // what one of them answers, and in the order constants settle, since
+        // one may read another through a path.
+        let effects = EffectChecker(context())
+
+        declaredConstants = order(module.constants).reduce(into: [Name: LoweredType]()) { declared, constant in
+            let before = declared
+
+            declared[constant.name] = effects.declaredType(
+                of: .constant(constant.name),
+                reading: constant.expression,
+                given: { read in before[read] }
+            )
+        }
+
         // Settled after the procedures are known, because a constant may call
         // one: a constant that spells a URL out of other constants spells it
         // with procedures like any other expression.
@@ -286,6 +252,7 @@ struct Compiler {
         typedConstants = try await self.constants(
             of: module,
             at: origin,
+            declaring: declaredConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             in: context()
@@ -299,33 +266,10 @@ struct Compiler {
             at: origin,
             declaring: declaredVariables,
             beside: typedConstants,
+            declaredAs: declaredConstants,
             folding: compiling.folding(),
             writing: &compiling.lowering,
             in: context()
-        )
-
-        // What every declaration of this document whose `returns` nobody
-        // wrote answers, read off its body.
-        await TypeChecker().answers(
-            of: holding.compactMap { symbol -> TypeChecker.Unsaid? in
-                guard
-                    symbol.procedure.signature.returns == nil,
-                    let block = symbol.procedure.block
-                else { return nil }
-
-                return TypeChecker.Unsaid(
-                    symbol: symbol,
-                    block: block,
-                    environment: opening(symbol.procedure.signature),
-                    sends: TypeChecker().sent(in: block)
-                )
-            },
-            reading: context,
-            recording: { qualified, answer in
-                read[qualified] = answer
-
-                compiling.read(answer, as: qualified, of: origin)
-            }
         )
 
         // Every declaration this document makes, in name order, which is
@@ -336,16 +280,15 @@ struct Compiler {
             _ = try await resolved(symbol)
         }
 
-        // The types its bodies and the answers read off them stand on, written
-        // as this document's own numbers.
+        // The types its bodies stand on, written as this document's own
+        // numbers.
         // Lowering read the link's table to judge, so what it wrote is that
         // link's rows; what leaves here is the document's.
         //
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            Array(block) + compiling.lowering.documents[origin].closureRows,
-            answering: read
+            Array(block) + compiling.lowering.documents[origin].closureRows
         )
 
         return Compiled(
@@ -359,7 +302,6 @@ struct Compiler {
             declared: declared,
             constants: module.constants.keys.sorted(),
             table: lowered.table.map(Judged.init),
-            answers: lowered.answers,
             numbering: numbering,
             typeNumbering: lowered.numbering,
             variables: boxes.map { name in (name: name, value: variables[name]?.value ?? .null) },
@@ -379,6 +321,7 @@ struct Compiler {
     private func constants(
         of module: Module,
         at origin: Int,
+        declaring declaredTypes: [Name: LoweredType],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         in context: TypingContext
@@ -407,6 +350,7 @@ struct Compiler {
                 into: nil,
                 at: place,
                 beside: known,
+                declaredAs: declaredTypes,
                 of: origin,
                 folding: resolved,
                 writing: &lowering,
@@ -433,6 +377,7 @@ struct Compiler {
         at origin: Int,
         declaring declaredTypes: [Name: LoweredType],
         beside known: [Name: (value: Value, type: LoweredType)],
+        declaredAs declaredConstants: [Name: LoweredType],
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
         in context: TypingContext
@@ -444,14 +389,11 @@ struct Compiler {
         for (name, variable) in module.variables.sorted(by: { $0.key < $1.key }) {
             let place = Place.variable(name.spelling, in: .of(module))
 
-            // A start written as a literal, or as a closure literal that
-            // writes no answer, is read as what the variable declares.
+            // A start written as a literal is read as what the variable
+            // declares.
             let declaredType = declaredTypes[name]
             let start = declaredType.map { declaredType in
-                declaredType.written(
-                    declaredType.completing(variable.start, in: context.loweredTypes),
-                    in: context.loweredTypes
-                )
+                declaredType.written(variable.start, in: context.loweredTypes)
             } ?? variable.start
 
             let (settled, written) = try await self.settled(
@@ -460,6 +402,7 @@ struct Compiler {
                 into: declaredType,
                 at: place,
                 beside: known,
+                declaredAs: declaredConstants,
                 of: origin,
                 folding: resolved,
                 writing: &lowering,
@@ -503,6 +446,7 @@ struct Compiler {
         into declared: LoweredType?,
         at place: Place,
         beside known: [Name: (value: Value, type: LoweredType)],
+        declaredAs declaredConstants: [Name: LoweredType],
         of origin: Int,
         folding resolved: ResolvedTable,
         writing lowering: inout Lowering,
@@ -512,7 +456,7 @@ struct Compiler {
             in: expression,
             into: declared,
             at: place,
-            in: known.mapValues { constant in Binding(.fixed(declared: nil), constant.type) },
+            in: bindings(of: known, declaring: declaredConstants),
             with: context,
             folding: nil
         )
@@ -541,6 +485,17 @@ struct Compiler {
     // The types a document's variables declare, lowered once.
     private func declaredTypes(of module: Module, in table: LoweredTypeTable) -> [Name: LoweredType] {
         module.variables.compactMapValues { variable in variable.declared?.lowered(in: table) }
+    }
+
+    // The constants settled so far as names a body or a later constant
+    // reads: each fixed, holding the type written where its value came from.
+    private func bindings(
+        of constants: [Name: (value: Value, type: LoweredType)],
+        declaring declaredTypes: [Name: LoweredType]
+    ) -> [Name: Binding] {
+        constants.reduce(into: [Name: Binding]()) { held, entry in
+            held[entry.key] = Binding(.fixed(declared: declaredTypes[entry.key]), entry.value.type)
+        }
     }
 
     // The order a module's constants settle in: what a constant reads comes

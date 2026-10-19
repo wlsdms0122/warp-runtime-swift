@@ -35,7 +35,8 @@ struct FieldPlaceTests {
         // the position is the layout's.
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "point", type: .named("App.Point"))]
+                parameters: [Parameter(name: "point", type: .named("App.Point"))],
+                returns: .int
             ),
             body: [],
             result: .reference([.name("point"), .name("y")])
@@ -53,6 +54,7 @@ struct FieldPlaceTests {
         // Given. The literal is written where the struct is declared, and laid
         // out the way the declaration is
         let sut = Procedure(
+            signature: Signature(returns: .int),
             body: [
                 Statement(
                     binding: .constant("held", declared: .named("App.Pair")),
@@ -74,7 +76,8 @@ struct FieldPlaceTests {
         // Given
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))]
+                parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))],
+                returns: .int
             ),
             body: [],
             result: .reference([.name("entries"), .index("a")])
@@ -92,7 +95,8 @@ struct FieldPlaceTests {
         // Given
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "outer", type: .named("App.Outer"))]
+                parameters: [Parameter(name: "outer", type: .named("App.Outer"))],
+                returns: .string
             ),
             body: [],
             result: .reference([.name("outer"), .name("inner"), .name("deep")])
@@ -112,7 +116,8 @@ struct FieldPlaceTests {
         // is the place the field stands in.
         let sut = Procedure(
             signature: Signature(
-                parameters: [Parameter(name: "point", type: .named("App.Point"))]
+                parameters: [Parameter(name: "point", type: .named("App.Point"))],
+                returns: .int
             ),
             body: [],
             result: .reference([.name("point"), .name("y")])
@@ -135,7 +140,7 @@ struct FieldPlaceTests {
         // Given. A value read as `Any` cast to what the box said it holds is
         // laid out the way the declaration says, and a place reads it.
         let sut = Procedure(
-            signature: Signature(parameters: [Parameter(name: "given", type: .any)]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .any)], returns: .int, failing: .these(["cast_refused"])),
             body: [
                 Statement(
                     binding: .variable("point", declared: .named("App.Point")),
@@ -168,7 +173,7 @@ struct FieldPlaceTests {
         // Given. Nothing was declared, so there is nothing for a write to
         // be held to and nothing the build laid out
         let sut = Procedure(
-            signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(key: .string, value: .int))]),
+            signature: Signature(parameters: [Parameter(name: "given", type: .dictionary(key: .string, value: .int))], returns: .int),
             body: [
                 Statement(binding: .variable("held"), expression: map(["y": .literal(.int(0))])),
                 Statement(

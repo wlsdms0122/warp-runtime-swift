@@ -17,7 +17,7 @@ extension Module {
     static let ticketing = try! Module(
         procedures: [
             "App.ticket": Procedure(
-                signature: Signature(returns: .int),
+                signature: Signature(returns: .int, constness: .const),
                 implementation: .query(TicketQuery())
             )
         ]
@@ -26,7 +26,12 @@ extension Module {
     static let failing = try! Module(
         procedures: [
             "App.fail": Procedure(
-                signature: Signature(of: FailEffect.self),
+                signature: Signature(
+                    of: FailEffect.self,
+                    returns: .any,
+                    failing: .these([TestRecoverableFailure.type]),
+                    isolation: .isolated
+                ),
                 implementation: .effect(FailEffect())
             )
         ]

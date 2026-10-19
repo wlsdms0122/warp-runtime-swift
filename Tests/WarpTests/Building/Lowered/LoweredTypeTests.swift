@@ -173,6 +173,7 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .int),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Math.max",
@@ -201,7 +202,7 @@ struct LoweredTypeTests {
             types: [
                 "App.Maybe": .alias(.nullable(.int)),
                 "App.Kinds": .struct([
-                    "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")], failing: .anything), .unstated, .unstated)
+                    "soft": .procedure(ProcedureType(parameters: [.named("App.Maybe")], returns: .any, failing: .anything), .unstated, .unstated)
                 ])
             ],
             procedures: [
@@ -237,8 +238,9 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                     body: [],
-                    result: .closure(Procedure(body: [], result: .literal(.int(1))))
+                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
                 )
             ]
         )
@@ -246,7 +248,11 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .anything)))]),
+                    signature: Signature(
+                        parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .anything)))],
+                        returns: .int,
+                        failing: .anything
+                    ),
                     body: [],
                     result: .apply(.reference([.name("held")]), arguments: [])
                 )
@@ -271,8 +277,9 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                     body: [],
-                    result: .closure(Procedure(body: [], result: .literal(.int(1))))
+                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
                 )
             ]
         )
@@ -280,7 +287,11 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .anything)))]),
+                    signature: Signature(
+                        parameters: [Parameter(name: "held", type: .procedure(ProcedureType(returns: .int, failing: .anything)))],
+                        returns: .int,
+                        failing: .anything
+                    ),
                     body: [],
                     result: .apply(.reference([.name("held")]), arguments: [])
                 )
@@ -304,8 +315,9 @@ struct LoweredTypeTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                     body: [],
-                    result: .closure(Procedure(body: [], result: .literal(.int(1))))
+                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
                 )
             ]
         )

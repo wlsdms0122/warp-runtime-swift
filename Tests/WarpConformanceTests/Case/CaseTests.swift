@@ -215,6 +215,7 @@ struct CaseTests {
                 procedures {
                   entry {
                     access "public"
+                    failing "anything"
                     result {
                       call {
                         arguments [
@@ -223,6 +224,7 @@ struct CaseTests {
                         procedure "\(procedure)"
                       }
                     }
+                    returns "Double"
                   }
                 }
                 warp 1

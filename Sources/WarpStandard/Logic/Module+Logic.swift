@@ -17,7 +17,12 @@ public extension Module {
             procedures: [
                 "Standard.Logic.equal": Procedure(
                     description: "Whether two values are the same.",
-                    signature: Signature(of: EqualQuery.self, returns: .bool),
+                    signature: Signature(
+                        of: EqualQuery.self,
+                        returns: .bool,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(EqualQuery())
                 )
             ]

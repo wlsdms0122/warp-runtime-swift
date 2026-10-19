@@ -55,7 +55,7 @@ struct BoundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Numeric.plus",
@@ -154,7 +154,7 @@ struct BoundTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(selector: "keep", arguments: [.literal(.double(1.5))]))
                 )
@@ -362,7 +362,7 @@ struct BoundTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .array(.named("App.Describable"))),
+                    signature: Signature(returns: .array(.named("App.Describable")), failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("card"),
@@ -402,7 +402,7 @@ struct BoundTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .string),
+                    signature: Signature(returns: .string, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("box"),
@@ -602,7 +602,7 @@ struct BoundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .any),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Collection.sorted",
@@ -629,7 +629,8 @@ struct BoundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "absent", type: .any)]
+                        parameters: [Parameter(name: "absent", type: .any)],
+                        returns: .any
                     ),
                     body: [],
                     result: .call(Call(selector: "Standard.Math.min", arguments: [reference("absent"), .literal(.int(1))]))
@@ -685,7 +686,7 @@ struct BoundTests {
                 ),
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("card"),

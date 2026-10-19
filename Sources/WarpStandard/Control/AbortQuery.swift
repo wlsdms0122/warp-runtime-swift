@@ -31,8 +31,6 @@ struct AbortQuery: Query {
     }
 
     // MARK: - Property
-    let failing = Failing.these([Aborted.type])
-
     static let unsaid = "aborted"
 
     // MARK: - Initializer

@@ -76,7 +76,7 @@ struct SeparateCompilationTests {
     func anUnknownEntryIsTheRunsRefusal() async throws {
         // Given
         let sut = try Module(
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
         )
 
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
@@ -120,11 +120,11 @@ struct SeparateCompilationTests {
 
     }
 
-    @Test("a fact nobody declared crosses documents in the order they stand")
-    func aDerivedFactCrossesDocuments() async throws {
-        // Given. Three documents in a chain. The bottom one reads its own
-        // variable, so it answers by the run's state rather than on its own,
-        // and the two above reach it only through each other.
+    @Test("a body is held to what a declaration in another document says")
+    func aDeclarationCrossesDocuments() async throws {
+        // Given. The bottom document reads its own variable, so it answers by
+        // the run's state and says nothing of itself; the middle one says it
+        // answers without running and calls it.
         let bottom = try Module(
             variables: ["lowCount": .literal(.int(0))],
             procedures: [
@@ -138,37 +138,19 @@ struct SeparateCompilationTests {
         let middle = try Module(
             procedures: [
                 "Mid.ask": Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, constness: .const),
                     body: [],
                     result: .call(Call(selector: "Low.read"))
                 )
             ]
         )
-        let top = try Module(
-            procedures: [
-                "Top.ask": Procedure(
-                    signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Mid.ask"))
-                ),
-                "Top.alone": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
-            ]
-        )
 
-        // When. Handed over with the one that is needed last, so the standing
-        // has to put it first for the answer to be there when it is asked.
-        let compiled = try await compiled([top, middle, bottom])
-
-        func constness(of declared: Name) throws -> Constness {
-            try Assembled(compiled).table[#require(try Assembled(compiled).rows[declared])].judged.constness
+        // When / Then. Handed over with the one that is needed last
+        await #expect {
+            try await compiled([middle, bottom])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'Mid.ask' is declared const, and it calls 'Low.read'")
         }
-
-        // Then. The whole chain answers by the run, and what reaches none of
-        // it still answers on its own.
-        #expect(try constness(of: "Low.read") == .unstated)
-        #expect(try constness(of: "Mid.ask") == .unstated)
-        #expect(try constness(of: "Top.ask") == .unstated)
-        #expect(try constness(of: "Top.alone") == .const)
     }
 
     @Test("a constant runs a written procedure a document standing before it declared")
@@ -178,7 +160,7 @@ struct SeparateCompilationTests {
         let answering = try Module(
             procedures: [
                 "A.answer": Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, constness: .const),
                     body: [],
                     result: .literal(.int(7))
                 )
@@ -477,41 +459,6 @@ struct SeparateCompilationTests {
         )
     }
 
-    @Test("an answer the build read carries the number its own document gave")
-    func aReadAnswerCarriesTheDocumentsOwnTypeNumber() async throws {
-        // Given. A declaration writing no `returns`, whose body answers a type
-        // its document declares.
-        let sut = try casting()
-
-        // When. Compiled alone, and again beside a document whose type takes a
-        // type row in front of its own.
-        let alone = try await compiled(sut + Module.standard)
-        let beside = try await compiled(
-            [
-                try Module(
-                    types: ["Aaa.Ahead": .struct(["first": .int])],
-                    procedures: [
-                        "Aaa.first": Procedure(
-                            signature: Signature(returns: .int),
-                            body: [],
-                            result: .literal(.int(0))
-                        )
-                    ]
-                )
-            ] + sut + Module.standard
-        )
-
-        // Then. The answer is carried, in the document's own numbers.
-        #expect(try answer(of: entryName, in: alone) == .named(0))
-
-        // And. The row it stands on moved and the number did not.
-        #expect(
-            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
-                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
-        )
-        #expect(try answer(of: entryName, in: alone) == answer(of: entryName, in: beside))
-    }
-
     @Test("a document compiled against the ones behind it runs the same as the graph")
     func aDocumentCompilesAgainstWhatIsAlreadyCompiled() async throws {
         // Given. A document whose constant runs a procedure another declared, and
@@ -521,7 +468,7 @@ struct SeparateCompilationTests {
             types: ["A.Held": .struct(["count": .int])],
             procedures: [
                 "A.answer": Procedure(
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .these(["cast_refused"]), constness: .const),
                     body: [
                         Statement(
                             binding: .constant("held"),
@@ -575,7 +522,6 @@ struct SeparateCompilationTests {
 
             #expect(one.document == other.document)
             #expect(one.declared == other.declared)
-            #expect(one.answers == other.answers)
             #expect(one.typeNumbering.types == other.typeNumbering.types)
             #expect(one.variables.map(\.name) == other.variables.map(\.name))
             #expect(one.table.count == other.table.count)
@@ -641,7 +587,7 @@ struct SeparateCompilationTests {
                 )
             ]
         )
-        let after = try Module(procedures: ["After.one": Procedure(body: [], result: .literal(.int(1)))])
+        let after = try Module(procedures: ["After.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))])
 
         // When / Then
         await #expect(throws: Never.self) {
@@ -710,7 +656,7 @@ struct SeparateCompilationTests {
             case var .dictionary(parts) = try compiled[1].object(),
             case var .array(table) = parts["rows"],
             case var .array(row) = table[0],
-            case var .array(implementation) = row[6],
+            case var .array(implementation) = row[3],
             case var .array(body) = implementation[1],
             case var .array(result) = body[1],
             case var .array(operation) = result[0],
@@ -727,7 +673,7 @@ struct SeparateCompilationTests {
         result[0] = .array(operation)
         body[1] = .array(result)
         implementation[1] = .array(body)
-        row[6] = .array(implementation)
+        row[3] = .array(implementation)
         table[0] = .array(row)
         parts = parts.writing("rows", with: .array(table))
 
@@ -858,55 +804,6 @@ struct SeparateCompilationTests {
         }
     }
 
-    @Test("a path reads into what another document's body answers")
-    func aStepReadsAnAnswerAnotherDocumentsBodyGave() async throws {
-        // Given. A document declaring a procedure that writes no `returns`, and
-        // another calling it and then reading into what it answers.
-        let answering = try Module(
-            types: ["A.Held": .struct(["count": .int])],
-            procedures: [
-                "A.first": Procedure(
-                    signature: Signature(
-                        parameters: [Parameter(name: "of", type: .array(.int))]
-                    ),
-                    body: [],
-                    result: .cast(
-                        .struct(["count": .literal(.int(3))]),
-                        as: .named("A.Held"),
-                        optional: false
-                    )
-                )
-            ]
-        )
-        let walking = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    signature: Signature(
-                        parameters: [Parameter(name: "items", type: .array(.int))],
-                        returns: .int
-                    ),
-                    body: [
-                        Statement(
-                            binding: .constant("held"),
-                            expression: .call(Call(selector: "A.first", arguments: [reference("items")]))
-                        )
-                    ],
-                    result: .reference([.name("held"), .name("count")])
-                )
-            ]
-        )
-
-        // When / Then. The step into `count` is judged against what the call
-        // answers, which is a type only the other document's reading knows.
-        #expect(
-            try await run(
-                [walking, answering],
-                arguments: ["items": .array([.int(1)])]
-            ) == .int(3)
-        )
-    }
-
     // MARK: - Public
     // MARK: - Private
     // An object written down and read back with its declared types replaced
@@ -967,7 +864,7 @@ struct SeparateCompilationTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(returns: .string),
+                        signature: Signature(returns: .string, failing: .these(["cast_refused"])),
                         body: [
                             Statement(
                                 binding: .constant("account"),
@@ -995,15 +892,6 @@ struct SeparateCompilationTests {
         }
 
         _ = try builder.link(compiled, supplying: Supplying(Module.standard))
-    }
-
-    // What a compile read off the body of a declaration that wrote no answer.
-    private func answer(of declared: Name, in compiled: [Compiled]) throws -> LoweredType {
-        guard let read = compiled.compactMap({ document in document.answers[declared] }).first else {
-            throw Unheld(description: "nothing read an answer for '\(declared)'")
-        }
-
-        return read
     }
 
     private func compiled(_ modules: [Module]) async throws -> [Compiled] {
@@ -1061,6 +949,7 @@ struct SeparateCompilationTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .named("Bank.Account"), failing: .these(["cast_refused"])),
                         body: [],
                         result: .cast(
                             .struct(["balance": .literal(.int(7))]),
@@ -1121,6 +1010,7 @@ struct SeparateCompilationTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .array(.string), failing: .these(["cast_refused"])),
                         body: [
                             Statement(
                                 binding: .constant("account"),
@@ -1191,7 +1081,7 @@ struct SeparateCompilationTests {
             ),
             try Module(
                 procedures: [
-                    entryName: Procedure(access: .public, body: [], result: .call(Call(selector: "B.asks"))),
+                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "B.asks"))),
                     "B.asks": Procedure(
                         signature: Signature(returns: .int),
                         body: [],

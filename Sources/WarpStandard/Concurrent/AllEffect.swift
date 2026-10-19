@@ -14,9 +14,6 @@ struct AllEffect: Effect {
     typealias Parameters = FanoutOperand
 
     // MARK: - Property
-    // Every recoverable failure a piece raises is gathered into one.
-    let failing = Failing.these([ConcurrentFailed.type])
-
     private let fanout: Fanout
 
     // MARK: - Initializer

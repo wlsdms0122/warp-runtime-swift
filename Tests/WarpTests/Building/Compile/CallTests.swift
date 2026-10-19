@@ -23,7 +23,7 @@ struct CallTests {
     func threeKindsOfProcedureAreOneExpression() async throws {
         // Given
         let echo = Procedure(
-            signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
+            signature: Signature(parameters: [Parameter(name: "text", type: .string)], returns: .dictionary(key: .string, value: .string)),
             body: [],
             result: map(["said": reference("text")])
         )
@@ -42,6 +42,7 @@ struct CallTests {
         // When
         let outputs = try await run(
             Procedure(
+                signature: Signature(returns: .any),
                 body: sut,
                 result: map([
                     "counted": reference("counted"),
@@ -247,6 +248,7 @@ struct CallTests {
             result: .literal(.bool(true))
         )
         let sut = Procedure(
+            signature: Signature(returns: .bool),
             body: [
                 Statement(binding: .constant("run"), expression: .call(
                     Call(selector: "countdown", arguments: [.literal(.int(1))])

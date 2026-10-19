@@ -70,8 +70,8 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.allKeyed",
                     arguments: [
                         map([
-                            "left": .closure(Procedure(body: [], result: .literal(.int(1)))),
-                            "right": .closure(Procedure(body: [], result: .literal(.int(2))))
+                            "left": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
+                            "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2))))
                         ])
                     ]
                 )
@@ -93,9 +93,9 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
-                            .closure(Procedure(body: [], result: .literal(.int(1)))),
-                            .closure(Procedure(body: [], result: .literal(.int(2)))),
-                            .closure(Procedure(body: [], result: .literal(.int(3))))
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2)))),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(3))))
                         ])
                     ]
                 )
@@ -123,7 +123,9 @@ struct ConcurrencyTests {
                                     parameters: [
                                         Parameter(name: "item", type: .any),
                                         Parameter(name: "index", type: .any)
-                                    ]
+                                    ],
+                                    returns: .any,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -154,7 +156,9 @@ struct ConcurrencyTests {
                         .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: [Parameter(name: "index", type: .any)]
+                                    parameters: [Parameter(name: "index", type: .any)],
+                                    returns: .any,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("index")
@@ -170,7 +174,7 @@ struct ConcurrencyTests {
             try await answer(of: [sut], result: reference("placed"))
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("holds const isolated (Any) -> Any where isolated (")
+                && "\(error)".contains("holds isolated (Any) -> Any where isolated (")
         }
     }
 
@@ -190,7 +194,9 @@ struct ConcurrencyTests {
                                     parameters: [
                                         Parameter(name: "item", type: .any),
                                         Parameter(name: "index", type: .any)
-                                    ]
+                                    ],
+                                    returns: .any,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -219,7 +225,9 @@ struct ConcurrencyTests {
                         .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]
+                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)],
+                                    returns: .any,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -248,10 +256,11 @@ struct ConcurrencyTests {
                         .array([
                             .closure(
                                 Procedure(
+                                    signature: Signature(failing: .these(["aborted"]), isolation: .isolated),
                                     body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             ),
-                            .closure(Procedure(body: [], result: .literal(.string("answered"))))
+                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [], result: .literal(.string("answered"))))
                         ])
                     ]
                 )
@@ -279,9 +288,10 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.first",
                     arguments: [
                         .array([
-                            .closure(Procedure(body: [], result: .literal(.string("answered")))),
+                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [], result: .literal(.string("answered")))),
                             .closure(
                                 Procedure(
+                                    signature: Signature(returns: .any, isolation: .isolated),
                                     body: [
                                         Statement(binding: .constant("slow"), expression: .call(Call(selector: "App.wait"))
                                         )
@@ -302,7 +312,10 @@ struct ConcurrencyTests {
             vocabulary: Module.standard + [
                 try Module(
                     procedures: [
-                        "App.wait": Procedure(implementation: .effect(WaitEffect(watch: waiting)))
+                        "App.wait": Procedure(
+                            signature: Signature(isolation: .isolated),
+                            implementation: .effect(WaitEffect(watch: waiting))
+                        )
                     ]
                 )
             ]
@@ -328,7 +341,7 @@ struct ConcurrencyTests {
                         .array([
                             .closure(
                                 Procedure(
-                                    signature: Signature(parameters: [], returns: .int),
+                                    signature: Signature(returns: .int, failing: .these(["aborted"]), isolation: .isolated),
                                     body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             )
@@ -349,7 +362,10 @@ struct ConcurrencyTests {
         // Given. Two pieces fail. Which failures a rescue reads must be every
         // one of them, whichever finished first.
         let doomed = Warp.Expression.closure(
-            Procedure(body: [Statement(expression: aborting(literal("doomed")))])
+            Procedure(
+                signature: Signature(failing: .these(["aborted"]), isolation: .isolated),
+                body: [Statement(expression: aborting(literal("doomed")))]
+            )
         )
         let sut = Statement(binding: .constant("both"), expression: .call(
                 Call(selector: "Standard.Concurrent.allKeyed", arguments: [map(["first": doomed, "second": doomed])])
@@ -374,7 +390,7 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
-                            .closure(Procedure(body: [], result: .literal(.int(1)))),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
                             .literal(.int(2))
                         ])
                     ]
@@ -386,7 +402,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(of: [sut], result: reference("both"))
         } throws: { error in
-            "\(error)".contains("with pieces, which holds [const isolated () -> Int, Int] where Array<isolated () throws -> Any> is declared")
+            "\(error)".contains("with pieces, which holds [isolated () -> Int, Int] where Array<isolated () throws -> Any> is declared")
         }
     }
 
@@ -402,7 +418,9 @@ struct ConcurrencyTests {
                         .closure(
                             Procedure(
                                 signature: Signature(
-                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)]
+                                    parameters: [Parameter(name: "item", type: .any), Parameter(name: "index", type: .int)],
+                                    returns: .any,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("item")
@@ -419,7 +437,7 @@ struct ConcurrencyTests {
                 of: [sut],
                 result: reference("walked"),
                 arguments: ["subject": .string("not a collection")],
-                signature: Signature(parameters: [Parameter(name: "subject", type: .any)])
+                signature: Signature(parameters: [Parameter(name: "subject", type: .any)], returns: .any, failing: .anything)
             )
         } throws: { error in
             error is BuildError && "\(error)".contains("with array, which holds Any where")
@@ -436,7 +454,8 @@ struct ConcurrencyTests {
                     access: .public,
                     signature: Signature(
                         parameters: [Parameter(name: "items", type: .array(.int))],
-                        returns: .array(.int)
+                        returns: .array(.int),
+                        failing: .these(["concurrent_failed"])
                     ),
                     body: [],
                     result: .call(Call(
@@ -449,7 +468,8 @@ struct ConcurrencyTests {
                                         Parameter(name: "item", type: .int),
                                         Parameter(name: "index", type: .int)
                                     ],
-                                    returns: .int
+                                    returns: .int,
+                                    isolation: .isolated
                                 ),
                                 body: [],
                                 result: reference("item")

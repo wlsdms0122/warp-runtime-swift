@@ -20,7 +20,14 @@ enum ObjectCoverageFixture {
             // procedure.
             contracts: [
                 "a.five": Contract(
-                    procedures: ["a.six": ContractProcedure(signature: Signature(parameters: [Parameter(name: "r", type: .selfType), parameter], returns: .bool), constness: .const, isolation: .unstated, failing: ["a.nineteen", "a.twenty"])],
+                    procedures: [
+                        "a.six": Signature(
+                            parameters: [Parameter(name: "r", type: .selfType), parameter],
+                            returns: .bool,
+                            failing: .these(["a_nineteen", "a_twenty"]),
+                            constness: .const
+                        )
+                    ],
                     types: ["Item", "Key"],
                     bounds: ["Key": ["a.four"]]
                 )
@@ -50,7 +57,6 @@ enum ObjectCoverageFixture {
                 try lifted(label: "a.eleven"),
                 try lifted(label: "a.eleven")
             ],
-            answers: ["a.eleven": everyLoweredType],
             // The two closures behind the spellings belong to the declaration whose
             // body stands them up, which is the one with a body.
             numbering: Numbering(
@@ -183,6 +189,7 @@ enum ObjectCoverageFixture {
                 label: "apply"
             ),
             Instruction(binding: nil, code: .cast(.literal(.int(3)), as: .string, optional: true), label: "cast"),
+            Instruction(binding: nil, code: .cast(.literal(.int(3)), as: everyLoweredType, optional: false), label: "cast"),
             Instruction(
                 binding: nil,
                 code: .conditional(
@@ -259,11 +266,8 @@ enum ObjectCoverageFixture {
     static func lifted(label: Name) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(returns: .parameter(name: "T"), bounds: ["T": ["a.five", "a.four"]]),
+            signature: Signature(returns: .parameter(name: "T"), failing: .anything, bounds: ["T": ["a.five", "a.four"]]),
             access: .internal,
-            constness: .unstated,
-            isolation: .unstated,
-            failing: .anything,
             judging: .body(
                 LoweredBody(instructions: [], result: .literal(.int(0))),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
@@ -274,11 +278,15 @@ enum ObjectCoverageFixture {
     static func row(label: Name, body: Bool) throws -> Judged {
         try Judged(
             label: label,
-            signature: Signature(parameters: [parameter], returns: .int, sameTypes: body ? ["T.Item": .string] : [:]),
+            signature: Signature(
+                parameters: [parameter],
+                returns: .int,
+                failing: body ? .these(["a_fail", "b_fail"]) : .anything,
+                constness: body ? .const : .unstated,
+                isolation: body ? .unstated : .isolated,
+                sameTypes: body ? ["T.Item": .string] : [:]
+            ),
             access: .internal,
-            constness: body ? .const : .unstated,
-            isolation: body ? .unstated : .isolated,
-            failing: body ? .these(["a.fail", "b.fail"]) : .anything,
             judging: body
                 ? .body(
                     everyOperation,

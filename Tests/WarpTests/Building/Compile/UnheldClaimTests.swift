@@ -236,6 +236,7 @@ struct UnheldClaimTests {
                             Parameter(name: "it", type: .parameter(name: "T"))
                         ],
                         returns: .int,
+                        constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
                     body: [],

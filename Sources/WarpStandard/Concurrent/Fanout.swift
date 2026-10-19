@@ -11,9 +11,9 @@ import Warp
 // Running closures at once. An isolated closure is a body that is safe to run
 // beside another (it writes no name it captured, touches no module variable and
 // cannot leave past its own edge) so "run these concurrently" is a thing a procedure
-// can be handed, and the grammar does not need a construct to say it. Which
-// closures are isolated the link derived, and the slot holds every piece to it
-// before this runs.
+// can be handed, and the grammar does not need a construct to say it. A closure
+// declares it is isolated, the build holds its body to that, and the slot holds
+// every piece to it before this runs.
 //
 // One machine under two procedures, because what a piece is, how it is started
 // and how a failure is reported are the same for both, and only what "done"

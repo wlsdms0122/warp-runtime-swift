@@ -318,7 +318,7 @@ struct ClaimChecker {
         // that type gives under its name, derived as a call through the
         // contract derives it.
         let standingOnAsked = asked.held.procedures.values.reduce(into: [Name: (of: Name, name: Name)]()) { found, wanted in
-            found.merge(wanted.signature.read(of: contract).associatedTypes) { first, _ in first }
+            found.merge(wanted.read(of: contract).associatedTypes) { first, _ in first }
         }
 
         if standingOnAsked.keys.contains(where: { label in readingSelf[label] == nil }) {
@@ -359,9 +359,8 @@ struct ClaimChecker {
             }
 
             if let reason = answers(
-                wanted.signature,
+                wanted,
                 by: witness.held.signature,
-                reading: witness.held.facts?.answer,
                 answering: type,
                 under: claim.held.head,
                 readingSelf: readingSelf,
@@ -373,31 +372,30 @@ struct ClaimChecker {
                 throw BuildError(says + ", and \(witness.spelled) declares '\(spelling)', which " + reason, at: claim.place)
             }
 
-            // What the contract asked beyond the signature, held where the
-            // witness's row stands, which is where its document was compiled.
-            guard let facts = witness.held.facts else { continue }
+            // What the contract asks beyond what a call hands and takes back.
+            let declared = witness.held.signature
 
-            if wanted.constness == .const, facts.constness != .const {
+            if wanted.constness == .const, declared.constness != .const {
                 throw BuildError(
-                    says + ", and \(witness.spelled) declares '\(spelling)', which runs, and '\(contract)'"
-                        + " asks '\(procedure)' to answer without running",
+                    says + ", and \(witness.spelled) declares '\(spelling)', which is not declared const, and"
+                        + " '\(contract)' asks '\(procedure)' to answer without running",
                     at: claim.place
                 )
             }
 
-            if wanted.isolation == .isolated, facts.isolation != .isolated {
+            if wanted.isolation == .isolated, declared.isolation != .isolated {
                 throw BuildError(
-                    says + ", and \(witness.spelled) declares '\(spelling)', which touches a name another"
-                        + " body could touch at once, and '\(contract)' asks '\(procedure)' to touch none",
+                    says + ", and \(witness.spelled) declares '\(spelling)', which is not declared isolated, and"
+                        + " '\(contract)' asks '\(procedure)' to touch no name another body could touch at once",
                     at: claim.place
                 )
             }
 
-            if !facts.failing.fails(within: wanted.failing) {
+            if !declared.failing.fails(within: wanted.failing) {
                 throw BuildError(
                     says + ", and \(witness.spelled) declares '\(spelling)', which may fail with"
-                        + " \(facts.failing.rendered), and '\(contract)' lets '\(procedure)' fail with"
-                        + " \(Failing.these(wanted.failing).rendered)",
+                        + " \(declared.failing.rendered), and '\(contract)' lets '\(procedure)' fail with"
+                        + " \(wanted.failing.rendered)",
                     at: claim.place
                 )
             }
@@ -419,14 +417,9 @@ struct ClaimChecker {
     // stands as one type the declaration does not know; the declaration's
     // own are filled by what the contract writes at the same positions. The
     // names are each declaration's own.
-    //
-    // A declaration that wrote no `returns` answers what the build read off
-    // its body, which is `read`. A claim is judged once its document is
-    // compiled, so every declaration it stands on has its reading.
     private func answers(
         _ asked: Signature,
         by given: Signature,
-        reading answerRead: LoweredType?,
         answering type: Name,
         under head: Head,
         readingSelf: [Name: LoweredType],
@@ -504,23 +497,16 @@ struct ClaimChecker {
                     + " at \(position) where the contract writes \(asked.parameters[position].type.rendered)"
         }
 
-        guard
-            let answer = asked.returns,
-            let promised = read.loweredReturns(in: loweredTypes)?.replacingParameters(readingSelf)
-        else {
-            return nil
-        }
+        let promised = read.loweredReturns(in: loweredTypes).replacingParameters(readingSelf)
 
         // What the declaration wrote is rendered as lowered, so a type
         // parameter names the bound its signature holds it to.
         let declared = given.loweredReturns(in: loweredTypes)
-        let answered = (declared ?? answerRead ?? .any)
-            .filling(substitution.readings)
 
-        guard promised.accepts(answered, in: loweredTypes) else {
+        guard promised.accepts(declared.filling(substitution.readings), in: loweredTypes) else {
             return "is the member '\(procedure)' of '\(type)', the procedure '\(contract)'"
-                    + " asks, and answers \((declared ?? answered).rendered(in: loweredTypes))"
-                    + " where the contract writes \(answer.rendered)"
+                    + " asks, and answers \(declared.rendered(in: loweredTypes))"
+                    + " where the contract writes \(asked.returns.rendered)"
         }
 
         return nil

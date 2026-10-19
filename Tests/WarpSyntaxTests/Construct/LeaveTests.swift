@@ -57,6 +57,7 @@ struct LeaveTests {
         // Given. The loop counts to ten and stops at three, and what it kept
         // it wrote outward.
         let sut = try loader.loadProcedure([
+            "returns": "Int",
             "body": [
                 ["var": "seen", "value": 0],
                 [
@@ -93,6 +94,7 @@ struct LeaveTests {
         // Given. A round cut short wrote nothing further outward, which is what
         // skipping it means. So only the rounds that finished are seen.
         let sut = try loader.loadProcedure([
+            "returns": "String",
             "parameters": [["name": "names", "type": "Array<String>"]],
             "body": [
                 ["var": "seen", "value": ""],
@@ -150,6 +152,7 @@ struct LeaveTests {
         // it binds and a loop binds its round state under that name. Reaching
         // past the nearest one is spelling the name that already exists.
         let sut = try loader.loadProcedure([
+            "returns": "Int",
             "body": [
                 ["var": "count", "value": 0],
                 [
@@ -288,6 +291,7 @@ struct LeaveTests {
             "procedures": [
                 "entry": [
                     "returns": "String",
+                    "failing": "anything",
                     "body": [
                         ["let": "said", "value": ["call": ["procedure": "helper"]]],
                         [
@@ -323,6 +327,7 @@ struct LeaveTests {
         // around the attempt is a loop around its body. A leaving is not a
         // failure, so a rescue lets it past.
         let sut = try loader.loadProcedure([
+            "returns": "Int",
             "body": [
                 ["var": "seen", "value": 0],
                 [

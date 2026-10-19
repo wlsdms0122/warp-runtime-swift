@@ -155,14 +155,7 @@ struct ObjectWriter {
                 .array([
                     .array(contract.types.sorted().map(name)),
                     keyed(contract.bounds) { contracts in .array(contracts.sorted().map(name)) },
-                    try keyed(contract.procedures) { (asked) throws(ObjectUnwritable) -> Value in
-                        .array([
-                            try signature(asked.signature),
-                            constness(asked.constness),
-                            isolation(asked.isolation),
-                            failing(.these(asked.failing))
-                        ])
-                    }
+                    try keyed(contract.procedures, signature)
                 ])
             }
 
@@ -194,9 +187,6 @@ struct ObjectWriter {
             return .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
                 try judged(row, spelled: false)
             })
-
-        case .answers:
-            return try keyed(compiled.answers, lowered)
 
         // What the bodies number their calls from, and their types.
         case .numbering:
@@ -367,12 +357,12 @@ struct ObjectWriter {
     }
 
     // A procedure type is `[parameters, returns, failing]`: the types it is
-    // applied with, in position order, what it answers or nothing, and what it
-    // may fail with.
+    // applied with, in position order, what it answers, and what it may fail
+    // with.
     private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try type.parameters.map(self.type)),
-            try ObjectWriter.maybe(type.returns, self.type),
+            try self.type(type.returns),
             failing(type.failing)
         ])
     }
@@ -380,7 +370,10 @@ struct ObjectWriter {
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
         .array([
             .array(try signature.parameters.map(parameter)),
-            try ObjectWriter.maybe(signature.returns, type),
+            try type(signature.returns),
+            failing(signature.failing),
+            constness(signature.constness),
+            isolation(signature.isolation),
             keyed(signature.bounds) { contracts in .array(contracts.sorted().map(name)) },
             try keyed(signature.sameTypes, type)
         ])
@@ -543,9 +536,6 @@ struct ObjectWriter {
         .array((spelled ? [name(row.label)] : []) + [
             try signature(row.signature),
             access(row.access),
-            constness(row.constness),
-            isolation(row.isolation),
-            failing(row.failing),
             try implementation(row.implementation)
         ])
     }

@@ -18,8 +18,6 @@ struct BakedTests {
         typealias Parameters = NoParameters
 
         // MARK: - Property
-        let isolated: Bool
-
         // MARK: - Initializer
         // MARK: - Public
         func evaluate(_ question: Question<Self>) async throws -> Value {
@@ -191,7 +189,7 @@ struct BakedTests {
             procedures: [
                 "App.main": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
+                    signature: Signature(returns: .int, failing: .these(["cast_refused"])),
                     body: [
                         Statement(
                             binding: .constant("account"),
@@ -375,7 +373,7 @@ struct BakedTests {
                 supplying: Supplying([try counting(isolated: false)] + Module.standard)
             )
         } throws: { error in
-            "\(error)".contains("said about its isolation, and the procedure brought under")
+            "\(error)".contains("said about its declaration, and the procedure brought under")
         }
     }
 
@@ -477,8 +475,8 @@ struct BakedTests {
             procedures: [
                 "App.counted": Procedure(
                     access: .public,
-                    signature: Signature(returns: .int),
-                    implementation: .query(CountingQuery(isolated: isolated))
+                    signature: Signature(returns: .int, isolation: isolated ? .isolated : .unstated),
+                    implementation: .query(CountingQuery())
                 )
             ]
         )

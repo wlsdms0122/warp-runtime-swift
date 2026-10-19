@@ -120,7 +120,7 @@ struct StandardTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(),
+                    signature: Signature(returns: .array(.int)),
                     body: [],
                     result: .call(Call(
                         selector: "Standard.Collection.sorted",

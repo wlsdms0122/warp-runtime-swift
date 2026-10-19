@@ -482,11 +482,9 @@ struct WriterTests {
         let draft = Draft(
             contracts: [
                 "App.Kept": [
-                    "keep": ContractProcedure(
-                        signature: Signature(
-                            parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
-                            bounds: ["T": ["App.Kept"]]
-                        )
+                    "keep": Signature(
+                        parameters: [Parameter(name: "of", type: .selfType), Parameter(name: "with", type: .parameter(name: "T"))],
+                        bounds: ["T": ["App.Kept"]]
                     )
                 ]
             ]
@@ -650,6 +648,7 @@ struct WriterTests {
             ],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "parameters": [["name": "names", "type": "Array<String>"], ["name": "procedure", "type": "String"]],
                     "body": [
                         ["var": "pick"],

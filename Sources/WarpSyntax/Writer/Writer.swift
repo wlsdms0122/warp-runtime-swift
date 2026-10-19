@@ -120,25 +120,7 @@ public struct Writer: Sendable {
                     guard !contract.procedures.isEmpty else { return .dictionary(asking) }
 
                     asking[ContractReader.CodingKeys.procedures.name] = .dictionary(
-                        try contract.procedures.mapValues { asked in
-                            var written = try fields(of: asked.signature)
-
-                            if asked.constness == .const {
-                                written[ContractProcedureReader.CodingKeys.const.name] = .bool(true)
-                            }
-
-                            if asked.isolation == .isolated {
-                                written[ContractProcedureReader.CodingKeys.isolated.name] = .bool(true)
-                            }
-
-                            if !asked.failing.isEmpty {
-                                written[ContractProcedureReader.CodingKeys.failing.name] = .array(
-                                    asked.failing.sorted().map(Value.string)
-                                )
-                            }
-
-                            return .dictionary(written)
-                        }
+                        try contract.procedures.mapValues { asked in .dictionary(try fields(of: asked)) }
                     )
 
                     return .dictionary(asking)
@@ -395,7 +377,8 @@ public struct Writer: Sendable {
 
     // A signature is written flat into whatever declares it. A procedure and a
     // contract's procedure both spell it as their own keys rather than nesting
-    // it.
+    // it. What says the least is written by leaving its key out: an answer of
+    // `Null`, no failure, neither claim.
     //
     // A type parameter's bound stands beside the first naming of it the
     // slots write, and an associated type's under `bounds`.
@@ -409,9 +392,28 @@ public struct Writer: Sendable {
             )
         }
 
-        if let returns = signature.returns {
+        if signature.returns != .null {
             written[SignatureFieldsReader.CodingKeys.returns.name] = try TypeWriter(readBy: readBy)
-                .value(of: returns, introducing: introducing)
+                .value(of: signature.returns, introducing: introducing)
+        }
+
+        switch signature.failing {
+        case .anything:
+            written[SignatureFieldsReader.CodingKeys.failing.name] = .string(Failing.anythingSpelling)
+
+        case let .these(failures) where !failures.isEmpty:
+            written[SignatureFieldsReader.CodingKeys.failing.name] = .array(failures.sorted().map(Value.string))
+
+        case .these:
+            break
+        }
+
+        if signature.constness == .const {
+            written[SignatureFieldsReader.CodingKeys.const.name] = .bool(true)
+        }
+
+        if signature.isolation == .isolated {
+            written[SignatureFieldsReader.CodingKeys.isolated.name] = .bool(true)
         }
 
         if let unwritten = introducing.bounds.keys.sorted().first {

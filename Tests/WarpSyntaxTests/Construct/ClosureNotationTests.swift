@@ -28,6 +28,7 @@ struct ClosureNotationTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "body": [
                         [
                             "let": "ran",
@@ -36,6 +37,7 @@ struct ClosureNotationTests {
                                 "arguments": [
                                     [
                                         "closure": [
+                                            "returns": "String",
                                             "body": [["let": "said", "value": "hi"]],
                                             "result": ["ref": "said"]
                                         ]
@@ -47,6 +49,7 @@ struct ClosureNotationTests {
                     "result": ["dictionary": [["result", ["ref": "ran"]]]]
                 ],
                 "twice": [
+                    "returns": "Any",
                     "parameters": [["name": "body", "type": "() -> String"]],
                     "body": [
                         ["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]],
@@ -72,12 +75,14 @@ struct ClosureNotationTests {
         let sut = try loader.loadDocument([
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "body": [
                         ["let": "outer", "value": "written"],
                         [
                             "let": "made",
                             "value": [
                                 "closure": [
+                                    "returns": "String",
                                     "body": [["let": "seen", "value": ["ref": "outer"]]],
                                     "result": ["ref": "seen"]
                                 ]
@@ -91,6 +96,7 @@ struct ClosureNotationTests {
                     "result": ["dictionary": [["result", ["ref": "said"]]]]
                 ],
                 "runner": [
+                    "returns": "Any",
                     "parameters": [["name": "body", "type": "() -> String"]],
                     "body": [
                         ["let": "outer", "value": "called"],
@@ -115,11 +121,14 @@ struct ClosureNotationTests {
             "imports": ["Standard.Text.joined", "Standard.Text.text"],
             "procedures": [
                 "entry": [
+                    "returns": "Any",
                     "body": [
                         [
                             "let": "doubler",
+                            "type": "(Int) -> String",
                             "value": [
                                 "closure": [
+                                    "returns": "String",
                                     "parameters": [["name": "n", "type": "Int"]],
                                     "body": [
                                         [

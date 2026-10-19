@@ -17,7 +17,12 @@ extension Module {
     static let testing = try! Module(
         procedures: [
             "Test.fail": Procedure(
-                signature: Signature(of: FailEffect.self),
+                signature: Signature(
+                    of: FailEffect.self,
+                    returns: .any,
+                    failing: .these([TestRecoverableFailure.type]),
+                    isolation: .isolated
+                ),
                 implementation: .effect(FailEffect())
             )
         ]

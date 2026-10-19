@@ -18,7 +18,13 @@ public extension Module {
             procedures: [
                 "Standard.Control.abort": Procedure(
                     description: "Fails on purpose with a message, which an attempt around it catches.",
-                    signature: Signature(of: AbortQuery.self, returns: .never),
+                    signature: Signature(
+                        of: AbortQuery.self,
+                        returns: .never,
+                        failing: .these([Aborted.type]),
+                        constness: .const,
+                        isolation: .isolated
+                    ),
                     implementation: .query(AbortQuery())
                 )
             ]

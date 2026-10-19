@@ -105,7 +105,8 @@ struct InferenceTests {
         let counting = Procedure(
             signature: Signature(
                 parameters: [Parameter(name: "item", type: .string)],
-                returns: .int
+                returns: .int,
+                constness: .const
             ),
             body: [],
             result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("item")]))
@@ -120,7 +121,8 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(
-                        parameters: [Parameter(name: "names", type: .array(.string))]
+                        parameters: [Parameter(name: "names", type: .array(.string))],
+                        failing: .anything
                     ),
                     body: [
                         Statement(binding: .constant("sizes"), expression: .call(Call(
@@ -395,6 +397,7 @@ struct InferenceTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(failing: .these(["concurrent_failed"])),
                     body: [
                         Statement(binding: .constant("kept"), expression: .call(
                                 Call(
@@ -408,7 +411,8 @@ struct InferenceTests {
                                                         Parameter(name: "item", type: .int),
                                                         Parameter(name: "index", type: .int)
                                                     ],
-                                                    returns: .int
+                                                    returns: .int,
+                                                    isolation: .isolated
                                                 ),
                                                 body: [],
                                                 result: reference("item")
@@ -979,7 +983,8 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "count", type: .nullable(.int))
-                        ]
+                        ],
+                        returns: .nullable(.string)
                     ),
                     body: [],
                     result: .cast(
@@ -1109,7 +1114,9 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .any)
-                        ]
+                        ],
+                        returns: .any,
+                        failing: .these(["cast_refused"])
                     ),
                     body: [
                         Statement(binding: .constant("rows"), expression: .cast(
@@ -1142,7 +1149,9 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .named("App.Payload"))
-                        ]
+                        ],
+                        returns: .string,
+                        failing: .these(["cast_refused"])
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
@@ -1174,7 +1183,9 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .any)
-                        ]
+                        ],
+                        returns: .string,
+                        failing: .these(["cast_refused"])
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
@@ -1219,7 +1230,8 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .any)
-                        ]
+                        ],
+                        failing: .these(["cast_refused"])
                     ),
                     body: [
                         Statement(binding: .constant("read"), expression: .cast(
@@ -1628,7 +1640,8 @@ struct InferenceTests {
                     signature: Signature(
                         parameters: [
                             Parameter(name: "ready", type: .bool)
-                        ]
+                        ],
+                        failing: .these(["aborted"])
                     ),
                     body: [
                         Statement(binding: .variable("many"), expression: .literal(.null)),

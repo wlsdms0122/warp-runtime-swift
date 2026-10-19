@@ -91,6 +91,7 @@ struct SharedGroundTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
+                        signature: Signature(returns: .double),
                         body: [],
                         result: .call(Call(
                             selector: "Standard.Numeric.dividedBy",
@@ -122,6 +123,7 @@ struct SharedGroundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .any),
                     body: [
                         Statement(binding: .constant("sum"), expression: .call(Call(
                             selector: "Standard.Numeric.plus",
@@ -163,7 +165,7 @@ struct SharedGroundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    signature: Signature(parameters: [Parameter(name: "n", type: .int)]),
+                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .string),
                     body: [
                         Statement(binding: .variable("verdict"), expression: .literal(.string(""))),
                         Statement(
@@ -239,6 +241,7 @@ struct SharedGroundTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
+                    signature: Signature(returns: .any, failing: .anything),
                     body: [],
                     result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
                 )
