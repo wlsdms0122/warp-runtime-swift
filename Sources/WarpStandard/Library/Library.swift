@@ -2031,7 +2031,7 @@ enum Library {
                     }
                   ]
                   const true
-                  description "Whether every one of sides that may fail answers true, asked until one does not."
+                  description "Whether every side, each of which may fail, answers true, asked until one does not."
                   failing "anything"
                   isolated true
                   parameters [
@@ -2108,7 +2108,7 @@ enum Library {
                     }
                   ]
                   const true
-                  description "Whether one of sides that may fail answers true, asked until one does."
+                  description "Whether one side, each of which may fail, answers true, asked until one does."
                   failing "anything"
                   isolated true
                   parameters [
@@ -2162,7 +2162,7 @@ enum Library {
                     }
                   ]
                   const true
-                  description "The value one of two sides that may fail answers, chosen by a truth."
+                  description "The value one of two sides, each of which may fail, answers, chosen by a truth."
                   failing "anything"
                   isolated true
                   parameters [
