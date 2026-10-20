@@ -26,9 +26,6 @@ import Warp
 //   (procedure (const))                const Procedure
 struct TypeNode {
     // MARK: - Property
-    // What a name in a type may not hold, since the spelling is cut at it.
-    static let cut = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "<>(),:&?"))
-
     // MARK: - Initializer
     // MARK: - Public
     // The text a node writes, where the node is the one that text reads as.

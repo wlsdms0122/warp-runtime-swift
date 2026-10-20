@@ -34,8 +34,8 @@ struct IntroducedNamesReader {
                 )
             }
 
-            let parts = written.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-            let name = try Name.read(parts[0].trimmingCharacters(in: Path.whiteSpace), at: steps)
+            let cut = Self.names(of: written)
+            let name = try Name.read(cut[0], at: steps)
 
             // One name introduced twice would be one name bounded two ways.
             guard !names.contains(name) else {
@@ -44,14 +44,12 @@ struct IntroducedNamesReader {
 
             names.append(name)
 
-            guard parts.count > 1 else { continue }
-
-            let bound = parts[1].trimmingCharacters(in: Path.whiteSpace)
+            guard cut.count > 1 else { continue }
 
             do {
-                bounds[name] = try TypeReader.contracts(bound, in: decoder.notation)
+                bounds[name] = try TypeReader.contracts(Array(cut.dropFirst()), in: decoder.notation)
             } catch let refused as TypeFormError {
-                throw ReadingError("bounds '\(name)' by '\(bound)': \(refused.message)", at: steps)
+                throw ReadingError("bounds '\(name)' by '\(cut.dropFirst().joined(separator: " & "))': \(refused.message)", at: steps)
             }
         }
 
@@ -60,5 +58,16 @@ struct IntroducedNamesReader {
     }
 
     // MARK: - Public
+    // The names an entry is read as: the name before its first `:`, and then
+    // the contracts after it, the parts an `&` joins.
+    static func names(of written: String) -> [String] {
+        let parts = written.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let name = parts[0].trimmingCharacters(in: Path.whiteSpace)
+
+        guard parts.count > 1 else { return [name] }
+
+        return [name] + TypeParser().names(String(parts[1]))
+    }
+
     // MARK: - Private
 }

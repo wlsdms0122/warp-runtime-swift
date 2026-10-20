@@ -173,6 +173,15 @@ public struct ModuleReader: Decodable {
     // spellings its shorthands were spent into, and the names are filled in
     // where a text is written out. A document is held to its whole list
     // where it is loaded, by being the one way its program is written.
+    // What an import is read as: a name, or a claim's type and contract
+    // either side of its `:`, each without the white space around it.
+    static func parts(ofImport spelled: String) -> [String] {
+        let parts = spelled.split(separator: ":", omittingEmptySubsequences: false)
+            .map { part in part.trimmingCharacters(in: .whitespaces) }
+
+        return parts.count == 1 ? [spelled] : parts
+    }
+
     private static func imports(
         in container: KeyedDecodingContainer<CodingKeys>
     ) throws -> (names: Set<Name>?, claims: Set<ClaimPair>)? {
@@ -184,12 +193,11 @@ public struct ModuleReader: Decodable {
 
         for (position, spelled) in try written.read([String].self).enumerated() {
             let steps = written.steps + [.index(position)]
-            let parts = spelled.split(separator: ":", omittingEmptySubsequences: false)
-                .map { part in part.trimmingCharacters(in: .whitespaces) }
+            let parts = Self.parts(ofImport: spelled)
 
             switch parts.count {
             case 1:
-                names.insert(try Name.read(spelled, at: steps))
+                names.insert(try Name.read(parts[0], at: steps))
 
             // Written the one way where a document is loaded, which the
             // write-back holds a text to.

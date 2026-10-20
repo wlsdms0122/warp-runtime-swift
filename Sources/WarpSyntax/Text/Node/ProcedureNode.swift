@@ -76,13 +76,12 @@ struct ProcedureNode {
                     throw Unplaced("`bound` holds an associated type and the contracts it is bounded by", at: part.offset)
                 }
 
-                let names = try [label] + contracts.map(Node.name)
+                let names = try contracts.map(Node.name)
+                let joined = names.joined(separator: " & ")
 
-                if let held = names.first(where: { name in name.rangeOfCharacter(from: TypeNode.cut) != nil }) {
-                    throw Unplaced("'\(held)' holds what a bound is cut at", at: part.offset)
+                guard TypeParser().names(joined) == names else {
+                    throw Unplaced("'\(joined)' is read as other contracts than these, so they have no text", at: part.offset)
                 }
-
-                let joined = names.dropFirst().joined(separator: " & ")
 
                 try keyed.write(.string(joined), named: label, under: Self.bounds, at: part.offset)
 
@@ -148,10 +147,10 @@ struct ProcedureNode {
         if let bounds = fields.take(Self.bounds) {
             parts += try Fields.entries(bounds, as: "a procedure's bounds").map { label, contracts in
                 let written = try Fields.text(contracts, as: "a bound")
-                let names = written.components(separatedBy: " & ")
+                let names = TypeParser().names(written)
 
-                guard !names.contains(where: \.isEmpty) else {
-                    throw Unplaced("the bound '\(written)' names no contract between two `&`, and no node writes it")
+                guard names.joined(separator: " & ") == written else {
+                    throw Unplaced("the bound '\(written)' is spelled as no node writes it")
                 }
 
                 return .node("bound", [.name(label)] + names.map(Datum.name))

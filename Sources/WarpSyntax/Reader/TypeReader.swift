@@ -222,7 +222,12 @@ struct TypeReader: Decodable {
     // contract may be called is the load's, by `NameGrammar`, wherever the
     // names came from.
     static func contracts(_ written: String, in notation: Notation) throws -> Set<Name> {
-        try contracts(TypeParser().names(written)) { name in notation.qualified(name, as: .type) }
+        try contracts(TypeParser().names(written), in: notation)
+    }
+
+    // The same, the parts already cut.
+    static func contracts(_ parts: [String], in notation: Notation) throws -> Set<Name> {
+        try contracts(parts) { name in notation.qualified(name, as: .type) }
     }
 
     // A written type's name, said in this notation's own terms: every other
