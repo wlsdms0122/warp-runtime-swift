@@ -1,96 +1,24 @@
-warpt 1
-{
-  imports [
-    "Standard.Comparable.lessThan"
-    "Standard.Numeric.plus"
-  ]
-  procedures {
-    counted {
-      body [
-        {
-          value 0
-          var "held"
-        }
-        {
-          set "held"
-          value {
-            call {
-              arguments [
-                {
-                  ref "held"
-                }
-                {
-                  ref "value"
-                }
-              ]
-              procedure "Standard.Numeric.plus"
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "value"
-          type "Int"
-        }
-      ]
-      result {
-        ref "held"
-      }
-      returns "Int"
-    }
-    entry {
-      access "public"
-      body [
-        {
-          value 0
-          var "seen"
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  set "seen"
-                  value {
-                    call {
-                      arguments [
-                        1
-                      ]
-                      procedure "counted"
-                    }
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "seen"
-      }
-      returns "Int"
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.plus)
+
+(procedure counted
+  (parameter value (type Int))
+  (returns Int)
+  (body
+    (var held 0)
+    (set held (call Standard.Numeric.plus held value)))
+  (result held))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (call counted 1))))))
+  (result seen))

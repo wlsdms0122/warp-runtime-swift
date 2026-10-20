@@ -54,7 +54,8 @@ struct IdentityTests {
         // arrived may reach the answer.
         let document = Value.dictionary([
             "warp": .int(1),
-            "procedures": .dictionary(["entry": .dictionary(["body": .array([])])])
+            "imports": .array([]),
+            "procedures": .dictionary(["entry": .dictionary(["result": .int(1)])])
         ])
 
         let throughText = try TextEncoding().value(from: try TextEncoding().text(from: document))

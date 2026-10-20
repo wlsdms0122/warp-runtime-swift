@@ -1,88 +1,18 @@
-warpt 1
-{
-  imports [
-    "Standard.Collection.setting"
-    "Standard.Comparable.lessThan"
-    "Standard.Numeric.remainder"
-    "Standard.Text.text"
-  ]
-  procedures {
-    entry {
-      access "public"
-      body [
-        {
-          type "Dictionary<String, Int>"
-          value {
-            dictionary []
-          }
-          var "held"
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  set "held"
-                  value {
-                    call {
-                      arguments [
-                        {
-                          ref "held"
-                        }
-                        {
-                          call {
-                            arguments [
-                              {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "round.index"
-                                    }
-                                    100
-                                  ]
-                                  procedure "Standard.Numeric.remainder"
-                                }
-                              }
-                            ]
-                            procedure "Standard.Text.text"
-                          }
-                        }
-                        1
-                      ]
-                      procedure "Standard.Collection.setting"
-                    }
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "held"
-      }
-      returns "Dictionary<String, Int>"
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Collection.setting)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.remainder)
+(import Standard.Text.text)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns (dictionary String Int))
+  (body
+    (var held (type (dictionary String Int)) (dictionary))
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set held (call Standard.Collection.setting held (call Standard.Text.text (call Standard.Numeric.remainder (path round (field index)) 100)) 1))))))
+  (result held))

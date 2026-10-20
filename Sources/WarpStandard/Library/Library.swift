@@ -11,3204 +11,674 @@ import Foundation
 enum Library {
     static let documents: [String: String] = [
         "collection": """
-            warpt 1
-            {
-              description "Reading a collection by walking it, written from its count and its index."
-              imports [
-                "Standard.Collection.appending"
-                "Standard.Collection.count"
-                "Standard.Collection.gathering"
-                "Standard.Collection.keys"
-                "Standard.Comparable"
-                "Standard.Comparable.lessThan"
-                "Standard.Logic.equal"
-                "Standard.Numeric.minus"
-                "Standard.Numeric.plus"
-              ]
-              procedures {
-                "Standard.Collection.append" {
-                  body [
-                    {
-                      set "array"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "array"
-                            }
-                            {
-                              ref "element"
-                            }
-                          ]
-                          procedure "Standard.Collection.appending"
-                        }
-                      }
-                    }
-                  ]
-                  description "Writes one element onto the end of the array a variable holds, in place."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "inout Array<some Element>"
-                    }
-                    {
-                      name "element"
-                      type "some Element"
-                    }
-                  ]
-                }
-                "Standard.Collection.contains" {
-                  body [
-                    {
-                      value false
-                      var "found"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      set "found"
-                                      value true
-                                    }
-                                    {
-                                      value {
-                                        break null
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "array[walk.index]"
-                                        }
-                                        {
-                                          ref "element"
-                                        }
-                                      ]
-                                      procedure "Standard.Logic.equal"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether an array holds a value."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "element"
-                      type "some Element"
-                    }
-                  ]
-                  result {
-                    ref "found"
-                  }
-                  returns "Bool"
-                }
-                "Standard.Collection.dropFirst" {
-                  body [
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              set "places"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "places"
-                                    }
-                                    {
-                                      call {
-                                        arguments [
-                                          {
-                                            ref "walk.index"
-                                          }
-                                          1
-                                        ]
-                                        procedure "Standard.Numeric.plus"
-                                      }
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "array"
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.count"
-                                        }
-                                      }
-                                      1
-                                    ]
-                                    procedure "Standard.Numeric.minus"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements after the first."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.dropLast" {
-                  body [
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              set "places"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "places"
-                                    }
-                                    {
-                                      ref "walk.index"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "array"
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.count"
-                                        }
-                                      }
-                                      1
-                                    ]
-                                    procedure "Standard.Numeric.minus"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements before the last."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.filter" {
-                  body [
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "kept"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "isIncluded"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      set "places"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "places"
-                                            }
-                                            {
-                                              ref "walk.index"
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.appending"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "kept"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements a procedure answers true for."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "isIncluded"
-                      type "const isolated (some Element) -> Bool"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.first" {
-                  const true
-                  description "The first element."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                  ]
-                  result {
-                    ref "array[0]"
-                  }
-                  returns "some Element"
-                }
-                "Standard.Collection.last" {
-                  body [
-                    {
-                      let "at"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              call {
-                                arguments [
-                                  {
-                                    ref "array"
-                                  }
-                                ]
-                                procedure "Standard.Collection.count"
-                              }
-                            }
-                            1
-                          ]
-                          procedure "Standard.Numeric.minus"
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The last element."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                  ]
-                  result {
-                    ref "array[at]"
-                  }
-                  returns "some Element"
-                }
-                "Standard.Collection.map" {
-                  body [
-                    {
-                      value []
-                      var "answers"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "transform"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              set "answers"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "answers"
-                                    }
-                                    {
-                                      ref "answered"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Each element answered by a procedure, in order."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "transform"
-                      type "const isolated (some Element) -> some Answer"
-                    }
-                  ]
-                  result {
-                    ref "answers"
-                  }
-                  returns "Array<some Answer>"
-                }
-                "Standard.Collection.prepending" {
-                  body [
-                    {
-                      let "back"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "array"
-                            }
-                          ]
-                          procedure "Standard.Collection.reversed"
-                        }
-                      }
-                    }
-                    {
-                      let "grown"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "back"
-                            }
-                            {
-                              ref "element"
-                            }
-                          ]
-                          procedure "Standard.Collection.appending"
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements with one more at the front."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "element"
-                      type "some Element"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "grown"
-                        }
-                      ]
-                      procedure "Standard.Collection.reversed"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.reduce" {
-                  body [
-                    {
-                      value {
-                        ref "initialResult"
-                      }
-                      var "carried"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "carried"
-                                    }
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "nextPartialResult"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              set "carried"
-                              value {
-                                ref "answered"
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements folded into one, starting from a value."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "initialResult"
-                      type "some Carried"
-                    }
-                    {
-                      name "nextPartialResult"
-                      type "const isolated (some Carried, some Element) -> some Carried"
-                    }
-                  ]
-                  result {
-                    ref "carried"
-                  }
-                  returns "some Carried"
-                }
-                "Standard.Collection.reversed" {
-                  body [
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              set "places"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "places"
-                                    }
-                                    {
-                                      call {
-                                        arguments [
-                                          {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "array"
-                                                }
-                                              ]
-                                              procedure "Standard.Collection.count"
-                                            }
-                                          }
-                                          {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "walk.index"
-                                                }
-                                                1
-                                              ]
-                                              procedure "Standard.Numeric.plus"
-                                            }
-                                          }
-                                        ]
-                                        procedure "Standard.Numeric.minus"
-                                      }
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements back to front."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.sorted" {
-                  body [
-                    {
-                      let "total"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "array"
-                            }
-                          ]
-                          procedure "Standard.Collection.count"
-                        }
-                      }
-                    }
-                    {
-                      value []
-                      var "ranks"
-                    }
-                    {
-                      let "outer"
-                      value {
-                        loop {
-                          body [
-                            {
-                              value 0
-                              var "rank"
-                            }
-                            {
-                              let "inner"
-                              value {
-                                loop {
-                                  body [
-                                    {
-                                      value true
-                                      var "tie"
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "rank"
-                                              value {
-                                                call {
-                                                  arguments [
-                                                    {
-                                                      ref "rank"
-                                                    }
-                                                    1
-                                                  ]
-                                                  procedure "Standard.Numeric.plus"
-                                                }
-                                              }
-                                            }
-                                            {
-                                              set "tie"
-                                              value false
-                                            }
-                                          ]
-                                          when {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "array[inner.index]"
-                                                }
-                                                {
-                                                  ref "array[outer.index]"
-                                                }
-                                              ]
-                                              procedure "Standard.Comparable.lessThan"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "tie"
-                                              value false
-                                            }
-                                          ]
-                                          when {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "array[outer.index]"
-                                                }
-                                                {
-                                                  ref "array[inner.index]"
-                                                }
-                                              ]
-                                              procedure "Standard.Comparable.lessThan"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              value {
-                                                conditional {
-                                                  then [
-                                                    {
-                                                      set "rank"
-                                                      value {
-                                                        call {
-                                                          arguments [
-                                                            {
-                                                              ref "rank"
-                                                            }
-                                                            1
-                                                          ]
-                                                          procedure "Standard.Numeric.plus"
-                                                        }
-                                                      }
-                                                    }
-                                                  ]
-                                                  when {
-                                                    call {
-                                                      arguments [
-                                                        {
-                                                          ref "inner.index"
-                                                        }
-                                                        {
-                                                          ref "outer.index"
-                                                        }
-                                                      ]
-                                                      procedure "Standard.Comparable.lessThan"
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          ]
-                                          when {
-                                            ref "tie"
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  while {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "inner.index"
-                                        }
-                                        {
-                                          ref "total"
-                                        }
-                                      ]
-                                      procedure "Standard.Comparable.lessThan"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              set "ranks"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "ranks"
-                                    }
-                                    {
-                                      ref "rank"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "outer.index"
-                                }
-                                {
-                                  ref "total"
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "pick"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "scan"
-                              value {
-                                loop {
-                                  body [
-                                    {
-                                      value true
-                                      var "same"
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "same"
-                                              value false
-                                            }
-                                          ]
-                                          when {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "ranks[scan.index]"
-                                                }
-                                                {
-                                                  ref "pick.index"
-                                                }
-                                              ]
-                                              procedure "Standard.Comparable.lessThan"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "same"
-                                              value false
-                                            }
-                                          ]
-                                          when {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "pick.index"
-                                                }
-                                                {
-                                                  ref "ranks[scan.index]"
-                                                }
-                                              ]
-                                              procedure "Standard.Comparable.lessThan"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "places"
-                                              value {
-                                                call {
-                                                  arguments [
-                                                    {
-                                                      ref "places"
-                                                    }
-                                                    {
-                                                      ref "scan.index"
-                                                    }
-                                                  ]
-                                                  procedure "Standard.Collection.appending"
-                                                }
-                                              }
-                                            }
-                                          ]
-                                          when {
-                                            ref "same"
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  while {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "scan.index"
-                                        }
-                                        {
-                                          ref "total"
-                                        }
-                                      ]
-                                      procedure "Standard.Comparable.lessThan"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "pick.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "total"
-                                      }
-                                      1
-                                    ]
-                                    procedure "Standard.Numeric.plus"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements in the order lessThan puts them in, for any type that orders."
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element: Standard.Comparable>"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.tryFilter" {
-                  body [
-                    {
-                      value []
-                      var "places"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "kept"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "isIncluded"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      set "places"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "places"
-                                            }
-                                            {
-                                              ref "walk.index"
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.appending"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "kept"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements a procedure that may fail answers true for."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "isIncluded"
-                      type "const isolated (some Element) throws -> Bool"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "array"
-                        }
-                        {
-                          ref "places"
-                        }
-                      ]
-                      procedure "Standard.Collection.gathering"
-                    }
-                  }
-                  returns "Array<some Element>"
-                }
-                "Standard.Collection.tryMap" {
-                  body [
-                    {
-                      value []
-                      var "answers"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "transform"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              set "answers"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "answers"
-                                    }
-                                    {
-                                      ref "answered"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Each element answered by a procedure that may fail, in order."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "transform"
-                      type "const isolated (some Element) throws -> some Answer"
-                    }
-                  ]
-                  result {
-                    ref "answers"
-                  }
-                  returns "Array<some Answer>"
-                }
-                "Standard.Collection.tryReduce" {
-                  body [
-                    {
-                      value {
-                        ref "initialResult"
-                      }
-                      var "carried"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "carried"
-                                    }
-                                    {
-                                      ref "array[walk.index]"
-                                    }
-                                  ]
-                                  procedure {
-                                    ref "nextPartialResult"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              set "carried"
-                              value {
-                                ref "answered"
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The elements folded into one by a procedure that may fail, starting from a value."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "initialResult"
-                      type "some Carried"
-                    }
-                    {
-                      name "nextPartialResult"
-                      type "const isolated (some Carried, some Element) throws -> some Carried"
-                    }
-                  ]
-                  result {
-                    ref "carried"
-                  }
-                  returns "some Carried"
-                }
-                "Standard.Collection.values" {
-                  body [
-                    {
-                      let "keys"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "dictionary"
-                            }
-                          ]
-                          procedure "Standard.Collection.keys"
-                        }
-                      }
-                    }
-                    {
-                      value []
-                      var "held"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "key"
-                              value {
-                                ref "keys[walk.index]"
-                              }
-                            }
-                            {
-                              set "held"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "held"
-                                    }
-                                    {
-                                      ref "dictionary[key]"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "keys"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "What a map holds, by its keys in the key order."
-                  isolated true
-                  parameters [
-                    {
-                      name "dictionary"
-                      type "Dictionary<some Key: Hashable, some Entry>"
-                    }
-                  ]
-                  result {
-                    ref "held"
-                  }
-                  returns "Array<some Entry>"
-                }
-              }
-              warp 1
-            }
+            (warp 1)
+            (description "Reading a collection by walking it, written from its count and its index.")
+            (import Standard.Collection.appending)
+            (import Standard.Collection.count)
+            (import Standard.Collection.gathering)
+            (import Standard.Collection.keys)
+            (import Standard.Comparable)
+            (import Standard.Comparable.lessThan)
+            (import Standard.Logic.equal)
+            (import Standard.Numeric.minus)
+            (import Standard.Numeric.plus)
+            
+            (procedure Standard.Collection.append
+              (description "Writes one element onto the end of the array a variable holds, in place.")
+              (isolated)
+              (parameter array (type (inout (array (some Element)))))
+              (parameter element (type (some Element)))
+              (body
+                (set array (call Standard.Collection.appending array element))))
+            
+            (procedure Standard.Collection.contains
+              (description "Whether an array holds a value.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter element (type (some Element)))
+              (returns Bool)
+              (body
+                (var found false)
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (conditional
+                        (when (call Standard.Logic.equal (path array (index (path walk (field index)))) element))
+                        (then
+                          (set found true)
+                          (break)))))))
+              (result found))
+            
+            (procedure Standard.Collection.dropFirst
+              (description "The elements after the first.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (returns (array (some Element)))
+              (body
+                (var places (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
+                    (body
+                      (set places (call Standard.Collection.appending places (call Standard.Numeric.plus (path walk (field index)) 1)))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.dropLast
+              (description "The elements before the last.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (returns (array (some Element)))
+              (body
+                (var places (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
+                    (body
+                      (set places (call Standard.Collection.appending places (path walk (field index))))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.filter
+              (description "The elements a procedure answers true for.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter isIncluded (type (procedure (const) (isolated) (parameters (some Element)) (returns Bool))))
+              (returns (array (some Element)))
+              (body
+                (var places (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let kept (apply isIncluded (path array (index (path walk (field index))))))
+                      (conditional
+                        (when kept)
+                        (then
+                          (set places (call Standard.Collection.appending places (path walk (field index))))))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.first
+              (description "The first element.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (returns (some Element))
+              (result (path array (index 0))))
+            
+            (procedure Standard.Collection.last
+              (description "The last element.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (returns (some Element))
+              (body
+                (let at (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
+              (result (path array (index at))))
+            
+            (procedure Standard.Collection.map
+              (description "Each element answered by a procedure, in order.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter transform (type (procedure (const) (isolated) (parameters (some Element)) (returns (some Answer)))))
+              (returns (array (some Answer)))
+              (body
+                (var answers (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let answered (apply transform (path array (index (path walk (field index))))))
+                      (set answers (call Standard.Collection.appending answers answered))))))
+              (result answers))
+            
+            (procedure Standard.Collection.prepending
+              (description "The elements with one more at the front.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter element (type (some Element)))
+              (returns (array (some Element)))
+              (body
+                (let back (call Standard.Collection.reversed array))
+                (let grown (call Standard.Collection.appending back element)))
+              (result (call Standard.Collection.reversed grown)))
+            
+            (procedure Standard.Collection.reduce
+              (description "The elements folded into one, starting from a value.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter initialResult (type (some Carried)))
+              (parameter nextPartialResult (type (procedure (const) (isolated) (parameters (some Carried) (some Element)) (returns (some Carried)))))
+              (returns (some Carried))
+              (body
+                (var carried initialResult)
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let answered (apply nextPartialResult carried (path array (index (path walk (field index))))))
+                      (set carried answered)))))
+              (result carried))
+            
+            (procedure Standard.Collection.reversed
+              (description "The elements back to front.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (returns (array (some Element)))
+              (body
+                (var places (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (set places (call Standard.Collection.appending places (call Standard.Numeric.minus (call Standard.Collection.count array) (call Standard.Numeric.plus (path walk (field index)) 1))))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.sorted
+              (description "The elements in the order lessThan puts them in, for any type that orders.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element Standard.Comparable))))
+              (returns (array (some Element)))
+              (body
+                (let total (call Standard.Collection.count array))
+                (var ranks (array))
+                (let outer
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path outer (field index)) total))
+                    (body
+                      (var rank 0)
+                      (let inner
+                        (loop
+                          (while (call Standard.Comparable.lessThan (path inner (field index)) total))
+                          (body
+                            (var tie true)
+                            (conditional
+                              (when (call Standard.Comparable.lessThan (path array (index (path inner (field index)))) (path array (index (path outer (field index))))))
+                              (then
+                                (set rank (call Standard.Numeric.plus rank 1))
+                                (set tie false)))
+                            (conditional
+                              (when (call Standard.Comparable.lessThan (path array (index (path outer (field index)))) (path array (index (path inner (field index))))))
+                              (then
+                                (set tie false)))
+                            (conditional
+                              (when tie)
+                              (then
+                                (conditional
+                                  (when (call Standard.Comparable.lessThan (path inner (field index)) (path outer (field index))))
+                                  (then
+                                    (set rank (call Standard.Numeric.plus rank 1)))))))))
+                      (set ranks (call Standard.Collection.appending ranks rank)))))
+                (var places (array))
+                (let pick
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path pick (field index)) (call Standard.Numeric.plus total 1)))
+                    (body
+                      (let scan
+                        (loop
+                          (while (call Standard.Comparable.lessThan (path scan (field index)) total))
+                          (body
+                            (var same true)
+                            (conditional
+                              (when (call Standard.Comparable.lessThan (path ranks (index (path scan (field index)))) (path pick (field index))))
+                              (then
+                                (set same false)))
+                            (conditional
+                              (when (call Standard.Comparable.lessThan (path pick (field index)) (path ranks (index (path scan (field index))))))
+                              (then
+                                (set same false)))
+                            (conditional
+                              (when same)
+                              (then
+                                (set places (call Standard.Collection.appending places (path scan (field index)))))))))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.tryFilter
+              (description "The elements a procedure that may fail answers true for.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter isIncluded (type (procedure (const) (isolated) (parameters (some Element)) (failing (anything)) (returns Bool))))
+              (returns (array (some Element)))
+              (failing (anything))
+              (body
+                (var places (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let kept (apply isIncluded (path array (index (path walk (field index))))))
+                      (conditional
+                        (when kept)
+                        (then
+                          (set places (call Standard.Collection.appending places (path walk (field index))))))))))
+              (result (call Standard.Collection.gathering array places)))
+            
+            (procedure Standard.Collection.tryMap
+              (description "Each element answered by a procedure that may fail, in order.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter transform (type (procedure (const) (isolated) (parameters (some Element)) (failing (anything)) (returns (some Answer)))))
+              (returns (array (some Answer)))
+              (failing (anything))
+              (body
+                (var answers (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let answered (apply transform (path array (index (path walk (field index))))))
+                      (set answers (call Standard.Collection.appending answers answered))))))
+              (result answers))
+            
+            (procedure Standard.Collection.tryReduce
+              (description "The elements folded into one by a procedure that may fail, starting from a value.")
+              (const)
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter initialResult (type (some Carried)))
+              (parameter nextPartialResult (type (procedure (const) (isolated) (parameters (some Carried) (some Element)) (failing (anything)) (returns (some Carried)))))
+              (returns (some Carried))
+              (failing (anything))
+              (body
+                (var carried initialResult)
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let answered (apply nextPartialResult carried (path array (index (path walk (field index))))))
+                      (set carried answered)))))
+              (result carried))
+            
+            (procedure Standard.Collection.values
+              (description "What a map holds, by its keys in the key order.")
+              (const)
+              (isolated)
+              (parameter dictionary (type (dictionary (some Key Hashable) (some Entry))))
+              (returns (array (some Entry)))
+              (body
+                (let keys (call Standard.Collection.keys dictionary))
+                (var held (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count keys)))
+                    (body
+                      (let key (path keys (index (path walk (field index)))))
+                      (set held (call Standard.Collection.appending held (path dictionary (index key))))))))
+              (result held))
             """,
         "concurrent": """
-            warpt 1
-            {
-              description "Running one closure once per element, written from the fan-out that runs a list of them."
-              imports [
-                "Standard.Collection.appending"
-                "Standard.Collection.count"
-                "Standard.Comparable.lessThan"
-                "Standard.Concurrent.all"
-              ]
-              procedures {
-                "Standard.Concurrent.map" {
-                  body [
-                    {
-                      value []
-                      var "pieces"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "item"
-                              value {
-                                ref "array[walk.index]"
-                              }
-                            }
-                            {
-                              let "index"
-                              value {
-                                ref "walk.index"
-                              }
-                            }
-                            {
-                              let "piece"
-                              value {
-                                closure {
-                                  body [
-                                    {
-                                      let "answered"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "item"
-                                            }
-                                            {
-                                              ref "index"
-                                            }
-                                          ]
-                                          procedure {
-                                            ref "transform"
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  failing "anything"
-                                  isolated true
-                                  result {
-                                    ref "answered"
-                                  }
-                                  returns "some Answer"
-                                }
-                              }
-                            }
-                            {
-                              set "pieces"
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      ref "pieces"
-                                    }
-                                    {
-                                      ref "piece"
-                                    }
-                                  ]
-                                  procedure "Standard.Collection.appending"
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "array"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  description "Each element answered by a procedure, run at once, in the collection's order."
-                  failing [
-                    "concurrent_failed"
-                  ]
-                  isolated true
-                  parameters [
-                    {
-                      name "array"
-                      type "Array<some Element>"
-                    }
-                    {
-                      name "transform"
-                      type "isolated (some Element, Int) throws -> some Answer"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "pieces"
-                        }
-                      ]
-                      procedure "Standard.Concurrent.all"
-                    }
-                  }
-                  returns "Array<some Answer>"
-                }
-              }
-              warp 1
-            }
+            (warp 1)
+            (description "Running one closure once per element, written from the fan-out that runs a list of them.")
+            (import Standard.Collection.appending)
+            (import Standard.Collection.count)
+            (import Standard.Comparable.lessThan)
+            (import Standard.Concurrent.all)
+            
+            (procedure Standard.Concurrent.map
+              (description "Each element answered by a procedure, run at once, in the collection's order.")
+              (isolated)
+              (parameter array (type (array (some Element))))
+              (parameter transform (type (procedure (isolated) (parameters (some Element) Int) (failing (anything)) (returns (some Answer)))))
+              (returns (array (some Answer)))
+              (failing concurrent_failed)
+              (body
+                (var pieces (array))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
+                    (body
+                      (let item (path array (index (path walk (field index)))))
+                      (let index (path walk (field index)))
+                      (let piece
+                        (closure
+                          (isolated)
+                          (returns (some Answer))
+                          (failing (anything))
+                          (body
+                            (let answered (apply transform item index)))
+                          (result answered)))
+                      (set pieces (call Standard.Collection.appending pieces piece))))))
+              (result (call Standard.Concurrent.all pieces)))
             """,
         "logic": """
-            warpt 1
-            {
-              description "Negation, difference, choosing and the connectives, written from equality."
-              imports [
-                "Standard.Collection.count"
-                "Standard.Comparable.lessThan"
-                "Standard.Logic.equal"
-              ]
-              procedures {
-                "Standard.Logic.and" {
-                  body [
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "side"
-                              value {
-                                ref "conditions[walk.index]"
-                              }
-                            }
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "side"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return false
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "answered"
-                                        }
-                                      ]
-                                      procedure "Standard.Logic.not"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "conditions"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether every one answers true, asked until one does not."
-                  isolated true
-                  parameters [
-                    {
-                      name "conditions"
-                      type "Array<const isolated () -> Bool>"
-                    }
-                  ]
-                  result true
-                  returns "Bool"
-                }
-                "Standard.Logic.not" {
-                  const true
-                  description "The opposite of a truth."
-                  isolated true
-                  parameters [
-                    {
-                      name "value"
-                      type "Bool"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "value"
-                        }
-                        false
-                      ]
-                      procedure "Standard.Logic.equal"
-                    }
-                  }
-                  returns "Bool"
-                }
-                "Standard.Logic.notEqual" {
-                  const true
-                  description "Whether two values differ."
-                  isolated true
-                  parameters [
-                    {
-                      name "lhs"
-                    }
-                    {
-                      name "rhs"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          call {
-                            arguments [
-                              {
-                                ref "lhs"
-                              }
-                              {
-                                ref "rhs"
-                              }
-                            ]
-                            procedure "Standard.Logic.equal"
-                          }
-                        }
-                        false
-                      ]
-                      procedure "Standard.Logic.equal"
-                    }
-                  }
-                  returns "Bool"
-                }
-                "Standard.Logic.or" {
-                  body [
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "side"
-                              value {
-                                ref "conditions[walk.index]"
-                              }
-                            }
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "side"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return true
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "answered"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "conditions"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether one answers true, asked until one does."
-                  isolated true
-                  parameters [
-                    {
-                      name "conditions"
-                      type "Array<const isolated () -> Bool>"
-                    }
-                  ]
-                  result false
-                  returns "Bool"
-                }
-                "Standard.Logic.select" {
-                  body [
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              let "taken"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "then"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                return {
-                                  ref "taken"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            ref "condition"
-                          }
-                        }
-                      }
-                    }
-                    {
-                      let "left"
-                      value {
-                        call {
-                          procedure {
-                            ref "else"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The value one of two sides answers, chosen by a truth."
-                  isolated true
-                  parameters [
-                    {
-                      name "condition"
-                      type "Bool"
-                    }
-                    {
-                      name "then"
-                      type "const isolated () -> some Answer"
-                    }
-                    {
-                      name "else"
-                      type "const isolated () -> some Answer"
-                    }
-                  ]
-                  result {
-                    ref "left"
-                  }
-                  returns "some Answer"
-                }
-                "Standard.Logic.tryAnd" {
-                  body [
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "side"
-                              value {
-                                ref "conditions[walk.index]"
-                              }
-                            }
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "side"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return false
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "answered"
-                                        }
-                                      ]
-                                      procedure "Standard.Logic.not"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "conditions"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether every side, each of which may fail, answers true, asked until one does not."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "conditions"
-                      type "Array<const isolated () throws -> Bool>"
-                    }
-                  ]
-                  result true
-                  returns "Bool"
-                }
-                "Standard.Logic.tryOr" {
-                  body [
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              let "side"
-                              value {
-                                ref "conditions[walk.index]"
-                              }
-                            }
-                            {
-                              let "answered"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "side"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return true
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "answered"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "conditions"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether one side, each of which may fail, answers true, asked until one does."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "conditions"
-                      type "Array<const isolated () throws -> Bool>"
-                    }
-                  ]
-                  result false
-                  returns "Bool"
-                }
-                "Standard.Logic.trySelect" {
-                  body [
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              let "taken"
-                              value {
-                                call {
-                                  procedure {
-                                    ref "then"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                return {
-                                  ref "taken"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            ref "condition"
-                          }
-                        }
-                      }
-                    }
-                    {
-                      let "left"
-                      value {
-                        call {
-                          procedure {
-                            ref "else"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The value one of two sides, each of which may fail, answers, chosen by a truth."
-                  failing "anything"
-                  isolated true
-                  parameters [
-                    {
-                      name "condition"
-                      type "Bool"
-                    }
-                    {
-                      name "then"
-                      type "const isolated () throws -> some Answer"
-                    }
-                    {
-                      name "else"
-                      type "const isolated () throws -> some Answer"
-                    }
-                  ]
-                  result {
-                    ref "left"
-                  }
-                  returns "some Answer"
-                }
-              }
-              warp 1
-            }
+            (warp 1)
+            (description "Negation, difference, choosing and the connectives, written from equality.")
+            (import Standard.Collection.count)
+            (import Standard.Comparable.lessThan)
+            (import Standard.Logic.equal)
+            
+            (procedure Standard.Logic.and
+              (description "Whether every one answers true, asked until one does not.")
+              (const)
+              (isolated)
+              (parameter conditions (type (array (procedure (const) (isolated) (parameters) (returns Bool)))))
+              (returns Bool)
+              (body
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count conditions)))
+                    (body
+                      (let side (path conditions (index (path walk (field index)))))
+                      (let answered (apply side))
+                      (conditional
+                        (when (call Standard.Logic.not answered))
+                        (then
+                          (return false)))))))
+              (result true))
+            
+            (procedure Standard.Logic.not
+              (description "The opposite of a truth.")
+              (const)
+              (isolated)
+              (parameter value (type Bool))
+              (returns Bool)
+              (result (call Standard.Logic.equal value false)))
+            
+            (procedure Standard.Logic.notEqual
+              (description "Whether two values differ.")
+              (const)
+              (isolated)
+              (parameter lhs)
+              (parameter rhs)
+              (returns Bool)
+              (result (call Standard.Logic.equal (call Standard.Logic.equal lhs rhs) false)))
+            
+            (procedure Standard.Logic.or
+              (description "Whether one answers true, asked until one does.")
+              (const)
+              (isolated)
+              (parameter conditions (type (array (procedure (const) (isolated) (parameters) (returns Bool)))))
+              (returns Bool)
+              (body
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count conditions)))
+                    (body
+                      (let side (path conditions (index (path walk (field index)))))
+                      (let answered (apply side))
+                      (conditional
+                        (when answered)
+                        (then
+                          (return true)))))))
+              (result false))
+            
+            (procedure Standard.Logic.select
+              (description "The value one of two sides answers, chosen by a truth.")
+              (const)
+              (isolated)
+              (parameter condition (type Bool))
+              (parameter then (type (procedure (const) (isolated) (parameters) (returns (some Answer)))))
+              (parameter else (type (procedure (const) (isolated) (parameters) (returns (some Answer)))))
+              (returns (some Answer))
+              (body
+                (conditional
+                  (when condition)
+                  (then
+                    (let taken (apply then))
+                    (return taken)))
+                (let left (apply else)))
+              (result left))
+            
+            (procedure Standard.Logic.tryAnd
+              (description "Whether every side, each of which may fail, answers true, asked until one does not.")
+              (const)
+              (isolated)
+              (parameter conditions (type (array (procedure (const) (isolated) (parameters) (failing (anything)) (returns Bool)))))
+              (returns Bool)
+              (failing (anything))
+              (body
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count conditions)))
+                    (body
+                      (let side (path conditions (index (path walk (field index)))))
+                      (let answered (apply side))
+                      (conditional
+                        (when (call Standard.Logic.not answered))
+                        (then
+                          (return false)))))))
+              (result true))
+            
+            (procedure Standard.Logic.tryOr
+              (description "Whether one side, each of which may fail, answers true, asked until one does.")
+              (const)
+              (isolated)
+              (parameter conditions (type (array (procedure (const) (isolated) (parameters) (failing (anything)) (returns Bool)))))
+              (returns Bool)
+              (failing (anything))
+              (body
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count conditions)))
+                    (body
+                      (let side (path conditions (index (path walk (field index)))))
+                      (let answered (apply side))
+                      (conditional
+                        (when answered)
+                        (then
+                          (return true)))))))
+              (result false))
+            
+            (procedure Standard.Logic.trySelect
+              (description "The value one of two sides, each of which may fail, answers, chosen by a truth.")
+              (const)
+              (isolated)
+              (parameter condition (type Bool))
+              (parameter then (type (procedure (const) (isolated) (parameters) (failing (anything)) (returns (some Answer)))))
+              (parameter else (type (procedure (const) (isolated) (parameters) (failing (anything)) (returns (some Answer)))))
+              (returns (some Answer))
+              (failing (anything))
+              (body
+                (conditional
+                  (when condition)
+                  (then
+                    (let taken (apply then))
+                    (return taken)))
+                (let left (apply else)))
+              (result left))
             """,
         "math": """
-            warpt 1
-            {
-              description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus."
-              imports [
-                "Standard.Comparable"
-                "Standard.Comparable.lessThan"
-                "Standard.Numeric"
-                "Standard.Numeric.minus"
-              ]
-              procedures {
-                "Standard.Math.absolute" {
-                  body [
-                    {
-                      let "zero"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "number"
-                            }
-                            {
-                              ref "number"
-                            }
-                          ]
-                          procedure "Standard.Numeric.minus"
-                        }
-                      }
-                    }
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                return {
-                                  ref "number"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  ref "zero"
-                                }
-                                {
-                                  ref "number"
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The number without its sign."
-                  isolated true
-                  parameters [
-                    {
-                      name "number"
-                      type "some N: Standard.Comparable & Standard.Numeric"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "zero"
-                        }
-                        {
-                          ref "number"
-                        }
-                      ]
-                      procedure "Standard.Numeric.minus"
-                    }
-                  }
-                  returns "some N"
-                }
-                "Standard.Math.greaterThan" {
-                  const true
-                  description "Whether the first is larger, by the one order."
-                  isolated true
-                  parameters [
-                    {
-                      name "lhs"
-                      type "some T: Standard.Comparable"
-                    }
-                    {
-                      name "rhs"
-                      type "some T"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "rhs"
-                        }
-                        {
-                          ref "lhs"
-                        }
-                      ]
-                      procedure "Standard.Comparable.lessThan"
-                    }
-                  }
-                  returns "Bool"
-                }
-                "Standard.Math.max" {
-                  body [
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                return {
-                                  ref "lhs"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  ref "rhs"
-                                }
-                                {
-                                  ref "lhs"
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The larger of two of one type, by the one order."
-                  isolated true
-                  parameters [
-                    {
-                      name "lhs"
-                      type "some T: Standard.Comparable"
-                    }
-                    {
-                      name "rhs"
-                      type "some T"
-                    }
-                  ]
-                  result {
-                    ref "rhs"
-                  }
-                  returns "some T"
-                }
-                "Standard.Math.min" {
-                  body [
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                return {
-                                  ref "rhs"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  ref "rhs"
-                                }
-                                {
-                                  ref "lhs"
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The smaller of two of one type, by the one order."
-                  isolated true
-                  parameters [
-                    {
-                      name "lhs"
-                      type "some T: Standard.Comparable"
-                    }
-                    {
-                      name "rhs"
-                      type "some T"
-                    }
-                  ]
-                  result {
-                    ref "lhs"
-                  }
-                  returns "some T"
-                }
-              }
-              warp 1
-            }
+            (warp 1)
+            (description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus.")
+            (import Standard.Comparable)
+            (import Standard.Comparable.lessThan)
+            (import Standard.Numeric)
+            (import Standard.Numeric.minus)
+            
+            (procedure Standard.Math.absolute
+              (description "The number without its sign.")
+              (const)
+              (isolated)
+              (parameter number (type (some N Standard.Comparable Standard.Numeric)))
+              (returns (some N))
+              (body
+                (let zero (call Standard.Numeric.minus number number))
+                (conditional
+                  (when (call Standard.Comparable.lessThan zero number))
+                  (then
+                    (return number))))
+              (result (call Standard.Numeric.minus zero number)))
+            
+            (procedure Standard.Math.greaterThan
+              (description "Whether the first is larger, by the one order.")
+              (const)
+              (isolated)
+              (parameter lhs (type (some T Standard.Comparable)))
+              (parameter rhs (type (some T)))
+              (returns Bool)
+              (result (call Standard.Comparable.lessThan rhs lhs)))
+            
+            (procedure Standard.Math.max
+              (description "The larger of two of one type, by the one order.")
+              (const)
+              (isolated)
+              (parameter lhs (type (some T Standard.Comparable)))
+              (parameter rhs (type (some T)))
+              (returns (some T))
+              (body
+                (conditional
+                  (when (call Standard.Comparable.lessThan rhs lhs))
+                  (then
+                    (return lhs))))
+              (result rhs))
+            
+            (procedure Standard.Math.min
+              (description "The smaller of two of one type, by the one order.")
+              (const)
+              (isolated)
+              (parameter lhs (type (some T Standard.Comparable)))
+              (parameter rhs (type (some T)))
+              (returns (some T))
+              (body
+                (conditional
+                  (when (call Standard.Comparable.lessThan rhs lhs))
+                  (then
+                    (return rhs))))
+              (result lhs))
             """,
         "text": """
-            warpt 1
-            {
-              description "Scanning text, written from its characters."
-              imports [
-                "Standard.Collection.appending"
-                "Standard.Collection.count"
-                "Standard.Comparable.lessThan"
-                "Standard.Control.abort"
-                "Standard.Logic.equal"
-                "Standard.Logic.not"
-                "Standard.Numeric.minus"
-                "Standard.Numeric.plus"
-                "Standard.Text.characters"
-                "Standard.Text.joined"
-              ]
-              procedures {
-                "Standard.Text.contains" {
-                  body [
-                    {
-                      let "held"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "text"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      let "wanted"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "other"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              value true
-                              var "same"
-                            }
-                            {
-                              let "probe"
-                              value {
-                                loop {
-                                  body [
-                                    {
-                                      let "at"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "walk.index"
-                                            }
-                                            {
-                                              ref "probe.index"
-                                            }
-                                          ]
-                                          procedure "Standard.Numeric.plus"
-                                        }
-                                      }
-                                    }
-                                    {
-                                      value {
-                                        conditional {
-                                          then [
-                                            {
-                                              set "same"
-                                              value false
-                                            }
-                                            {
-                                              value {
-                                                break null
-                                              }
-                                            }
-                                          ]
-                                          when {
-                                            call {
-                                              arguments [
-                                                {
-                                                  call {
-                                                    arguments [
-                                                      {
-                                                        ref "held[at]"
-                                                      }
-                                                      {
-                                                        ref "wanted[probe.index]"
-                                                      }
-                                                    ]
-                                                    procedure "Standard.Logic.equal"
-                                                  }
-                                                }
-                                              ]
-                                              procedure "Standard.Logic.not"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  while {
-                                    call {
-                                      arguments [
-                                        {
-                                          ref "probe.index"
-                                        }
-                                        {
-                                          call {
-                                            arguments [
-                                              {
-                                                ref "wanted"
-                                              }
-                                            ]
-                                            procedure "Standard.Collection.count"
-                                          }
-                                        }
-                                      ]
-                                      procedure "Standard.Comparable.lessThan"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return true
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "same"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        call {
-                                          arguments [
-                                            {
-                                              call {
-                                                arguments [
-                                                  {
-                                                    ref "held"
-                                                  }
-                                                ]
-                                                procedure "Standard.Collection.count"
-                                              }
-                                            }
-                                            {
-                                              call {
-                                                arguments [
-                                                  {
-                                                    ref "wanted"
-                                                  }
-                                                ]
-                                                procedure "Standard.Collection.count"
-                                              }
-                                            }
-                                          ]
-                                          procedure "Standard.Numeric.minus"
-                                        }
-                                      }
-                                      1
-                                    ]
-                                    procedure "Standard.Numeric.plus"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether a string holds another inside it."
-                  isolated true
-                  parameters [
-                    {
-                      name "text"
-                      type "String"
-                    }
-                    {
-                      name "other"
-                      type "String"
-                    }
-                  ]
-                  result false
-                  returns "Bool"
-                }
-                "Standard.Text.replacing" {
-                  body [
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                call {
-                                  arguments [
-                                    "replacing asks an empty piece"
-                                  ]
-                                  procedure "Standard.Control.abort"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  ref "target"
-                                }
-                                ""
-                              ]
-                              procedure "Standard.Logic.equal"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Every occurrence of a piece swapped for another."
-                  failing [
-                    "aborted"
-                  ]
-                  isolated true
-                  parameters [
-                    {
-                      name "text"
-                      type "String"
-                    }
-                    {
-                      name "target"
-                      type "String"
-                    }
-                    {
-                      name "replacement"
-                      type "String"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          call {
-                            arguments [
-                              {
-                                ref "text"
-                              }
-                              {
-                                ref "target"
-                              }
-                            ]
-                            procedure "Standard.Text.split"
-                          }
-                        }
-                        {
-                          ref "replacement"
-                        }
-                      ]
-                      procedure "Standard.Text.joined"
-                    }
-                  }
-                  returns "String"
-                }
-                "Standard.Text.split" {
-                  body [
-                    {
-                      let "held"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "text"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      let "heldCount"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "held"
-                            }
-                          ]
-                          procedure "Standard.Collection.count"
-                        }
-                      }
-                    }
-                    {
-                      let "wanted"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "separator"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      let "wantedCount"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "wanted"
-                            }
-                          ]
-                          procedure "Standard.Collection.count"
-                        }
-                      }
-                    }
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                call {
-                                  arguments [
-                                    "split asks an empty separator"
-                                  ]
-                                  procedure "Standard.Control.abort"
-                                }
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  ref "wantedCount"
-                                }
-                                0
-                              ]
-                              procedure "Standard.Logic.equal"
-                            }
-                          }
-                        }
-                      }
-                    }
-                    {
-                      value []
-                      var "pieces"
-                    }
-                    {
-                      value []
-                      var "current"
-                    }
-                    {
-                      value 0
-                      var "at"
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              value {
-                                call {
-                                  arguments [
-                                    {
-                                      call {
-                                        arguments [
-                                          {
-                                            ref "heldCount"
-                                          }
-                                          {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "at"
-                                                }
-                                                {
-                                                  ref "wantedCount"
-                                                }
-                                              ]
-                                              procedure "Standard.Numeric.plus"
-                                            }
-                                          }
-                                        ]
-                                        procedure "Standard.Comparable.lessThan"
-                                      }
-                                    }
-                                  ]
-                                  procedure "Standard.Logic.not"
-                                }
-                              }
-                              var "matched"
-                            }
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      let "probe"
-                                      value {
-                                        loop {
-                                          body [
-                                            {
-                                              let "offset"
-                                              value {
-                                                call {
-                                                  arguments [
-                                                    {
-                                                      ref "at"
-                                                    }
-                                                    {
-                                                      ref "probe.index"
-                                                    }
-                                                  ]
-                                                  procedure "Standard.Numeric.plus"
-                                                }
-                                              }
-                                            }
-                                            {
-                                              value {
-                                                conditional {
-                                                  then [
-                                                    {
-                                                      set "matched"
-                                                      value false
-                                                    }
-                                                    {
-                                                      value {
-                                                        break null
-                                                      }
-                                                    }
-                                                  ]
-                                                  when {
-                                                    call {
-                                                      arguments [
-                                                        {
-                                                          call {
-                                                            arguments [
-                                                              {
-                                                                ref "held[offset]"
-                                                              }
-                                                              {
-                                                                ref "wanted[probe.index]"
-                                                              }
-                                                            ]
-                                                            procedure "Standard.Logic.equal"
-                                                          }
-                                                        }
-                                                      ]
-                                                      procedure "Standard.Logic.not"
-                                                    }
-                                                  }
-                                                }
-                                              }
-                                            }
-                                          ]
-                                          while {
-                                            call {
-                                              arguments [
-                                                {
-                                                  ref "probe.index"
-                                                }
-                                                {
-                                                  ref "wantedCount"
-                                                }
-                                              ]
-                                              procedure "Standard.Comparable.lessThan"
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "matched"
-                                  }
-                                }
-                              }
-                            }
-                            {
-                              value {
-                                conditional {
-                                  else [
-                                    {
-                                      set "current"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "current"
-                                            }
-                                            {
-                                              ref "held[at]"
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.appending"
-                                        }
-                                      }
-                                    }
-                                    {
-                                      set "at"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "at"
-                                            }
-                                            1
-                                          ]
-                                          procedure "Standard.Numeric.plus"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  then [
-                                    {
-                                      set "pieces"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "pieces"
-                                            }
-                                            {
-                                              call {
-                                                arguments [
-                                                  {
-                                                    ref "current"
-                                                  }
-                                                  ""
-                                                ]
-                                                procedure "Standard.Text.joined"
-                                              }
-                                            }
-                                          ]
-                                          procedure "Standard.Collection.appending"
-                                        }
-                                      }
-                                    }
-                                    {
-                                      set "current"
-                                      value []
-                                    }
-                                    {
-                                      set "at"
-                                      value {
-                                        call {
-                                          arguments [
-                                            {
-                                              ref "at"
-                                            }
-                                            {
-                                              ref "wantedCount"
-                                            }
-                                          ]
-                                          procedure "Standard.Numeric.plus"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    ref "matched"
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "at"
-                                }
-                                {
-                                  ref "heldCount"
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "The text cut on a separator."
-                  failing [
-                    "aborted"
-                  ]
-                  isolated true
-                  parameters [
-                    {
-                      name "text"
-                      type "String"
-                    }
-                    {
-                      name "separator"
-                      type "String"
-                    }
-                  ]
-                  result {
-                    call {
-                      arguments [
-                        {
-                          ref "pieces"
-                        }
-                        {
-                          call {
-                            arguments [
-                              {
-                                ref "current"
-                              }
-                              ""
-                            ]
-                            procedure "Standard.Text.joined"
-                          }
-                        }
-                      ]
-                      procedure "Standard.Collection.appending"
-                    }
-                  }
-                  returns "Array<String>"
-                }
-                "Standard.Text.startsWith" {
-                  body [
-                    {
-                      let "held"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "text"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      let "wanted"
-                      value {
-                        call {
-                          arguments [
-                            {
-                              ref "prefix"
-                            }
-                          ]
-                          procedure "Standard.Text.characters"
-                        }
-                      }
-                    }
-                    {
-                      value {
-                        conditional {
-                          then [
-                            {
-                              value {
-                                return false
-                              }
-                            }
-                          ]
-                          when {
-                            call {
-                              arguments [
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "held"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "wanted"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                    {
-                      let "walk"
-                      value {
-                        loop {
-                          body [
-                            {
-                              value {
-                                conditional {
-                                  then [
-                                    {
-                                      value {
-                                        return false
-                                      }
-                                    }
-                                  ]
-                                  when {
-                                    call {
-                                      arguments [
-                                        {
-                                          call {
-                                            arguments [
-                                              {
-                                                ref "held[walk.index]"
-                                              }
-                                              {
-                                                ref "wanted[walk.index]"
-                                              }
-                                            ]
-                                            procedure "Standard.Logic.equal"
-                                          }
-                                        }
-                                      ]
-                                      procedure "Standard.Logic.not"
-                                    }
-                                  }
-                                }
-                              }
-                            }
-                          ]
-                          while {
-                            call {
-                              arguments [
-                                {
-                                  ref "walk.index"
-                                }
-                                {
-                                  call {
-                                    arguments [
-                                      {
-                                        ref "wanted"
-                                      }
-                                    ]
-                                    procedure "Standard.Collection.count"
-                                  }
-                                }
-                              ]
-                              procedure "Standard.Comparable.lessThan"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                  const true
-                  description "Whether a string begins with another."
-                  isolated true
-                  parameters [
-                    {
-                      name "text"
-                      type "String"
-                    }
-                    {
-                      name "prefix"
-                      type "String"
-                    }
-                  ]
-                  result true
-                  returns "Bool"
-                }
-              }
-              warp 1
-            }
+            (warp 1)
+            (description "Scanning text, written from its characters.")
+            (import Standard.Collection.appending)
+            (import Standard.Collection.count)
+            (import Standard.Comparable.lessThan)
+            (import Standard.Control.abort)
+            (import Standard.Logic.equal)
+            (import Standard.Logic.not)
+            (import Standard.Numeric.minus)
+            (import Standard.Numeric.plus)
+            (import Standard.Text.characters)
+            (import Standard.Text.joined)
+            
+            (procedure Standard.Text.contains
+              (description "Whether a string holds another inside it.")
+              (const)
+              (isolated)
+              (parameter text (type String))
+              (parameter other (type String))
+              (returns Bool)
+              (body
+                (let held (call Standard.Text.characters text))
+                (let wanted (call Standard.Text.characters other))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Numeric.plus (call Standard.Numeric.minus (call Standard.Collection.count held) (call Standard.Collection.count wanted)) 1)))
+                    (body
+                      (var same true)
+                      (let probe
+                        (loop
+                          (while (call Standard.Comparable.lessThan (path probe (field index)) (call Standard.Collection.count wanted)))
+                          (body
+                            (let at (call Standard.Numeric.plus (path walk (field index)) (path probe (field index))))
+                            (conditional
+                              (when (call Standard.Logic.not (call Standard.Logic.equal (path held (index at)) (path wanted (index (path probe (field index)))))))
+                              (then
+                                (set same false)
+                                (break))))))
+                      (conditional
+                        (when same)
+                        (then
+                          (return true)))))))
+              (result false))
+            
+            (procedure Standard.Text.replacing
+              (description "Every occurrence of a piece swapped for another.")
+              (const)
+              (isolated)
+              (parameter text (type String))
+              (parameter target (type String))
+              (parameter replacement (type String))
+              (returns String)
+              (failing aborted)
+              (body
+                (conditional
+                  (when (call Standard.Logic.equal target ""))
+                  (then
+                    (call Standard.Control.abort "replacing asks an empty piece"))))
+              (result (call Standard.Text.joined (call Standard.Text.split text target) replacement)))
+            
+            (procedure Standard.Text.split
+              (description "The text cut on a separator.")
+              (const)
+              (isolated)
+              (parameter text (type String))
+              (parameter separator (type String))
+              (returns (array String))
+              (failing aborted)
+              (body
+                (let held (call Standard.Text.characters text))
+                (let heldCount (call Standard.Collection.count held))
+                (let wanted (call Standard.Text.characters separator))
+                (let wantedCount (call Standard.Collection.count wanted))
+                (conditional
+                  (when (call Standard.Logic.equal wantedCount 0))
+                  (then
+                    (call Standard.Control.abort "split asks an empty separator")))
+                (var pieces (array))
+                (var current (array))
+                (var at 0)
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan at heldCount))
+                    (body
+                      (var matched (call Standard.Logic.not (call Standard.Comparable.lessThan heldCount (call Standard.Numeric.plus at wantedCount))))
+                      (conditional
+                        (when matched)
+                        (then
+                          (let probe
+                            (loop
+                              (while (call Standard.Comparable.lessThan (path probe (field index)) wantedCount))
+                              (body
+                                (let offset (call Standard.Numeric.plus at (path probe (field index))))
+                                (conditional
+                                  (when (call Standard.Logic.not (call Standard.Logic.equal (path held (index offset)) (path wanted (index (path probe (field index)))))))
+                                  (then
+                                    (set matched false)
+                                    (break))))))))
+                      (conditional
+                        (when matched)
+                        (then
+                          (set pieces (call Standard.Collection.appending pieces (call Standard.Text.joined current "")))
+                          (set current (array))
+                          (set at (call Standard.Numeric.plus at wantedCount)))
+                        (else
+                          (set current (call Standard.Collection.appending current (path held (index at))))
+                          (set at (call Standard.Numeric.plus at 1))))))))
+              (result (call Standard.Collection.appending pieces (call Standard.Text.joined current ""))))
+            
+            (procedure Standard.Text.startsWith
+              (description "Whether a string begins with another.")
+              (const)
+              (isolated)
+              (parameter text (type String))
+              (parameter prefix (type String))
+              (returns Bool)
+              (body
+                (let held (call Standard.Text.characters text))
+                (let wanted (call Standard.Text.characters prefix))
+                (conditional
+                  (when (call Standard.Comparable.lessThan (call Standard.Collection.count held) (call Standard.Collection.count wanted)))
+                  (then
+                    (return false)))
+                (let walk
+                  (loop
+                    (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count wanted)))
+                    (body
+                      (conditional
+                        (when (call Standard.Logic.not (call Standard.Logic.equal (path held (index (path walk (field index)))) (path wanted (index (path walk (field index)))))))
+                        (then
+                          (return false)))))))
+              (result true))
             """
     ]
 }

@@ -1,91 +1,24 @@
-warpt 1
-{
-  imports [
-    "Standard.Comparable.lessThan"
-  ]
-  procedures {
-    "App.read" {
-      parameters [
-        {
-          name "account"
-          type "App.Account"
-        }
-      ]
-      result {
-        ref "account.balance"
-      }
-      returns "Int"
-    }
-    entry {
-      access "public"
-      body [
-        {
-          let "account"
-          type "App.Account"
-          value {
-            struct {
-              balance 1
-            }
-          }
-        }
-        {
-          value 0
-          var "seen"
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  set "seen"
-                  value {
-                    call {
-                      arguments [
-                        {
-                          ref "account"
-                        }
-                      ]
-                      procedure "App.read"
-                    }
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "seen"
-      }
-      returns "Int"
-    }
-  }
-  types {
-    "App.Account" {
-      struct {
-        balance "Int"
-      }
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Comparable.lessThan)
+
+(struct App.Account
+  (field balance Int))
+
+(procedure App.read
+  (parameter account (type App.Account))
+  (returns Int)
+  (result (path account (field balance))))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let account (type App.Account) (struct (field balance 1)))
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (call App.read account))))))
+  (result seen))
