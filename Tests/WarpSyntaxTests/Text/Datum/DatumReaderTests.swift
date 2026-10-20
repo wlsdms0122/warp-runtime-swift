@@ -40,7 +40,7 @@ struct DatumReaderTests {
         // Given
         for text in ["1.50", "01", "+1", "1.", "1e2", "1a", "-0"] {
             // When / Then
-            #expect(throws: Unplaced.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
+            #expect(throws: TextRefused.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
         }
     }
 
@@ -50,7 +50,7 @@ struct DatumReaderTests {
         #expect(try Self.read(#""a\"b\\c\n\u0001""#) == ["text a\"b\\c\n\u{1}"])
 
         for text in [#""\u0041""#, #""\u000a""#, #""\`""#, #""\q""#, "\"a\u{1}\""] {
-            #expect(throws: Unplaced.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
+            #expect(throws: TextRefused.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
         }
     }
 
@@ -59,7 +59,7 @@ struct DatumReaderTests {
         // Given
         for text in ["a\"b\"", "\"a\"b", "(a", "a)", "``", "x\"6A\"", "x\"6\"", "a\u{1}b"] {
             // When / Then
-            #expect(throws: Unplaced.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
+            #expect(throws: TextRefused.self, "\(text)") { try DatumReader().data(of: Array(text.unicodeScalars)) }
         }
     }
 
@@ -70,7 +70,7 @@ struct DatumReaderTests {
 
         // When / Then
         #expect(try DatumReader().data(of: Array(Self.nested(bound).unicodeScalars)).count == 1)
-        #expect(throws: Unplaced.self) { try DatumReader().data(of: Array(Self.nested(bound + 1).unicodeScalars)) }
+        #expect(throws: TextRefused.self) { try DatumReader().data(of: Array(Self.nested(bound + 1).unicodeScalars)) }
     }
 
     // MARK: - Public

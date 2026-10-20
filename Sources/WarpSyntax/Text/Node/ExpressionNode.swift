@@ -62,7 +62,7 @@ struct ExpressionNode {
             return try array(elements)
 
         case .procedure:
-            throw Unplaced("a procedure closed over a scope is not data, and a document holds data")
+            throw TextRefused("a procedure closed over a scope is not data, and a document holds data")
 
         case .dictionary:
             break
@@ -93,11 +93,11 @@ struct ExpressionNode {
 
     private func apply(_ node: Node) throws -> Value {
         guard let callee = node.operands.first else {
-            throw Unplaced("`apply` holds the value it calls, then what it hands", at: node.offset)
+            throw TextRefused("`apply` holds the value it calls, then what it hands", at: node.offset)
         }
 
         if case .text = callee.form {
-            throw Unplaced("text under `procedure` names a declaration, and a call of one is `(call …)`", at: callee.offset)
+            throw TextRefused("text under `procedure` names a declaration, and a call of one is `(call …)`", at: callee.offset)
         }
 
         return tagged(.call, try call(try value(of: callee), handing: node.operands.dropFirst()))
@@ -105,7 +105,7 @@ struct ExpressionNode {
 
     private func cast(_ node: Node) throws -> Value {
         guard node.operands.count == 2 else {
-            throw Unplaced("`\(node.word)` holds what it casts, then the type", at: node.offset)
+            throw TextRefused("`\(node.word)` holds what it casts, then the type", at: node.offset)
         }
 
         return tagged(
@@ -129,7 +129,7 @@ struct ExpressionNode {
         let entry = try Node(datum)
 
         guard entry.word == "entry", entry.operands.count == 2 else {
-            throw Unplaced("a map holds `(entry key value)`", at: datum.offset)
+            throw TextRefused("a map holds `(entry key value)`", at: datum.offset)
         }
 
         return .array([try value(of: entry.operands[0]), try value(of: entry.operands[1])])
@@ -147,7 +147,7 @@ struct ExpressionNode {
             let field = try Node(operand)
 
             guard field.word == "field" else {
-                throw Unplaced("a struct holds `(field name value)`", at: operand.offset)
+                throw TextRefused("a struct holds `(field name value)`", at: operand.offset)
             }
 
             let (name, held) = try field.named()
@@ -162,8 +162,8 @@ struct ExpressionNode {
         tagged(.closure, try ProcedureNode().value(of: node.operands[...]))
     }
 
-    private func unknown(_ node: Node) -> Unplaced {
-        Unplaced("no expression is written `(\(node.word) …)`", at: node.offset)
+    private func unknown(_ node: Node) -> TextRefused {
+        TextRefused("no expression is written `(\(node.word) …)`", at: node.offset)
     }
 
     // The one tag a mapping where a value stands is an expression by, and
@@ -172,7 +172,7 @@ struct ExpressionNode {
         let entries = try Fields.entries(value, as: "an expression")
 
         guard entries.count == 1, let tag = ExpressionTag(rawValue: entries[0].key) else {
-            throw Unplaced(
+            throw TextRefused(
                 "an expression is a mapping of one tag, and this one holds \(entries.map { entry in "`\(entry.key)`" }.joined(separator: ", "))"
             )
         }
@@ -193,7 +193,7 @@ struct ExpressionNode {
             let list = try Fields.list(handed, as: "a call's arguments")
 
             guard !list.isEmpty else {
-                throw Unplaced("a call writes `arguments` where it hands something, and no node writes it empty")
+                throw TextRefused("a call writes `arguments` where it hands something, and no node writes it empty")
             }
 
             arguments = try list.map(datum(of:))
@@ -209,7 +209,7 @@ struct ExpressionNode {
             return .node("apply", [try datum(of: callee)] + arguments)
 
         case nil:
-            throw Unplaced("a call names what it calls under `procedure`, and this one does not")
+            throw TextRefused("a call names what it calls under `procedure`, and this one does not")
         }
     }
 
@@ -220,7 +220,7 @@ struct ExpressionNode {
             let subject = fields.take(ExpressionReader.subjectKey.spelling),
             let type = fields.take(ExpressionReader.typeKey.spelling)
         else {
-            throw Unplaced("a cast writes what it casts and the type, and no node writes one without both")
+            throw TextRefused("a cast writes what it casts and the type, and no node writes one without both")
         }
 
         try fields.finish()
@@ -235,7 +235,7 @@ struct ExpressionNode {
                 let pair = try Fields.list(entry, as: "a map literal's entry")
 
                 guard pair.count == 2 else {
-                    throw Unplaced("a map literal's entry is a key and a value, and this one holds \(pair.count)")
+                    throw TextRefused("a map literal's entry is a key and a value, and this one holds \(pair.count)")
                 }
 
                 return .node("entry", [try datum(of: pair[0]), try datum(of: pair[1])])

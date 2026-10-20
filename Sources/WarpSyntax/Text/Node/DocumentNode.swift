@@ -89,7 +89,7 @@ struct DocumentNode {
                 try keyed.write(try ProcedureNode().value(of: parts), named: name, under: Self.procedures, at: node.offset)
 
             default:
-                throw Unplaced("a document holds no `(\(node.word) …)`", at: node.offset)
+                throw TextRefused("a document holds no `(\(node.word) …)`", at: node.offset)
             }
         }
 
@@ -101,7 +101,7 @@ struct DocumentNode {
         var nodes: [Datum] = []
 
         guard let imports = fields.take(Self.imports) else {
-            throw Unplaced("a document writes `imports`, and no node writes one without it")
+            throw TextRefused("a document writes `imports`, and no node writes one without it")
         }
 
         if let version = fields.take(Self.warp) {
@@ -180,7 +180,7 @@ struct DocumentNode {
             break
         }
 
-        throw Unplaced("a document's `var` holds a name, a type where it declares one, and its start", at: node.offset)
+        throw TextRefused("a document's `var` holds a name, a type where it declares one, and its start", at: node.offset)
     }
 
     private func variable(_ name: String, _ start: Value) throws -> Datum {

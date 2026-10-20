@@ -1,5 +1,5 @@
 //
-//  Unplaced.swift
+//  TextRefused.swift
 //  WarpSyntax
 //
 //  Created by JSilver on 10/20/26.
@@ -12,7 +12,7 @@ import Foundation
 // column are worked out once, where the text is read, from the whole text,
 // and the encoding says the refusal at its door. Nil where what is refused
 // was never read from a text.
-struct Unplaced: Error {
+struct TextRefused: Error {
     // MARK: - Property
     let said: String
     let offset: Int?

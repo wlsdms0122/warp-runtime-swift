@@ -54,7 +54,7 @@ struct DatumReader {
 
             case "(":
                 guard opened.count < Self.nestingBound else {
-                    throw Unplaced("the text nests deeper than a reader must follow", at: start)
+                    throw TextRefused("the text nests deeper than a reader must follow", at: start)
                 }
 
                 reading.removeFirst()
@@ -64,7 +64,7 @@ struct DatumReader {
 
             case ")":
                 guard let (held, at) = opened.popLast() else {
-                    throw Unplaced("nothing here is a list to close", at: start)
+                    throw TextRefused("nothing here is a list to close", at: start)
                 }
 
                 reading.removeFirst()
@@ -80,7 +80,7 @@ struct DatumReader {
                 let name = try quoted(from: &reading, closing: "`")
 
                 guard !name.isEmpty else {
-                    throw Unplaced("a name in backticks holds at least one character", at: start)
+                    throw TextRefused("a name in backticks holds at least one character", at: start)
                 }
 
                 read = Datum(.name(name), at: start)
@@ -111,7 +111,7 @@ struct DatumReader {
         }
 
         if let (_, at) = opened.last {
-            throw Unplaced("a list opened here is never closed", at: at)
+            throw TextRefused("a list opened here is never closed", at: at)
         }
 
         return top
@@ -135,7 +135,7 @@ struct DatumReader {
         }
 
         if let control = scalars.first(where: { scalar in scalar.value < 0x20 }) {
-            throw Unplaced("a name holds \(shown(control)) written raw, and is written in backticks", at: offset)
+            throw TextRefused("a name holds \(shown(control)) written raw, and is written in backticks", at: offset)
         }
 
         return .name(bare)
@@ -150,15 +150,15 @@ struct DatumReader {
                 return .int(int)
 
             case .notOneSpelling:
-                throw Unplaced("\(bare) is not a whole number's one writing", at: offset)
+                throw TextRefused("\(bare) is not a whole number's one writing", at: offset)
 
             case .overflow:
-                throw Unplaced("\(bare) is a whole number past what an Int holds", at: offset)
+                throw TextRefused("\(bare) is a whole number past what an Int holds", at: offset)
             }
         }
 
         guard let double = Double(spelling: bare) else {
-            throw Unplaced("\(bare) is not a fraction's one writing", at: offset)
+            throw TextRefused("\(bare) is not a fraction's one writing", at: offset)
         }
 
         return .double(double)
@@ -168,7 +168,7 @@ struct DatumReader {
     private func separated(_ reading: ArraySlice<Unicode.Scalar>) throws {
         guard let next = reading.first, !Self.delimiters.contains(next) else { return }
 
-        throw Unplaced(
+        throw TextRefused(
             "a token runs straight into \(shown(next)), and white space or a parenthesis separates the two",
             at: reading.startIndex
         )
@@ -196,14 +196,14 @@ struct DatumReader {
 
             default:
                 guard character.value >= 0x20 else {
-                    throw Unplaced("\(shown(character)) is written raw, and is escaped", at: at)
+                    throw TextRefused("\(shown(character)) is written raw, and is escaped", at: at)
                 }
 
                 string.unicodeScalars.append(character)
             }
         }
 
-        throw Unplaced(
+        throw TextRefused(
             closing == "`" ? "the text ends inside a name" : "the text ends inside text",
             at: reading.startIndex
         )
@@ -214,7 +214,7 @@ struct DatumReader {
         closing: Unicode.Scalar
     ) throws -> Unicode.Scalar {
         guard let character = reading.first else {
-            throw Unplaced("the text ends inside an escape", at: reading.startIndex)
+            throw TextRefused("the text ends inside an escape", at: reading.startIndex)
         }
 
         let at = reading.startIndex
@@ -235,17 +235,17 @@ struct DatumReader {
             let value = try hexadecimal(from: &reading)
 
             guard value < 0x20 else {
-                throw Unplaced("the escape spells a character that is written as itself", at: at)
+                throw TextRefused("the escape spells a character that is written as itself", at: at)
             }
 
             guard let scalar = Unicode.Scalar(value), !["\n", "\r", "\t"].contains(scalar) else {
-                throw Unplaced("the escape spells a character that has a shorter escape", at: at)
+                throw TextRefused("the escape spells a character that has a shorter escape", at: at)
             }
 
             return scalar
 
         default:
-            throw Unplaced("nothing is written \\\(shown(character))", at: at)
+            throw TextRefused("nothing is written \\\(shown(character))", at: at)
         }
     }
 
@@ -266,18 +266,18 @@ struct DatumReader {
                 digits.append(UInt8(character.value - 0x61 + 10))
 
             default:
-                throw Unplaced("bytes are written as lowercase hex", at: at)
+                throw TextRefused("bytes are written as lowercase hex", at: at)
             }
         }
 
         guard reading.first == "\"" else {
-            throw Unplaced("the text ends inside bytes", at: reading.startIndex)
+            throw TextRefused("the text ends inside bytes", at: reading.startIndex)
         }
 
         reading.removeFirst()
 
         guard digits.count % 2 == 0 else {
-            throw Unplaced("bytes are written two digits each", at: reading.startIndex)
+            throw TextRefused("bytes are written two digits each", at: reading.startIndex)
         }
 
         return stride(from: 0, to: digits.count, by: 2)
@@ -294,7 +294,7 @@ struct DatumReader {
                 !("A"..."F").contains(character),
                 let digit = UInt32(String(character), radix: 16)
             else {
-                throw Unplaced("the escape is not four lowercase hexadecimal digits", at: reading.startIndex)
+                throw TextRefused("the escape is not four lowercase hexadecimal digits", at: reading.startIndex)
             }
 
             value = value << 4 | digit

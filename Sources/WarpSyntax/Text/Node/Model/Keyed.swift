@@ -25,7 +25,7 @@ struct Keyed {
     // MARK: - Public
     mutating func write(_ value: Value, under key: String, at offset: Int?) throws {
         guard values.updateValue(value, forKey: key) == nil else {
-            throw Unplaced("`\(key)` is written twice", at: offset)
+            throw TextRefused("`\(key)` is written twice", at: offset)
         }
     }
 
@@ -42,7 +42,7 @@ struct Keyed {
 
     mutating func write(_ value: Value, named name: String, under key: String, at offset: Int?) throws {
         guard maps[key, default: [:]].updateValue(value, forKey: name) == nil else {
-            throw Unplaced("'\(name)' is written twice", at: offset)
+            throw TextRefused("'\(name)' is written twice", at: offset)
         }
     }
 

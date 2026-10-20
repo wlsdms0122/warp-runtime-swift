@@ -83,7 +83,7 @@ struct TypeNodeTests {
         let node = try Self.datum(written)
 
         // When / Then
-        #expect(throws: Unplaced.self) { try TypeNode().text(of: node) }
+        #expect(throws: TextRefused.self) { try TypeNode().text(of: node) }
     }
 
     @Test("a spelling no node writes back is refused on the way out", arguments: [
@@ -95,7 +95,7 @@ struct TypeNodeTests {
     ])
     func aSpellingNoNodeWrites(text: String) {
         // When / Then
-        #expect(throws: Unplaced.self) { try TypeNode().datum(of: text) }
+        #expect(throws: TextRefused.self) { try TypeNode().datum(of: text) }
     }
 
     @Test("a type node nests as deep as the bound, counted from the type written inside the outermost")
@@ -108,8 +108,8 @@ struct TypeNodeTests {
         // When / Then
         #expect(try TypeNode().text(of: Self.datum(node(bound))) == text(bound))
         #expect(try DatumWriter().line(of: TypeNode().datum(of: text(bound))) == node(bound))
-        #expect(throws: Unplaced.self) { try TypeNode().text(of: Self.datum(node(bound + 1))) }
-        #expect(throws: Unplaced.self) { try TypeNode().datum(of: text(bound + 1)) }
+        #expect(throws: TextRefused.self) { try TypeNode().text(of: Self.datum(node(bound + 1))) }
+        #expect(throws: TextRefused.self) { try TypeNode().datum(of: text(bound + 1)) }
     }
 
     // MARK: - Public

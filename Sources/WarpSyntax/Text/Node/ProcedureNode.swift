@@ -73,14 +73,14 @@ struct ProcedureNode {
                 let (label, contracts) = try part.declared()
 
                 guard !contracts.isEmpty else {
-                    throw Unplaced("`bound` holds an associated type and the contracts it is bounded by", at: part.offset)
+                    throw TextRefused("`bound` holds an associated type and the contracts it is bounded by", at: part.offset)
                 }
 
                 let names = try contracts.map(Node.name)
                 let joined = names.joined(separator: " & ")
 
                 guard TypeParser().names(joined) == names else {
-                    throw Unplaced("'\(joined)' is read as other contracts than these, so they have no text", at: part.offset)
+                    throw TextRefused("'\(joined)' is read as other contracts than these, so they have no text", at: part.offset)
                 }
 
                 try keyed.write(.string(joined), named: label, under: Self.bounds, at: part.offset)
@@ -97,7 +97,7 @@ struct ProcedureNode {
                 try keyed.write(try ExpressionNode().value(of: part.one()), under: part.word, at: part.offset)
 
             default:
-                throw Unplaced("a procedure holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("a procedure holds no `\(part.word)`", at: part.offset)
             }
         }
 
@@ -120,7 +120,7 @@ struct ProcedureNode {
             guard let held = fields.take(mark) else { continue }
 
             guard held == .bool(true) else {
-                throw Unplaced("`\(mark)` is written `true` or not at all, and no node writes \(Rendering(held).text())")
+                throw TextRefused("`\(mark)` is written `true` or not at all, and no node writes \(Rendering(held).text())")
             }
 
             parts.append(.node(mark))
@@ -130,7 +130,7 @@ struct ProcedureNode {
             let list = try Fields.list(parameters, as: "a procedure's parameters")
 
             guard !list.isEmpty else {
-                throw Unplaced("a procedure writes `parameters` where it takes some, and no node writes it empty")
+                throw TextRefused("a procedure writes `parameters` where it takes some, and no node writes it empty")
             }
 
             parts += try list.map(parameter)
@@ -150,7 +150,7 @@ struct ProcedureNode {
                 let names = TypeParser().names(written)
 
                 guard names.joined(separator: " & ") == written else {
-                    throw Unplaced("the bound '\(written)' is spelled as no node writes it")
+                    throw TextRefused("the bound '\(written)' is spelled as no node writes it")
                 }
 
                 return .node("bound", [.name(label)] + names.map(Datum.name))
@@ -198,7 +198,7 @@ struct ProcedureNode {
                 try keyed.write(try DataNode().value(of: part.one()), under: part.word, at: part.offset)
 
             default:
-                throw Unplaced("a parameter holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("a parameter holds no `\(part.word)`", at: part.offset)
             }
         }
 
@@ -209,7 +209,7 @@ struct ProcedureNode {
         var fields = try Fields(value, as: "a parameter")
 
         guard let name = fields.take(Self.name) else {
-            throw Unplaced("a parameter writes its name, and no node writes one without it")
+            throw TextRefused("a parameter writes its name, and no node writes one without it")
         }
 
         var parts: [Datum] = [.name(try Fields.text(name, as: "a parameter's name"))]
@@ -248,7 +248,7 @@ struct ProcedureNode {
             return .node(Self.failing, try failures.map { failure in .name(try Fields.text(failure, as: "a failure")) })
 
         default:
-            throw Unplaced("a procedure fails with a list of names or with `anything`, and no node writes \(Rendering(value).text())")
+            throw TextRefused("a procedure fails with a list of names or with `anything`, and no node writes \(Rendering(value).text())")
         }
     }
 }

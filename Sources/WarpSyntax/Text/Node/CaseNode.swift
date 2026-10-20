@@ -59,7 +59,7 @@ struct CaseNode {
                 let tree = try DataNode().value(of: node.one())
 
                 if written(tree) != nil {
-                    throw Unplaced("a tree a node writes is written as `(program …)`", at: node.offset)
+                    throw TextRefused("a tree a node writes is written as `(program …)`", at: node.offset)
                 }
 
                 try keyed.write(tree, under: Self.program, at: node.offset)
@@ -69,7 +69,7 @@ struct CaseNode {
                     let document = try Node(operand)
 
                     guard document.word == "document" else {
-                        throw Unplaced("`documents` holds `(document …)`", at: operand.offset)
+                        throw TextRefused("`documents` holds `(document …)`", at: operand.offset)
                     }
 
                     return try DocumentNode().value(of: document.operands[...])
@@ -87,7 +87,7 @@ struct CaseNode {
                     let argument = try Node(operand)
 
                     guard argument.word == "argument" else {
-                        throw Unplaced("`arguments` holds `(argument name value)`", at: operand.offset)
+                        throw TextRefused("`arguments` holds `(argument name value)`", at: operand.offset)
                     }
 
                     let (name, held) = try argument.named()
@@ -104,7 +104,7 @@ struct CaseNode {
                     let expectation = try Node(operand)
 
                     guard Self.expectations.contains(expectation.word) else {
-                        throw Unplaced("a case expects no `\(expectation.word)`", at: expectation.offset)
+                        throw TextRefused("a case expects no `\(expectation.word)`", at: expectation.offset)
                     }
 
                     let held = expectation.word == Self.refuses
@@ -117,7 +117,7 @@ struct CaseNode {
                 try keyed.write(try expected.value(), under: node.word, at: node.offset)
 
             default:
-                throw Unplaced("a case holds no `(\(node.word) …)`", at: node.offset)
+                throw TextRefused("a case holds no `(\(node.word) …)`", at: node.offset)
             }
         }
 

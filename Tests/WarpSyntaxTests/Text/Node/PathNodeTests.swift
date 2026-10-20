@@ -49,13 +49,13 @@ struct PathNodeTests {
         let node = try #require(try DatumReader().data(of: Array(written.unicodeScalars)).first)
 
         // When / Then
-        #expect(throws: Unplaced.self) { try PathNode().text(of: node) }
+        #expect(throws: TextRefused.self) { try PathNode().text(of: node) }
     }
 
     @Test("a path no node writes is refused on the way out", arguments: ["?.a", "[0]", "a[ 0 ]", "a."])
     func aPathNoNodeWrites(text: String) {
         // When / Then
-        #expect(throws: Unplaced.self) { try PathNode().datum(of: text) }
+        #expect(throws: TextRefused.self) { try PathNode().datum(of: text) }
     }
 
     // MARK: - Public

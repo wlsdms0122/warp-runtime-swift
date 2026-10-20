@@ -36,7 +36,7 @@ struct TypeNode {
             let read = (try? TypeParser().parse(text)).flatMap(self.datum(of:)),
             try DatumWriter().line(of: read) == DatumWriter().line(of: datum)
         else {
-            throw Unplaced("'\(text)' is written as another node, and is one type", at: datum.offset)
+            throw TextRefused("'\(text)' is written as another node, and is one type", at: datum.offset)
         }
 
         return text
@@ -49,11 +49,11 @@ struct TypeNode {
         do {
             syntax = try TypeParser().parse(text)
         } catch let refusal as TypeSyntaxError {
-            throw Unplaced("the type is written '\(text)', which no node writes: \(refusal.message)")
+            throw TextRefused("the type is written '\(text)', which no node writes: \(refusal.message)")
         }
 
         guard let datum = datum(of: syntax), (try? self.text(of: datum)) == text else {
-            throw Unplaced("the type is written '\(text)', which no node writes")
+            throw TextRefused("the type is written '\(text)', which no node writes")
         }
 
         return datum
@@ -65,7 +65,7 @@ struct TypeNode {
     // tree may.
     private func syntax(of datum: Datum, depth: Int) throws -> TypeSyntax {
         guard depth <= Value.nestingBound else {
-            throw Unplaced("the type nests deeper than a document may", at: datum.offset)
+            throw TextRefused("the type nests deeper than a document may", at: datum.offset)
         }
 
         guard case .list = datum.form else { return .name(try Node.name(datum)) }
@@ -86,8 +86,8 @@ struct TypeNode {
         }
     }
 
-    private func unwritten(_ node: Node) -> Unplaced {
-        Unplaced("no type is written `(\(node.word) …)`", at: node.offset)
+    private func unwritten(_ node: Node) -> TextRefused {
+        TextRefused("no type is written `(\(node.word) …)`", at: node.offset)
     }
 
     private func composition(_ node: Node) throws -> TypeSyntax {
@@ -119,7 +119,7 @@ struct TypeNode {
 
     private func dictionary(_ node: Node, depth: Int) throws -> TypeSyntax {
         guard node.operands.count == 2 else {
-            throw Unplaced("`dictionary` holds its key's type and its value's", at: node.offset)
+            throw TextRefused("`dictionary` holds its key's type and its value's", at: node.offset)
         }
 
         return .applied(TypeSpelling.dictionary.spelling, try syntax(of: node.operands, depth: depth))
@@ -175,16 +175,16 @@ struct TypeNode {
             switch part.word {
             case "parameters", "failing", "returns":
                 guard parts.updateValue(part, forKey: part.word) == nil else {
-                    throw Unplaced("`\(part.word)` is written twice", at: part.offset)
+                    throw TextRefused("`\(part.word)` is written twice", at: part.offset)
                 }
 
             default:
-                throw Unplaced("a procedure type holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("a procedure type holds no `\(part.word)`", at: part.offset)
             }
         }
 
         guard (parts["parameters"] == nil) == (parts["returns"] == nil), parts["returns"] != nil || parts["failing"] == nil else {
-            throw Unplaced("a procedure type writes `parameters` and `returns` both, or neither and no `failing`", at: node.offset)
+            throw TextRefused("a procedure type writes `parameters` and `returns` both, or neither and no `failing`", at: node.offset)
         }
 
         return (modifiers, parts["parameters"]?.operands, try parts["failing"].map(throwing), try parts["returns"]?.one())

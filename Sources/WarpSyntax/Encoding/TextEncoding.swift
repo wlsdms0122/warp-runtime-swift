@@ -35,7 +35,7 @@ public struct TextEncoding {
             let nodes = isCase ? try CaseNode().nodes(of: value) : try DocumentNode().nodes(of: value)
 
             guard let first = nodes.first?.word, first == (isCase ? CaseNode.test : Module.versionKey.spelling) else {
-                throw Unplaced(
+                throw TextRefused(
                     "a text begins with what it is, `(\(Module.versionKey) …)` or `(\(CaseNode.test) …)`, and this tree writes neither"
                 )
             }
@@ -94,7 +94,7 @@ public struct TextEncoding {
             return try CaseNode().value(of: nodes)
 
         default:
-            throw Unplaced(
+            throw TextRefused(
                 "a text begins with what it is, `(\(Module.versionKey) …)` or `(\(CaseNode.test) …)`",
                 at: nodes.first?.offset ?? 0
             )
@@ -108,8 +108,8 @@ public struct TextEncoding {
     private func refusing<Made>(in scalars: [Unicode.Scalar], _ making: () throws -> Made) throws -> Made {
         do {
             return try making()
-        } catch let unplaced as Unplaced {
-            guard let offset = unplaced.offset else { throw EncodingRefused(unplaced.said) }
+        } catch let refusal as TextRefused {
+            guard let offset = refusal.offset else { throw EncodingRefused(refusal.said) }
 
             var line = 1
             var column = 1
@@ -123,7 +123,7 @@ public struct TextEncoding {
                 }
             }
 
-            throw EncodingRefused(unplaced.said, at: EncodingRefused.Position(line: line, column: column))
+            throw EncodingRefused(refusal.said, at: EncodingRefused.Position(line: line, column: column))
         }
     }
 }

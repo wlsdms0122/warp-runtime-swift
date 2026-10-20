@@ -76,7 +76,7 @@ struct StatementNode {
         var operands = node.operands[...]
 
         guard let named = operands.popFirst() else {
-            throw Unplaced("`\(word)` begins with what it binds", at: node.offset)
+            throw TextRefused("`\(word)` begins with what it binds", at: node.offset)
         }
 
         let binding = word == StatementReader.NamingKeys.assignment.name.spelling
@@ -96,7 +96,7 @@ struct StatementNode {
         }
 
         if let extra = operands.first {
-            throw Unplaced("`\(word)` holds what it binds, a type and a value, and nothing after", at: extra.offset)
+            throw TextRefused("`\(word)` holds what it binds, a type and a value, and nothing after", at: extra.offset)
         }
 
         return try keyed.value()
@@ -112,14 +112,14 @@ struct StatementNode {
 
         guard let (word, binding) = bindings.first else {
             guard let held, type == nil else {
-                throw Unplaced("a statement that binds nothing is a value alone, and no node writes this one")
+                throw TextRefused("a statement that binds nothing is a value alone, and no node writes this one")
             }
 
             return try datum(bound: held)
         }
 
         guard bindings.count == 1 else {
-            throw Unplaced("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
+            throw TextRefused("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
         }
 
         var operands: [Datum]
@@ -182,7 +182,7 @@ struct StatementNode {
 
         guard case .null = operand.form else { return try ExpressionNode().value(of: node.one()) }
 
-        throw Unplaced("`(return)` returns null, and is the one text of it", at: operand.offset)
+        throw TextRefused("`(return)` returns null, and is the one text of it", at: operand.offset)
     }
 
     // A construct holding parts under keys: a conditional, a loop, an
@@ -195,7 +195,7 @@ struct StatementNode {
             let part = try Node(operand)
 
             guard let (_, holding) = parts.first(where: { key, _ in key == part.word }) else {
-                throw Unplaced("`\(node.word)` holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("`\(node.word)` holds no `\(part.word)`", at: part.offset)
             }
 
             let held: Value = switch holding {

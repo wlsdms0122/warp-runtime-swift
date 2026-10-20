@@ -63,7 +63,7 @@ struct DeclarationNode {
         var fields = try Fields(value, as: "a struct's declaration")
 
         guard let declared = fields.take(Self.structKey) else {
-            throw Unplaced("a struct's declaration writes `struct`, and no node writes one without it")
+            throw TextRefused("a struct's declaration writes `struct`, and no node writes one without it")
         }
 
         var parts: [Datum] = []
@@ -101,7 +101,7 @@ struct DeclarationNode {
                 try keyed.write(try ProcedureNode().value(of: held), named: name, under: Self.procedures, at: part.offset)
 
             default:
-                throw Unplaced("a contract holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("a contract holds no `\(part.word)`", at: part.offset)
             }
         }
 
@@ -140,14 +140,14 @@ struct DeclarationNode {
             }
 
             guard head == nil else {
-                throw Unplaced("`head` is written twice", at: part.offset)
+                throw TextRefused("`head` is written twice", at: part.offset)
             }
 
             head = try TypeNode().text(of: part.one())
         }
 
         guard let head else {
-            throw Unplaced("an extension writes its `head`, the type it extends", at: offset)
+            throw TextRefused("an extension writes its `head`, the type it extends", at: offset)
         }
 
         return (head, try keyed.value())
@@ -172,7 +172,7 @@ struct DeclarationNode {
         let text = contracts.isEmpty ? name : "\(name): \(names.dropFirst().joined(separator: " & "))"
 
         guard cut(text, as: node.word) == names else {
-            throw Unplaced("'\(text)' is read as other names than these, so they have no text", at: node.offset)
+            throw TextRefused("'\(text)' is read as other names than these, so they have no text", at: node.offset)
         }
 
         return text
@@ -182,7 +182,7 @@ struct DeclarationNode {
         let list = try Fields.list(value, as: "a list of names")
 
         guard !list.isEmpty else {
-            throw Unplaced("no node writes an empty list of `\(word)`")
+            throw TextRefused("no node writes an empty list of `\(word)`")
         }
 
         return try list.map { element in
@@ -190,7 +190,7 @@ struct DeclarationNode {
             let datum = Datum.node(word, cut(text, as: word).map(Datum.name))
 
             guard (try? introduced(Node(datum))) == text else {
-                throw Unplaced("'\(text)' is read as names no node writes back as itself")
+                throw TextRefused("'\(text)' is read as names no node writes back as itself")
             }
 
             return datum
@@ -222,7 +222,7 @@ struct DeclarationNode {
             try keyed.write(try ProcedureNode().value(of: held), named: name, under: Self.procedures, at: part.offset)
 
         default:
-            throw Unplaced("no declaration here holds `\(part.word)`", at: part.offset)
+            throw TextRefused("no declaration here holds `\(part.word)`", at: part.offset)
         }
     }
 
