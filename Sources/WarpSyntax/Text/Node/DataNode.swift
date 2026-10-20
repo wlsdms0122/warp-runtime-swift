@@ -123,11 +123,11 @@ struct DataNode {
 
             let (named, held) = try field.named()
 
-            return (name: try self.name(named, at: field.offset), value: try value(of: held))
+            return (name: try Node.name(named, at: field.offset), value: try value(of: held))
         }
 
         do {
-            return try .holding(fields, named: try self.name(name, at: node.offset))
+            return try .holding(fields, named: try Node.name(name, at: node.offset))
         } catch let refusal as ValueRefused {
             throw Unplaced(refusal.message, at: node.offset)
         }
@@ -147,13 +147,5 @@ struct DataNode {
                 .node("field", [.name(name.spelling), try datum(of: value)])
             })
         )
-    }
-
-    private func name(_ spelling: String, at offset: Int?) throws -> Name {
-        do {
-            return try Name(spelling)
-        } catch let refusal as NameRefused {
-            throw Unplaced(refusal.message, at: offset)
-        }
     }
 }

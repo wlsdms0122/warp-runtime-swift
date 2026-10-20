@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Warp
 
 // A list read as a node: the word it begins with, which says which node it
 // is, and the operands after it.
@@ -66,6 +67,16 @@ struct Node {
         }
 
         return name
+    }
+
+    // A name a text writes, through the door every name from outside a
+    // program comes through, refused where it stands.
+    static func name(_ spelling: String, at offset: Int?) throws -> Name {
+        do {
+            return try Name(spelling)
+        } catch let refusal as NameRefused {
+            throw Unplaced(refusal.message, at: offset)
+        }
     }
 
     // MARK: - Private

@@ -61,7 +61,7 @@ struct PathNode {
         }
 
         if case let .name(name) = datum.form {
-            return Path([.name(Name(normal: name))])
+            return Path([.name(try Node.name(name, at: datum.offset))])
         }
 
         let node = try Node(datum)
@@ -76,7 +76,7 @@ struct PathNode {
             throw Unplaced("a path of one name is the name, written bare", at: node.offset)
         }
 
-        var segments: [PathSegment] = [.name(Name(normal: head))]
+        var segments: [PathSegment] = [.name(try Node.name(head, at: node.operands[0].offset))]
 
         for part in parts {
             segments.append(try segment(part, depth: depth))
@@ -90,7 +90,9 @@ struct PathNode {
 
         switch node.word {
         case "field", "field?":
-            return .name(Name(normal: try Node.name(node.one())), optional: node.word == "field?")
+            let field = try node.one()
+
+            return .name(try Node.name(Node.name(field), at: field.offset), optional: node.word == "field?")
 
         case "index", "index?":
             let index = try node.one()
