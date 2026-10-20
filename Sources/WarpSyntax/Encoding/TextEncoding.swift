@@ -31,7 +31,7 @@ public struct TextEncoding {
         }
 
         let text = try refusing(in: []) {
-            let isCase = (try? Fields.entries(value, as: "a tree"))?.contains { key, _ in key == CaseNode.test } == true
+            let isCase = (try? Subtree(value, as: "a tree").entries())?.contains { key, _ in key == CaseNode.test } == true
             let nodes = isCase ? try CaseNode().nodes(of: value) : try DocumentNode().nodes(of: value)
 
             guard let first = nodes.first?.word, first == (isCase ? CaseNode.test : Module.versionKey.spelling) else {

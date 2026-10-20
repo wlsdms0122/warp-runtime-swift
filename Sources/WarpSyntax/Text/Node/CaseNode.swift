@@ -138,7 +138,7 @@ struct CaseNode {
             nodes.append(
                 .block(
                     Self.documents,
-                    try Fields.list(documents, as: "the documents beside a case's program").map { document in
+                    try Subtree(documents, as: "the documents beside a case's program").list().map { document in
                         .block("document", try DocumentNode().nodes(of: document))
                     }
                 )
@@ -167,7 +167,7 @@ struct CaseNode {
             nodes.append(
                 .node(
                     Self.arguments,
-                    try Fields.entries(arguments, as: "a case's arguments").map { name, held in
+                    try Subtree(arguments, as: "a case's arguments").entries().map { name, held in
                         .node("argument", [.name(name), try DataNode().datum(of: held)])
                     }
                 )
@@ -182,7 +182,7 @@ struct CaseNode {
                 guard let held = expected.take(key) else { continue }
 
                 let written = key == Self.refuses
-                    ? Datum.name(try Fields.text(held, as: "where a case is refused"))
+                    ? Datum.name(try Subtree(held, as: "where a case is refused").text())
                     : try DataNode().datum(of: held)
 
                 expectations.append(.node(key, [written]))

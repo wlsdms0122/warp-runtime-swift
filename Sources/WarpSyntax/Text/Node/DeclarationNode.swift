@@ -75,8 +75,8 @@ struct DeclarationNode {
         let given = try self.given(&fields, as: "a struct's declaration")
 
         parts += given.satisfies
-        parts += try Fields.entries(declared, as: "a struct's fields").map { name, type in
-            .node("field", [.name(name), try TypeNode().datum(of: try Fields.text(type, as: "a field's type"))])
+        parts += try Subtree(declared, as: "a struct's fields").entries().map { name, type in
+            .node("field", [.name(name), try TypeNode().datum(of: try Subtree(type, as: "a field's type").text())])
         }
         parts += given.rest
 
@@ -179,14 +179,14 @@ struct DeclarationNode {
     }
 
     func introduced(_ value: Value, as word: String) throws -> [Datum] {
-        let list = try Fields.list(value, as: "a list of names")
+        let list = try Subtree(value, as: "a list of names").list()
 
         guard !list.isEmpty else {
             throw TextRefused("no node writes an empty list of `\(word)`")
         }
 
         return try list.map { element in
-            let text = try Fields.text(element, as: "a name and its bounds")
+            let text = try Subtree(element, as: "a name and its bounds").text()
             let datum = Datum.node(word, cut(text, as: word).map(Datum.name))
 
             guard (try? introduced(Node(datum))) == text else {
@@ -231,16 +231,16 @@ struct DeclarationNode {
         var rest: [Datum] = []
 
         if let contracts = fields.take(Self.satisfies) {
-            let names = try Fields.list(contracts, as: "what \(place) satisfies").map { contract in
-                Datum.name(try Fields.text(contract, as: "a contract's name"))
+            let names = try Subtree(contracts, as: "what \(place) satisfies").list().map { contract in
+                Datum.name(try Subtree(contract, as: "a contract's name").text())
             }
 
             satisfies.append(.node(Self.satisfies, names))
         }
 
         if let types = fields.take(Self.types) {
-            rest += try Fields.entries(types, as: "the types \(place) gives").map { name, type in
-                .node("type", [.name(name), try TypeNode().datum(of: try Fields.text(type, as: "a given type"))])
+            rest += try Subtree(types, as: "the types \(place) gives").entries().map { name, type in
+                .node("type", [.name(name), try TypeNode().datum(of: try Subtree(type, as: "a given type").text())])
             }
         }
 
@@ -252,7 +252,7 @@ struct DeclarationNode {
     }
 
     private func procedures(_ value: Value) throws -> [Datum] {
-        try Fields.entries(value, as: "a mapping of procedures").map { name, procedure in
+        try Subtree(value, as: "a mapping of procedures").entries().map { name, procedure in
             .block("procedure", [.name(name)] + (try ProcedureNode().parts(of: procedure)))
         }
     }

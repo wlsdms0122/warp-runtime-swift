@@ -71,7 +71,7 @@ struct ExpressionNode {
         let (tag, held) = try tagged(value)
 
         switch tag {
-        case .reference: return try PathNode().datum(of: try Fields.text(held, as: "a reference"))
+        case .reference: return try PathNode().datum(of: try Subtree(held, as: "a reference").text())
         case .call: return try call(held)
         case .cast, .optionalCast: return try cast(held, as: tag)
         case .dictionary: return try dictionary(held)
@@ -169,7 +169,7 @@ struct ExpressionNode {
     // The one tag a mapping where a value stands is an expression by, and
     // what it holds.
     private func tagged(_ value: Value) throws -> (ExpressionTag, Value) {
-        let entries = try Fields.entries(value, as: "an expression")
+        let entries = try Subtree(value, as: "an expression").entries()
 
         guard entries.count == 1, let tag = ExpressionTag(rawValue: entries[0].key) else {
             throw TextRefused(
@@ -190,7 +190,7 @@ struct ExpressionNode {
         var arguments: [Datum] = []
 
         if let handed = fields.take(CallForm.CodingKeys.arguments.name.spelling) {
-            let list = try Fields.list(handed, as: "a call's arguments")
+            let list = try Subtree(handed, as: "a call's arguments").list()
 
             guard !list.isEmpty else {
                 throw TextRefused("a call writes `arguments` where it hands something, and no node writes it empty")
@@ -225,14 +225,14 @@ struct ExpressionNode {
 
         try fields.finish()
 
-        return .node(tag.rawValue, [try datum(of: subject), try TypeNode().datum(of: try Fields.text(type, as: "a cast's type"))])
+        return .node(tag.rawValue, [try datum(of: subject), try TypeNode().datum(of: try Subtree(type, as: "a cast's type").text())])
     }
 
     private func dictionary(_ held: Value) throws -> Datum {
         .node(
             "dictionary",
-            try Fields.list(held, as: "a map literal").map { entry in
-                let pair = try Fields.list(entry, as: "a map literal's entry")
+            try Subtree(held, as: "a map literal").list().map { entry in
+                let pair = try Subtree(entry, as: "a map literal's entry").list()
 
                 guard pair.count == 2 else {
                     throw TextRefused("a map literal's entry is a key and a value, and this one holds \(pair.count)")
@@ -246,7 +246,7 @@ struct ExpressionNode {
     private func `struct`(_ held: Value) throws -> Datum {
         .node(
             "struct",
-            try Fields.entries(held, as: "a struct literal").map { name, value in
+            try Subtree(held, as: "a struct literal").entries().map { name, value in
                 .node("field", [.name(name), try datum(of: value)])
             }
         )

@@ -113,7 +113,7 @@ struct ProcedureNode {
         }
 
         if let access = fields.take(Self.access) {
-            parts.append(.node(Self.access, [.name(try Fields.text(access, as: "an access"))]))
+            parts.append(.node(Self.access, [.name(try Subtree(access, as: "an access").text())]))
         }
 
         for mark in [Self.const, Self.isolated] {
@@ -127,7 +127,7 @@ struct ProcedureNode {
         }
 
         if let parameters = fields.take(Self.parameters) {
-            let list = try Fields.list(parameters, as: "a procedure's parameters")
+            let list = try Subtree(parameters, as: "a procedure's parameters").list()
 
             guard !list.isEmpty else {
                 throw TextRefused("a procedure writes `parameters` where it takes some, and no node writes it empty")
@@ -137,7 +137,7 @@ struct ProcedureNode {
         }
 
         if let returns = fields.take(Self.returns) {
-            parts.append(.node(Self.returns, [try TypeNode().datum(of: try Fields.text(returns, as: "what a procedure returns"))]))
+            parts.append(.node(Self.returns, [try TypeNode().datum(of: try Subtree(returns, as: "what a procedure returns").text())]))
         }
 
         if let failing = fields.take(Self.failing) {
@@ -145,8 +145,8 @@ struct ProcedureNode {
         }
 
         if let bounds = fields.take(Self.bounds) {
-            parts += try Fields.entries(bounds, as: "a procedure's bounds").map { label, contracts in
-                let written = try Fields.text(contracts, as: "a bound")
+            parts += try Subtree(bounds, as: "a procedure's bounds").entries().map { label, contracts in
+                let written = try Subtree(contracts, as: "a bound").text()
                 let names = TypeParser().names(written)
 
                 guard names.joined(separator: " & ") == written else {
@@ -158,8 +158,8 @@ struct ProcedureNode {
         }
 
         if let sameTypes = fields.take(Self.sameTypes) {
-            parts += try Fields.entries(sameTypes, as: "a procedure's same types").map { label, type in
-                .node("sameType", [.name(label), try TypeNode().datum(of: try Fields.text(type, as: "a same type"))])
+            parts += try Subtree(sameTypes, as: "a procedure's same types").entries().map { label, type in
+                .node("sameType", [.name(label), try TypeNode().datum(of: try Subtree(type, as: "a same type").text())])
             }
         }
 
@@ -212,10 +212,10 @@ struct ProcedureNode {
             throw TextRefused("a parameter writes its name, and no node writes one without it")
         }
 
-        var parts: [Datum] = [.name(try Fields.text(name, as: "a parameter's name"))]
+        var parts: [Datum] = [.name(try Subtree(name, as: "a parameter's name").text())]
 
         if let type = fields.take(Self.type) {
-            parts.append(.node(Self.type, [try TypeNode().datum(of: try Fields.text(type, as: "a parameter's type"))]))
+            parts.append(.node(Self.type, [try TypeNode().datum(of: try Subtree(type, as: "a parameter's type").text())]))
         }
 
         if let description = fields.take(Self.description) {
@@ -245,7 +245,7 @@ struct ProcedureNode {
             return .node(Self.failing, [.node(Failing.anythingSpelling)])
 
         case let .array(failures):
-            return .node(Self.failing, try failures.map { failure in .name(try Fields.text(failure, as: "a failure")) })
+            return .node(Self.failing, try failures.map { failure in .name(try Subtree(failure, as: "a failure").text()) })
 
         default:
             throw TextRefused("a procedure fails with a list of names or with `anything`, and no node writes \(Rendering(value).text())")

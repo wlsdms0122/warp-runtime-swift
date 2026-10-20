@@ -125,13 +125,13 @@ struct StatementNode {
         var operands: [Datum]
 
         if word == StatementReader.NamingKeys.assignment.name.spelling {
-            operands = [try PathNode().datum(of: try Fields.text(binding, as: "what a `set` writes"))]
+            operands = [try PathNode().datum(of: try Subtree(binding, as: "what a `set` writes").text())]
         } else {
-            operands = [.name(try Fields.text(binding, as: "what a `\(word)` binds"))]
+            operands = [.name(try Subtree(binding, as: "what a `\(word)` binds").text())]
         }
 
         if let type {
-            operands.append(.node(StatementReader.typeKey.spelling, [try TypeNode().datum(of: try Fields.text(type, as: "a binding's type"))]))
+            operands.append(.node(StatementReader.typeKey.spelling, [try TypeNode().datum(of: try Subtree(type, as: "a binding's type").text())]))
         }
 
         if let held {
@@ -147,7 +147,7 @@ struct StatementNode {
     }
 
     func data(of statements: Value, as place: String) throws -> [Datum] {
-        try Fields.list(statements, as: place).map(datum(of:))
+        try Subtree(statements, as: place).list().map(datum(of:))
     }
 
     // MARK: - Private
@@ -227,7 +227,7 @@ struct StatementNode {
             return .node(word, body == .null ? [] : [try ExpressionNode().datum(of: body)])
 
         case BreakForm.key.spelling, ContinueForm.key.spelling:
-            return .node(word, body == .null ? [] : [.name(try Fields.text(body, as: "what a `\(word)` leaves"))])
+            return .node(word, body == .null ? [] : [.name(try Subtree(body, as: "what a `\(word)` leaves").text())])
 
         default:
             return .block(word, try parts(of: body, in: word))
