@@ -211,8 +211,8 @@ struct Evaluator: Sendable {
 
                 try handle.write(result, at: try activation.projections(of: address))
 
-            // A nameless statement ran for its effect, and the answer is
-            // dropped, which is what leaving the name off said.
+            // A nameless statement ran, and the answer is dropped, which is
+            // what leaving the name off said.
             case nil:
                 break
             }
