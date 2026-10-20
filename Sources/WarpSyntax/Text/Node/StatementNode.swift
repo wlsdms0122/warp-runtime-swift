@@ -141,7 +141,7 @@ struct StatementNode {
         return .node(word, operands)
     }
 
-    // A list of statements, as a block's parts hold them.
+    // A list of statements, as a construct's parts hold them.
     func value(of statements: ArraySlice<Datum>) throws -> Value {
         .array(try statements.map(value(of:)))
     }
@@ -171,7 +171,7 @@ struct StatementNode {
             return node.operands.isEmpty ? .null : .string(try Node.name(node.one()))
 
         default:
-            return try block(node)
+            return try keyedParts(node)
         }
     }
 
@@ -187,7 +187,7 @@ struct StatementNode {
 
     // A construct holding parts under keys: a conditional, a loop, an
     // attempt and its rescue.
-    private func block(_ node: Node) throws -> Value {
+    private func keyedParts(_ node: Node) throws -> Value {
         var keyed = Keyed()
         let parts = Self.parts[node.word] ?? []
 
@@ -201,7 +201,7 @@ struct StatementNode {
             let held: Value = switch holding {
             case .expression: try ExpressionNode().value(of: part.one())
             case .statements: try value(of: part.operands[...])
-            case .rescue: try block(part)
+            case .rescue: try keyedParts(part)
             }
 
             try keyed.write(held, under: part.word, at: part.offset)
