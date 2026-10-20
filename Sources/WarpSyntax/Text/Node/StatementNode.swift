@@ -165,7 +165,7 @@ struct StatementNode {
     private func construct(_ node: Node) throws -> Value {
         switch node.word {
         case ReturnForm.key.spelling:
-            return node.operands.isEmpty ? .null : try ExpressionNode().value(of: node.one())
+            return try returned(node)
 
         case BreakForm.key.spelling, ContinueForm.key.spelling:
             return node.operands.isEmpty ? .null : .string(try Node.name(node.one()))
@@ -173,6 +173,16 @@ struct StatementNode {
         default:
             return try block(node)
         }
+    }
+
+    // What a `return` hands back. Null is written by leaving the operand
+    // out, so `(return null)` is a second text of `(return)`.
+    private func returned(_ node: Node) throws -> Value {
+        guard let operand = node.operands.first else { return .null }
+
+        guard case .null = operand.form else { return try ExpressionNode().value(of: node.one()) }
+
+        throw Unplaced("`(return)` returns null, and is the one text of it", at: operand.offset)
     }
 
     // A construct holding parts under keys: a conditional, a loop, an
