@@ -53,20 +53,14 @@ struct GatheringQuery: Query {
                 throw ExecutionError("Standard.Collection.gathering asks positions that are Int")
             }
 
-            // The collection is there and says how long it is, so a position it
-            // does not hold read the length wrong. The same answer an index
-            // written past the end gets.
-            guard number >= 0, number < held.count else {
-                throw ExecutionError(
-                    "Standard.Collection.gathering asks position \(number) of \(held.count)"
-                )
-            }
-
             return number
         }
 
+        // The collection is there and says how long it is, so a position it
+        // does not hold read the length wrong. The same answer an index
+        // written past the end gets.
         guard let gathered = collection.elements(at: positions) else {
-            throw ExecutionError("Standard.Collection.gathering asks an Array and an Array<Int>")
+            throw ExecutionError("Standard.Collection.gathering asks positions \(positions) of \(held.count)")
         }
 
         return gathered
