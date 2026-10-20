@@ -783,23 +783,20 @@ indirect enum LoweredType: Sendable, Hashable {
     // Whether this reading is `declared` itself: what one struct's two
     // mentions have to be to be one type. What the reading says of one value
     // and no declaration writes is read as what is declared: a whole literal
-    // as the number it names, `Never`, what holds no value, as any type, and
-    // a procedure as its positions and answer, the constness, isolation and
-    // failing it declares meeting what the declaration asks, as a write
-    // handed in place is judged.
+    // as the number it names, and `Never`, what holds no value, as any type.
+    // A procedure type is that type: its constness, isolation and failing
+    // are declared, and the same as the declaration's.
     func reads(as declared: LoweredType) -> Bool {
         switch (self, declared) {
         case (.wholeLiteral, .int), (.wholeLiteral, .double), (.never, _):
             return true
 
         case let (.procedure(given, constness, isolation), .procedure(asked, wanted, wantedIsolation)):
-            guard wanted != .const || constness == .const, wantedIsolation != .isolated || isolation == .isolated else {
-                return false
-            }
+            guard constness == wanted, isolation == wantedIsolation else { return false }
 
             guard let asked, let given else { return asked == given }
 
-            return given.failing.fails(within: asked.failing)
+            return given.failing == asked.failing
                 && given.parameters.count == asked.parameters.count
                 && zip(given.parameters, asked.parameters).allSatisfy { mine, theirs in mine.reads(as: theirs) }
                 && given.returns.reads(as: asked.returns)
