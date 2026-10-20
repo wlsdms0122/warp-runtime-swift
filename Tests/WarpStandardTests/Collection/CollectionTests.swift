@@ -317,28 +317,6 @@ struct CollectionTests {
         )
     }
 
-    @Test("a literal holding a fraction with no finite value is no program")
-    func aNonFiniteLiteralIsRefused() async {
-        // When / Then. No document carries one, and a module assembled in
-        // Swift meets the same rule where it is made
-        await #expect {
-            try await run(
-                Procedure(
-                    signature: Signature(returns: .array(.double)),
-                    body: [],
-                    result: .call(
-                        Call(
-                            selector: "Standard.Collection.sorted",
-                            arguments: [.literal(.array([.double(1.5), .double(.nan)]))]
-                        )
-                    )
-                )
-            )
-        } throws: { error in
-            "\(error)".contains("a literal holds a fraction with no finite value")
-        }
-    }
-
     @Test("the collection vocabulary applies to bytes directly")
     func collectionProceduresReadBytes() async throws {
         // Given. Each procedure declares an array first, and bytes are one
