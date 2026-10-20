@@ -374,30 +374,32 @@ struct ClaimChecker {
 
             // What the contract asks beyond what a call hands and takes back.
             let declared = witness.held.signature
+            let declares = says + ", and \(witness.spelled) declares '\(spelling)', which"
 
-            if wanted.constness == .const, declared.constness != .const {
+            switch declared.effects.exceeding(wanted.effects) {
+            case .constness:
                 throw BuildError(
-                    says + ", and \(witness.spelled) declares '\(spelling)', which is not declared const, and"
-                        + " '\(contract)' asks '\(procedure)' to answer without running",
+                    declares + " is not declared const, and '\(contract)' asks '\(procedure)' to answer"
+                        + " without running",
                     at: claim.place
                 )
-            }
 
-            if wanted.isolation == .isolated, declared.isolation != .isolated {
+            case .isolation:
                 throw BuildError(
-                    says + ", and \(witness.spelled) declares '\(spelling)', which is not declared isolated, and"
-                        + " '\(contract)' asks '\(procedure)' to touch no name another body could touch at once",
+                    declares + " is not declared isolated, and '\(contract)' asks '\(procedure)' to touch no name"
+                        + " another body could touch at once",
                     at: claim.place
                 )
-            }
 
-            if !declared.failing.fails(within: wanted.failing) {
+            case .failing:
                 throw BuildError(
-                    says + ", and \(witness.spelled) declares '\(spelling)', which may fail with"
-                        + " \(declared.failing.rendered), and '\(contract)' lets '\(procedure)' fail with"
-                        + " \(wanted.failing.rendered)",
+                    declares + " may fail with \(declared.failing.rendered), and '\(contract)' lets '\(procedure)'"
+                        + " fail with \(wanted.failing.rendered)",
                     at: claim.place
                 )
+
+            case nil:
+                break
             }
         }
     }

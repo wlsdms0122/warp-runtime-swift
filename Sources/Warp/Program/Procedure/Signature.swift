@@ -60,6 +60,12 @@ public struct Signature: Sendable, Equatable {
         ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: failing)
     }
 
+    // Whether a call answers without running and touches no name another
+    // body could touch at once, and what may fail out of it.
+    var effects: EffectSet {
+        EffectSet(constness: constness, isolation: isolation, failing: failing)
+    }
+
     // The parameters whose box is the body's own. One handed in place is the
     // caller's box, written through rather than held.
     var ownedParameters: Set<Name> {
