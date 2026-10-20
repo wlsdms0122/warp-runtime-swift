@@ -799,6 +799,22 @@ struct ValidationTests {
         }
     }
 
+    @Test("a literal holds no fraction without a finite value, at whatever depth it holds one", arguments: [
+        Value.double(.nan),
+        .array([.double(1.5), .double(.infinity)]),
+        .dictionary(["a": .array([.double(-.infinity)])])
+    ])
+    func aNonFiniteLiteralIsRefused(carried: Value) throws {
+        // When / Then
+        #expect {
+            try Module(
+                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
+            )
+        } throws: { error in
+            error is ValidationError && "\(error)".contains("a literal holds a fraction with no finite value")
+        }
+    }
+
     @Test("a closure writes no bounds, since the procedure around it owns them")
     func aClosureWritesNoBounds() throws {
         // Given
