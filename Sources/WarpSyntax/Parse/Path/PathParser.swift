@@ -12,25 +12,28 @@ import Warp
 // `.name` for a field, and `[3]`, `["a"]` or `[i]` for what a list or a map
 // holds at a whole number, a text or a value read from a name. `?.` and `?[`
 // read an absence as null. A path between brackets is one deeper than the
-// path around it, and a path nests no deeper than a document may.
+// path around it, and a path nests no deeper than a document may, counted on
+// from the containers around its string.
 struct PathParser: Sendable {
     // MARK: - Property
-    private static let deeper = "the path nests deeper than \(Value.nestingBound) paths, and a path between brackets is one"
-        + " deeper than the path around it"
+    private static let deeper = "the path nests deeper than a document may, \(Value.nestingBound) levels: the containers"
+        + " around its string count, and a path between brackets is one level deeper than the path around it"
 
     // MARK: - Initializer
     init() {
     }
 
     // MARK: - Public
-    func parse(_ text: String) throws -> Path {
-        try parse(text, depth: 1)
+    // `depth` is how many containers stand around the string the path is
+    // written in.
+    func parse(_ text: String, at depth: Int = 0) throws -> Path {
+        return try path(text, depth: depth)
     }
 
     // MARK: - Private
     // Only the reading of a reference walks deeper, so a level of the walk
     // holds this and `segment(_:depth:)`, and the scan is done before it.
-    private func parse(_ text: String, depth: Int) throws -> Path {
+    private func path(_ text: String, depth: Int) throws -> Path {
         guard depth <= Value.nestingBound else {
             throw PathSyntaxError(Self.deeper)
         }
@@ -44,7 +47,7 @@ struct PathParser: Sendable {
             return segment
 
         case let .reference(text, optional):
-            return .indexRef(try parse(text, depth: depth + 1), optional: optional)
+            return .indexRef(try path(text, depth: depth + 1), optional: optional)
         }
     }
 

@@ -90,8 +90,8 @@ struct TypeReader: Decodable {
     // What a slot reads: the type, and the type parameters it names.
     var bounded: (type: TypeExpression, namings: [Naming]) { (written, namings) }
 
-    private static let deeper = "the type nests deeper than \(Value.nestingBound) types, and a type written inside"
-        + " another is one deeper than it"
+    private static let deeper = "the type nests deeper than a document may, \(Value.nestingBound) levels: the containers"
+        + " around its string count, and a type written inside another is one level deeper than it"
 
     // What a type written as anything but a string is refused with.
     static let unread = "a type is written as a string like `String`, `Array<String>`, `Task` or"
@@ -128,14 +128,15 @@ struct TypeReader: Decodable {
     }
 
     // A type from its spelling, a declared name written short standing for
-    // what the notation reads it as. `steps` are where it is written.
+    // what the notation reads it as. `steps` are where its string is written,
+    // and the type stands as deep as the containers they enter.
     static func reading(
         _ written: String,
         in notation: Notation = .canonical,
         at steps: [Place.Step] = []
     ) throws -> TypeReader {
         var namings: [Naming] = []
-        let type = try parse(written, depth: 1, qualifying: { name in notation.qualified(name, as: .type) }) { name, bound in
+        let type = try parse(written, depth: steps.count, qualifying: { name in notation.qualified(name, as: .type) }) { name, bound in
             namings.append(Naming(name: name, bound: bound, steps: steps))
         }
 
@@ -162,8 +163,12 @@ struct TypeReader: Decodable {
     }
 
     // The same, where no bound may stand.
-    static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
-        let read = try reading(written, in: notation)
+    static func parse(
+        _ written: String,
+        in notation: Notation = .canonical,
+        at steps: [Place.Step] = []
+    ) throws -> TypeExpression {
+        let read = try reading(written, in: notation, at: steps)
 
         if let bounded = read.namings.first(where: { naming in naming.bound != nil }) {
             throw TypeFormError(unintroduced(bounded.name))
@@ -177,8 +182,12 @@ struct TypeReader: Decodable {
     // `some T` may stand beside its bounds, `some T: Hashable & Equatable`.
     // A type parameter is bounded where the head first names it, and the
     // head is a type a value is an instance of.
-    static func head(_ written: String, in notation: Notation = .canonical) throws -> Head {
-        let read = try reading(written, in: notation)
+    static func head(
+        _ written: String,
+        in notation: Notation = .canonical,
+        at steps: [Place.Step] = []
+    ) throws -> Head {
+        let read = try reading(written, in: notation, at: steps)
         let (bounds, again) = introduced(read.namings)
         let type = read.written
 
@@ -255,7 +264,8 @@ struct TypeReader: Decodable {
     // MARK: - Private
     // `qualifying` is the notation's reading of a declared name, handed down
     // the spelling's parts. A type written inside another is one deeper, and
-    // a type nests no deeper than a document may. The forms holding a type
+    // a type nests no deeper than a document may, counted on from the
+    // containers around its string. The forms holding a type
     // are read in functions of their own, and every check that ends the walk
     // in others, so a level of the walk holds little more than the dispatch.
     private static func parse(

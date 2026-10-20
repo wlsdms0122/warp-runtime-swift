@@ -38,7 +38,7 @@ public struct ExtensionReader: Decodable {
     // the key is written.
     public static func head(of key: Name, in notation: Notation, at steps: [Place.Step]) throws -> Head {
         do {
-            return try TypeReader.head(key.spelling, in: notation)
+            return try TypeReader.head(key.spelling, in: notation, at: steps)
         } catch let refusal as TypeFormError {
             throw ReadingError(refusal.message, at: steps)
         }

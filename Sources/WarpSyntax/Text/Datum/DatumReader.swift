@@ -19,12 +19,11 @@ import Warp
 // the same name as one written bare.
 struct DatumReader {
     // MARK: - Property
-    // How deep lists may nest. A tree's level is written in two lists at
-    // most, a map's entry inside the map, and a type or a path at its foot
-    // nests as deep as a tree may, a level in two lists at most, a procedure
-    // type's parameters inside the type and a path's index inside the path.
-    // So every tree within the bounds has a text within this one.
-    static let nestingBound = 4 * Value.nestingBound
+    // How deep lists may nest. A document's level is written in two lists at
+    // most: a map's entry inside the map, a procedure type's parameters inside
+    // the type, a path's index inside the path. So every document within the
+    // bound has a text within this one.
+    static let nestingBound = 2 * Value.nestingBound
 
     static let whiteSpace = Set(" \n\r\t".unicodeScalars)
 

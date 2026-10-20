@@ -190,12 +190,14 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("Task") == .named("Task"))
     }
 
-    @Test("a type written inside another is a level deeper, and a type nests as deep as a document may")
+    @Test("a type written inside another is a level deeper, counted on from the containers around the type's string")
     func aTypeNestsToTheBound() throws {
         // Given
-        let nested = { (deep: Int, open: String, inner: String, close: String) in
-            String(repeating: open, count: deep - 1) + inner + String(repeating: close, count: deep - 1)
+        let nested = { (levels: Int, open: String, inner: String, close: String) in
+            String(repeating: open, count: levels) + inner + String(repeating: close, count: levels)
         }
+        let around = 100
+        let steps = Array(repeating: Place.Step.index(0), count: around)
 
         // When / Then. A modifier and the parentheses grouping a type add no
         // level
@@ -205,6 +207,11 @@ struct TypeNotationTests {
             == nested(Value.nestingBound, "const (", "Int", ") -> Int"))
         #expect(throws: TypeFormError.self) { try TypeReader.parse(nested(Value.nestingBound + 1, "Array<", "Int", ">")) }
         #expect(throws: TypeFormError.self) { try TypeReader.parse(nested(Value.nestingBound + 1, "(", "Int", ")?")) }
+        #expect(try TypeReader.parse(nested(Value.nestingBound - around, "Array<", "Int", ">"), at: steps).rendered
+            == nested(Value.nestingBound - around, "Array<", "Int", ">"))
+        #expect(throws: TypeFormError.self) {
+            try TypeReader.parse(nested(Value.nestingBound - around + 1, "Array<", "Int", ">"), at: steps)
+        }
     }
 
     @Test("an unbalanced argument is an author mistake, caught while reading")

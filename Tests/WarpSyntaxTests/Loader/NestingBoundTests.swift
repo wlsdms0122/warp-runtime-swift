@@ -15,8 +15,8 @@ import Testing
 // building and running one on an ordinary stack is what an implementation
 // owes it. Two constructs: a call inside a call, which is the deepest thing a
 // program ordinarily writes, and a closure inside a closure, which spends the
-// most per level. A type and a path are one text in the tree and nest inside
-// it as deep as a document may, each spelling walked on its own.
+// most per level. A type and a path are one string in the tree, and their
+// levels count on from the containers around it.
 @Suite("A document nested as deep as the wire admits")
 struct NestingBoundTests {
     enum Construct {
@@ -24,23 +24,35 @@ struct NestingBoundTests {
         case closure
 
         // MARK: - Property
-        // How many levels of this construct fit under the bound. A level of a
-        // call opens three containers, the last its list of arguments, where
-        // the next level and the other argument both stand; a level of a
-        // closure opens five. Around them the document opens three and the
-        // reference at the bottom one.
-        var levels: Int {
+        // How many containers a level of this construct opens. A level of a
+        // call opens three, the last its list of arguments, where the next
+        // level and the other argument both stand; a level of a closure opens
+        // five.
+        var opened: Int {
             switch self {
-            case .call: (Value.nestingBound - 4) / 3
-            case .closure: (Value.nestingBound - 4) / 5
+            case .call: 3
+            case .closure: 5
             }
+        }
+
+        // How many levels of this construct fit under the bound. Around them
+        // the document opens three containers and the reference at the bottom
+        // one.
+        var levels: Int {
+            (Value.nestingBound - 4) / opened
         }
 
         // MARK: - Initializer
         // MARK: - Public
-        // The whole document, `deep` levels of the construct around a reference to
-        // a constant one.
-        func document(deep: Int) -> Value {
+        // How many containers stand around the path at the bottom of `deep`
+        // levels.
+        func foot(deep: Int) -> Int {
+            4 + opened * deep
+        }
+
+        // The whole document, `deep` levels of the construct around a reference
+        // reading one, by the path `read`.
+        func document(deep: Int, reading read: String = "one") -> Value {
             let expression: Value
             let imports: Value
             let entry: Value
@@ -48,14 +60,14 @@ struct NestingBoundTests {
             switch self {
             case .call:
                 imports = ["Standard.Numeric.plus"]
-                expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
+                expression = (0 ..< deep).reduce(["ref": .string(read)]) { inner, _ in
                     ["call": ["procedure": "Standard.Numeric.plus", "arguments": [inner, ["ref": "one"]]]]
                 }
                 entry = ["access": "public", "returns": "Int", "result": expression]
 
             case .closure:
                 imports = ["Standard.Logic.select"]
-                expression = (0 ..< deep).reduce(["ref": "one"]) { inner, _ in
+                expression = (0 ..< deep).reduce(["ref": .string(read)]) { inner, _ in
                     [
                         "call": [
                             "procedure": "Standard.Logic.select",
@@ -73,7 +85,7 @@ struct NestingBoundTests {
             return [
                 "warp": .int(1),
                 "imports": imports,
-                "const": ["one": .int(1), "zero": .int(0), "yes": .bool(true)],
+                "const": ["one": .int(1), "zero": .int(0), "yes": .bool(true), "ones": [.int(1), .int(1)]],
                 "procedures": ["entry": entry]
             ]
         }
@@ -98,25 +110,32 @@ struct NestingBoundTests {
         case modified
 
         // MARK: - Property
+        // How many containers stand around the spelling's string: the
+        // document, `procedures` and the procedure, and then the reference,
+        // or the list of parameters and the parameter.
+        var place: Int {
+            self == .path ? 4 : 5
+        }
+
         // MARK: - Initializer
         // MARK: - Public
-        // The spelling, `deep` types or paths deep.
-        func written(deep: Int) -> String {
+        // The spelling, `levels` types or paths inside it.
+        func written(levels: Int) -> String {
             switch self {
-            case .path: wrapped(deep - 1, "a[", "zero", "]")
-            case .array: wrapped(deep - 1, "Array<", "Int", ">")
-            case .dictionary: wrapped(deep - 1, "Dictionary<Int, ", "Int", ">")
-            case .named: wrapped(deep - 1, "App.Box<", "Int", ">")
-            case .parameters: wrapped(deep - 1, "(", "Int", ") -> Int")
-            case .returns: String(repeating: "() -> ", count: deep - 1) + "Int"
-            case .modified: wrapped(deep - 1, "const (", "Int", ") -> Int")
+            case .path: wrapped(levels, "a[", "zero", "]")
+            case .array: wrapped(levels, "Array<", "Int", ">")
+            case .dictionary: wrapped(levels, "Dictionary<Int, ", "Int", ">")
+            case .named: wrapped(levels, "App.Box<", "Int", ">")
+            case .parameters: wrapped(levels, "(", "Int", ") -> Int")
+            case .returns: String(repeating: "() -> ", count: levels) + "Int"
+            case .modified: wrapped(levels, "const (", "Int", ") -> Int")
             }
         }
 
         // A document reading the path, or declaring a procedure that takes
         // the type, beside an entry answering 0.
-        func document(deep: Int) -> Value {
-            let written = Value.string(written(deep: deep))
+        func document(levels: Int) -> Value {
+            let written = Value.string(written(levels: levels))
 
             guard self != .path else {
                 return [
@@ -182,13 +201,13 @@ struct NestingBoundTests {
     @Test("a type or a path as deep as a document may is read, built and run", arguments: Spelling.allCases)
     func aSpellingAsDeepAsTheBound(_ spelling: Spelling) async throws {
         // Given. A spelling the load takes, one level short of one it refuses.
-        let document = spelling.document(deep: Value.nestingBound)
-        let deeper = spelling.document(deep: Value.nestingBound + 1)
+        let document = spelling.document(levels: Value.nestingBound - spelling.place)
+        let deeper = spelling.document(levels: Value.nestingBound - spelling.place + 1)
 
         #expect {
             try Loader().load(deeper, identity: nil)
         } throws: { error in
-            "\(error)".contains("nests deeper than \(Value.nestingBound)")
+            "\(error)".contains("nests deeper than a document may")
         }
         #expect(try TextEncoding().value(from: try TextEncoding().text(from: document)) == document)
 
@@ -198,6 +217,33 @@ struct NestingBoundTests {
 
         // Then. It answers.
         #expect(try await Executor().run(image) == .int(0))
+    }
+
+    @Test("a path at the bottom of a deep document nests as deep as the rest allows", arguments: [Construct.call, .closure])
+    func aPathAtTheBottomOfADeepDocument(_ construct: Construct) async throws {
+        // Given. Half the construct's levels, and under them a path as deep as
+        // the containers around it leave room for, and one deeper.
+        let deep = construct.levels / 2
+        let levels = Value.nestingBound - construct.foot(deep: deep)
+        let path = { (levels: Int) in
+            String(repeating: "ones[", count: levels) + "zero" + String(repeating: "]", count: levels)
+        }
+        let document = construct.document(deep: deep, reading: path(levels))
+        let deeper = construct.document(deep: deep, reading: path(levels + 1))
+
+        #expect {
+            try Loader().load(deeper, identity: nil)
+        } throws: { error in
+            "\(error)".contains("nests deeper than a document may")
+        }
+        #expect(try TextEncoding().value(from: try TextEncoding().text(from: document)) == document)
+
+        // When. Read, built and run.
+        let module = try Loader().load(document, identity: nil)
+        let image = try await Builder().build([module] + Module.standard)
+
+        // Then. It answers as the path's one does.
+        #expect(try await Executor().run(image) == construct.answer(deep: deep))
     }
 
     // MARK: - Public

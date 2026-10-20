@@ -18,7 +18,8 @@ struct TemplateParser: Sendable {
     }
 
     // MARK: - Public
-    func parse(_ text: String) throws -> [TemplateSegment] {
+    // `depth` is how many containers stand around the template's string.
+    func parse(_ text: String, at depth: Int = 0) throws -> [TemplateSegment] {
         var segments: [TemplateSegment] = []
         var index = text.startIndex
         var buffer = ""
@@ -52,7 +53,7 @@ struct TemplateParser: Sendable {
                         buffer = ""
                     }
 
-                    segments.append(.ref(path: try PathParser().parse(String(inner))))
+                    segments.append(.ref(path: try PathParser().parse(String(inner), at: depth)))
                     index = text.index(after: close)
 
                     continue
