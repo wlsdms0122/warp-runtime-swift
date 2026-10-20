@@ -596,7 +596,7 @@ struct Validator: Sendable {
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
         var variables = startVariables
-        var declared: Set<Name> = []
+        var declared = parameters
 
         for (position, statement) in body.statements.enumerated() {
             // A statement is its name and the construct it writes under. Both,
@@ -650,15 +650,11 @@ struct Validator: Sendable {
                 case let .constant(name, _), let .variable(name, _):
                     try held(name, as: .value, at: named)
 
-                    guard !parameters.contains(name) else {
+                    guard !declared.contains(name) else {
                         throw ValidationError(
-                            "'\(name)' is a parameter this body takes, and a body introduces a name once",
+                            "'\(name)' is a name this body introduced already, and a body introduces a name once",
                             at: named
                         )
-                    }
-
-                    guard !declared.contains(name) else {
-                        throw ValidationError("two statements here are named '\(name)'", at: named)
                     }
 
                     declared.insert(name)

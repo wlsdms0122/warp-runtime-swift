@@ -377,7 +377,7 @@ struct ValidationTests {
         #expect {
             try Module(procedures: [entryName: redeclaresIt])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("'name' is a parameter this body takes")
+            error is ValidationError && "\(error)".contains("'name' is a name this body introduced already")
         }
     }
 
