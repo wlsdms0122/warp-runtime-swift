@@ -31,6 +31,12 @@ struct Fanout: Sendable {
         let value: Value?
         let failure: (any Error)?
 
+        // Whether the piece refused the run rather than failing: an author
+        // mistake, which no rescue holds.
+        var refuses: Bool {
+            failure.map { failure in !(failure is any RecoverableFailure) } ?? false
+        }
+
         // MARK: - Initializer
         // MARK: - Public
         // MARK: - Private
@@ -78,7 +84,9 @@ struct Fanout: Sendable {
     }
 
     // The first success, with the rest asked to stop. Which piece wins is the
-    // one fact here that timing decides, and the procedure's name says so.
+    // one fact here that timing decides, and the procedure's name says so. A
+    // piece that refuses the run before one succeeds ends the race as a
+    // success does, and refuses the run.
     func first<P: NativeProcedure>(
         _ invocation: Invocation<P>
     ) async throws -> Value where P.Parameters == FanoutOperand {
@@ -165,11 +173,13 @@ struct Fanout: Sendable {
             for await outcome in group {
                 collected.append(outcome)
 
-                // A `first` stops at the first success. The rest are asked to
-                // stop rather than made to. A piece that ignores the ask still
-                // finishes, and its answer is discarded. Returning without the
-                // ask would still await every sibling.
-                if racing, outcome.value != nil {
+                // A `first` stops at the first success, or at the first piece
+                // that refuses the run, which refuses it whatever the rest
+                // would answer. The rest are asked to stop rather than made
+                // to. A piece that ignores the ask still finishes, and what it
+                // answers is discarded. Returning without the ask would still
+                // await every sibling.
+                if racing, outcome.value != nil || outcome.refuses {
                     group.cancelAll()
 
                     break
@@ -233,9 +243,7 @@ struct Fanout: Sendable {
     }
 
     private func failure(among failures: [Outcome]) -> any Error {
-        if let authorMistake = failures.first(where: { outcome in
-            !(outcome.failure is any RecoverableFailure)
-        })?.failure {
+        if let authorMistake = failures.first(where: \.refuses)?.failure {
             return authorMistake
         }
 
