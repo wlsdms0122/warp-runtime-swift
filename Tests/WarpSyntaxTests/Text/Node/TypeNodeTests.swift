@@ -37,6 +37,9 @@ struct TypeNodeTests {
         ("(var Int)", "var Int"),
         ("Procedure", "Procedure"),
         ("(procedure (const))", "const Procedure"),
+        ("(procedure (isolated) (const))", "isolated const Procedure"),
+        ("(procedure (const) (const))", "const const Procedure"),
+        ("(named Dictionary Int)", "Dictionary<Int>"),
         ("(procedure (const) (isolated) (parameters Int (inout B)) (failing b a) (returns (nullable R)))",
          "const isolated (Int, inout B) throws(b, a) -> R?"),
         ("(procedure (parameters) (failing (anything)) (returns Int))", "() throws -> Int"),
@@ -72,7 +75,6 @@ struct TypeNodeTests {
         "(composition some A)",
         "(composition inout A)",
         "(procedure (returns R) (parameters A))",
-        "(procedure (isolated) (const))",
         "(array \u{301})",
         "\"Int\""
     ])
@@ -88,9 +90,8 @@ struct TypeNodeTests {
         "Array<Int,Int>",
         "Array< Int>",
         "Int -> Int",
-        "isolated const Procedure",
         "(Int)",
-        "Dictionary<Int>"
+        "(Int)?"
     ])
     func aSpellingNoNodeWrites(text: String) {
         // When / Then
