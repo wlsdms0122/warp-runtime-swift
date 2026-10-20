@@ -12,14 +12,6 @@ import Foundation
 // or a concurrent piece takes its own; the holds among them share their
 // boxes.
 struct Activation: Sendable {
-    // Where a walk over a path came down: on a value, or on a reading gone
-    // wrong. Every slot is there from the frame's making, so there is no
-    // third answer.
-    private enum Walk {
-        case found(Value)
-        case unfit(String)
-    }
-
     // MARK: - Property
     var cells: [Cell]
     let frame: Frame
@@ -77,10 +69,9 @@ struct Activation: Sendable {
 
     // MARK: - Private
     // A dot reads a name and nothing else, and the build judged every one and
-    // wrote the judgement into the step. What may genuinely be absent, a missing
-    // entry or a null on the way, is read as null only where the author spelled
-    // `?.` or `?[`, and refused everywhere else.
-    private func lookup(_ address: Address) -> Walk {
+    // wrote the judgement into the step. Every slot is there from the frame's
+    // making, so a walk comes down on a part or on a reading gone wrong.
+    private func lookup(_ address: Address) -> Projection.Part {
         let (slot, steps) = (address.slot, address.steps)
         var current: Value
 
@@ -102,116 +93,39 @@ struct Activation: Sendable {
                 spelled(step)
             }
 
-            // Null stops every reading the same way, and the rule lives with
-            // the segment: the build's walk over types asks the same judge, so
-            // the two layers cannot drift apart.
-            if current == .null {
-                switch segment().meetingNull(at: walked()) {
-                case .reads:
-                    return .found(.null)
-
-                case let .refused(reason):
-                    return .unfit(reason)
-                }
-            }
-
-            let read: Walk
+            let projection: Projection
 
             switch step {
-            case let .index(index, optional):
-                read = indexed(current, at: index, optional: optional, walked: walked, segment: segment)
+            case let .field(position, name, _):
+                projection = .field(position, name)
+
+            case let .name(name, _):
+                projection = .name(name)
+
+            case let .index(index, _):
+                projection = .index(index)
 
             // The index is a path of its own, read against the same frame.
-            case let .at(inner, optional):
+            case let .at(inner, _):
                 switch lookup(inner) {
                 case let .found(index):
-                    read = indexed(current, at: index, optional: optional, walked: walked, segment: segment)
+                    projection = .index(index)
 
                 case let .unfit(reason):
                     return .unfit(reason)
                 }
-
-            // The place the build proved, which is where a write lands too.
-            case let .field(position, _, _):
-                guard case let .struct(instance) = current else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
-                }
-
-                guard instance.values.indices.contains(position) else {
-                    return .unfit("\(walked().rendered) drills past the fields this struct holds")
-                }
-
-                read = .found(instance.values[position])
-
-            // A field by its name, as the text wrote it where the build read
-            // no value to lay it out against: past a null or a `Never`.
-            case let .name(name, _):
-                guard case let .struct(instance) = current else {
-                    return .unfit("\(walked().rendered) drills a field into \(current.nominal)")
-                }
-
-                guard let next = instance[name] else {
-                    return .unfit("\(walked().rendered) drills past the fields this struct holds")
-                }
-
-                read = .found(next)
             }
 
-            switch read {
+            switch projection.part(of: current, as: segment, walked: walked) {
             case let .found(value):
                 current = value
 
-            case .unfit:
-                return read
+            case let .unfit(reason):
+                return .unfit(reason)
             }
         }
 
         return .found(current)
-    }
-
-    // One reading for both index spellings, decided by what is indexed: a
-    // list by a position and a map by a key. A list is whatever has
-    // elements: the projection owns the `Array<Int>` equation, lazily, so one
-    // element read does not unpack a compact spelling. Past the end is a
-    // defect, not absence: the list is there and says how long it is. An
-    // entry the map does not hold follows the mark.
-    private func indexed(
-        _ current: Value,
-        at index: Value,
-        optional: Bool,
-        walked: () -> Path,
-        segment: () -> PathSegment
-    ) -> Walk {
-        if case let .dictionary(map) = current {
-            guard let entry = map[key: index] else {
-                guard optional else {
-                    return .unfit(
-                        "\(walked().rendered) reads an entry the map does not hold."
-                            + " Only `\(segment().mark)` reads absence"
-                    )
-                }
-
-                return .found(.null)
-            }
-
-            return .found(entry)
-        }
-
-        guard let elements = current.elements else {
-            return .unfit("\(walked().rendered) indexes into \(current.nominal), expected Array or Dictionary")
-        }
-
-        guard case let .int(position) = index else {
-            return .unfit("\(walked().rendered) indexes a list by \(index.nominal), expected Int")
-        }
-
-        guard position >= 0, position < elements.count else {
-            return .unfit(
-                "\(walked().rendered) indexes a list of \(elements.count) at \(position), a position it does not hold"
-            )
-        }
-
-        return .found(elements[elements.index(elements.startIndex, offsetBy: position)])
     }
 
     private func spelled(_ step: Step) -> PathSegment {

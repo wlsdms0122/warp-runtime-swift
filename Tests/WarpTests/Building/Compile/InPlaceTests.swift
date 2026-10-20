@@ -304,7 +304,7 @@ struct InPlaceTests {
         await #expect {
             try await run(sut)
         } throws: { error in
-            "\(error)".contains("reads element 1 of an array holding 1")
+            "\(error)".contains("items[1] indexes a list of 1 at 1, a position it does not hold")
         }
     }
 
