@@ -36,7 +36,7 @@ struct TypeNode {
         let text = try syntax(of: datum, depth: 1).spelling
 
         guard
-            let read = try? self.datum(of: TypeParser().parse(text)),
+            let read = (try? TypeParser().parse(text)).flatMap(self.datum(of:)),
             try DatumWriter().line(of: read) == DatumWriter().line(of: datum)
         else {
             throw Unplaced("'\(text)' is written as another node, and is one type", at: datum.offset)
@@ -47,18 +47,16 @@ struct TypeNode {
 
     // The node a tree's text is, where a node writes that text back.
     func datum(of text: String) throws -> Datum {
-        let datum: Datum
+        let syntax: TypeSyntax
 
         do {
-            datum = try self.datum(of: TypeParser().parse(text))
+            syntax = try TypeParser().parse(text)
         } catch let refusal as TypeSyntaxError {
-            throw EncodingRefused("the type is written '\(text)', which no node writes: \(refusal.message)")
-        } catch let refusal as Unplaced {
-            throw EncodingRefused("the type is written '\(text)', which no node writes: \(refusal.said)")
+            throw Unplaced("the type is written '\(text)', which no node writes: \(refusal.message)")
         }
 
-        guard (try? self.text(of: datum)) == text else {
-            throw EncodingRefused("the type is written '\(text)', which no node writes")
+        guard let datum = datum(of: syntax), (try? self.text(of: datum)) == text else {
+            throw Unplaced("the type is written '\(text)', which no node writes")
         }
 
         return datum
@@ -207,16 +205,16 @@ struct TypeNode {
 
     // The node a syntax is written as, where one is. A dispatcher and a
     // function a form, as on the way in.
-    private func datum(of syntax: TypeSyntax) throws -> Datum {
+    private func datum(of syntax: TypeSyntax) -> Datum? {
         switch syntax {
         case let .name(name):
             return .name(name)
 
         case let .applied(name, arguments):
-            return applied(name, try data(of: arguments))
+            return data(of: arguments).map { data in applied(name, data) }
 
         case let .nullable(inner):
-            return try held(by: "nullable", inner)
+            return held(by: "nullable", inner)
 
         case let .composition(names):
             return .node("composition", names.map(Datum.name))
@@ -225,31 +223,33 @@ struct TypeNode {
             return .node("some", [.name(name)] + (bound ?? []).map(Datum.name))
 
         case let .marked(mark, inner):
-            return try held(by: mark.word.spelling, inner)
+            return held(by: mark.word.spelling, inner)
 
         case let .modified(modifiers, .procedure(parameters, throwing, returns)):
-            return try procedure(modifiers, parameters, throwing, returns)
+            return procedure(modifiers, parameters, throwing, returns)
 
         case let .modified(modifiers, inner):
-            return try modified(modifiers, inner)
+            return modified(modifiers, inner)
 
         case let .procedure(parameters, throwing, returns):
-            return try procedure([], parameters, throwing, returns)
+            return procedure([], parameters, throwing, returns)
         }
     }
 
-    private func data(of syntaxes: [TypeSyntax]) throws -> [Datum] {
+    private func data(of syntaxes: [TypeSyntax]) -> [Datum]? {
         var data: [Datum] = []
 
         for syntax in syntaxes {
-            data.append(try datum(of: syntax))
+            guard let datum = datum(of: syntax) else { return nil }
+
+            data.append(datum)
         }
 
         return data
     }
 
-    private func held(by word: String, _ inner: TypeSyntax) throws -> Datum {
-        .node(word, [try datum(of: inner)])
+    private func held(by word: String, _ inner: TypeSyntax) -> Datum? {
+        datum(of: inner).map { datum in .node(word, [datum]) }
     }
 
     private func applied(_ name: String, _ data: [Datum]) -> Datum {
@@ -262,10 +262,8 @@ struct TypeNode {
 
     // A modifier is written on a procedure type's node, so modifiers on
     // anything but a procedure type have a node only on `Procedure`.
-    private func modified(_ modifiers: [TypeSyntax.Modifier], _ inner: TypeSyntax) throws -> Datum {
-        guard case .name(TypeSpelling.procedure.spelling) = inner else {
-            throw Unplaced("a modifier stands on a procedure type's node, and here on what no node writes one on", at: nil)
-        }
+    private func modified(_ modifiers: [TypeSyntax.Modifier], _ inner: TypeSyntax) -> Datum? {
+        guard case .name(TypeSpelling.procedure.spelling) = inner else { return nil }
 
         return .node("procedure", modifiers.map { modifier in Datum.node(modifier.word.spelling) })
     }
@@ -277,9 +275,8 @@ struct TypeNode {
         _ parameters: [TypeSyntax],
         _ throwing: TypeSyntax.Throwing?,
         _ returns: TypeSyntax
-    ) throws -> Datum {
-        let parameters = try data(of: parameters)
-        let returns = try datum(of: returns)
+    ) -> Datum? {
+        guard let parameters = data(of: parameters), let returns = datum(of: returns) else { return nil }
 
         return procedure(modifiers, parameters, throwing, returns)
     }

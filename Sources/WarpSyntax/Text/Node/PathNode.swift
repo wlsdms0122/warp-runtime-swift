@@ -41,13 +41,13 @@ struct PathNode {
         do {
             path = try PathParser().parse(text)
         } catch {
-            throw EncodingRefused("the path is written '\(text)', which no node writes: \(error)")
+            throw Unplaced("the path is written '\(text)', which no node writes: \(error)")
         }
 
         let datum = try self.datum(of: path)
 
         guard (try? self.text(of: datum)) == text else {
-            throw EncodingRefused("the path is written '\(text)', which no node writes. The nearest writes '\(path.rendered)'")
+            throw Unplaced("the path is written '\(text)', which no node writes. The nearest writes '\(path.rendered)'")
         }
 
         return datum
@@ -118,7 +118,7 @@ struct PathNode {
 
     private func datum(of path: Path) throws -> Datum {
         guard case let .name(head, false)? = path.segments.first else {
-            throw EncodingRefused("the path '\(path.rendered)' begins with no unmarked name, and no node writes it")
+            throw Unplaced("the path '\(path.rendered)' begins with no unmarked name, and no node writes it")
         }
 
         guard path.segments.count > 1 else { return .name(head.spelling) }
@@ -144,7 +144,7 @@ struct PathNode {
             return .node(optional ? "index?" : "index", [Datum(.text(key))])
 
         case let .index(index, _):
-            throw EncodingRefused("a path indexes by \(Rendering(index).text()), and no node writes it")
+            throw Unplaced("a path indexes by \(Rendering(index).text()), and no node writes it")
 
         case let .indexRef(path, optional):
             return .node(optional ? "index?" : "index", [try datum(of: path)])

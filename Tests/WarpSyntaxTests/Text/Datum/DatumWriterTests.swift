@@ -71,7 +71,7 @@ struct DatumWriterTests {
         let deep = (0 ..< DatumReader.nestingBound).reduce(Datum.node("a")) { held, _ in .node("a", [held]) }
 
         // When / Then
-        #expect(throws: EncodingRefused.self) { try DatumWriter().text(of: [deep]) }
+        #expect(throws: Unplaced.self) { try DatumWriter().text(of: [deep]) }
     }
 
     // MARK: - Public

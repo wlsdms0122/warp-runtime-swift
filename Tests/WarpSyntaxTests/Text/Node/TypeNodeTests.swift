@@ -95,7 +95,7 @@ struct TypeNodeTests {
     ])
     func aSpellingNoNodeWrites(text: String) {
         // When / Then
-        #expect(throws: EncodingRefused.self) { try TypeNode().datum(of: text) }
+        #expect(throws: Unplaced.self) { try TypeNode().datum(of: text) }
     }
 
     // MARK: - Public

@@ -61,7 +61,7 @@ struct DeclarationNode {
         var fields = try Fields(value, as: "a struct's declaration")
 
         guard let declared = fields.take(Self.structKey) else {
-            throw EncodingRefused("a struct's declaration writes `struct`, and no node writes one without it")
+            throw Unplaced("a struct's declaration writes `struct`, and no node writes one without it")
         }
 
         var parts: [Datum] = []
@@ -178,7 +178,7 @@ struct DeclarationNode {
         let list = try Fields.list(value, as: "a list of names")
 
         guard !list.isEmpty else {
-            throw EncodingRefused("no node writes an empty list of `\(word)`")
+            throw Unplaced("no node writes an empty list of `\(word)`")
         }
 
         return try list.map { element in
@@ -189,7 +189,7 @@ struct DeclarationNode {
             let datum = Datum.node(word, names.map(Datum.name))
 
             guard (try? introduced(Node(datum))) == text else {
-                throw EncodingRefused("'\(text)' cuts at its `:` into names no node writes back as itself")
+                throw Unplaced("'\(text)' cuts at its `:` into names no node writes back as itself")
             }
 
             return datum

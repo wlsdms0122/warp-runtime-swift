@@ -67,7 +67,7 @@ struct DataNode {
 
         case let .double(double):
             guard double.isFinite else {
-                throw EncodingRefused("only a finite fraction has a spelling, and \(double) is none")
+                throw Unplaced("only a finite fraction has a spelling, and \(double) is none")
             }
 
             return Datum(.double(double))
@@ -88,7 +88,7 @@ struct DataNode {
             return try `struct`(instance)
 
         case .procedure:
-            throw EncodingRefused("a procedure closed over a scope is not data, and a text holds data")
+            throw Unplaced("a procedure closed over a scope is not data, and a text holds data")
         }
     }
 

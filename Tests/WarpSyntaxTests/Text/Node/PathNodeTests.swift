@@ -55,7 +55,7 @@ struct PathNodeTests {
     @Test("a path no node writes is refused on the way out", arguments: ["?.a", "[0]", "a[ 0 ]", "a."])
     func aPathNoNodeWrites(text: String) {
         // When / Then
-        #expect(throws: EncodingRefused.self) { try PathNode().datum(of: text) }
+        #expect(throws: Unplaced.self) { try PathNode().datum(of: text) }
     }
 
     // MARK: - Public

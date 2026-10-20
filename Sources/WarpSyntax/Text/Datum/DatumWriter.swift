@@ -76,7 +76,7 @@ struct DatumWriter {
             let depth = within.map { list in entries[list].depth + 1 } ?? 0
 
             if datum.isList, depth >= DatumReader.nestingBound {
-                throw EncodingRefused("the text nests deeper than a reader must follow")
+                throw Unplaced("the text nests deeper than a reader must follow")
             }
 
             if let within {

@@ -62,7 +62,7 @@ struct ExpressionNode {
             return try array(elements)
 
         case .procedure:
-            throw EncodingRefused("a procedure closed over a scope is not data, and a document holds data")
+            throw Unplaced("a procedure closed over a scope is not data, and a document holds data")
 
         case .dictionary:
             break
@@ -172,7 +172,7 @@ struct ExpressionNode {
         let entries = try Fields.entries(value, as: "an expression")
 
         guard entries.count == 1, let tag = ExpressionTag(rawValue: entries[0].key) else {
-            throw EncodingRefused(
+            throw Unplaced(
                 "an expression is a mapping of one tag, and this one holds \(entries.map { entry in "`\(entry.key)`" }.joined(separator: ", "))"
             )
         }
@@ -193,7 +193,7 @@ struct ExpressionNode {
             let list = try Fields.list(handed, as: "a call's arguments")
 
             guard !list.isEmpty else {
-                throw EncodingRefused("a call writes `arguments` where it hands something, and no node writes it empty")
+                throw Unplaced("a call writes `arguments` where it hands something, and no node writes it empty")
             }
 
             arguments = try list.map(datum(of:))
@@ -209,7 +209,7 @@ struct ExpressionNode {
             return .node("apply", [try datum(of: callee)] + arguments)
 
         case nil:
-            throw EncodingRefused("a call names what it calls under `procedure`, and this one does not")
+            throw Unplaced("a call names what it calls under `procedure`, and this one does not")
         }
     }
 
@@ -220,7 +220,7 @@ struct ExpressionNode {
             let subject = fields.take(ExpressionReader.subjectKey.spelling),
             let type = fields.take(ExpressionReader.typeKey.spelling)
         else {
-            throw EncodingRefused("a cast writes what it casts and the type, and no node writes one without both")
+            throw Unplaced("a cast writes what it casts and the type, and no node writes one without both")
         }
 
         try fields.finish()
@@ -235,7 +235,7 @@ struct ExpressionNode {
                 let pair = try Fields.list(entry, as: "a map literal's entry")
 
                 guard pair.count == 2 else {
-                    throw EncodingRefused("a map literal's entry is a key and a value, and this one holds \(pair.count)")
+                    throw Unplaced("a map literal's entry is a key and a value, and this one holds \(pair.count)")
                 }
 
                 return .node("entry", [try datum(of: pair[0]), try datum(of: pair[1])])

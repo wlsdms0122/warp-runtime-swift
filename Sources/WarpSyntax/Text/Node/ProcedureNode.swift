@@ -121,7 +121,7 @@ struct ProcedureNode {
             guard let held = fields.take(mark) else { continue }
 
             guard held == .bool(true) else {
-                throw EncodingRefused("`\(mark)` is written `true` or not at all, and no node writes \(Rendering(held).text())")
+                throw Unplaced("`\(mark)` is written `true` or not at all, and no node writes \(Rendering(held).text())")
             }
 
             parts.append(.node(mark))
@@ -131,7 +131,7 @@ struct ProcedureNode {
             let list = try Fields.list(parameters, as: "a procedure's parameters")
 
             guard !list.isEmpty else {
-                throw EncodingRefused("a procedure writes `parameters` where it takes some, and no node writes it empty")
+                throw Unplaced("a procedure writes `parameters` where it takes some, and no node writes it empty")
             }
 
             parts += try list.map(parameter)
@@ -151,7 +151,7 @@ struct ProcedureNode {
                 let names = written.components(separatedBy: " & ")
 
                 guard !names.contains(where: \.isEmpty) else {
-                    throw EncodingRefused("the bound '\(written)' names no contract between two `&`, and no node writes it")
+                    throw Unplaced("the bound '\(written)' names no contract between two `&`, and no node writes it")
                 }
 
                 return .node("bound", [.name(label)] + names.map(Datum.name))
@@ -210,7 +210,7 @@ struct ProcedureNode {
         var fields = try Fields(value, as: "a parameter")
 
         guard let name = fields.take(Self.name) else {
-            throw EncodingRefused("a parameter writes its name, and no node writes one without it")
+            throw Unplaced("a parameter writes its name, and no node writes one without it")
         }
 
         var parts: [Datum] = [.name(try Fields.text(name, as: "a parameter's name"))]
@@ -249,7 +249,7 @@ struct ProcedureNode {
             return .node(Self.failing, try failures.map { failure in .name(try Fields.text(failure, as: "a failure")) })
 
         default:
-            throw EncodingRefused("a procedure fails with a list of names or with `anything`, and no node writes \(Rendering(value).text())")
+            throw Unplaced("a procedure fails with a list of names or with `anything`, and no node writes \(Rendering(value).text())")
         }
     }
 }

@@ -101,7 +101,7 @@ struct DocumentNode {
         var nodes: [Datum] = []
 
         guard let imports = fields.take(Self.imports) else {
-            throw EncodingRefused("a document writes `imports`, and no node writes one without it")
+            throw Unplaced("a document writes `imports`, and no node writes one without it")
         }
 
         if let version = fields.take(Self.warp) {

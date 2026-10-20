@@ -112,14 +112,14 @@ struct StatementNode {
 
         guard let (word, binding) = bindings.first else {
             guard let held, type == nil else {
-                throw EncodingRefused("a statement that binds nothing is a value alone, and no node writes this one")
+                throw Unplaced("a statement that binds nothing is a value alone, and no node writes this one")
             }
 
             return try datum(bound: held)
         }
 
         guard bindings.count == 1 else {
-            throw EncodingRefused("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
+            throw Unplaced("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
         }
 
         var operands: [Datum]
