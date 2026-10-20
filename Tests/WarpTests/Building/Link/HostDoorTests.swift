@@ -11,8 +11,8 @@ import Testing
 
 @Suite("A host settles a value against a declaration the build holds")
 struct HostDoorTests {
-    // A procedure the host answers handing the closure it was given a struct
-    // holding a field the closure's parameter never names.
+    // A procedure the host answers handing the closure it was given what it
+    // is built holding.
     private struct HandingQuery: Query {
         enum Parameters: Int, ParameterSet {
             case body
@@ -31,6 +31,8 @@ struct HostDoorTests {
         }
 
         // MARK: - Property
+        let handed: Value
+
         // MARK: - Initializer
         // MARK: - Public
         func evaluate(_ question: Question<Self>) async throws -> Value {
@@ -38,17 +40,14 @@ struct HostDoorTests {
                 throw ExecutionError("App.handing asks a procedure")
             }
 
-            return try await question.call(
-                closure,
-                handing: [.struct(Struct(name: "App.Ticket", ["id": .string("a"), "extra": .int(1)]))]
-            )
+            return try await question.call(closure, handing: [handed])
         }
 
         // MARK: - Private
     }
 
-    // A procedure the host answers writing text into the variable it was
-    // handed in place, which declares a whole number.
+    // A procedure the host answers writing what it is built holding into the
+    // variable it was handed in place, which declares a whole number.
     private struct WritingEffect: Effect {
         enum Parameters: Int, ParameterSet {
             case box
@@ -64,12 +63,60 @@ struct HostDoorTests {
         }
 
         // MARK: - Property
+        let written: Value
+
         // MARK: - Initializer
         // MARK: - Public
         func run(_ invocation: Invocation<Self>) async throws -> Value {
-            try invocation.write(.box, .string("s"))
+            try invocation.write(.box, written)
 
             return .null
+        }
+
+        // MARK: - Private
+    }
+
+    // A procedure the host answers with what it is built holding.
+    private struct AnsweringQuery: Query {
+        typealias Parameters = NoParameters
+
+        // MARK: - Property
+        let held: Value
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            held
+        }
+
+        // MARK: - Private
+    }
+
+    // A procedure the host answers sending `App.take` what it is built
+    // holding.
+    private struct SendingQuery: Query {
+        typealias Parameters = NoParameters
+
+        enum Imports: Int, ImportSet {
+            case take
+
+            // MARK: - Property
+            var selector: Name { "App.take" }
+
+            var handing: Int { 1 }
+
+            // MARK: - Initializer
+            // MARK: - Public
+            // MARK: - Private
+        }
+
+        // MARK: - Property
+        let held: Value
+
+        // MARK: - Initializer
+        // MARK: - Public
+        func evaluate(_ question: Question<Self>) async throws -> Value {
+            try await question.send(.take, handing: [held])
         }
 
         // MARK: - Private
@@ -186,11 +233,11 @@ struct HostDoorTests {
         }
     }
 
-    @Test("a fraction with no finite value refuses at the entry's door and at a failure's")
+    @Test("a fraction with no finite value refuses at every door a value from outside comes through")
     func aNonFiniteNumberIsRefusedAtEveryDoor() async throws {
-        // Given. An entry taking anything, and a procedure the host answers
-        // failing with what it holds: two more doors a value from outside
-        // comes through
+        // Given. An entry taking anything, and procedures the host answers
+        // bringing one in: failing with it, answering it, writing it in place,
+        // handing it to a closure and sending it
         let entry = try Module(
             procedures: [
                 "entry": Procedure(
@@ -202,7 +249,13 @@ struct HostDoorTests {
             ]
         )
         let taking = try await Builder().build([entry] + Module.standard)
-        let failing = try await Builder().build(try carrying(.array([.double(.nan)])) + Module.standard)
+        let doors = [
+            try carrying(.array([.double(.nan)])) + Module.standard,
+            try answering(.double(-.infinity)),
+            try writing(.double(.nan)),
+            try handing(.struct(Struct(name: "App.Ticket", ["id": .double(.infinity)]))),
+            try sending(.double(.nan))
+        ]
 
         // When / Then
         await #expect {
@@ -210,10 +263,15 @@ struct HostDoorTests {
         } throws: { error in
             "\(error)".contains("holds a fraction with no finite value")
         }
-        await #expect {
-            try await Executor().run(failing)
-        } throws: { error in
-            "\(error)".contains("holds a fraction with no finite value")
+
+        for door in doors {
+            let image = try await Builder().build(door)
+
+            await #expect {
+                try await Executor().run(image)
+            } throws: { error in
+                "\(error)".contains("holds a fraction with no finite value")
+            }
         }
     }
 
@@ -235,37 +293,10 @@ struct HostDoorTests {
 
     @Test("a value a host hands a closure is fitted at the door")
     func aValueHandedToAClosureIsFitted() async throws {
-        // Given
-        let handing = try Module(
-            types: ["App.Ticket": .struct(["id": .string])],
-            procedures: [
-                "App.handing": Procedure(
-                    signature: Signature(of: HandingQuery.self, returns: .string),
-                    implementation: .query(HandingQuery())
-                )
-            ]
+        // Given. A field the closure's parameter never names
+        let image = try await Builder().build(
+            try handing(.struct(Struct(name: "App.Ticket", ["id": .string("a"), "extra": .int(1)])))
         )
-        let document = try Module(
-            imports: ["App.handing", "App.Ticket"],
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "App.handing",
-                        arguments: [
-                            .closure(Procedure(
-                                signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string, constness: .const),
-                                body: [],
-                                result: .reference([.name("x"), .name("id")])
-                            ))
-                        ]
-                    ))
-                )
-            ]
-        )
-        let image = try await Builder().build([document, handing])
 
         // When / Then
         #expect(try await Executor().run(image) == .string("a"))
@@ -274,29 +305,7 @@ struct HostDoorTests {
     @Test("a value a host writes through a parameter handed in place is judged at the door")
     func aValueWrittenInPlaceIsJudged() async throws {
         // Given
-        let writing = try Module(
-            procedures: [
-                "App.writing": Procedure(
-                    signature: Signature(of: WritingEffect.self),
-                    implementation: .effect(WritingEffect())
-                )
-            ]
-        )
-        let document = try Module(
-            imports: ["App.writing"],
-            procedures: [
-                "entry": Procedure(
-                    access: .public,
-                    signature: Signature(returns: .int),
-                    body: [
-                        Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
-                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])])))
-                    ],
-                    result: .reference([.name("n")])
-                )
-            ]
-        )
-        let image = try await Builder().build([document, writing])
+        let image = try await Builder().build(try writing(.string("s")))
 
         // When / Then. The text never reaches the variable
         await #expect {
@@ -505,6 +514,137 @@ struct HostDoorTests {
         )
 
         return [document, carry]
+    }
+
+    // A document answering what a procedure the host answers brings in.
+    private func answering(_ held: Value) throws -> [Module] {
+        let answer = try Module(
+            procedures: [
+                "App.answer": Procedure(
+                    signature: Signature(of: AnsweringQuery.self, returns: .double),
+                    implementation: .query(AnsweringQuery(held: held))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.answer"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .double),
+                    body: [],
+                    result: .call(Call(selector: "App.answer"))
+                )
+            ]
+        )
+
+        return [document, answer]
+    }
+
+    // A document handing a variable declaring a whole number in place to a
+    // procedure the host answers writing `written` into it.
+    private func writing(_ written: Value) throws -> [Module] {
+        let writing = try Module(
+            procedures: [
+                "App.writing": Procedure(
+                    signature: Signature(of: WritingEffect.self),
+                    implementation: .effect(WritingEffect(written: written))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.writing"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
+                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])])))
+                    ],
+                    result: .reference([.name("n")])
+                )
+            ]
+        )
+
+        return [document, writing]
+    }
+
+    // A document handing a closure reading an `App.Ticket`'s id to a
+    // procedure the host answers handing it `handed`.
+    private func handing(_ handed: Value) throws -> [Module] {
+        let handing = try Module(
+            types: ["App.Ticket": .struct(["id": .string])],
+            procedures: [
+                "App.handing": Procedure(
+                    signature: Signature(of: HandingQuery.self, returns: .string),
+                    implementation: .query(HandingQuery(handed: handed))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.handing", "App.Ticket"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .string),
+                    body: [],
+                    result: .call(Call(
+                        selector: "App.handing",
+                        arguments: [
+                            .closure(Procedure(
+                                signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string, constness: .const),
+                                body: [],
+                                result: .reference([.name("x"), .name("id")])
+                            ))
+                        ]
+                    ))
+                )
+            ]
+        )
+
+        return [document, handing]
+    }
+
+    // A document calling a procedure the host answers, which sends `held` to
+    // `App.take`, answering what it is handed.
+    private func sending(_ held: Value) throws -> [Module] {
+        let take = try Module(
+            procedures: [
+                "App.take": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        parameters: [Parameter(name: "x", type: .double)],
+                        returns: .double,
+                        constness: .const,
+                        isolation: .isolated
+                    ),
+                    body: [],
+                    result: .reference([.name("x")])
+                )
+            ]
+        )
+        let sending = try Module(
+            procedures: [
+                "App.sending": Procedure(
+                    signature: Signature(of: SendingQuery.self, returns: .double),
+                    implementation: .query(SendingQuery(held: held))
+                )
+            ]
+        )
+        let document = try Module(
+            imports: ["App.sending"],
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .double),
+                    body: [],
+                    result: .call(Call(selector: "App.sending"))
+                )
+            ]
+        )
+
+        return [document, sending, take]
     }
 
     // The entry's door over no table, answered by name.
