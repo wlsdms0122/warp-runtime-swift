@@ -256,18 +256,15 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // Every name a path in here is headed by, at whatever depth, a closure's
-    // body and an index's own path included.
-    //
-    // Flat, because a body may not introduce a name the module bound, so a
-    // head spelled as a module's constant is that constant wherever it
-    // stands.
-    var pathHeads: Set<Name> {
-        subexpressions.reduce(into: Set<Name>()) { names, held in
-            guard case let .reference(path) = held else { return }
+    // Every name this reads from around it: the head of a path in here, at
+    // whatever depth, a closure's body and an index's own path included,
+    // where no body in here introduced the name before reading it.
+    var freeNames: Set<Name> {
+        var free: Set<Name> = []
 
-            names.formUnion(path.expandingIndexReferences.compactMap(\.head))
-        }
+        gather(into: &free, naming: nil, outside: [])
+
+        return free
     }
 
     // Whether every way through this expression leaves, read off the text
@@ -292,4 +289,105 @@ public indirect enum Expression: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
+    // `name` is the statement's this is the value of, which a loop binds its
+    // round under and an attempt its failure; `introduced` the names the
+    // bodies around this introduced.
+    private func gather(into free: inout Set<Name>, naming name: Name?, outside introduced: Set<Name>) {
+        let named = introduced.union(name.map { name in [name] } ?? [])
+
+        switch self {
+        case .literal:
+            break
+
+        case let .reference(path):
+            Self.gather(path, into: &free, outside: introduced)
+
+        case let .array(elements):
+            for element in elements {
+                element.gather(into: &free, naming: nil, outside: introduced)
+            }
+
+        case let .struct(fields):
+            for field in fields.values {
+                field.gather(into: &free, naming: nil, outside: introduced)
+            }
+
+        case let .dictionary(entries):
+            for entry in entries {
+                entry.key.gather(into: &free, naming: nil, outside: introduced)
+                entry.value.gather(into: &free, naming: nil, outside: introduced)
+            }
+
+        case let .closure(procedure):
+            if let block = procedure.block {
+                Self.gather(block, into: &free, outside: introduced.union(procedure.signature.names))
+            }
+
+        case let .apply(callee, arguments):
+            callee.gather(into: &free, naming: nil, outside: introduced)
+
+            for argument in arguments {
+                argument.gather(into: &free, naming: nil, outside: introduced)
+            }
+
+        case let .cast(value, _, _):
+            value.gather(into: &free, naming: nil, outside: introduced)
+
+        case let .conditional(condition, then, otherwise):
+            condition.gather(into: &free, naming: nil, outside: introduced)
+            Self.gather(Block(body: then), into: &free, outside: introduced)
+
+            if let otherwise {
+                Self.gather(Block(body: otherwise), into: &free, outside: introduced)
+            }
+
+        case let .loop(condition, body):
+            condition.gather(into: &free, naming: nil, outside: named)
+            Self.gather(Block(body: body), into: &free, outside: named)
+
+        case let .attempt(body, rescue):
+            Self.gather(body, into: &free, outside: introduced)
+            Self.gather(rescue, into: &free, outside: named)
+
+        case let .call(call):
+            for argument in call.arguments {
+                argument.gather(into: &free, naming: nil, outside: introduced)
+            }
+
+        case let .leave(leave):
+            leave.value?.gather(into: &free, naming: nil, outside: introduced)
+        }
+    }
+
+    // A block in order: a name a statement introduces is the body's own from
+    // the statement after it.
+    private static func gather(_ block: Block, into free: inout Set<Name>, outside introduced: Set<Name>) {
+        var introduced = introduced
+
+        for statement in block.body.statements {
+            if case let .assignment(path)? = statement.binding {
+                gather(path, into: &free, outside: introduced)
+            }
+
+            statement.expression.gather(
+                into: &free,
+                naming: statement.expression.namesItsOwn ? statement.binding?.introduced : nil,
+                outside: introduced
+            )
+
+            if let name = statement.bindingAfter?.introduced {
+                introduced.insert(name)
+            }
+        }
+
+        block.result?.gather(into: &free, naming: nil, outside: introduced)
+    }
+
+    private static func gather(_ path: Path, into free: inout Set<Name>, outside introduced: Set<Name>) {
+        for inner in path.expandingIndexReferences {
+            if let head = inner.head, !introduced.contains(head) {
+                free.insert(head)
+            }
+        }
+    }
 }

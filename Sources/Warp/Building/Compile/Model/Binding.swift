@@ -42,11 +42,22 @@ struct Binding: Equatable, Sendable {
         case assigned
     }
 
+    // What declared the name. A path headed by a constant of the module
+    // folds to what it reads, where the build can read it, and a reading of
+    // a variable of the module answers by the run's state. A name a body
+    // declared is neither, whatever its spelling.
+    enum Declarer: Equatable, Sendable {
+        case module
+        case body
+    }
+
     // MARK: - Property
     let holding: Holding
 
     // What the name reads as.
     let type: LoweredType
+
+    let declarer: Declarer
 
     // The type written for what the name holds, or nil where none was.
     var declaredType: LoweredType? {
@@ -93,9 +104,10 @@ struct Binding: Equatable, Sendable {
     // MARK: - Initializer
     // A name holds what it was given as a name holds it: a literal whole
     // number written to it is an Int from here on.
-    init(_ holding: Holding, _ type: LoweredType) {
+    init(_ holding: Holding, _ type: LoweredType, declarer: Declarer = .body) {
         self.holding = holding
         self.type = type.asHeld
+        self.declarer = declarer
     }
 
     // A parameter as the body holds it: one handed in place is the caller's
@@ -117,7 +129,7 @@ struct Binding: Equatable, Sendable {
     // The same name held the same way, reading as what the transform makes
     // of what it read as.
     func map(_ transform: (LoweredType) -> LoweredType) -> Binding {
-        Binding(holding, transform(type))
+        Binding(holding, transform(type), declarer: declarer)
     }
 
     // The same name once a closure or a call that holds it to `held` takes
@@ -127,7 +139,7 @@ struct Binding: Equatable, Sendable {
     func taken(to held: LoweredType) -> Binding {
         guard case .assigned = holding else { return self }
 
-        return Binding(.held(held), type)
+        return Binding(.held(held), type, declarer: declarer)
     }
 
     // MARK: - Private

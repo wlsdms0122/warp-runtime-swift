@@ -122,10 +122,10 @@ struct Way {
 
             switch current.holding {
             case .assigned:
-                environment[name] = Binding(.assigned, write.definite ? write.type : current.type.joined(write.type))
+                environment[name] = current.map { read in write.definite ? write.type : read.joined(write.type) }
 
             case let .held(type):
-                environment[name] = Binding(current.holding, write.definite ? type : current.type.joined(type))
+                environment[name] = current.map { read in write.definite ? type : read.joined(type) }
 
             case .fixed, .declared:
                 continue

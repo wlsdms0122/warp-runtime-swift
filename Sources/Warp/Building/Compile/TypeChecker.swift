@@ -800,13 +800,14 @@ struct TypeChecker {
     // own (`items[names[C]]`) and the promise is about all of them.
     private func foldedIndexReferences(
         _ path: LoweredPath,
+        in environment: [Name: Binding],
         at place: Place,
         folding: Folding
     ) async throws -> LoweredPath {
         var folded = LoweredPath([])
 
         for segment in path.segments {
-            folded.append(try await self.folded(segment, at: place, folding: folding))
+            folded.append(try await self.folded(segment, in: environment, at: place, folding: folding))
         }
 
         return folded
@@ -1116,6 +1117,7 @@ struct TypeChecker {
     // written out because reading a constant runs, and what runs is a call.
     private func folded(
         _ segment: LoweredPath.Segment,
+        in environment: [Name: Binding],
         at place: Place,
         folding: Folding
     ) async throws -> LoweredPath.Segment {
@@ -1123,9 +1125,9 @@ struct TypeChecker {
 
         // An index path indexed in turn by what only the run reads stays a
         // path however it is headed: the run reads it.
-        let inner = try await foldedIndexReferences(written, at: place, folding: folding)
+        let inner = try await foldedIndexReferences(written, in: environment, at: place, folding: folding)
 
-        guard let head = folding.boundHead(of: inner) else {
+        guard let head = folding.boundHead(of: inner, in: environment) else {
             return .at(inner, optional: optionally)
         }
 
@@ -1358,7 +1360,7 @@ struct TypeChecker {
                 // name survives into the image. One indexed by what only the run
                 // reads (`digits[ch]`) cannot fold: it stays a path, and the
                 // lowering binds the constant in the body for the run to read.
-                let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
+                let folded = try await foldedIndexReferences(placed, in: environment, at: place, folding: folding)
 
                 // What an index settled to stands as if it were written there,
                 // and is judged as such.
@@ -1369,7 +1371,7 @@ struct TypeChecker {
                     throw BuildError(reason, at: place)
                 }
 
-                guard let head = folding.boundHead(of: folded) else { return reference(folded) }
+                guard let head = folding.boundHead(of: folded, in: environment) else { return reference(folded) }
 
                 do {
                     let value = try await folding.read(folded, at: place)
@@ -1826,7 +1828,7 @@ struct TypeChecker {
                 if let refusal = EffectChecker(context).refusal(
                     of: block,
                     declared: procedure.signature,
-                    bound: opening.compactMapValues(\.declaredType)
+                    in: opening
                 ) {
                     throw BuildError("the closure \(refusal)", at: place.child(.closure))
                 }
@@ -2716,7 +2718,7 @@ struct TypeChecker {
                 guard box.heldType != nil || box.holding == .assigned else { break }
 
                 if box.heldType == nil, path.segments.count == 1 {
-                    environment[id] = Binding(.assigned, inner.reading)
+                    environment[id] = box.map { _ in inner.reading }
                     placed = LoweredPath([.name(id, optional: false)])
 
                     if !locals.contains(id) {
@@ -2742,7 +2744,7 @@ struct TypeChecker {
                 )
 
                 if case let .held(held) = box.holding, path.segments.count == 1 {
-                    environment[id] = Binding(.held(held), held)
+                    environment[id] = box.map { _ in held }
 
                     if !locals.contains(id) {
                         flowed.land((held, true), on: id)
@@ -3083,7 +3085,7 @@ struct TypeChecker {
         case let .reads(reached, placed):
             guard case let .judging(folding?, _) = ask else { return (reached, placed) }
 
-            let folded = try await foldedIndexReferences(placed, at: place, folding: folding)
+            let folded = try await foldedIndexReferences(placed, in: environment, at: place, folding: folding)
 
             if
                 folded != placed,

@@ -483,7 +483,7 @@ struct Validator: Sendable {
 
             // Sorted, so a module with two mistakes in it refuses the same one
             // every run. What a set hands back is seeded per process.
-            for read in expression.pathHeads.sorted() {
+            for read in expression.freeNames.sorted() {
                 guard let reading = constants[read] else { continue }
 
                 try walk(read, reading: reading)

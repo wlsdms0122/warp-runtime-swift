@@ -227,30 +227,29 @@ struct Compiling {
         loweredRows.removeAll(keepingCapacity: true)
     }
 
-    // One document's reading. Which names hold boxes is the document's own, so
-    // a context is made for the document whose body is being read, and so are
-    // the declarations it may name: its own by its block, private ones
-    // included, and every other document's by the spelling the link holds.
-    func context(reading variables: Set<Name>, of origin: Int) -> TypingContext {
-        context(reading: variables, owning: lowering.own(origin))
+    // One document's reading. A context is made for the document whose body
+    // is being read, since the declarations it may name are its own by its
+    // block, private ones included, and every other document's by the
+    // spelling the link holds.
+    func context(of origin: Int) -> TypingContext {
+        context(owning: lowering.own(origin))
     }
 
     // The same for a document whose rows are not held yet: what the documents
     // behind it declare, and nothing of its own.
-    func context(reading variables: Set<Name>) -> TypingContext {
-        context(reading: variables, owning: [:])
+    func context() -> TypingContext {
+        context(owning: [:])
     }
 
     // MARK: - Private
-    private func context(reading variables: Set<Name>, owning own: [Name: Int]) -> TypingContext {
+    private func context(owning own: [Name: Int]) -> TypingContext {
         TypingContext(
             types: types,
             linked: lowering.table,
             rows: lowering.rows,
             own: own,
             concealed: lowering.concealed,
-            contractProcedures: contractProcedures,
-            variables: variables
+            contractProcedures: contractProcedures
         )
     }
 }
