@@ -41,7 +41,6 @@ struct Compiler {
         // the order the rows and the boxes stand in.
         let declared = holding.map(\.declared)
         let boxes = module.variables.keys.sorted()
-        let reading = Set(module.variables.keys)
 
         // What this document settled.
         var constants: [Name: Value] = [:]
@@ -62,7 +61,7 @@ struct Compiler {
         var declaredConstants: [Name: LoweredType] = [:]
 
         func context() -> TypingContext {
-            compiling.context(reading: reading, of: origin)
+            compiling.context(of: origin)
         }
 
         // This document's declarations by its block: what it declares is its
@@ -84,24 +83,25 @@ struct Compiler {
 
         // What the documents behind this one declare, read the way a body in
         // this one reads them.
-        let behind = compiling.context(reading: reading)
+        let behind = compiling.context()
 
-        // The names in scope before a body's first statement: its parameters,
-        // the constants its module declared beside them, and the variables. A
-        // module variable holds the type it declared, or the type it started
-        // as, through every write, because every body of the document reads
-        // it as that.
+        // The names in scope before a body's first statement: the constants
+        // and the variables its module declared, and its parameters, a
+        // parameter standing for the name it spells. A module variable holds
+        // the type it declared, or the type it started as, through every
+        // write, because every body of the document reads it as that.
         func opening(_ signature: Signature) -> [Name: Binding] {
-            signature.environment(in: loweredTypes)
-                .merging(bindings(of: typedConstants, declaring: declaredConstants)) { _, constant in constant }
+            bindings(of: typedConstants, declaring: declaredConstants)
                 .merging(
                     variables.reduce(into: [Name: Binding]()) { held, entry in
                         held[entry.key] = Binding(
                             declaredVariables[entry.key].map(Binding.Holding.declared) ?? .held(entry.value.type),
-                            entry.value.type
+                            entry.value.type,
+                            declarer: .module
                         )
                     }
                 ) { _, variable in variable }
+                .merging(signature.environment(in: loweredTypes)) { _, parameter in parameter }
         }
 
         // One declaration resolves once, whichever table asks.
@@ -151,7 +151,7 @@ struct Compiler {
                 if let refusal = EffectChecker(context()).refusal(
                     of: block,
                     declared: declaration.signature,
-                    bound: opening(declaration.signature).compactMapValues(\.declaredType)
+                    in: opening(declaration.signature)
                 ) {
                     throw BuildError("'\(symbol.declared)' \(refusal)", at: symbol.place)
                 }
@@ -489,13 +489,13 @@ struct Compiler {
     }
 
     // The constants settled so far as names a body or a later constant
-    // reads: each fixed, holding the type written where its value came from.
+    // reads, each holding the type written where its value came from.
     private func bindings(
         of constants: [Name: (value: Value, type: LoweredType)],
         declaring declaredTypes: [Name: LoweredType]
     ) -> [Name: Binding] {
         constants.reduce(into: [Name: Binding]()) { held, entry in
-            held[entry.key] = Binding(.fixed(declared: declaredTypes[entry.key]), entry.value.type)
+            held[entry.key] = Binding(.fixed(declared: declaredTypes[entry.key]), entry.value.type, declarer: .module)
         }
     }
 
@@ -510,7 +510,7 @@ struct Compiler {
 
             // Sorted, so the order is the same every run. What a set hands
             // back is seeded per process.
-            for read in expression.pathHeads.sorted() {
+            for read in expression.freeNames.sorted() {
                 // The walk goes only to names this module declared as constants.
                 guard let reading = constants[read] else { continue }
 

@@ -25,12 +25,19 @@ struct EffectChecker {
 
         // MARK: - Initializer
         // MARK: - Public
+        // The same fact where a body introduced `name`: under it the spelling
+        // reads the new name.
+        func introducing(_ name: Name?) -> Fact {
+            guard let name else { return self }
+
+            return Fact(held: held, claim: claim, unread: unread.subtracting([name]), word: word)
+        }
+
         // MARK: - Private
     }
 
     // MARK: - Property
-    // The declarations a body may call, the module variables it may read and
-    // the table its types are read in.
+    // The declarations a body may call and the table its types are read in.
     private let context: TypingContext
 
     // MARK: - Initializer
@@ -42,16 +49,18 @@ struct EffectChecker {
     // What a body does beyond what its declaration says, or nil where it
     // keeps to it: a body declared const reaches outside the run, one
     // declared isolated touches what another body could touch at once, or
-    // one may fail with more than its declaration names. `bound` is the type
-    // written for what each name in scope holds, before the first statement.
-    func refusal(of block: Block, declared signature: Signature, bound declared: [Name: LoweredType]) -> String? {
+    // one may fail with more than its declaration names. `environment` is
+    // what each name in scope is bound as, before the first statement.
+    func refusal(of block: Block, declared signature: Signature, in environment: [Name: Binding]) -> String? {
+        let declared = environment.compactMapValues(\.declaredType)
+
         // A body reading a module variable answers by the run's state, and so
         // does one writing a name outside the parameters it owns, or handing
         // such a name in place to a call.
         let const = Fact(
             held: { callee in callee.constness == .const },
             claim: \.isConstProcedure,
-            unread: context.variables,
+            unread: Set(environment.filter { _, bound in bound.declarer == .module && bound.isBox }.keys),
             word: "const"
         )
 
@@ -271,6 +280,7 @@ struct EffectChecker {
         declaring names: Set<Name>,
         bound declaredTypes: [Name: LoweredType]
     ) -> String? {
+        var fact = fact
         var declared = names
         var declaredTypes = declaredTypes
 
@@ -286,7 +296,22 @@ struct EffectChecker {
                 }
             }
 
-            if let broken = breaking(statement.expression, fact, declaring: declared, bound: declaredTypes) {
+            // A loop binds its round under the statement's name, inside the
+            // whole of it, and an attempt its failure, inside its rescue.
+            let naming = fact.introducing(statement.binding?.introduced)
+            let broken: String? = switch statement.expression {
+            case .loop:
+                breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
+
+            case let .attempt(body, rescue):
+                breaking(body, fact, declaring: declared, bound: declaredTypes)
+                    ?? breaking(rescue, naming, declaring: declared, bound: declaredTypes)
+
+            default:
+                breaking(statement.expression, fact, declaring: declared, bound: declaredTypes)
+            }
+
+            if let broken {
                 return broken
             }
 
@@ -294,6 +319,7 @@ struct EffectChecker {
                 declared.insert(name)
             }
 
+            fact = fact.introducing(statement.bindingAfter?.introduced)
             declaring(statement, into: &declaredTypes)
         }
 

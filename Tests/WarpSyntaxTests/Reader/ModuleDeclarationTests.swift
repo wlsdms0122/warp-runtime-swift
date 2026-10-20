@@ -173,19 +173,17 @@ struct ModuleDeclarationTests {
         }
     }
 
-    @Test("a statement may not reintroduce a name the module bound")
-    func constantsCannotBeShadowed() {
-        // Given. Compiling folds a reference to a constant into its value, so a
-        // second reading of the same spelling could never be true
+    @Test("a statement may introduce a name the module bound")
+    func aStatementMayShadowAConstant() throws {
+        // Given. A procedure's body stands inside its document, so its name is
+        // the body's own
         let fixture: Value = [
             "const": ["limit": 3],
             "procedures": ["entry": ["body": [["let": "limit", "value": 4]]]]
         ]
 
         // When / Then
-        #expect(throws: ValidationError.self) {
-            try validated(try loader.loadDocument(fixture))
-        }
+        try validated(try loader.loadDocument(fixture))
     }
 
     @Test("a document declares a contract, and a procedure reaches it through the contract's name")

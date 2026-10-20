@@ -83,16 +83,18 @@ struct PlaceTests {
 
     @Test("a signature's slots are named by the position a procedure declares them at")
     func parametersAreNamedByPosition() throws {
-        // Given. A parameter shadowing a constant, so the refusal is the
+        // Given. A parameter declared twice, so the refusal is the
         // declaration's own rather than anything a body did with it
         // When
         let error = #expect(throws: ValidationError.self) {
             try Module(
-                constants: ["amount": .literal(.int(1))],
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        signature: Signature(parameters: [Parameter(name: "amount", type: .int)]),
+                        signature: Signature(parameters: [
+                            Parameter(name: "amount", type: .int),
+                            Parameter(name: "amount", type: .int)
+                        ]),
                         body: []
                     )
                 ]
@@ -100,7 +102,7 @@ struct PlaceTests {
         }
 
         // Then
-        #expect(error?.place?.rendered == "procedures.entry.parameters[0]")
+        #expect(error?.place?.rendered == "procedures.entry.parameters[1]")
     }
 
     @Test("the place is carried as data, and the sentence is only the reason")

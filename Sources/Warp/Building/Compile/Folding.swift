@@ -86,17 +86,17 @@ struct Folding {
         )
     }
 
-    // Whether a name is bound here.
-    func holds(_ name: Name) -> Bool {
-        names.contains(name)
-    }
-
-    // The head of a path bound here, where the path folds here: a name bound
-    // here, and the path indexed by nothing still a reference. Asked of a path
-    // whose index references have been folded, so one still a reference is
-    // one only a run reads.
-    func boundHead(of path: LoweredPath) -> Name? {
-        guard let head = path.head, holds(head) else { return nil }
+    // The head of a path bound here, where the path folds here: a name the
+    // scope reading it binds to a constant, and the path indexed by nothing
+    // still a reference. Asked of a path whose index references have been
+    // folded, so one still a reference is one only a run reads.
+    func boundHead(of path: LoweredPath, in environment: [Name: Binding]) -> Name? {
+        guard
+            let head = path.head,
+            let bound = environment[head],
+            bound.declarer == .module,
+            !bound.isBox
+        else { return nil }
 
         let indexedByTheRun = path.segments.contains { segment in
             if case .at = segment { return true }
