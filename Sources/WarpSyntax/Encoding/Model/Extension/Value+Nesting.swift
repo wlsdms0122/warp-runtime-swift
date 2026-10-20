@@ -8,14 +8,7 @@
 import Foundation
 import Warp
 
-// Held by the syntax rather than by the value: how deep a document may nest
-// is a fact about the wire.
 extension Value {
-    // How deep a document may nest. The bound is exact: every reader takes
-    // a document within it and refuses the first container past it, and a
-    // value a caller built is held to it where a document is loaded.
-    public static let nestingBound = 128
-
     // How many containers the deepest path through this value opens, counted
     // on a stack of the walk's own: a value handed in is a caller's, and how
     // deep they built it is not this process to spend.

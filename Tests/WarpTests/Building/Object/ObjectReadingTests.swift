@@ -652,8 +652,8 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([ObjectWriter().declaration(.procedure("App.entry")), .int(.max - 1)]),
-            .array([ObjectWriter().declaration(.procedure("App.other")), .int(1)])
+            .array([ObjectWriter.declaration(.procedure("App.entry")), .int(.max - 1)]),
+            .array([ObjectWriter.declaration(.procedure("App.other")), .int(1)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
@@ -741,8 +741,8 @@ struct ObjectReadingTests {
         }
 
         numbering[1] = .array([
-            .array([ObjectWriter().declaration(.procedure("App.entry")), .int(.max)]),
-            .array([ObjectWriter().declaration(.procedure("App.other")), .int(.max)])
+            .array([ObjectWriter.declaration(.procedure("App.entry")), .int(.max)]),
+            .array([ObjectWriter.declaration(.procedure("App.other")), .int(.max)])
         ])
         parts = parts.writing("numbering", with: .array(numbering))
 
@@ -858,7 +858,7 @@ struct ObjectReadingTests {
             return
         }
 
-        numbering[1] = .array(counts + [.array([ObjectWriter().declaration(.procedure("App.other")), .int(0)])])
+        numbering[1] = .array(counts + [.array([ObjectWriter.declaration(.procedure("App.other")), .int(0)])])
         parts = parts.writing("numbering", with: .array(numbering))
 
         // When / Then

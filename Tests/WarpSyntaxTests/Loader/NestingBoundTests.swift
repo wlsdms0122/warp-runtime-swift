@@ -248,6 +248,44 @@ struct NestingBoundTests {
         #expect(try await Executor().run(image) == construct.answer(deep: deep))
     }
 
+    @Test("a type aliases unfold to the bound is written in an object, and one past it writes none")
+    func aTypeUnfoldedToTheBound() async throws {
+        // Given. Aliases each standing for an array of the one before, and a
+        // cast to the last: a string one level deep that lowers as deep as
+        // the aliases are many.
+        let document = { (aliases: Int) -> Value in
+            var types: [Name: Value] = [Name(normal: "App.A0"): "Int"]
+
+            for alias in 1 ... aliases {
+                types[Name(normal: "App.A\(alias)")] = .string("Array<App.A\(alias - 1)>")
+            }
+
+            return [
+                "warp": 1,
+                "imports": [],
+                "types": .dictionary(Value.Dictionary(types)),
+                "procedures": [
+                    "entry": [
+                        "access": "public",
+                        "parameters": [["name": "p"]],
+                        "returns": "Any",
+                        "failing": ["cast_refused"],
+                        "result": ["as": ["of": ["ref": "p"], "type": .string("App.A\(aliases)")]]
+                    ]
+                ]
+            ]
+        }
+
+        // When. Built with the cast's type lowered to the bound, and one
+        // level past it.
+        let module = try Loader().load(document(Value.nestingBound - 1), identity: nil)
+        let past = try await Builder().compile([try Loader().load(document(Value.nestingBound), identity: nil)])
+
+        // Then. The one is written and read back; the other has no object.
+        try await objectReadsBack(module, beside: [])
+        #expect(throws: ObjectUnwritable.self) { try past[0].object() }
+    }
+
     // MARK: - Public
     // MARK: - Private
     // The document's object written as bytes and read back: an object nests

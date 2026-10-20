@@ -22,10 +22,12 @@ import Foundation
 // specification.
 struct ObjectWriter {
     // MARK: - Property
-    private let tables = ObjectTables { _ in TableWriting() }
+    private let compiled: Compiled
+    private let tables = ObjectTables { key in TableWriter(of: key) }
 
     // MARK: - Initializer
-    init() {
+    init(_ compiled: Compiled) {
+        self.compiled = compiled
     }
 
     // MARK: - Public
@@ -41,37 +43,43 @@ struct ObjectWriter {
 
     // The declaration that wrote a closure, its kind before its name. The
     // reading of it is `Field.declaration`.
-    func declaration(_ declaration: Closure.Declaration) -> Value {
+    static func declaration(_ declaration: Closure.Declaration) -> Value {
         typealias Tag = ObjectLayout.DeclarationTag
 
         switch declaration {
-        case let .procedure(declared): return tagged(Tag.procedure, name(declared))
-        case let .binding(declared): return tagged(Tag.binding, name(declared))
+        case let .procedure(declared): return .array([.int(Tag.procedure.rawValue), .string(declared.spelling)])
+        case let .binding(declared): return .array([.int(Tag.binding.rawValue), .string(declared.spelling)])
         }
     }
 
     // Every part by the key it stands under, the tables last, once every
     // other part has numbered what it holds. What this cannot write is a
     // closure holding a box of the run that made it or written by a document
-    // nobody wrote down, a dependency no fingerprint was worked out for, and
-    // a lowered type holding a struct's fields. Each is the one error thrown
-    // on the way down, and an object of what holds it is not written.
-    func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
+    // nobody wrote down, a dependency no fingerprint was worked out for, a
+    // lowered type holding a struct's fields, and a table nesting past the
+    // bound. Each is the one error thrown on the way down, and an object of
+    // what holds it is not written.
+    func value() throws(ObjectUnwritable) -> Value {
         let parts = try ObjectLayout.Key.allCases.map { (key) throws(ObjectUnwritable) -> (Name, Value) in
-            (key.name, try part(key, of: compiled))
+            (key.name, try part(key))
         }
 
         return .dictionary(Value.Dictionary(Dictionary(uniqueKeysWithValues: parts)))
     }
 
+    // MARK: - Private
     // A value written down: the data as it is, and a closure by what it is
     // spelled by, since the row a link gave it is the link's. A cell held
     // is a box of the run that made the closure, and no object holds one.
-    func value(_ value: Value) throws(ObjectUnwritable) -> Value {
-        tables.values.number(try valueEntry(value))
+    private func value(_ value: Value) throws(ObjectUnwritable) -> Value {
+        try tables.values.open()
+
+        return tables.values.append(try valueEntry(value))
     }
 
-    // MARK: - Private
+    // Written without a closure between a value and the values it holds, so
+    // a value nested to the bound spends little stack a level, a debug
+    // build's included.
     private func valueEntry(_ value: Value) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.ValueTag
 
@@ -95,14 +103,14 @@ struct ObjectWriter {
             return tagged(Tag.bytes, value)
 
         case let .array(items):
-            return tagged(Tag.array, .array(try items.map(self.value)))
+            return tagged(Tag.array, try values(items))
 
         case let .struct(instance):
             return tagged(
                 Tag.struct,
                 name(instance.name),
                 .array(instance.layout.fields.map(name)),
-                .array(try instance.values.map(self.value))
+                try values(instance.values)
             )
 
         // The keys in the key order the map holds them in, and the values
@@ -110,36 +118,55 @@ struct ObjectWriter {
         case let .dictionary(dictionary):
             return tagged(
                 Tag.dictionary,
-                .array(try dictionary.keys.map(self.value)),
-                .array(try dictionary.values.map(self.value))
+                try values(dictionary.keys),
+                try values(dictionary.values)
             )
 
-        // A document nobody wrote down is one an object cannot spell, so a
-        // closure such a document wrote is not written either.
         case let .procedure(closure):
-            guard case let .written(identity) = closure.writer.document else {
-                throw ObjectUnwritable("a value holds a closure a document nobody wrote down wrote")
+            return try closureForm(closure)
+        }
+    }
+
+    // The values a list holds, in its order.
+    private func values(_ values: some Sequence<Value>) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for value in values {
+            written.append(try self.value(value))
+        }
+
+        return .array(written)
+    }
+
+    // A document nobody wrote down is one an object cannot spell, so a
+    // closure such a document wrote is not written either.
+    private func closureForm(_ closure: Closure) throws(ObjectUnwritable) -> Value {
+        guard case let .written(identity) = closure.writer.document else {
+            throw ObjectUnwritable("a value holds a closure a document nobody wrote down wrote")
+        }
+
+        var captured: [Value] = []
+
+        for (slot, cell) in closure.captured {
+            guard case let .value(held) = cell else {
+                throw ObjectUnwritable("a value holds a closure holding a box of the run that made it")
             }
 
-            return tagged(
-                Tag.closure,
-                .bytes(identity.bytes),
-                declaration(closure.writer.declaration),
-                .int(closure.nth),
-                .array(try closure.captured.map { (slot, cell) throws(ObjectUnwritable) -> Value in
-                    guard case let .value(held) = cell else {
-                        throw ObjectUnwritable("a value holds a closure holding a box of the run that made it")
-                    }
-
-                    return .array([.int(slot), try self.value(held)])
-                })
-            )
+            captured.append(.array([.int(slot), try value(held)]))
         }
+
+        return tagged(
+            ObjectLayout.ValueTag.closure,
+            .bytes(identity.bytes),
+            Self.declaration(closure.writer.declaration),
+            .int(closure.nth),
+            .array(captured)
+        )
     }
 
     // One part of an object, by the one case that names its key, so a key the
     // layout gains is a case this has to write.
-    private func part(_ key: ObjectLayout.Key, of compiled: Compiled) throws(ObjectUnwritable) -> Value {
+    private func part(_ key: ObjectLayout.Key) throws(ObjectUnwritable) -> Value {
         switch key {
         case .object:
             return .int(ObjectLayout.format)
@@ -193,14 +220,14 @@ struct ObjectWriter {
                 try judged(row, spelled: true)
             })
 
+        // What the bodies number their calls from, and their types.
+        case .numbering:
+            return compiled.numbering.written(dropping: compiled.declared.count)
+
         case .lifted:
             return .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
                 try judged(row, spelled: false)
             })
-
-        // What the bodies number their calls from, and their types.
-        case .numbering:
-            return compiled.numbering.written(dropping: compiled.declared.count)
 
         case .typeNumbering:
             return compiled.typeNumbering.written
@@ -313,9 +340,14 @@ struct ObjectWriter {
     }
 
     private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
-        tables.types.number(try typeEntry(expression))
+        try tables.types.open()
+
+        return tables.types.append(try typeEntry(expression))
     }
 
+    // Written without a closure between a type and the types it holds, so a
+    // type nested to the bound spends little stack a level, a debug build's
+    // included.
     private func typeEntry(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
@@ -348,7 +380,7 @@ struct ObjectWriter {
             return tagged(Tag.dictionary, try type(key), try type(value))
 
         case let .procedure(written, constness, isolation):
-            return try procedureEntry(written, constness, isolation)
+            return try procedureForm(written, constness, isolation)
 
         case let .variable(held):
             return tagged(Tag.variable, try type(held))
@@ -359,12 +391,8 @@ struct ObjectWriter {
         case let .nullable(held):
             return tagged(Tag.nullable, try type(held))
 
-        // What a struct is applied to follows its name where it is applied
-        // to anything.
         case let .named(spelling, arguments):
-            guard !arguments.isEmpty else { return tagged(Tag.named, name(spelling)) }
-
-            return tagged(Tag.named, name(spelling), .array(try arguments.map(type)))
+            return try namedForm(spelling, arguments)
 
         case let .parameter(spelling):
             return tagged(Tag.parameter, name(spelling))
@@ -380,11 +408,24 @@ struct ObjectWriter {
         }
     }
 
+    // What a struct is applied to follows its name where it is applied to
+    // anything.
+    private func namedForm(_ spelling: Name, _ arguments: [TypeExpression]) throws(ObjectUnwritable) -> Value {
+        guard !arguments.isEmpty else { return tagged(ObjectLayout.TypeTag.named, name(spelling)) }
+
+        var written: [Value] = []
+
+        for argument in arguments {
+            written.append(try type(argument))
+        }
+
+        return tagged(ObjectLayout.TypeTag.named, name(spelling), .array(written))
+    }
+
     // A procedure type is `[parameters, returns, failing]`: the types it is
     // applied with, in position order, what it answers, and what it may fail
-    // with. Written without a closure between a type and the types it holds,
-    // since a procedure type may hold one as deep as a document may nest.
-    private func procedureEntry(
+    // with.
+    private func procedureForm(
         _ written: ProcedureType?,
         _ constness: Constness,
         _ isolation: Isolation
@@ -495,7 +536,9 @@ struct ObjectWriter {
     }
 
     private func lowered(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
-        tables.loweredTypes.number(try loweredEntry(type))
+        try tables.loweredTypes.open()
+
+        return tables.loweredTypes.append(try loweredEntry(type))
     }
 
     private func loweredEntry(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
@@ -638,7 +681,9 @@ struct ObjectWriter {
     }
 
     private func address(_ address: Address) throws(ObjectUnwritable) -> Value {
-        tables.addresses.number(.array([.int(address.slot), .array(try address.steps.map(walk))]))
+        try tables.addresses.open()
+
+        return tables.addresses.append(.array([.int(address.slot), .array(try address.steps.map(walk))]))
     }
 
     private func walk(_ step: Step) throws(ObjectUnwritable) -> Value {
@@ -660,7 +705,9 @@ struct ObjectWriter {
     }
 
     private func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
-        tables.operations.number(try operationEntry(operation))
+        try tables.operations.open()
+
+        return tables.operations.append(try operationEntry(operation))
     }
 
     private func operationEntry(_ operation: Operation) throws(ObjectUnwritable) -> Value {
