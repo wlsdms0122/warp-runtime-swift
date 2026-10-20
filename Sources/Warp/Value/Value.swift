@@ -332,6 +332,11 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // MARK: - Property
+    // How deep a written tree may nest: a document, and every tree an object
+    // writes as the entries of a table. The bound is exact: a reading takes a
+    // tree within it and refuses the first level past it.
+    public static let nestingBound = 128
+
     // What is said wherever a value stands where a document can reach it.
     static let procedureIsNotData = "a procedure is not data, so it cannot stand"
         + " where a document reaches; a body a program carries is written as a closure"
