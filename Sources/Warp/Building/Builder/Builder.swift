@@ -124,9 +124,7 @@ public struct Builder: Sendable {
 
         try ModuleGraph.stand(compiled)
 
-        let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: linkage)
-
-        try DeclarationChecker().judge(compiled, in: declaring)
+        let declaring = namespace.table(standing: compiled, numbered: linkage)
 
         let signatures = signatures(of: assembled)
 
@@ -225,7 +223,7 @@ public struct Builder: Sendable {
         let laying = standing.map { position in modules[position] }
         let documents: [any Declaring] = compiled + laying
 
-        let declaring = try DeclarationChecker().types(of: namespace, standing: documents, numbered: laid.linkage)
+        let declaring = namespace.table(standing: documents, numbered: laid.linkage)
 
         // Every declaration these documents are compiled beside, by the
         // spelling it was declared by: what the documents behind them left on
@@ -458,14 +456,10 @@ public struct Builder: Sendable {
         let namespace = try TypeNamespace(compiled)
 
         // Each object stands after what it names, the order the documents it
-        // was compiled from stood in, and every type it names is declared
-        // here, since it may have been compiled beside other documents than
-        // these.
+        // was compiled from stood in.
         try ModuleGraph.stand(compiled)
 
-        let declaring = try DeclarationChecker().types(of: namespace, standing: compiled, numbered: Linkage())
-
-        try DeclarationChecker().judge(compiled, in: declaring)
+        let declaring = namespace.table(standing: compiled, numbered: Linkage())
 
         let signatures = signatures(of: assembled)
 

@@ -16,44 +16,11 @@ struct DeclarationChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // The type table of a namespace, and the check that each name a
-    // declaration mentions is declared in it. A type name is resolved here for
-    // the same reason a procedure name is: unreached code still has to
-    // compile, and a signature naming a type nobody declared is a defect
-    // whether or not this run walks that way. This judges content: what a
-    // declaration holds, not what it is called.
-    func types(
-        of namespace: TypeNamespace,
-        standing documents: [any Declaring],
-        numbered linkage: Linkage
-    ) throws -> TypeTable {
-        let declared = namespace.types
-
-        // A document's types take a run of type rows the way its declarations
-        // take a run of table rows, in the order the documents stand.
-        let table = TypeTable(
-            types: declared.mapValues(\.held),
-            contracts: namespace.contracts.mapValues(\.held),
-            typeMembers: namespace.typeMembers.values.map(\.held),
-            standing: Prelude.types.keys.sorted() + documents.flatMap { document in document.types.keys.sorted() },
-            of: linkage
-        )
-
-        // The table is walked whole rather than per module: it arrives
-        // carrying where each name was written, and asking a module again
-        // would be spelling that a second way. What a mention asks of a
-        // contract is not asked here: which claims answer is each document's
-        // reach, and a document is judged against its own where it is
-        // compiled.
-        for (_, declaration) in declared.sorted(by: { $0.key < $1.key }) {
-            try mentioned(in: declaration.held, at: declaration.place, resolve: table, answering: false)
-        }
-
-        return table
-    }
-
     // Every type a document names, held to being one the link declares, and
-    // every map type it names keyed by a type that answers `Hashable`. A
+    // every map type it names keyed by a type that answers `Hashable`. A type
+    // name is resolved here for the same reason a procedure name is:
+    // unreached code still has to compile, and a signature naming a type
+    // nobody declared is a defect whether or not a run walks that way. A
     // document is read on its own: what is judged is its own text, and the
     // table is what the link declared, answering with the claims the
     // document stands on.
@@ -120,35 +87,6 @@ struct DeclarationChecker {
         }
     }
 
-    // Every type an object's signatures name, held to being one the link
-    // declares: an object compiled against other documents may name what
-    // none of these declares. What it asked of a contract was answered
-    // where it was compiled, within its reach, so it is not asked again.
-    // What its declared types name is held by `types`, and what its bodies
-    // stand on where their numbers are answered with rows.
-    func judge(_ objects: [Compiled], in table: TypeTable) throws {
-        for object in objects {
-            try judge(contracts: object.contracts, of: object.document, in: table, answering: false)
-            try judge(
-                heads: Set(object.claims.keys).union(object.members.keys).union(object.typeMembers.keys),
-                of: object.document,
-                in: table,
-                answering: false
-            )
-
-            for row in object.table {
-                try judge(
-                    row.signature,
-                    at: .procedure(row.label.spelling, in: object.document),
-                    in: table,
-                    answering: false
-                )
-            }
-
-            try judge(typeMembers: object.typeMembers, of: object.document, in: table, answering: false)
-        }
-    }
-
     // MARK: - Private
     // A contract's procedures are declarations the way a document's own are,
     // and what a call is judged against is what was judged. `Self` is read
@@ -156,8 +94,7 @@ struct DeclarationChecker {
     private func judge(
         contracts: [Name: Contract],
         of document: Place.Document,
-        in table: TypeTable,
-        answering: Bool = true
+        in table: TypeTable
     ) throws {
         for (contract, declared) in contracts.sorted(by: { $0.key < $1.key }) {
             let home = Place.contract(contract.spelling, in: document)
@@ -167,7 +104,7 @@ struct DeclarationChecker {
             for (name, asked) in declared.procedures.sorted(by: { $0.key < $1.key }) {
                 let place = home.part(.procedures).key(name.spelling)
 
-                try judge(asked.read(of: contract), at: place, in: table, answering: answering)
+                try judge(asked.read(of: contract), at: place, in: table)
             }
         }
     }
@@ -179,15 +116,14 @@ struct DeclarationChecker {
     private func judge(
         heads: Set<Head>,
         of document: Place.Document,
-        in table: TypeTable,
-        answering: Bool = true
+        in table: TypeTable
     ) throws {
         for head in heads.sorted() {
             guard let mention = head.mention else { continue }
 
             let place = Place(document.home(of: head), in: document)
 
-            try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table, answering: answering)
+            try mentioned(in: mention, at: place, bounds: head.bounds, resolve: table)
 
             // A head writes its bounds beside the names, so a bound stands where
             // the head is written.
@@ -240,16 +176,14 @@ struct DeclarationChecker {
     private func judge(
         typeMembers: [Head: [Name: TypeExpression]],
         of document: Place.Document,
-        in table: TypeTable,
-        answering: Bool = true
+        in table: TypeTable
     ) throws {
         for member in TypeMember.listed(typeMembers) {
             try mentioned(
                 in: member.type,
                 at: .typeMember(member, in: document),
                 bounds: member.head.applying(table.types[member.head.type]).bounds,
-                resolve: table,
-                answering: answering
+                resolve: table
             )
         }
     }
@@ -289,8 +223,7 @@ struct DeclarationChecker {
     private func judge(
         _ signature: Signature,
         at place: Place,
-        in table: TypeTable,
-        answering: Bool = true
+        in table: TypeTable
     ) throws {
         for (position, parameter) in signature.parameters.enumerated() {
             try mentioned(
@@ -298,8 +231,7 @@ struct DeclarationChecker {
                 at: place.part(.parameters).index(position),
                 bounds: signature.bounds,
                 sameTypes: signature.sameTypes,
-                resolve: table,
-                answering: answering
+                resolve: table
             )
         }
 
@@ -308,8 +240,7 @@ struct DeclarationChecker {
             at: place.part(.returns),
             bounds: signature.bounds,
             sameTypes: signature.sameTypes,
-            resolve: table,
-            answering: answering
+            resolve: table
         )
 
         try judge(bounds: signature.bounds, at: { parameter in place.bound(parameter, of: signature) }, in: table)
@@ -326,8 +257,7 @@ struct DeclarationChecker {
                 in: .associatedType(of: member.of, name: member.name),
                 at: at,
                 bounds: signature.bounds,
-                resolve: table,
-                answering: answering
+                resolve: table
             )
         }
 
@@ -339,11 +269,10 @@ struct DeclarationChecker {
                 at: at,
                 bounds: signature.bounds,
                 sameTypes: signature.sameTypes,
-                resolve: table,
-                answering: answering
+                resolve: table
             )
 
-            guard answering, label.associated != nil else { continue }
+            guard label.associated != nil else { continue }
 
             let types = table.loweredTypes
             let held = types.contracts(bounding: label, under: signature.bounds)
@@ -419,12 +348,11 @@ struct DeclarationChecker {
         at place: Place,
         bounds: [Name: Set<Name>] = [:],
         sameTypes: [Name: TypeExpression] = [:],
-        resolve table: TypeTable,
-        answering: Bool = true
+        resolve table: TypeTable
     ) throws {
         // A part, judged under the same signature.
         func part(_ type: TypeExpression, at place: Place) throws {
-            try mentioned(in: type, at: place, bounds: bounds, sameTypes: sameTypes, resolve: table, answering: answering)
+            try mentioned(in: type, at: place, bounds: bounds, sameTypes: sameTypes, resolve: table)
         }
 
         switch type {
@@ -470,8 +398,7 @@ struct DeclarationChecker {
                 at: place,
                 bounds: bounds,
                 sameTypes: sameTypes,
-                in: table,
-                answering: answering
+                in: table
             )
 
         case let .array(inner), let .inout(inner), let .variable(inner):
@@ -480,9 +407,7 @@ struct DeclarationChecker {
         case let .dictionary(key, value):
             try part(key, at: place)
             try part(value, at: place)
-            if answering {
-                try keyed(by: key, at: place, bounds: bounds, sameTypes: sameTypes, in: table)
-            }
+            try keyed(by: key, at: place, bounds: bounds, sameTypes: sameTypes, in: table)
 
         case let .nullable(inner):
             try part(inner, at: place)
@@ -552,8 +477,7 @@ struct DeclarationChecker {
     private func mentioned(
         in declared: TypeDeclaration,
         at place: Place,
-        resolve table: TypeTable,
-        answering: Bool = true
+        resolve table: TypeTable
     ) throws {
         switch declared {
         case let .struct(fields, typeParameters, bounds):
@@ -562,8 +486,7 @@ struct DeclarationChecker {
                     in: field,
                     at: place.part(.fields).key(name.spelling),
                     bounds: bounds,
-                    resolve: table,
-                    answering: answering
+                    resolve: table
                 )
             }
 
@@ -577,7 +500,7 @@ struct DeclarationChecker {
             )
 
         case let .alias(type):
-            try mentioned(in: type, at: place, resolve: table, answering: answering)
+            try mentioned(in: type, at: place, resolve: table)
         }
     }
 
@@ -591,8 +514,7 @@ struct DeclarationChecker {
         at place: Place,
         bounds: [Name: Set<Name>],
         sameTypes: [Name: TypeExpression],
-        in table: TypeTable,
-        answering: Bool = true
+        in table: TypeTable
     ) throws {
         guard case let .struct(_, typeParameters, declaredBounds) = table.types[name] else {
             guard arguments.isEmpty else {
@@ -615,8 +537,6 @@ struct DeclarationChecker {
                 at: place
             )
         }
-
-        guard answering else { return }
 
         let types = table.loweredTypes
 

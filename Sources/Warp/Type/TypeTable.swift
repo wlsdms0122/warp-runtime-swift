@@ -53,11 +53,7 @@ public struct TypeTable: Sendable {
         contracts: [Name: Contract] = [:]
     ) throws {
         let declaring = try Module(types: types, contracts: contracts)
-        let table = try DeclarationChecker().types(
-            of: try TypeNamespace([declaring]),
-            standing: [declaring],
-            numbered: Linkage()
-        )
+        let table = try TypeNamespace([declaring]).table(standing: [declaring], numbered: Linkage())
 
         try DeclarationChecker().judge([declaring], in: table)
 
