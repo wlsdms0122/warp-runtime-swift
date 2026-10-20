@@ -399,7 +399,7 @@ struct LeaveTests {
     }
 
     @Test("a break carries nothing")
-    func leavingDoesNotWidenALoop() throws {
+    func aBreakCarriesNothing() throws {
         // Given. A loop answers nothing, so a `break` has nothing to carry.
         let sut: Value = [
             "body": [
