@@ -118,7 +118,11 @@ struct Fanout {
         let held = Warp.Expression.reference([.name("held"), .name("value")])
 
         return Procedure(
-            signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
+            signature: Signature(
+                parameters: [Parameter(name: "value", type: .int)],
+                returns: .int,
+                failing: .these([CastRefused.type])
+            ),
             body: [
                 Statement(
                     binding: .constant("held"),

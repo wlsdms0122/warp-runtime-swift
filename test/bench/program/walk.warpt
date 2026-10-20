@@ -1,79 +1,23 @@
-warpt 1
-{
-  imports [
-    "Standard.Collection.map"
-    "Standard.Comparable.lessThan"
-  ]
-  procedures {
-    entry {
-      access "public"
-      body [
-        {
-          let "items"
-          value [
-            1
-          ]
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  let "mapped"
-                  value {
-                    call {
-                      arguments [
-                        {
-                          ref "items"
-                        }
-                        {
-                          closure {
-                            parameters [
-                              {
-                                name "item"
-                                type "Int"
-                              }
-                            ]
-                            result {
-                              ref "item"
-                            }
-                          }
-                        }
-                      ]
-                      procedure "Standard.Collection.map"
-                    }
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "items"
-      }
-      returns "Array<Int>"
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Collection.map)
+(import Standard.Comparable.lessThan)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns (array Int))
+  (body
+    (let items (array 1))
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let mapped
+            (call Standard.Collection.map items
+              (closure
+                (const)
+                (isolated)
+                (parameter item (type Int))
+                (returns Int)
+                (result item))))))))
+  (result items))
