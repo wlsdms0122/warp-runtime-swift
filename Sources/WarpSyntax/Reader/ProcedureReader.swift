@@ -25,12 +25,13 @@ struct ProcedureReader: Decodable {
         try Self.gate(decoder)
 
         let block = try BlockReader(reading: decoder).block
+        let access = try Self.access(in: decoder)
 
         // A procedure has no name of its own. It is named by the key its module
         // declares it under.
         self.procedure = Procedure(
             description: try Self.description(in: decoder),
-            access: try Self.access(in: decoder) ?? .internal,
+            access: access ?? .internal,
             signature: try SignatureFieldsReader(reading: decoder).signature,
             body: block.body,
             result: block.result

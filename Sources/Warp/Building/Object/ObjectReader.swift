@@ -1051,9 +1051,9 @@ struct ObjectReader {
         return read
     }
 
-    // Read without a closure between an operation and the operations it
-    // holds, so an expression nested to the bound spends little stack a
-    // level, a debug build's included.
+    // One function a kind, and the operations, arguments and instructions an
+    // operation lists read by loops, so an expression nested to the bound
+    // spends little stack a level, a debug build's included.
     private func operationEntry(_ value: Value) throws -> Operation {
         var cursor = try FieldCursor(value, of: "operation")
         let read: Operation
@@ -1121,14 +1121,17 @@ struct ObjectReader {
     }
 
     private func applyOperation(_ cursor: inout FieldCursor) throws -> Operation {
-        let callee = try operation(cursor.next())
-        var arguments: [Argument] = []
+        .apply(try operation(cursor.next()), arguments: try arguments(cursor.next()))
+    }
 
-        for written in try Field(cursor.next(), of: "arguments").list({ written in written }) {
-            arguments.append(try argument(written))
+    private func arguments(_ written: Value) throws -> [Argument] {
+        var read: [Argument] = []
+
+        for held in try Field(written, of: "arguments").list({ held in held }) {
+            read.append(try argument(held))
         }
 
-        return .apply(callee, arguments: arguments)
+        return read
     }
 
     private func castOperation(_ cursor: inout FieldCursor) throws -> Operation {
@@ -1237,7 +1240,7 @@ struct ObjectReader {
             contract: try name(cursor.next()),
             procedure: try name(cursor.next()),
             first: try operation(cursor.next()),
-            arguments: try Field(cursor.next(), of: "arguments").list(argument)
+            arguments: try arguments(cursor.next())
         )
 
         try cursor.end()

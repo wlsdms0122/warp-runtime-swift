@@ -732,7 +732,7 @@ struct Validator: Sendable {
     // failure. The statement already held it to where a name may be
     // introduced.
     //
-    // Each kind is checked by a function of its own, so a level of an
+    // The parts of each kind are checked out of line, so a level of an
     // expression nested to the bound spends little stack, a debug build's
     // included.
     private func validate(

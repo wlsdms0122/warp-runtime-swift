@@ -17,7 +17,7 @@ import Foundation
 // of those is always there.
 protocol Traversable {
     // Everything held in here, each with where it was found, appended to
-    // `found` in the order it is written, each thing before what it holds.
+    // `found`, each thing before what it holds.
     // Filled rather than returned, so a level of a tree nested to the bound
     // spends little stack and copies nothing it found.
     func walk<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail, into found: inout [(Trail, Node)])

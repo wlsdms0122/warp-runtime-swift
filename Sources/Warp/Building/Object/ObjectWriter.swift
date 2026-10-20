@@ -720,9 +720,9 @@ struct ObjectWriter {
         return tables.operations.append(try operationEntry(operation))
     }
 
-    // Written without a closure between an operation and the operations it
-    // holds, so an expression nested to the bound spends little stack a
-    // level, a debug build's included.
+    // One function a kind, and the operations, arguments and instructions an
+    // operation lists written by loops, so an expression nested to the bound
+    // spends little stack a level, a debug build's included.
     private func operationEntry(_ operation: Operation) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.OperationTag
 
@@ -885,7 +885,7 @@ struct ObjectWriter {
             name(dispatch.contract),
             name(dispatch.procedure),
             try operation(dispatch.first),
-            .array(try dispatch.arguments.map(argument))
+            try arguments(dispatch.arguments)
         ])
     }
 
