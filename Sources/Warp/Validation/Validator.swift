@@ -626,7 +626,7 @@ struct Validator: Sendable {
                     )
                 }
 
-                if statement.expression.answersNothing, case .assignment = binding {
+                if case .loop = statement.expression, case .assignment = binding {
                     throw ValidationError(
                         "a loop answers nothing, so there is nothing to write."
                             + " What a round keeps is written to an outer variable with 'set'",
