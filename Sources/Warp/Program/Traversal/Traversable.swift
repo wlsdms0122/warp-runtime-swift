@@ -16,11 +16,23 @@ import Foundation
 // because a statement is found by its name and by its position and only one
 // of those is always there.
 protocol Traversable {
-    // Everything held in here, each with where it was found.
-    func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Node)]
+    // Everything held in here, each with where it was found, appended to
+    // `found` in the order it is written, each thing before what it holds.
+    // Filled rather than returned, so a level of a tree nested to the bound
+    // spends little stack and copies nothing it found.
+    func walk<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail, into found: inout [(Trail, Node)])
 }
 
 extension Traversable {
+    // Everything held in here, each with where it was found.
+    func walked<Trail>(at trail: Trail, stepping: (Trail, Place.Step) -> Trail) -> [(Trail, Node)] {
+        var found: [(Trail, Node)] = []
+
+        walk(at: trail, stepping: stepping, into: &found)
+
+        return found
+    }
+
     // Every expression held in here, each with where it was found.
     func subexpressions<Trail>(
         at trail: Trail,

@@ -13,25 +13,28 @@ import Testing
 
 // A document nested as deep as the wire admits is a document, and reading,
 // building and running one on an ordinary stack is what an implementation
-// owes it. Two constructs: a call inside a call, which is the deepest thing a
-// program ordinarily writes, and a closure inside a closure, which spends the
-// most per level. A type and a path are one string in the tree, and their
-// levels count on from the containers around it.
+// owes it. Three constructs: a call inside a call, which is the deepest thing a
+// program ordinarily writes, a closure inside a closure, which spends the
+// most per level, and an array inside an array, which opens the most levels
+// for the containers it writes. A type and a path are one string in the
+// tree, and their levels count on from the containers around it.
 @Suite("A document nested as deep as the wire admits")
 struct NestingBoundTests {
     enum Construct {
         case call
         case closure
+        case array
 
         // MARK: - Property
         // How many containers a level of this construct opens. A level of a
         // call opens three, the last its list of arguments, where the next
         // level and the other argument both stand; a level of a closure opens
-        // five.
+        // five, and one of an array one.
         var opened: Int {
             switch self {
             case .call: 3
             case .closure: 5
+            case .array: 1
             }
         }
 
@@ -80,6 +83,11 @@ struct NestingBoundTests {
                     ]
                 }
                 entry = ["access": "public", "returns": "Int", "result": expression]
+
+            case .array:
+                imports = []
+                expression = (0 ..< deep).reduce(["ref": .string(read)]) { inner, _ in [inner] }
+                entry = ["access": "public", "returns": "Any", "result": expression]
             }
 
             return [
@@ -94,6 +102,7 @@ struct NestingBoundTests {
             switch self {
             case .call: .int(1 + deep)
             case .closure: .int(1)
+            case .array: (0 ..< deep).reduce(.int(1)) { inner, _ in [inner] }
             }
         }
 
@@ -166,7 +175,7 @@ struct NestingBoundTests {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Test
-    @Test("is read, built and run", arguments: [Construct.call, .closure])
+    @Test("is read, built and run", arguments: [Construct.call, .closure, .array])
     func isReadBuiltAndRun(_ construct: Construct) async throws {
         // Given. A document the wire admits, one level short of one it refuses
         // on the way out and at the door alike.
@@ -221,7 +230,7 @@ struct NestingBoundTests {
         try await objectReadsBack(module, beside: [])
     }
 
-    @Test("a path at the bottom of a deep document nests as deep as the rest allows", arguments: [Construct.call, .closure])
+    @Test("a path at the bottom of a deep document nests as deep as the rest allows", arguments: [Construct.call, .closure, .array])
     func aPathAtTheBottomOfADeepDocument(_ construct: Construct) async throws {
         // Given. Half the construct's levels, and under them a path as deep as
         // the containers around it leave room for, and one deeper.

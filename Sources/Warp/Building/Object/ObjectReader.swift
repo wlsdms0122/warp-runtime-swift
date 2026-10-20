@@ -951,11 +951,22 @@ struct ObjectReader {
     private func body(_ value: Value) throws -> LoweredBody {
         var cursor = try FieldCursor(value, of: "body")
         let read = LoweredBody(
-            instructions: try cursor.field().list(instruction),
+            instructions: try instructions(cursor.next(), of: "body"),
             result: try cursor.field().maybe(operation)
         )
 
         try cursor.end()
+
+        return read
+    }
+
+    // The instructions a list holds, in its order.
+    private func instructions(_ written: Value, of part: String) throws -> [Instruction] {
+        var read: [Instruction] = []
+
+        for held in try Field(written, of: part).list({ held in held }) {
+            read.append(try instruction(held))
+        }
 
         return read
     }
@@ -1040,6 +1051,9 @@ struct ObjectReader {
         return read
     }
 
+    // Read without a closure between an operation and the operations it
+    // holds, so an expression nested to the bound spends little stack a
+    // level, a debug build's included.
     private func operationEntry(_ value: Value) throws -> Operation {
         var cursor = try FieldCursor(value, of: "operation")
         let read: Operation
@@ -1047,77 +1061,19 @@ struct ObjectReader {
         switch ObjectLayout.OperationTag(rawValue: try cursor.field().integer()) {
         case .literal: read = .literal(try self.value(cursor.next()))
         case .local: read = .local(try address(cursor.next()))
-        case .array: read = .array(try Field(cursor.next(), of: "array").list(operation))
+        case .array: read = .array(try operations(cursor.next(), of: "array"))
         case .struct: read = .struct(try structOperation(cursor.next()))
-        case .dictionary:
-            read = .dictionary(try Field(cursor.next(), of: "dictionary").list { written in
-                var entry = try FieldCursor(written, of: "entry")
-                let read = (key: try operation(entry.next()), value: try operation(entry.next()))
-
-                try entry.end()
-
-                return read
-            })
-        case .closure:
-            read = .closure(
-                try cursor.field().count(),
-                captures: try Field(cursor.next(), of: "captures").list { written in
-                    var held = try FieldCursor(written, of: "capture")
-                    let taken = (try held.field().count(), try held.field().count())
-
-                    try held.end()
-
-                    return taken
-                }
-            )
-
-        case .apply:
-            read = .apply(
-                try operation(cursor.next()),
-                arguments: try Field(cursor.next(), of: "arguments").list(argument)
-            )
-
-        case .cast:
-            read = .cast(
-                try operation(cursor.next()),
-                as: try lowered(cursor.next()),
-                optional: try cursor.field().flag()
-            )
-
-        case .conditional:
-            read = .conditional(
-                try operation(cursor.next()),
-                then: try Field(cursor.next(), of: "then").list(instruction),
-                else: try cursor.field().maybe { written in
-                    try Field(written, of: "otherwise").list(instruction)
-                }
-            )
-
-        case .loop:
-            read = .loop(
-                while: try operation(cursor.next()),
-                body: try Field(cursor.next(), of: "body").list(instruction),
-                round: try cursor.field().maybe(counted)
-            )
-
-        case .attempt:
-            read = .attempt(
-                try body(cursor.next()),
-                rescue: try body(cursor.next()),
-                failure: try cursor.field().maybe(counted)
-            )
-
+        case .dictionary: read = .dictionary(try entries(cursor.next()))
+        case .closure: read = try closureOperation(&cursor)
+        case .apply: read = try applyOperation(&cursor)
+        case .cast: read = try castOperation(&cursor)
+        case .conditional: read = try conditionalOperation(&cursor)
+        case .loop: read = try loopOperation(&cursor)
+        case .attempt: read = try attemptOperation(&cursor)
         case .call: read = .call(try callOperation(cursor.next()))
         case .dispatch: read = .dispatch(try dispatchOperation(cursor.next()))
-        case .leave:
-            read = .leave(
-                try reach(cursor.next()),
-                target: try cursor.field().maybe(name),
-                try cursor.field().maybe(operation)
-            )
-
-        case nil:
-            throw ObjectRefused("'operation' does something this reads none of")
+        case .leave: read = try leaveOperation(&cursor)
+        case nil: throw ObjectRefused("'operation' does something this reads none of")
         }
 
         try cursor.end()
@@ -1125,15 +1081,129 @@ struct ObjectReader {
         return read
     }
 
+    // The operations a list holds, in its order.
+    private func operations(_ written: Value, of part: String) throws -> [Operation] {
+        var read: [Operation] = []
+
+        for number in try Field(written, of: part).list({ number in number }) {
+            read.append(try operation(number))
+        }
+
+        return read
+    }
+
+    // Each key before its value.
+    private func entries(_ written: Value) throws -> [(key: Operation, value: Operation)] {
+        var read: [(key: Operation, value: Operation)] = []
+
+        for held in try Field(written, of: "dictionary").list({ held in held }) {
+            var entry = try FieldCursor(held, of: "entry")
+
+            read.append((key: try operation(entry.next()), value: try operation(entry.next())))
+            try entry.end()
+        }
+
+        return read
+    }
+
+    private func closureOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        .closure(
+            try cursor.field().count(),
+            captures: try Field(cursor.next(), of: "captures").list { written in
+                var held = try FieldCursor(written, of: "capture")
+                let taken = (try held.field().count(), try held.field().count())
+
+                try held.end()
+
+                return taken
+            }
+        )
+    }
+
+    private func applyOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        let callee = try operation(cursor.next())
+        var arguments: [Argument] = []
+
+        for written in try Field(cursor.next(), of: "arguments").list({ written in written }) {
+            arguments.append(try argument(written))
+        }
+
+        return .apply(callee, arguments: arguments)
+    }
+
+    private func castOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        .cast(
+            try operation(cursor.next()),
+            as: try lowered(cursor.next()),
+            optional: try cursor.field().flag()
+        )
+    }
+
+    private func conditionalOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        let condition = try operation(cursor.next())
+        let then = try instructions(cursor.next(), of: "then")
+        var otherwise: [Instruction]?
+
+        if let written = try cursor.field().maybe({ written in written }) {
+            otherwise = try instructions(written, of: "otherwise")
+        }
+
+        return .conditional(condition, then: then, else: otherwise)
+    }
+
+    private func loopOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        .loop(
+            while: try operation(cursor.next()),
+            body: try instructions(cursor.next(), of: "body"),
+            round: try cursor.field().maybe(counted)
+        )
+    }
+
+    private func attemptOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        .attempt(
+            try body(cursor.next()),
+            rescue: try body(cursor.next()),
+            failure: try cursor.field().maybe(counted)
+        )
+    }
+
+    private func leaveOperation(_ cursor: inout FieldCursor) throws -> Operation {
+        let reach = try reach(cursor.next())
+        let target = try cursor.field().maybe(name)
+
+        guard let written = try cursor.field().maybe({ written in written }) else {
+            return .leave(reach, target: target, nil)
+        }
+
+        return .leave(reach, target: target, try operation(written))
+    }
+
     private func structOperation(_ value: Value) throws -> StructOperation {
         var cursor = try FieldCursor(value, of: "struct")
         let held = try layout(cursor.next())
         let read = try StructOperation(
             layout: held,
-            judging: try cursor.field().list(operation)
+            judging: try operations(cursor.next(), of: "struct")
         )
 
         try cursor.end()
+
+        return read
+    }
+
+    // What a call writes at each position, and nothing where what it hands
+    // in place stands.
+    private func handedArguments(_ written: Value) throws -> [Operation?] {
+        var read: [Operation?] = []
+
+        for held in try Field(written, of: "arguments").list({ held in held }) {
+            guard let number = try Field(held, of: "argument").maybe({ number in number }) else {
+                read.append(nil)
+                continue
+            }
+
+            read.append(try operation(number))
+        }
 
         return read
     }
@@ -1142,9 +1212,7 @@ struct ObjectReader {
         var cursor = try FieldCursor(value, of: "call")
         let read = try CallOperation(
             procedure: try cursor.field().count(),
-            arguments: try Field(cursor.next(), of: "arguments").list { written in
-                try Field(written, of: "argument").maybe(operation)
-            },
+            arguments: try handedArguments(cursor.next()),
             handing: try Field(cursor.next(), of: "handed").list { written in
                 var held = try FieldCursor(written, of: "handed")
                 let taken = CallOperation.Handed(

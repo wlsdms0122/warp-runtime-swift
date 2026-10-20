@@ -279,7 +279,7 @@ struct ValidationTests {
         let construct = Warp.Expression.conditional(.literal(.bool(true)), then: [], else: nil)
         let places: [(Body, String)] = [
             ([Statement(expression: .call(Call(selector: "App.f", arguments: [construct])))], "body[0].call.arguments[0]"),
-            ([Statement(expression: .apply(.closure(Procedure(body: [])), arguments: [.array([construct])]))], "body[0].call.arguments[0]"),
+            ([Statement(expression: .apply(.closure(Procedure(body: [])), arguments: [.array([construct])]))], "body[0].call.arguments[0][0]"),
             ([Statement(expression: .conditional(construct, then: [], else: nil))], "body[0].conditional.condition"),
             ([Statement(expression: .loop(while: construct, body: []))], "body[0].loop.condition"),
             ([Statement(binding: .constant("list"), expression: .array([construct]))], "body.list[0].array[0]"),

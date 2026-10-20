@@ -245,37 +245,14 @@ public indirect enum Expression: Sendable {
         "this construct binds the name, a loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
 
-    // Whether a construct (a form that runs a body, or leaves) sits anywhere
-    // in this expression read as data. A closure is data (the body it carries
-    // is its own), so the walk does not enter it.
-    var holdsConstruct: Bool {
+    // Whether this is a construct: a form that runs a body, or leaves.
+    var isConstruct: Bool {
         switch self {
-        case .literal, .reference, .closure:
-            return false
-
-        case let .array(array):
-            return array.contains { element in element.holdsConstruct }
-
-        case let .struct(literal):
-            return literal.values.contains { field in field.holdsConstruct }
-
-        case let .dictionary(entries):
-            return entries.contains { entry in entry.key.holdsConstruct || entry.value.holdsConstruct }
-
-        case let .apply(callee, arguments):
-            return callee.holdsConstruct
-                || arguments.contains { argument in argument.holdsConstruct }
-
-        case let .call(call):
-            return call.arguments.contains { argument in argument.holdsConstruct }
-
-        // A cast runs no body (it names a type and judges what arrives against
-        // it) so it holds a construct only where the value it reads does.
-        case let .cast(value, _, _):
-            return value.holdsConstruct
-
         case .conditional, .loop, .attempt, .leave:
             return true
+
+        case .literal, .reference, .closure, .array, .struct, .dictionary, .apply, .call, .cast:
+            return false
         }
     }
 
