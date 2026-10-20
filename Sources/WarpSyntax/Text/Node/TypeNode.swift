@@ -33,7 +33,7 @@ struct TypeNode {
     // MARK: - Public
     // The text a node writes, where the node is the one that text reads as.
     func text(of datum: Datum) throws -> String {
-        let text = try syntax(of: datum, depth: 1).spelling
+        let text = try syntax(of: datum, depth: 0).spelling
 
         guard
             let read = (try? TypeParser().parse(text)).flatMap(self.datum(of:)),

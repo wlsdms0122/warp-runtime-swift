@@ -21,7 +21,7 @@ struct PathNode {
     // MARK: - Initializer
     // MARK: - Public
     func text(of datum: Datum) throws -> String {
-        let path = try self.path(of: datum, depth: 1)
+        let path = try self.path(of: datum, depth: 0)
         let rendered = path.rendered
 
         guard (try? PathParser().parse(rendered)) == path else {

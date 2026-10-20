@@ -98,6 +98,20 @@ struct TypeNodeTests {
         #expect(throws: Unplaced.self) { try TypeNode().datum(of: text) }
     }
 
+    @Test("a type node nests as deep as the bound, counted from the type written inside the outermost")
+    func aNodeNestsToTheBound() throws {
+        // Given
+        let bound = Value.nestingBound
+        let node = { (levels: Int) in String(repeating: "(array ", count: levels) + "Int" + String(repeating: ")", count: levels) }
+        let text = { (levels: Int) in String(repeating: "Array<", count: levels) + "Int" + String(repeating: ">", count: levels) }
+
+        // When / Then
+        #expect(try TypeNode().text(of: Self.datum(node(bound))) == text(bound))
+        #expect(try DatumWriter().line(of: TypeNode().datum(of: text(bound))) == node(bound))
+        #expect(throws: Unplaced.self) { try TypeNode().text(of: Self.datum(node(bound + 1))) }
+        #expect(throws: Unplaced.self) { try TypeNode().datum(of: text(bound + 1)) }
+    }
+
     // MARK: - Public
     // MARK: - Private
     private static func datum(_ text: String) throws -> Datum {
