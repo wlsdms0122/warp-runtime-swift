@@ -64,16 +64,6 @@ struct Compiler {
             compiling.context(of: origin)
         }
 
-        // This document's declarations by the rows they stand at: what it
-        // declares is its own whoever else may name it.
-        func row(of symbol: Symbol) throws -> Int {
-            guard let row = compiling.lowering.own(origin)[symbol.declared] else {
-                throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
-            }
-
-            return row
-        }
-
         // What this document declares, by the spelling a call in it writes.
         // Its own rows do not stand yet, and this is what says what they take
         // until they do.
@@ -115,7 +105,7 @@ struct Compiler {
         //
         // Every call the body writes is checked here too, reached or not:
         // callee declared, arguments taken.
-        func resolved(_ symbol: Symbol) async throws -> Procedure {
+        func resolved(_ symbol: Symbol, at row: Int) async throws -> Procedure {
             if let done = resolvedBodies[symbol.declared] { return done }
 
             let declaration = symbol.procedure
@@ -171,7 +161,7 @@ struct Compiler {
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.lower(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
+                try compiling.lower(row, body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure
@@ -271,8 +261,8 @@ struct Compiler {
         // the order its rows stand in. What a document says has to hold
         // whether or not a run walks that way, so which declarations are
         // judged is not a question any run answers.
-        for symbol in holding {
-            _ = try await resolved(symbol)
+        for (symbol, row) in zip(holding, standing) {
+            _ = try await resolved(symbol, at: row)
         }
 
         // The types its bodies stand on, written as this document's own
