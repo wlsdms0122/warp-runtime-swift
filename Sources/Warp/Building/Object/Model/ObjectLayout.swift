@@ -30,9 +30,22 @@ enum ObjectLayout {
         case typeNumbering
         case variables
         case constants
+        case typeTable
+        case loweredTypeTable
+        case valueTable
+        case operationTable
+        case addressTable
 
         // MARK: - Property
         var name: Name { Name(normal: rawValue) }
+
+        // Whether the key holds one of the tables the other parts number into.
+        var isTable: Bool {
+            switch self {
+            case .typeTable, .loweredTypeTable, .valueTable, .operationTable, .addressTable: true
+            default: false
+            }
+        }
 
         // MARK: - Initializer
         // MARK: - Public

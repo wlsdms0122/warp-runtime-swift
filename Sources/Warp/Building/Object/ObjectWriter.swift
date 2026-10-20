@@ -15,10 +15,15 @@ import Foundation
 // the same format reads it back.
 //
 // Every list a name keys is written in name order, so one object is one
-// value and one value is one writing of bytes. The layout is the language's,
-// under *objects* in the specification.
+// value and one value is one writing of bytes. What nests, a type, a lowered
+// type, a value, an operation and an address, is written as an entry of its
+// table and held by its number, the tables filled in the order the parts are
+// written. The layout is the language's, under *objects* in the
+// specification.
 struct ObjectWriter {
     // MARK: - Property
+    private let tables = ObjectTables { _ in TableWriting() }
+
     // MARK: - Initializer
     init() {
     }
@@ -45,7 +50,8 @@ struct ObjectWriter {
         }
     }
 
-    // Every part by the key it stands under. What this cannot write is a
+    // Every part by the key it stands under, the tables last, once every
+    // other part has numbered what it holds. What this cannot write is a
     // closure holding a box of the run that made it or written by a document
     // nobody wrote down, a dependency no fingerprint was worked out for, and
     // a lowered type holding a struct's fields. Each is the one error thrown
@@ -62,6 +68,11 @@ struct ObjectWriter {
     // spelled by, since the row a link gave it is the link's. A cell held
     // is a box of the run that made the closure, and no object holds one.
     func value(_ value: Value) throws(ObjectUnwritable) -> Value {
+        tables.values.number(try valueEntry(value))
+    }
+
+    // MARK: - Private
+    private func valueEntry(_ value: Value) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.ValueTag
 
         switch value {
@@ -126,7 +137,6 @@ struct ObjectWriter {
         }
     }
 
-    // MARK: - Private
     // One part of an object, by the one case that names its key, so a key the
     // layout gains is a case this has to write.
     private func part(_ key: ObjectLayout.Key, of compiled: Compiled) throws(ObjectUnwritable) -> Value {
@@ -202,6 +212,21 @@ struct ObjectWriter {
 
         case .constants:
             return .array(compiled.constants.map(name))
+
+        case .typeTable:
+            return .array(tables.types.entries)
+
+        case .loweredTypeTable:
+            return .array(tables.loweredTypes.entries)
+
+        case .valueTable:
+            return .array(tables.values.entries)
+
+        case .operationTable:
+            return .array(tables.operations.entries)
+
+        case .addressTable:
+            return .array(tables.addresses.entries)
         }
     }
 
@@ -288,6 +313,10 @@ struct ObjectWriter {
     }
 
     private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
+        tables.types.number(try typeEntry(expression))
+    }
+
+    private func typeEntry(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
         switch expression {
@@ -319,12 +348,7 @@ struct ObjectWriter {
             return tagged(Tag.dictionary, try type(key), try type(value))
 
         case let .procedure(written, constness, isolation):
-            return tagged(
-                Tag.procedure,
-                try ObjectWriter.maybe(written, procedureType),
-                self.constness(constness),
-                self.isolation(isolation)
-            )
+            return try procedureEntry(written, constness, isolation)
 
         case let .variable(held):
             return tagged(Tag.variable, try type(held))
@@ -358,13 +382,26 @@ struct ObjectWriter {
 
     // A procedure type is `[parameters, returns, failing]`: the types it is
     // applied with, in position order, what it answers, and what it may fail
-    // with.
-    private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
-        .array([
-            .array(try type.parameters.map(self.type)),
-            try self.type(type.returns),
-            failing(type.failing)
-        ])
+    // with. Written without a closure between a type and the types it holds,
+    // since a procedure type may hold one as deep as a document may nest.
+    private func procedureEntry(
+        _ written: ProcedureType?,
+        _ constness: Constness,
+        _ isolation: Isolation
+    ) throws(ObjectUnwritable) -> Value {
+        var signature: [Value] = []
+
+        if let written {
+            var parameters: [Value] = []
+
+            for parameter in written.parameters {
+                parameters.append(try type(parameter))
+            }
+
+            signature = [.array([.array(parameters), try type(written.returns), failing(written.failing)])]
+        }
+
+        return tagged(ObjectLayout.TypeTag.procedure, .array(signature), self.constness(constness), self.isolation(isolation))
     }
 
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
@@ -458,6 +495,10 @@ struct ObjectWriter {
     }
 
     private func lowered(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
+        tables.loweredTypes.number(try loweredEntry(type))
+    }
+
+    private func loweredEntry(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.LoweredTypeTag
 
         switch type {
@@ -597,7 +638,7 @@ struct ObjectWriter {
     }
 
     private func address(_ address: Address) throws(ObjectUnwritable) -> Value {
-        .array([.int(address.slot), .array(try address.steps.map(walk))])
+        tables.addresses.number(.array([.int(address.slot), .array(try address.steps.map(walk))]))
     }
 
     private func walk(_ step: Step) throws(ObjectUnwritable) -> Value {
@@ -619,6 +660,10 @@ struct ObjectWriter {
     }
 
     private func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
+        tables.operations.number(try operationEntry(operation))
+    }
+
+    private func operationEntry(_ operation: Operation) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.OperationTag
 
         switch operation {

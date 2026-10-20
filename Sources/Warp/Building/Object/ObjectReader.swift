@@ -12,7 +12,9 @@ import Foundation
 // The layout is the language's, under *objects* in the specification: the
 // parts stand under their keys, and inside a part the fields stand in the
 // order the page lays them down. What tells a reading that a writing was laid
-// out some other way is the format number, read before anything else.
+// out some other way is the format number, read before anything else. What
+// nests is read out of its table where a part holds its number, in the order
+// the parts are read, which is the order the writing numbered it in.
 struct ObjectReader {
     // MARK: - Property
     // Which document this is reading an object of. Every identity a reading
@@ -21,9 +23,16 @@ struct ObjectReader {
     // holds it to the one the object was kept under.
     private let identity: Identity?
 
+    private let tables: ObjectTables<TableReading>
+
     // MARK: - Initializer
     init(of identity: Identity?) {
+        self.init(identity, tables: ObjectTables { key in TableReading(of: key.rawValue) })
+    }
+
+    private init(_ identity: Identity?, tables: ObjectTables<TableReading>) {
         self.identity = identity
+        self.tables = tables
     }
 
     // MARK: - Public
@@ -53,11 +62,35 @@ struct ObjectReader {
             )
         }
 
-        // Every part read by the one case that names its key, so a key the
-        // layout gains is a case this has to read. The rows the document
-        // declares are what the numbering counts from, and the numbering spells
-        // the rows its bodies lifted, so those two are kept as written until
-        // every part is in.
+        let parts = try Keyed(map)
+        var written: [ObjectLayout.Key: Value] = [:]
+
+        for (key, part) in parts.parts where key.isTable {
+            written[key] = part
+        }
+
+        let tables = try ObjectTables { key in try TableReading(written: written[key] ?? .null, of: key.rawValue) }
+
+        return try ObjectReader(identity, tables: tables).compiled(from: parts)
+    }
+
+    // A value as the writing laid it down: data as it is, and a closure by
+    // what it is spelled by, standing without a row until a link answers one.
+    func value(_ number: Value) throws -> Value {
+        let (held, entry) = try tables.values.open(number)
+        let read = try valueEntry(entry)
+
+        try tables.values.finish(held)
+
+        return read
+    }
+
+    // MARK: - Private
+    // Every part read by the one case that names its key, so a key the layout
+    // gains is a case this has to read. The rows the document declares are
+    // what the numbering counts from, and the numbering spells the rows its
+    // bodies lifted, so those are named once every part is in.
+    private func compiled(from parts: Keyed) throws -> Compiled {
         var dependencies: [Fingerprint] = []
         var types: [Name: TypeDeclaration] = [:]
         var contracts: [Name: Contract] = [:]
@@ -66,13 +99,13 @@ struct ObjectReader {
         var typeMembers: [Head: [Name: TypeExpression]] = [:]
         var importedClaims: Set<ClaimPair> = []
         var declaredRows: [Judged] = []
-        var liftedRows: [Value] = []
+        var liftedRows: [WrittenRow] = []
         var numbered: Value = .null
         var typeNumbering = LoweredTypeNumbering(types: [])
         var variables: [(name: Name, value: Value)] = []
         var constants: [Name] = []
 
-        for (key, part) in try Keyed(map).parts {
+        for (key, part) in parts.parts {
             switch key {
             // Read above, before the map is held to the layout.
             case .object:
@@ -143,11 +176,18 @@ struct ObjectReader {
             // The rows the document declares stand under their spellings.
             case .rows:
                 declaredRows = try Field(part, of: "rows").list { written in
-                    try judged(written, spelled: nil)
+                    var cursor = try FieldCursor(written, of: "row")
+                    let label = try name(cursor.next())
+
+                    return try row(&cursor).judged(label)
                 }
 
             case .lifted:
-                liftedRows = try Field(part, of: "lifted").list { written in written }
+                liftedRows = try Field(part, of: "lifted").list { written in
+                    var cursor = try FieldCursor(written, of: "row")
+
+                    return try row(&cursor)
+                }
 
             // What the document sends and how many closures each declaration
             // wrote, which is what its bodies number their calls from.
@@ -164,7 +204,15 @@ struct ObjectReader {
 
             case .constants:
                 constants = try Field(part, of: "constants").ordered(name)
+
+            // Read where a part holds what they number.
+            case .typeTable, .loweredTypeTable, .valueTable, .operationTable, .addressTable:
+                continue
             }
+        }
+
+        for table in [tables.types, tables.loweredTypes, tables.values, tables.operations, tables.addresses] {
+            try table.end()
         }
 
         let declared = declaredRows.map(\.label)
@@ -176,12 +224,12 @@ struct ObjectReader {
         }
 
         let numbering = try Numbering(written: numbered, declaring: declared)
-        let table = declaredRows + (try liftedRows.enumerated().map { index, written in
+        let table = declaredRows + (try liftedRows.enumerated().map { index, row in
             guard let writer = numbering.writer(of: index) else {
                 throw ObjectRefused("a lifted row stands where the numbering counts no closure")
             }
 
-            return try judged(written, spelled: writer.by.name)
+            return try row.judged(writer.by.name)
         })
 
         let spelled = Set(declared)
@@ -212,9 +260,7 @@ struct ObjectReader {
         )
     }
 
-    // A value as the writing laid it down: data as it is, and a closure by
-    // what it is spelled by, standing without a row until a link answers one.
-    func value(_ value: Value) throws -> Value {
+    private func valueEntry(_ value: Value) throws -> Value {
         var cursor = try FieldCursor(value, of: "value")
         let read: Value
 
@@ -284,7 +330,6 @@ struct ObjectReader {
         return read
     }
 
-    // MARK: - Private
     private func keyed<T>(
         _ value: Value,
         of part: String,
@@ -428,10 +473,14 @@ struct ObjectReader {
     // type parameters and their bounds where it takes any, or the type an
     // alias stands for.
     private func declaration(_ value: Value) throws -> TypeDeclaration {
+        guard case .array = value else {
+            return .alias(try expression(value))
+        }
+
         var cursor = try FieldCursor(value, of: "type")
 
         guard ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) == .struct else {
-            return .alias(try expression(value))
+            throw ObjectRefused("a declared type is a struct under its tag, or the number of the type an alias stands for")
         }
 
         let fields = try keyed(cursor.next(), of: "struct", expression)
@@ -464,11 +513,24 @@ struct ObjectReader {
         return .struct(fields, typeParameters: typeParameters, bounds: bounds)
     }
 
-    private func expression(_ value: Value) throws -> TypeExpression {
+    private func expression(_ number: Value) throws -> TypeExpression {
+        let (held, entry) = try tables.types.open(number)
+        let read = try expressionEntry(entry)
+
+        try tables.types.finish(held)
+
+        return read
+    }
+
+    // A dispatch, and a function a form, so a type holding another spends
+    // little more than its own form's frame a level.
+    private func expressionEntry(_ value: Value) throws -> TypeExpression {
         var cursor = try FieldCursor(value, of: "type")
         let read: TypeExpression
 
-        switch ObjectLayout.TypeTag(rawValue: try cursor.field().integer()) {
+        let tag = ObjectLayout.TypeTag(rawValue: try cursor.field().integer())
+
+        switch tag {
         case .any: read = .any
         case .never: read = .never
         case .null: read = .null
@@ -476,51 +538,80 @@ struct ObjectReader {
         case .int: read = .int
         case .double: read = .double
         case .string: read = .string
-        case .array: read = .array(try expression(cursor.next()))
-        case .dictionary: read = .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
-        // A struct type is written once, as a declared type's own.
-        case .struct: throw ObjectRefused("'type' writes a struct, which stands only as a type a document declares")
-        case .procedure:
-            read = .procedure(
-                try cursor.field().maybe(procedureType),
-                try constness(cursor.next()),
-                try isolation(cursor.next())
-            )
-
-        case .variable: read = .variable(try expression(cursor.next()))
-        case .`inout`: read = .inout(try expression(cursor.next()))
-        case .nullable: read = .nullable(try expression(cursor.next()))
-        case .named:
-            let named = try name(cursor.next())
-
-            read = .named(named, arguments: try cursor.isAtEnd ? [] : applied(cursor.next(), expression))
-
+        case .array: read = try arrayForm(&cursor)
+        case .dictionary: read = try dictionaryForm(&cursor)
+        case .struct: throw unstructured()
+        case .procedure: read = try procedureForm(&cursor)
+        case .variable, .`inout`, .nullable: read = try markedForm(&cursor, tag)
+        case .named: read = try namedForm(&cursor)
         case .parameter: read = .parameter(name: try name(cursor.next()))
-
-        // One contract is written by its name, so a composition joins two
-        // or more, the way a document's does.
-        case .composition:
-            let names = try Field(cursor.next(), of: "composition").ordered(name)
-
-            guard names.count > 1 else {
-                throw ObjectRefused("'composition' joins fewer than two names, and one is written as the name")
-            }
-
-            read = .composition(Set(names))
-
-        case .selfType:
-            read = .selfType
-
-        case .associatedType:
-            read = .associatedType(of: try name(cursor.next()), name: try name(cursor.next()))
-
-        case nil:
-            throw ObjectRefused("'type' names a kind this reads none of")
+        case .composition: read = try compositionForm(&cursor)
+        case .selfType: read = .selfType
+        case .associatedType: read = .associatedType(of: try name(cursor.next()), name: try name(cursor.next()))
+        case nil: throw unkinded()
         }
 
         try cursor.end()
 
         return read
+    }
+
+    private func arrayForm(_ cursor: inout FieldCursor) throws -> TypeExpression {
+        .array(try expression(cursor.next()))
+    }
+
+    private func dictionaryForm(_ cursor: inout FieldCursor) throws -> TypeExpression {
+        .dictionary(key: try expression(cursor.next()), value: try expression(cursor.next()))
+    }
+
+    // `var`, `inout` and `?`.
+    private func markedForm(_ cursor: inout FieldCursor, _ tag: ObjectLayout.TypeTag?) throws -> TypeExpression {
+        let held = try expression(cursor.next())
+
+        switch tag {
+        case .variable: return .variable(held)
+        case .`inout`: return .inout(held)
+        default: return .nullable(held)
+        }
+    }
+
+    private func namedForm(_ cursor: inout FieldCursor) throws -> TypeExpression {
+        let named = try name(cursor.next())
+
+        guard !cursor.isAtEnd else { return .named(named) }
+
+        var arguments: [TypeExpression] = []
+
+        for argument in try Field(cursor.next(), of: "arguments").list({ argument in argument }) {
+            arguments.append(try expression(argument))
+        }
+
+        guard !arguments.isEmpty else {
+            throw ObjectRefused("'arguments' holds nothing, and a struct applied to no types writes no list")
+        }
+
+        return .named(named, arguments: arguments)
+    }
+
+    // One contract is written by its name, so a composition joins two or
+    // more, the way a document's does.
+    private func compositionForm(_ cursor: inout FieldCursor) throws -> TypeExpression {
+        let names = try Field(cursor.next(), of: "composition").ordered(name)
+
+        guard names.count > 1 else {
+            throw ObjectRefused("'composition' joins fewer than two names, and one is written as the name")
+        }
+
+        return .composition(Set(names))
+    }
+
+    // A struct type is written once, as a declared type's own.
+    private func unstructured() -> ObjectRefused {
+        ObjectRefused("'type' writes a struct, which stands only as a type a document declares")
+    }
+
+    private func unkinded() -> ObjectRefused {
+        ObjectRefused("'type' names a kind this reads none of")
     }
 
     private func counted(_ value: Value) throws -> Int {
@@ -561,17 +652,26 @@ struct ObjectReader {
         return Contract(procedures: procedures, types: Set(types), bounds: bounds)
     }
 
-    private func procedureType(_ value: Value) throws -> ProcedureType {
-        var cursor = try FieldCursor(value, of: "procedure type")
-        let read = ProcedureType(
-            parameters: try Field(cursor.next(), of: "parameters").list(expression),
-            returns: try expression(cursor.next()),
-            failing: try failing(cursor.next())
-        )
+    // Read without a closure between a type and the types it holds, since a
+    // procedure type may hold one as deep as a document may nest.
+    private func procedureForm(_ cursor: inout FieldCursor) throws -> TypeExpression {
+        let written = try cursor.field().maybe { signature in signature }
+        var type: ProcedureType?
 
-        try cursor.end()
+        if let written {
+            var signature = try FieldCursor(written, of: "procedure type")
+            var parameters: [TypeExpression] = []
 
-        return read
+            for parameter in try Field(signature.next(), of: "parameters").list({ parameter in parameter }) {
+                parameters.append(try expression(parameter))
+            }
+
+            type = ProcedureType(parameters: parameters, returns: try expression(signature.next()), failing: try failing(signature.next()))
+
+            try signature.end()
+        }
+
+        return .procedure(type, try constness(cursor.next()), try isolation(cursor.next()))
     }
 
     private func signature(_ value: Value) throws -> Signature {
@@ -687,7 +787,16 @@ struct ObjectReader {
         return try refusing { try Layout(name: named, judging: written) }
     }
 
-    private func lowered(_ value: Value) throws -> LoweredType {
+    private func lowered(_ number: Value) throws -> LoweredType {
+        let (held, entry) = try tables.loweredTypes.open(number)
+        let read = try loweredEntry(entry)
+
+        try tables.loweredTypes.finish(held)
+
+        return read
+    }
+
+    private func loweredEntry(_ value: Value) throws -> LoweredType {
         var cursor = try FieldCursor(value, of: "lowered type")
         let read: LoweredType
 
@@ -758,17 +867,13 @@ struct ObjectReader {
         return read
     }
 
-    // A declared row carries its spelling; a lifted row is handed the one
-    // its numbering answers.
-    private func judged(_ value: Value, spelled: Name?) throws -> Judged {
-        var cursor = try FieldCursor(value, of: "row")
-        let label = try spelled ?? name(cursor.next())
-        let signature = try signature(cursor.next())
-        let read = try Judged(
-            label: label,
-            signature: signature,
+    // A row after its spelling, which a declared row writes before it and a
+    // lifted row is handed by its numbering.
+    private func row(_ cursor: inout FieldCursor) throws -> WrittenRow {
+        let read = WrittenRow(
+            signature: try signature(cursor.next()),
             access: try access(cursor.next()),
-            judging: try implementation(cursor.next())
+            implementation: try implementation(cursor.next())
         )
 
         try cursor.end()
@@ -869,12 +974,25 @@ struct ObjectReader {
         return read
     }
 
-    private func address(_ value: Value) throws -> Address {
+    private func address(_ number: Value) throws -> Address {
+        let (held, entry) = try tables.addresses.open(number)
+        let read = try addressEntry(entry)
+
+        try tables.addresses.finish(held)
+
+        return read
+    }
+
+    private func addressEntry(_ value: Value) throws -> Address {
         var cursor = try FieldCursor(value, of: "address")
-        let read = Address(
-            slot: try cursor.field().count(),
-            steps: try cursor.field().list(walk)
-        )
+        let slot = try cursor.field().count()
+        var steps: [Step] = []
+
+        for step in try cursor.field().list({ step in step }) {
+            steps.append(try walk(step))
+        }
+
+        let read = Address(slot: slot, steps: steps)
 
         try cursor.end()
 
@@ -900,7 +1018,16 @@ struct ObjectReader {
         return read
     }
 
-    private func operation(_ value: Value) throws -> Operation {
+    private func operation(_ number: Value) throws -> Operation {
+        let (held, entry) = try tables.operations.open(number)
+        let read = try operationEntry(entry)
+
+        try tables.operations.finish(held)
+
+        return read
+    }
+
+    private func operationEntry(_ value: Value) throws -> Operation {
         var cursor = try FieldCursor(value, of: "operation")
         let read: Operation
 

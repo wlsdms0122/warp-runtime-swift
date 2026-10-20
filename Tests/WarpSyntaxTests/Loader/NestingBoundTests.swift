@@ -194,8 +194,9 @@ struct NestingBoundTests {
         let module = try Loader().load(document, identity: nil)
         let image = try await Builder().build([module] + Module.standard)
 
-        // Then. It answers.
+        // Then. It answers, and its object is written and read back.
         #expect(try await Executor().run(image) == construct.answer(deep: construct.levels))
+        try await objectReadsBack(module, beside: Module.standard)
     }
 
     @Test("a type or a path as deep as a document may is read, built and run", arguments: Spelling.allCases)
@@ -215,8 +216,9 @@ struct NestingBoundTests {
         let module = try Loader().load(document, identity: nil)
         let image = try await Builder().build([module])
 
-        // Then. It answers.
+        // Then. It answers, and its object is written and read back.
         #expect(try await Executor().run(image) == .int(0))
+        try await objectReadsBack(module, beside: [])
     }
 
     @Test("a path at the bottom of a deep document nests as deep as the rest allows", arguments: [Construct.call, .closure])
@@ -248,4 +250,12 @@ struct NestingBoundTests {
 
     // MARK: - Public
     // MARK: - Private
+    // The document's object written as bytes and read back: an object nests
+    // no deeper for a document nesting deeper.
+    private func objectReadsBack(_ module: Module, beside standing: [Module]) async throws {
+        let compiled = try await Builder(fingerprinting: Fingerprint.of).compile([module] + standing)
+        let bytes = try BinaryEncoding().data(from: try compiled[0].object())
+
+        _ = try Compiled(written: try BinaryEncoding().value(from: bytes), of: compiled[0].identity)
+    }
 }

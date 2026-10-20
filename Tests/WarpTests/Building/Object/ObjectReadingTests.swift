@@ -118,18 +118,28 @@ struct ObjectReadingTests {
 
     @Test("is refused where a name keys two entries")
     func aNameWrittenTwice() async throws {
-        // Given. A real object whose declared types list repeats one entry.
-        var parts = try await parts()
+        // Given. A real object whose declared types list one name twice, each
+        // entry holding the type it was written with.
+        let sut = try Module(
+            types: ["App.One": .struct(["x": .int]), "App.Two": .struct(["y": .int])],
+            procedures: [
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+            ]
+        )
+
+        var parts = try await parts(of: sut)
 
         guard case let .array(types) = parts["types"],
-            let first = types.first
+            types.count == 2,
+            case let .array(first) = types[0],
+            case let .array(second) = types[1]
         else {
             Issue.record("an object is written as its parts under their keys")
 
             return
         }
 
-        parts = parts.writing("types", with: .array(types + [first]))
+        parts = parts.writing("types", with: .array([types[0], .array([first[0], second[1]])]))
 
         // When / Then
         #expect {
@@ -280,12 +290,9 @@ struct ObjectReadingTests {
 
         var parts = try await parts(of: sut)
 
-        guard case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[3],
-            case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
+        guard let number = result(of: parts),
+            case var .array(operations) = parts["operationTable"],
+            case var .array(operation) = operations[number],
             case var .array(built) = operation[1],
             case var .array(layout) = built[0],
             case let .array(names) = layout[1],
@@ -301,12 +308,8 @@ struct ObjectReadingTests {
         layout[1] = .array(names.reversed())
         built[0] = .array(layout)
         operation[1] = .array(built)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[3] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
+        operations[number] = .array(operation)
+        parts = parts.writing("operationTable", with: .array(operations))
 
         // When / Then
         #expect {
@@ -389,14 +392,18 @@ struct ObjectReadingTests {
         var parts = try await parts(of: sut)
 
         guard case let .array(types) = parts["types"],
-            types.count == 2
+            types.count == 2,
+            case let .array(first) = types[0],
+            case let .array(second) = types[1]
         else {
             Issue.record("an object writes its declared types in name order")
 
             return
         }
 
-        parts = parts.writing("types", with: .array(types.reversed()))
+        // The names turned around, each entry holding the type it was
+        // written with.
+        parts = parts.writing("types", with: .array([.array([second[0], first[1]]), .array([first[0], second[1]])]))
 
         // When / Then
         #expect {
@@ -429,15 +436,13 @@ struct ObjectReadingTests {
 
         var parts = try await parts(of: sut)
 
-        guard case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[3],
-            case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(literal) = result[0],
-            case var .array(value) = literal[1],
+        guard let number = result(of: parts),
+            case let .array(operations) = parts["operationTable"],
+            case let .array(literal) = operations[number],
+            case let .int(held) = literal[1],
+            case var .array(values) = parts["valueTable"],
+            case var .array(value) = values[held],
             case let .array(names) = value[2],
-            case let .array(values) = value[3],
             names.count == 2
         else {
             Issue.record("an object writes a struct literal as its names and values")
@@ -445,15 +450,11 @@ struct ObjectReadingTests {
             return
         }
 
+        // The names turned around, each value left where the writing put it,
+        // since a value is read where it is held.
         value[2] = .array(names.reversed())
-        value[3] = .array(values.reversed())
-        literal[1] = .array(value)
-        result[0] = .array(literal)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[3] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
+        values[held] = .array(value)
+        parts = parts.writing("valueTable", with: .array(values))
 
         // When / Then
         #expect {
@@ -905,6 +906,22 @@ struct ObjectReadingTests {
         return #expect(throws: ObjectRefused.self) {
             try Compiled(written: .dictionary(parts), of: mine.identity)
         }
+    }
+
+    // The number of the operation the first row's body answers with, which
+    // stands in the operation table.
+    private func result(of parts: Value.Dictionary) -> Int? {
+        guard case let .array(rows) = parts["rows"],
+            case let .array(row) = rows.first,
+            case let .array(implementation) = row[3],
+            case let .array(body) = implementation[1],
+            case let .array(result) = body[1],
+            case let .int(number) = result.first
+        else {
+            return nil
+        }
+
+        return number
     }
 
     // The object as written, its parts under their keys, so a test mutates
