@@ -98,43 +98,36 @@ struct ValidationTests {
         }
     }
 
-    @Test("a name the module bound is not introduced again at any depth")
-    func aBoundNameIsNotIntroducedAgainAtAnyDepth() {
-        // Given. Compiling folds a constant wherever its name is read, so a name
-        // introduced under that spelling would never be the one that answers.
-        // The rule is the whole body's: a sub scope is where a reader is least
-        // able to see that the name was already taken.
-        func module(introducing statement: Statement) throws -> Module {
-            try Module(
-                constants: ["limit": .literal(.int(3))],
-                procedures: [
-                    entryName: Procedure(
-                        access: .public,
-                        body: [
-                            Statement(expression: .conditional(.literal(.bool(true)), then: [statement], else: nil))
-                        ],
-                        result: reference("limit")
-                    )
-                ]
-            )
-        }
+    @Test("a body inside another may introduce a name the module bound")
+    func aNestedBodyMayIntroduceABoundName() throws {
+        // Given. Inside the arm `limit` is the arm's own
+        let sut = try Module(
+            constants: ["limit": .literal(.int(3))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [Statement(binding: .constant("limit"), expression: .literal(.int(9)))],
+                                else: nil
+                            )
+                        )
+                    ],
+                    result: reference("limit")
+                )
+            ]
+        )
 
         // When / Then
-        #expect {
-            try Validator().validate(
-                module(introducing: Statement(binding: .constant("limit"), expression: .literal(.int(9))))
-            )
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
-        }
+        try Validator().validate(sut)
     }
 
-    @Test("but writing one is refused for what it is, not for introducing a name")
+    @Test("but writing one is refused as a write")
     func writingABoundNameIsRefusedAsAWrite() throws {
-        // Given. An assignment names a name rather than introducing one, and
-        // the two mistakes have different fixes: one is to pick another
-        // spelling, the other is to declare a variable.
+        // Given. An assignment names a name rather than introducing one, and a
+        // constant is no variable
 
         // When / Then
         let error = #expect(throws: ValidationError.self) {
@@ -154,10 +147,10 @@ struct ValidationTests {
         #expect(error?.message.contains("Declare it as a variable to write it") == true)
     }
 
-    @Test("nor by the name a construct hands its body")
-    func aBoundNameIsNotWhatAConstructHandsItsBody() {
-        // Given. The same rule where the name is what a loop's round and the
-        // failure an attempt rescues are bound under.
+    @Test("and so may the name a construct hands its body")
+    func aConstructMayHandItsBodyABoundName() throws {
+        // Given. The name a loop's round and the failure an attempt rescues
+        // are bound under
         func module(running expression: Warp.Expression) throws -> Module {
             try Module(
                 constants: ["limit": .literal(.int(3))],
@@ -174,80 +167,35 @@ struct ValidationTests {
         let body = Block(body: [Statement(expression: .literal(.null))])
 
         // When / Then
-        #expect {
-            try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body.body)))
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
-        }
-        #expect {
-            try Validator().validate(module(running: .attempt(body, rescue: body)))
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
-        }
+        try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body.body)))
+        try Validator().validate(module(running: .attempt(body, rescue: body)))
     }
 
-    @Test("nor inside a closure a constant holds")
-    func aBoundNameIsNotIntroducedInsideAConstantsClosure() {
-        // Given. A constant's own expression is a body like any other. Read
-        // without this rule, a closure among the constants may introduce a name
-        // one of its siblings has, and what that name means then depends on
-        // which of the two the reader is standing in.
+    @Test("and so may a closure a constant holds, a sibling's spelling or a variable's")
+    func aConstantsClosureMayIntroduceABoundName() throws {
+        // Given. A constant's own expression is a body like any other
         func module(_ procedure: Procedure) throws -> Module {
             try Module(
                 constants: [
                     "apply": .closure(procedure),
                     "limit": .literal(.int(3))
                 ],
+                variables: ["count": .literal(.int(0))],
                 procedures: [entryName: Procedure(access: .public, body: [])]
             )
         }
 
         // When / Then. The two ways a closure introduces a name of its own
-        #expect {
-            try Validator().validate(module(Procedure(
-                signature: Signature(parameters: [Parameter(name: "limit", type: .int)], returns: .int),
-                body: [],
-                result: reference("limit")
-            )))
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
-        }
-        #expect {
-            try Validator().validate(module(Procedure(
-                signature: Signature(returns: .int),
-                body: [Statement(binding: .constant("limit"), expression: .literal(.int(9)))],
-                result: reference("limit")
-            )))
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'limit' collides with a name the module bound, which it would take the place of")
-        }
-    }
-
-    @Test("nor a variable's spelling inside a closure a constant holds")
-    func aVariablesNameIsNotIntroducedInsideAConstantsClosure() {
-        // Given. A constant cannot read `count`, and its closure still may not
-        // introduce the spelling
-        let closure = Procedure(
+        try Validator().validate(module(Procedure(
+            signature: Signature(parameters: [Parameter(name: "limit", type: .int)], returns: .int),
+            body: [],
+            result: reference("limit")
+        )))
+        try Validator().validate(module(Procedure(
             signature: Signature(returns: .int),
-            body: [Statement(binding: .constant("count"), expression: .literal(.int(1)))],
+            body: [Statement(binding: .constant("count"), expression: .literal(.int(9)))],
             result: reference("count")
-        )
-
-        // When / Then
-        #expect {
-            try Module(
-                constants: ["apply": .closure(closure)],
-                variables: ["count": .literal(.int(0))],
-                procedures: [entryName: Procedure(access: .public, body: [])]
-            )
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("'count' collides with a name the module bound, which it would take the place of")
-        }
+        )))
     }
 
     @Test("a constant sees the constants declared beside it and nothing else")
@@ -343,41 +291,6 @@ struct ValidationTests {
         }
     }
 
-    @Test("a closure a constant holds may not introduce a sibling's name")
-    func aClosureConstantMayNotShadowASibling() {
-        // Given. The rule a body is held to at load, met here from the caller's
-        // side. Neither module is made, and both are the same mistake: a name the
-        // module bound, introduced again where it would take the constant's
-        // place.
-        func module(introducing statement: Statement?) throws -> Module {
-            try Module(
-                constants: [
-                    "apply": .closure(Procedure(
-                        signature: Signature(
-                            parameters: statement == nil
-                                ? [Parameter(name: "zebra", type: .int)]
-                                : [],
-                            returns: .int
-                        ),
-                        body: statement.map { one in [one] } ?? [],
-                        result: reference("zebra")
-                    )),
-                    "zebra": .literal(.int(7))
-                ],
-                procedures: [entryName: Procedure(access: .public, body: [])]
-            )
-        }
-
-        // When / Then. The two ways a closure introduces a name of its own
-        for introduced in [nil, Statement(binding: .constant("zebra"), expression: .literal(.int(7)))] {
-            #expect {
-                try module(introducing: introduced)
-            } throws: { error in
-                error is ValidationError && "\(error)".contains("'zebra' collides with a name the module bound")
-            }
-        }
-    }
-
     @Test("a procedure whose sends stand apart is refused where the module is made")
     func aProcedureSendingFromScatteredPlacesIsRefused() {
         // Given / When / Then. A run reaches a sent procedure by the place the procedure
@@ -447,7 +360,8 @@ struct ValidationTests {
 
     @Test("a parameter is a name the body may read and may not introduce again")
     func parametersAreVisibleAndDeclared() throws {
-        // Given. A parameter's spelling is taken for the whole body
+        // Given. A parameter is a name the body introduced before its first
+        // statement
         let readsIt = Procedure(
             signature: Signature(parameters: [Parameter(name: "name", type: .string)]),
             body: [Statement(binding: .constant("greeting"), expression: reference("name"))]
@@ -463,7 +377,7 @@ struct ValidationTests {
         #expect {
             try Module(procedures: [entryName: redeclaresIt])
         } throws: { error in
-            error is ValidationError && "\(error)".contains("'name' is a parameter of the procedure")
+            error is ValidationError && "\(error)".contains("'name' is a parameter this body takes")
         }
     }
 
@@ -1172,11 +1086,9 @@ struct ValidationTests {
         )
     }
 
-    @Test("a closure parameter may not take a constant's name")
-    func aClosureParameterDoesNotShadowAConstant() throws {
-        // Given. Compiling folds a constant wherever its name is read, so a
-        // closure parameter under that name would never be the one that
-        // answers; refused where the top-level signature's is
+    @Test("a closure parameter may take a constant's spelling")
+    func aClosureParameterMayShadowAConstant() throws {
+        // Given. Inside the closure `greeting` is its parameter
         let procedure = Procedure(
             signature: Signature(),
             body: [
@@ -1192,16 +1104,11 @@ struct ValidationTests {
             result: .literal(.int(1))
         )
 
-        // When / Then. There is no such module to hand anywhere: making one is
-        // what refuses
-        #expect {
-            try Module(
-                constants: ["greeting": .literal(.string("hi"))],
-                procedures: [entryName: procedure]
-            )
-        } throws: { error in
-            "\(error)".contains("take the place of")
-        }
+        // When / Then
+        _ = try Module(
+            constants: ["greeting": .literal(.string("hi"))],
+            procedures: [entryName: procedure]
+        )
     }
 
     @Test("a name that is no struct and comes back to itself refuses at the load")

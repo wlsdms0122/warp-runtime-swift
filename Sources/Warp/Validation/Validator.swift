@@ -34,7 +34,6 @@ struct Validator: Sendable {
 
         let constants = Set(module.constants.keys)
         let variables = Set(module.variables.keys)
-        let bound = constants.union(variables)
 
         // A constant sees no scope, so it may name another constant and nothing
         // else.
@@ -44,7 +43,7 @@ struct Validator: Sendable {
                 value: expression,
                 visible: constants,
                 variables: [],
-                scope: .procedure(bound: bound),
+                scope: .procedure(),
                 at: .constant(name.spelling, in: .of(module))
             )
         }
@@ -69,7 +68,7 @@ struct Validator: Sendable {
                 value: variable.start,
                 visible: constants,
                 variables: [],
-                scope: .procedure(bound: bound),
+                scope: .procedure(),
                 at: .variable(name.spelling, in: .of(module))
             )
 
@@ -515,8 +514,7 @@ struct Validator: Sendable {
     }
 
     // A parameter is a name the body can read, so it is visible from the first
-    // statement, and no name the body introduces, at any depth, takes its
-    // spelling.
+    // statement, and it is the body's own, so the body introduces it once.
     private func validate(
         _ procedure: Procedure,
         constants: Set<Name>,
@@ -524,14 +522,8 @@ struct Validator: Sendable {
         at place: Place
     ) throws {
         let parameters = Set(procedure.signature.names)
-        let bound = constants.union(variables)
 
         try validate(procedure.signature, in: .signature, at: place)
-
-        for (position, parameter) in procedure.signature.names.enumerated() {
-            try collides(parameter, in: .procedure(bound: bound), at: place.part(.parameters).index(position))
-        }
-
         try reads(procedure, at: place)
         try sends(procedure, at: place)
 
@@ -541,13 +533,10 @@ struct Validator: Sendable {
         // the caller's, and writing it is what the parameter is for.
         try validate(
             block,
-            visible: bound.union(parameters),
+            taking: parameters,
+            visible: constants.union(variables).union(parameters),
             variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
-            scope: .procedure(
-                bound: bound,
-                parameters: parameters,
-                typeParameters: procedure.signature.parameterNames
-            ),
+            scope: .procedure(typeParameters: procedure.signature.parameterNames),
             at: place
         )
         try answersOneWay(block, at: place)
@@ -594,10 +583,13 @@ struct Validator: Sendable {
 
     // What the body leaves behind for what follows it: the names it made
     // visible, and which of them are variables. A result written after the body
-    // sees both.
+    // sees both. The parameters a body takes are names it introduced before its
+    // first statement. A body inside another may introduce any name it sees,
+    // and inside it the name is the new one.
     @discardableResult
     private func validate(
         _ body: Body,
+        taking parameters: Set<Name> = [],
         visible startVisible: Set<Name>,
         variables startVariables: Set<Name>,
         scope: Scope,
@@ -658,7 +650,13 @@ struct Validator: Sendable {
                 switch binding {
                 case let .constant(name, _), let .variable(name, _):
                     try held(name, as: .value, at: named)
-                    try collides(name, in: scope, at: named)
+
+                    guard !parameters.contains(name) else {
+                        throw ValidationError(
+                            "'\(name)' is a parameter this body takes, and a body introduces a name once",
+                            at: named
+                        )
+                    }
 
                     guard !declared.contains(name) else {
                         throw ValidationError("two statements here are named '\(name)'", at: named)
@@ -1000,19 +998,14 @@ struct Validator: Sendable {
 
         try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
 
-        // The same rule the top-level signature gets. A closure's parameter
-        // is a name a body reads, wherever the signature sits.
-        for (position, parameter) in procedure.signature.names.enumerated() {
-            try collides(parameter, in: scope, at: inside.part(.parameters).index(position))
-        }
-
         // A parameter it takes in place is a variable in its body, the way
         // a declaration's is.
         try validate(
             block,
+            taking: parameters,
             visible: visible.union(parameters),
             variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
-            scope: scope.enclosed(taking: parameters),
+            scope: scope.enclosed(),
             at: inside
         )
         try answersOneWay(block, at: inside)
@@ -1112,6 +1105,7 @@ struct Validator: Sendable {
 
     private func validate(
         _ block: Block,
+        taking parameters: Set<Name> = [],
         visible: Set<Name>,
         variables: Set<Name>,
         scope: Scope,
@@ -1119,6 +1113,7 @@ struct Validator: Sendable {
     ) throws {
         let inner = try validate(
             block.body,
+            taking: parameters,
             visible: visible,
             variables: variables,
             scope: scope,
@@ -1648,35 +1643,5 @@ struct Validator: Sendable {
 
         try held(key: standing.of, at: place)
         try held(standing.name, as: .typeMember, at: place)
-    }
-
-    // A name a body introduces: a parameter, a statement's name, or the one a
-    // construct hands its body. Every such name passes here, so the module's
-    // bound names and the parameters around it are checked at whatever depth
-    // the name appears. A parameter's grammar is its signature's.
-    //
-    // A module's constant is folded wherever its name is read and its variable
-    // is read through the module's box, so a name introduced under either
-    // spelling would never be the one that answers.
-    private func collides(
-        _ name: Name,
-        in scope: Scope,
-        at place: Place
-    ) throws {
-        if scope.bound.contains(name) {
-            throw ValidationError(
-                "'\(name)' collides with a name the module bound, which it would"
-                    + " take the place of",
-                at: place
-            )
-        }
-
-        if scope.parameters.contains(name) {
-            throw ValidationError(
-                "'\(name)' is a parameter of the procedure this is written in,"
-                    + " and a name inside it does not take a parameter's spelling",
-                at: place
-            )
-        }
     }
 }

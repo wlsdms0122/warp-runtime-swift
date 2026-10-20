@@ -7,7 +7,8 @@
 
 import Foundation
 
-// Where a body is, as far as leaving it and introducing a name are concerned.
+// Where a body is, as far as leaving it and naming a type parameter are
+// concerned.
 //
 // One value rather than a parameter each: a body checked without its loops
 // reads as a body outside any loop, so carrying the whole is the default and
@@ -19,16 +20,6 @@ struct Scope: Sendable {
     // to end.
     let rounds: [Name?]
 
-    // The names the module declares, its constants and its variables,
-    // carried so every name introduced on the way (a closure's parameters
-    // included) is refused where it would take one's place.
-    let bound: Set<Name>
-
-    // The parameters of the procedures this body is written in, a closure's
-    // included. No name introduced inside them, at any depth, takes one's
-    // spelling.
-    let parameters: Set<Name>
-
     // The type parameters the procedure this body is written in declares,
     // which are the ones a closure inside it may name.
     let typeParameters: Set<Name>
@@ -36,25 +27,21 @@ struct Scope: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // A procedure's own body: no loop yet.
-    static func procedure(
-        bound: Set<Name>,
-        parameters: Set<Name> = [],
-        typeParameters: Set<Name> = []
-    ) -> Scope {
-        Scope(rounds: [], bound: bound, parameters: parameters, typeParameters: typeParameters)
+    static func procedure(typeParameters: Set<Name> = []) -> Scope {
+        Scope(rounds: [], typeParameters: typeParameters)
     }
 
     func inside(_ round: Name?) -> Scope {
-        Scope(rounds: rounds + [round], bound: bound, parameters: parameters, typeParameters: typeParameters)
+        Scope(rounds: rounds + [round], typeParameters: typeParameters)
     }
 
-    // A procedure written inside another, taking these parameters. It may be
-    // called anywhere and long after, so the loops around where it was
-    // *written* are not around where it runs, and its own answer is its own.
+    // A procedure written inside another. It may be called anywhere and long
+    // after, so the loops around where it was *written* are not around where
+    // it runs, and its own answer is its own.
     // What it captured it may write: a variable's box is one thing under one
     // name everywhere the name is visible, and this body is one of those places.
-    func enclosed(taking parameters: Set<Name>) -> Scope {
-        Scope(rounds: [], bound: bound, parameters: self.parameters.union(parameters), typeParameters: typeParameters)
+    func enclosed() -> Scope {
+        Scope(rounds: [], typeParameters: typeParameters)
     }
 
     // MARK: - Private
