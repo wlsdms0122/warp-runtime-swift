@@ -19,11 +19,14 @@ import Warp
 // the same name as one written bare.
 struct DatumReader {
     // MARK: - Property
-    // How deep lists may nest. A document's level is written in two lists at
-    // most: a map's entry inside the map, a procedure type's parameters inside
-    // the type, a path's index inside the path. So every document within the
-    // bound has a text within this one.
-    static let nestingBound = 2 * Value.nestingBound
+    // How deep lists may nest: as deep as a tree within the bound writes. A
+    // document's first level is written in no list and each level after it
+    // in two at most, a dictionary and its entry, a procedure type and its
+    // parameters, save the level a type or a path starts at, which holds the
+    // list of the key it stands under beside them: 2 × 128 − 1. A case writes
+    // the documents beside its program two lists further down, each counted
+    // from itself.
+    static let nestingBound = 2 * Value.nestingBound + 1
 
     static let whiteSpace = Set(" \n\r\t".unicodeScalars)
 
