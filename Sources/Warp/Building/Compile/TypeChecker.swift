@@ -1216,11 +1216,9 @@ struct TypeChecker {
 
     // The walk. Each subexpression is judged in the environment the ones
     // before it left behind, which is the environment the run gives it.
-    // `name` is what the statement this expression is the value of
-    // introduces, which a loop binds its round under and an attempt its
-    // failure. `declared` is the type of the place the expression is written
-    // into, where one is: a struct literal is read as the declared struct
-    // it reads, and nil writes it into none.
+    // `name` is the statement's `nameInside`. `declared` is the type of the
+    // place the expression is written into, where one is: a struct literal
+    // is read as the declared struct it reads, and nil writes it into none.
     private func inspected(
         _ expression: Expression,
         naming name: Name?,
@@ -2599,7 +2597,7 @@ struct TypeChecker {
             let target = try writtenInto(by: written.binding, in: environment, with: context, at: here, when: ask)
             let inner = try await inspected(
                 written.expression,
-                naming: written.binding?.introduced,
+                naming: written.nameInside,
                 into: target,
                 at: here,
                 in: environment,

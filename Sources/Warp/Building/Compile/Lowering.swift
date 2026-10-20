@@ -529,7 +529,7 @@ struct Lowering {
 
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
-            let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
+            let code = try lower(statement.expression, naming: statement.nameInside, in: scope, on: context, at: here)
             let binding: Instruction.Binding?
 
             switch statement.bindingAfter {
@@ -567,9 +567,7 @@ struct Lowering {
         return instructions
     }
 
-    // `name` is what the statement this expression is the value of
-    // introduces, which a loop binds its round under and an attempt its
-    // failure.
+    // `name` is the statement's `nameInside`.
     private mutating func lower(
         _ expression: Expression,
         naming name: Name?,

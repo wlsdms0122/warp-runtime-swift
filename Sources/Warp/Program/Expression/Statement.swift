@@ -89,10 +89,17 @@ public struct Statement: Sendable {
     public var name: Name? { binding?.name }
 
     // What this statement binds for the statements after it. A construct
-    // answering nothing binds nothing there: a loop's name is its round, read
-    // inside the loop.
+    // answering nothing binds nothing there.
     var bindingAfter: Binding? {
         expression.answersNothing ? nil : binding
+    }
+
+    // The name this statement's construct binds inside itself: a loop's
+    // round, read in its condition and its body, and an attempt's failure,
+    // read in its rescue alone. Every other construct binds nothing inside,
+    // and neither does a statement that introduces no name.
+    var nameInside: Name? {
+        expression.namesItsOwn ? binding?.introduced : nil
     }
 
     // MARK: - Initializer

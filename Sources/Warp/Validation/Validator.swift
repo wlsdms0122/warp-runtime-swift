@@ -701,7 +701,7 @@ struct Validator: Sendable {
 
             try validate(
                 statement.expression,
-                naming: statement.binding?.introduced,
+                naming: statement.nameInside,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -725,10 +725,7 @@ struct Validator: Sendable {
         return (visible, variables)
     }
 
-    // `name` is what the statement this expression is the value of
-    // introduces, which a loop binds its round under and an attempt its
-    // failure. The statement already held it to where a name may be
-    // introduced.
+    // `name` is the statement's `nameInside`.
     //
     // The parts of each kind are checked out of line, so a level of an
     // expression nested to the bound spends little stack, a debug build's

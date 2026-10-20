@@ -265,19 +265,12 @@ struct EffectChecker {
                 }
             }
 
-            // A loop binds its round under the statement's name, inside the
-            // whole of it, and an attempt its failure, inside its rescue.
-            let naming = fact.introducing(statement.binding?.introduced)
-            let broken: String? = switch statement.expression {
-            case .loop:
-                breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
-
-            case let .attempt(body, rescue):
+            let naming = fact.introducing(statement.nameInside)
+            let broken: String? = if case let .attempt(body, rescue) = statement.expression {
                 breaking(body, fact, declaring: declared, bound: declaredTypes)
                     ?? breaking(rescue, naming, declaring: declared, bound: declaredTypes)
-
-            default:
-                breaking(statement.expression, fact, declaring: declared, bound: declaredTypes)
+            } else {
+                breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
             }
 
             if let broken {
