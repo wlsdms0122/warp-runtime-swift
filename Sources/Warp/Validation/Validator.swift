@@ -1053,7 +1053,8 @@ struct Validator: Sendable {
     }
 
     // The round state is bound before the condition is asked, which is what
-    // lets `while` read how many rounds have passed.
+    // lets `while` read how many rounds have passed. The round is a fixed
+    // name, whatever its spelling named outside.
     private func validate(
         loop condition: Expression,
         body: Body,
@@ -1063,20 +1064,23 @@ struct Validator: Sendable {
         scope: Scope,
         at place: Place
     ) throws {
-        let inner = visible.union(round.map { round in [round] } ?? [])
+        let named: Set<Name> = round.map { round in [round] } ?? []
+        let inner = visible.union(named)
+        let writable = variables.subtracting(named)
 
         try validate(
             value: condition,
             visible: inner,
-            variables: variables,
+            variables: writable,
             scope: scope,
             at: place.child(.condition(of: .loop))
         )
-        try validate(body, visible: inner, variables: variables, scope: scope.inside(round), at: place.child(.round))
+        try validate(body, visible: inner, variables: writable, scope: scope.inside(round), at: place.child(.round))
         try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
     }
 
-    // While the rescue runs, the failure is a value under the declared name.
+    // While the rescue runs, the failure is a value under the declared name,
+    // a fixed one whatever its spelling named outside.
     private func validate(
         attempt block: Block,
         rescue: Block,
@@ -1094,10 +1098,12 @@ struct Validator: Sendable {
             throw ValidationError("must not be empty", at: place.child(.rescue))
         }
 
+        let named: Set<Name> = failure.map { failure in [failure] } ?? []
+
         try validate(
             rescue,
-            visible: visible.union(failure.map { failure in [failure] } ?? []),
-            variables: variables,
+            visible: visible.union(named),
+            variables: variables.subtracting(named),
             scope: scope,
             at: place.child(.rescue)
         )
