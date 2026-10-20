@@ -21,11 +21,10 @@ struct DatumReader {
     // MARK: - Property
     // How deep lists may nest: as deep as a tree within the bound writes. A
     // document's first level is written in no list and each level after it
-    // in two at most, a dictionary and its entry, a procedure type and its
-    // parameters, save the level a type or a path starts at, which holds the
-    // list of the key it stands under beside them: 2 × 128 − 1. A case writes
-    // the documents beside its program two lists further down, each counted
-    // from itself.
+    // in two at most, a dictionary and its entry or a procedure type and its
+    // parameters, and one level on a way down holds a third, the key a value
+    // stands under: 2 × 128 − 1. A case writes the documents beside its
+    // program two lists further down.
     static let nestingBound = 2 * Value.nestingBound + 1
 
     static let whiteSpace = Set(" \n\r\t".unicodeScalars)
