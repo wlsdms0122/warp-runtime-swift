@@ -539,7 +539,6 @@ struct Validator: Sendable {
             scope: .procedure(typeParameters: procedure.signature.parameterNames),
             at: place
         )
-        try answersOneWay(block, at: place)
     }
 
     // A native procedure reads its arguments at the places its own keys stand at,
@@ -1004,7 +1003,6 @@ struct Validator: Sendable {
             scope: scope.enclosed(),
             at: inside
         )
-        try answersOneWay(block, at: inside)
     }
 
     private func validate(
@@ -1072,7 +1070,6 @@ struct Validator: Sendable {
             at: place.child(.condition(of: .loop))
         )
         try validate(body, visible: inner, variables: writable, scope: scope.inside(round), at: place.child(.round))
-        try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
     }
 
     // While the rescue runs, the failure is a value under the declared name,
@@ -1163,30 +1160,6 @@ struct Validator: Sendable {
                 at: place
             )
         }
-    }
-
-    // One program has one text, so a leave landing where its body ends anyway
-    // is not written: a `return` ending a procedure's own body answers what
-    // its `result` would, and a `continue` ending a round goes where the round
-    // goes on its own.
-    private func answersOneWay(_ block: Block, at place: Place) throws {
-        try refuseLeave(.procedure, endingAt: block.body, named: nil, at: place.child(.body))
-    }
-
-    private func refuseLeave(_ reach: Leave.Reach, endingAt body: Body, named loop: Name?, at place: Place) throws {
-        guard
-            let last = body.statements.last,
-            case let .leave(leave) = last.expression,
-            leave.reach == reach,
-            leave.target == nil || leave.target == loop
-        else { return }
-
-        let reason = switch reach {
-        case .procedure: "ends its body with 'return', which answers what 'result' does. A body says what it answers one way: under 'result'"
-        default: "ends its round with 'continue', where the round ends on its own"
-        }
-
-        throw ValidationError(reason, at: place.statement(last, at: body.statements.count - 1))
     }
 
     private func validate(
