@@ -1160,8 +1160,7 @@ struct Validator: Sendable {
 
         guard leave.value == nil else {
             throw ValidationError(
-                "a loop answers what it was going to answer,"
-                    + " so ending one carries nothing",
+                "a loop answers nothing, so ending one carries nothing",
                 at: place
             )
         }

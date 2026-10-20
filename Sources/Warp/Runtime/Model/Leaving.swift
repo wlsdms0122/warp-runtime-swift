@@ -24,8 +24,8 @@ struct Leaving: Error {
     let reach: Leave.Reach
     let target: Name?
 
-    // What a procedure answers by leaving. A loop answers what it was going to
-    // answer, so this is nothing for the other two reaches.
+    // What a procedure answers by leaving. A loop answers nothing, so this is
+    // nothing for the other two reaches.
     let value: Value
 
     // MARK: - Initializer

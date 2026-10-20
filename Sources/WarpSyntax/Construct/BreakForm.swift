@@ -26,8 +26,8 @@ public struct BreakForm: ConstructForm {
         .leave(Leave(reach: .construct, target: target))
     }
 
-    // Which loop, or nothing for the nearest. A loop answers what it was going
-    // to answer, so there is nothing to carry and what stands here is a name.
+    // Which loop, or nothing for the nearest. A loop answers nothing, so there
+    // is nothing to carry and what stands here is a name.
     static func target(from decoder: Decoder, called key: Name) throws -> Name? {
         switch try ValueReader(from: decoder).value {
         case .null:

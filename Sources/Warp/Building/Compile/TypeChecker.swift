@@ -2310,7 +2310,6 @@ struct TypeChecker {
                 )
             )
 
-        // A loop answers its body's declared result, and null when it has none.
         // A round may run no time at all, so nothing a round writes is
         // definite. A `break` or a `continue` of this loop stops here, and the
         // ways they took are absorbed rather than handed on; a `return`, or

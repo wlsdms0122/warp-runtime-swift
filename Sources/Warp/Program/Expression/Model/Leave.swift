@@ -28,8 +28,7 @@ public struct Leave: Sendable {
     public let target: Name?
 
     // What a procedure answers by leaving. Only `procedure` carries one: a loop
-    // answers what it was going to answer, so ending one early asks nothing new
-    // of the type it has.
+    // answers nothing, so ending one carries nothing.
     public let value: Expression?
 
     // MARK: - Initializer
