@@ -95,7 +95,7 @@ public struct Rendering {
 
         case let .struct(instance):
             let fields = try zip(instance.names, instance.values).map { name, value in
-                "\(quoted(name.spelling)):\(try written(value))"
+                "\(name.spelling):\(try written(value))"
             }
 
             return "\(instance.name) {" + fields.joined(separator: ",") + "}"

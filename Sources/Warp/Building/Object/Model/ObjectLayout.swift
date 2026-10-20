@@ -25,11 +25,16 @@ enum ObjectLayout {
         case typeMembers
         case importedClaims
         case rows
-        case lifted
         case numbering
+        case lifted
         case typeNumbering
         case variables
         case constants
+        case typeTable
+        case loweredTypeTable
+        case valueTable
+        case operationTable
+        case addressTable
 
         // MARK: - Property
         var name: Name { Name(normal: rawValue) }

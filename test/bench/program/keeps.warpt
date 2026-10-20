@@ -1,86 +1,20 @@
-warpt 1
-{
-  imports [
-    "Standard.Comparable.lessThan"
-    "Standard.Logic.equal"
-  ]
-  procedures {
-    entry {
-      access "public"
-      body [
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  let "seen"
-                  value {
-                    ref "round.index"
-                  }
-                }
-                {
-                  value {
-                    conditional {
-                      then [
-                        {
-                          value {
-                            continue null
-                          }
-                        }
-                      ]
-                      when {
-                        call {
-                          arguments [
-                            {
-                              ref "round.index"
-                            }
-                            1
-                          ]
-                          procedure "Standard.Logic.equal"
-                        }
-                      }
-                    }
-                  }
-                }
-                {
-                  let "kept"
-                  value {
-                    ref "seen"
-                  }
-                }
-              ]
-              result {
-                ref "kept"
-              }
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "round"
-      }
-      returns "Int?"
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Logic.equal)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let seen (path round (field index)))
+          (conditional
+            (when (call Standard.Logic.equal (path round (field index)) 1))
+            (then
+              (continue)))
+          (let kept seen)))))
+  (result rounds))

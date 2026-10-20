@@ -15,12 +15,19 @@ import Foundation
 // the same format reads it back.
 //
 // Every list a name keys is written in name order, so one object is one
-// value and one value is one writing of bytes. The layout is the language's,
-// under *objects* in the specification.
+// value and one value is one writing of bytes. What nests, a type, a lowered
+// type, a value, an operation and an address, is written as an entry of its
+// table and held by its number, the tables filled in the order the parts are
+// written. The layout is the language's, under *objects* in the
+// specification.
 struct ObjectWriter {
     // MARK: - Property
+    private let compiled: Compiled
+    private let tables = ObjectTables { key in TableWriter(of: key) }
+
     // MARK: - Initializer
-    init() {
+    init(_ compiled: Compiled) {
+        self.compiled = compiled
     }
 
     // MARK: - Public
@@ -36,32 +43,44 @@ struct ObjectWriter {
 
     // The declaration that wrote a closure, its kind before its name. The
     // reading of it is `Field.declaration`.
-    func declaration(_ declaration: Closure.Declaration) -> Value {
+    static func declaration(_ declaration: Closure.Declaration) -> Value {
         typealias Tag = ObjectLayout.DeclarationTag
 
         switch declaration {
-        case let .procedure(declared): return tagged(Tag.procedure, name(declared))
-        case let .binding(declared): return tagged(Tag.binding, name(declared))
+        case let .procedure(declared): return .array([.int(Tag.procedure.rawValue), .string(declared.spelling)])
+        case let .binding(declared): return .array([.int(Tag.binding.rawValue), .string(declared.spelling)])
         }
     }
 
-    // Every part by the key it stands under. What this cannot write is a
+    // Every part by the key it stands under, the tables last, once every
+    // other part has numbered what it holds. What this cannot write is a
     // closure holding a box of the run that made it or written by a document
-    // nobody wrote down, a dependency no fingerprint was worked out for, and
-    // a lowered type holding a struct's fields. Each is the one error thrown
-    // on the way down, and an object of what holds it is not written.
-    func value(of compiled: Compiled) throws(ObjectUnwritable) -> Value {
+    // nobody wrote down, a dependency no fingerprint was worked out for, a
+    // lowered type holding a struct's fields, and a table nesting past the
+    // bound. Each is the one error thrown on the way down, and an object of
+    // what holds it is not written.
+    func value() throws(ObjectUnwritable) -> Value {
         let parts = try ObjectLayout.Key.allCases.map { (key) throws(ObjectUnwritable) -> (Name, Value) in
-            (key.name, try part(key, of: compiled))
+            (key.name, try part(key))
         }
 
         return .dictionary(Value.Dictionary(Dictionary(uniqueKeysWithValues: parts)))
     }
 
+    // MARK: - Private
     // A value written down: the data as it is, and a closure by what it is
     // spelled by, since the row a link gave it is the link's. A cell held
     // is a box of the run that made the closure, and no object holds one.
-    func value(_ value: Value) throws(ObjectUnwritable) -> Value {
+    private func value(_ value: Value) throws(ObjectUnwritable) -> Value {
+        try tables.values.open()
+
+        return tables.values.append(try valueEntry(value))
+    }
+
+    // Written without a closure between a value and the values it holds, so
+    // a value nested to the bound spends little stack a level, a debug
+    // build's included.
+    private func valueEntry(_ value: Value) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.ValueTag
 
         switch value {
@@ -84,14 +103,14 @@ struct ObjectWriter {
             return tagged(Tag.bytes, value)
 
         case let .array(items):
-            return tagged(Tag.array, .array(try items.map(self.value)))
+            return tagged(Tag.array, try values(items))
 
         case let .struct(instance):
             return tagged(
                 Tag.struct,
                 name(instance.name),
                 .array(instance.layout.fields.map(name)),
-                .array(try instance.values.map(self.value))
+                try values(instance.values)
             )
 
         // The keys in the key order the map holds them in, and the values
@@ -99,37 +118,55 @@ struct ObjectWriter {
         case let .dictionary(dictionary):
             return tagged(
                 Tag.dictionary,
-                .array(try dictionary.keys.map(self.value)),
-                .array(try dictionary.values.map(self.value))
+                try values(dictionary.keys),
+                try values(dictionary.values)
             )
 
-        // A document nobody wrote down is one an object cannot spell, so a
-        // closure such a document wrote is not written either.
         case let .procedure(closure):
-            guard case let .written(identity) = closure.writer.document else {
-                throw ObjectUnwritable("a value holds a closure a document nobody wrote down wrote")
-            }
-
-            return tagged(
-                Tag.closure,
-                .bytes(identity.bytes),
-                declaration(closure.writer.declaration),
-                .int(closure.nth),
-                .array(try closure.captured.map { (slot, cell) throws(ObjectUnwritable) -> Value in
-                    guard case let .value(held) = cell else {
-                        throw ObjectUnwritable("a value holds a closure holding a box of the run that made it")
-                    }
-
-                    return .array([.int(slot), try self.value(held)])
-                })
-            )
+            return try closureForm(closure)
         }
     }
 
-    // MARK: - Private
+    // The values a list holds, in its order.
+    private func values(_ values: some Sequence<Value>) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for value in values {
+            written.append(try self.value(value))
+        }
+
+        return .array(written)
+    }
+
+    // A document nobody wrote down is one an object cannot spell, so a
+    // closure such a document wrote is not written either.
+    private func closureForm(_ closure: Closure) throws(ObjectUnwritable) -> Value {
+        guard case let .written(identity) = closure.writer.document else {
+            throw ObjectUnwritable("a value holds a closure a document nobody wrote down wrote")
+        }
+
+        var captured: [Value] = []
+
+        for (slot, cell) in closure.captured {
+            guard case let .value(held) = cell else {
+                throw ObjectUnwritable("a value holds a closure holding a box of the run that made it")
+            }
+
+            captured.append(.array([.int(slot), try value(held)]))
+        }
+
+        return tagged(
+            ObjectLayout.ValueTag.closure,
+            .bytes(identity.bytes),
+            Self.declaration(closure.writer.declaration),
+            .int(closure.nth),
+            .array(captured)
+        )
+    }
+
     // One part of an object, by the one case that names its key, so a key the
     // layout gains is a case this has to write.
-    private func part(_ key: ObjectLayout.Key, of compiled: Compiled) throws(ObjectUnwritable) -> Value {
+    private func part(_ key: ObjectLayout.Key) throws(ObjectUnwritable) -> Value {
         switch key {
         case .object:
             return .int(ObjectLayout.format)
@@ -183,14 +220,14 @@ struct ObjectWriter {
                 try judged(row, spelled: true)
             })
 
+        // What the bodies number their calls from, and their types.
+        case .numbering:
+            return compiled.numbering.written(dropping: compiled.declared.count)
+
         case .lifted:
             return .array(try compiled.table[compiled.lifted].map { (row) throws(ObjectUnwritable) -> Value in
                 try judged(row, spelled: false)
             })
-
-        // What the bodies number their calls from, and their types.
-        case .numbering:
-            return compiled.numbering.written(dropping: compiled.declared.count)
 
         case .typeNumbering:
             return compiled.typeNumbering.written
@@ -202,6 +239,21 @@ struct ObjectWriter {
 
         case .constants:
             return .array(compiled.constants.map(name))
+
+        case .typeTable:
+            return .array(tables.types.entries)
+
+        case .loweredTypeTable:
+            return .array(tables.loweredTypes.entries)
+
+        case .valueTable:
+            return .array(tables.values.entries)
+
+        case .operationTable:
+            return .array(tables.operations.entries)
+
+        case .addressTable:
+            return .array(tables.addresses.entries)
         }
     }
 
@@ -288,6 +340,15 @@ struct ObjectWriter {
     }
 
     private func type(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
+        try tables.types.open()
+
+        return tables.types.append(try typeEntry(expression))
+    }
+
+    // Written without a closure between a type and the types it holds, so a
+    // type nested to the bound spends little stack a level, a debug build's
+    // included.
+    private func typeEntry(_ expression: TypeExpression) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.TypeTag
 
         switch expression {
@@ -319,12 +380,7 @@ struct ObjectWriter {
             return tagged(Tag.dictionary, try type(key), try type(value))
 
         case let .procedure(written, constness, isolation):
-            return tagged(
-                Tag.procedure,
-                try ObjectWriter.maybe(written, procedureType),
-                self.constness(constness),
-                self.isolation(isolation)
-            )
+            return try procedureForm(written, constness, isolation)
 
         case let .variable(held):
             return tagged(Tag.variable, try type(held))
@@ -335,12 +391,8 @@ struct ObjectWriter {
         case let .nullable(held):
             return tagged(Tag.nullable, try type(held))
 
-        // What a struct is applied to follows its name where it is applied
-        // to anything.
         case let .named(spelling, arguments):
-            guard !arguments.isEmpty else { return tagged(Tag.named, name(spelling)) }
-
-            return tagged(Tag.named, name(spelling), .array(try arguments.map(type)))
+            return try namedForm(spelling, arguments)
 
         case let .parameter(spelling):
             return tagged(Tag.parameter, name(spelling))
@@ -356,15 +408,41 @@ struct ObjectWriter {
         }
     }
 
+    // What a struct is applied to follows its name where it is applied to
+    // anything.
+    private func namedForm(_ spelling: Name, _ arguments: [TypeExpression]) throws(ObjectUnwritable) -> Value {
+        guard !arguments.isEmpty else { return tagged(ObjectLayout.TypeTag.named, name(spelling)) }
+
+        var written: [Value] = []
+
+        for argument in arguments {
+            written.append(try type(argument))
+        }
+
+        return tagged(ObjectLayout.TypeTag.named, name(spelling), .array(written))
+    }
+
     // A procedure type is `[parameters, returns, failing]`: the types it is
     // applied with, in position order, what it answers, and what it may fail
     // with.
-    private func procedureType(_ type: ProcedureType) throws(ObjectUnwritable) -> Value {
-        .array([
-            .array(try type.parameters.map(self.type)),
-            try self.type(type.returns),
-            failing(type.failing)
-        ])
+    private func procedureForm(
+        _ written: ProcedureType?,
+        _ constness: Constness,
+        _ isolation: Isolation
+    ) throws(ObjectUnwritable) -> Value {
+        var signature: [Value] = []
+
+        if let written {
+            var parameters: [Value] = []
+
+            for parameter in written.parameters {
+                parameters.append(try type(parameter))
+            }
+
+            signature = [.array([.array(parameters), try type(written.returns), failing(written.failing)])]
+        }
+
+        return tagged(ObjectLayout.TypeTag.procedure, .array(signature), self.constness(constness), self.isolation(isolation))
     }
 
     private func signature(_ signature: Signature) throws(ObjectUnwritable) -> Value {
@@ -458,6 +536,12 @@ struct ObjectWriter {
     }
 
     private func lowered(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
+        try tables.loweredTypes.open()
+
+        return tables.loweredTypes.append(try loweredEntry(type))
+    }
+
+    private func loweredEntry(_ type: LoweredType) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.LoweredTypeTag
 
         switch type {
@@ -568,9 +652,19 @@ struct ObjectWriter {
 
     private func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
         .array([
-            .array(try body.instructions.map(instruction)),
+            try instructions(body.instructions),
             try ObjectWriter.maybe(body.result, operation)
         ])
+    }
+
+    private func instructions(_ instructions: [Instruction]) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for instruction in instructions {
+            written.append(try self.instruction(instruction))
+        }
+
+        return .array(written)
     }
 
     private func instruction(_ instruction: Instruction) throws(ObjectUnwritable) -> Value {
@@ -597,7 +691,9 @@ struct ObjectWriter {
     }
 
     private func address(_ address: Address) throws(ObjectUnwritable) -> Value {
-        .array([.int(address.slot), .array(try address.steps.map(walk))])
+        try tables.addresses.open()
+
+        return tables.addresses.append(.array([.int(address.slot), .array(try address.steps.map(walk))]))
     }
 
     private func walk(_ step: Step) throws(ObjectUnwritable) -> Value {
@@ -619,102 +715,166 @@ struct ObjectWriter {
     }
 
     private func operation(_ operation: Operation) throws(ObjectUnwritable) -> Value {
+        try tables.operations.open()
+
+        return tables.operations.append(try operationEntry(operation))
+    }
+
+    // One function a kind, and the operations, arguments and instructions an
+    // operation lists written by loops, so an expression nested to the bound
+    // spends little stack a level, a debug build's included.
+    private func operationEntry(_ operation: Operation) throws(ObjectUnwritable) -> Value {
         typealias Tag = ObjectLayout.OperationTag
 
         switch operation {
-        case let .literal(value):
-            return tagged(Tag.literal, try self.value(value))
-
-        case let .local(address):
-            return tagged(Tag.local, try self.address(address))
-
-        case let .array(elements):
-            return tagged(Tag.array, .array(try elements.map(self.operation)))
-
-        case let .struct(built):
-            return tagged(Tag.struct, try structOperation(built))
-
-        case let .dictionary(entries):
-            return tagged(
-                Tag.dictionary,
-                .array(try entries.map { (entry) throws(ObjectUnwritable) -> Value in
-                    .array([try self.operation(entry.key), try self.operation(entry.value)])
-                })
-            )
-
-        case let .closure(number, captures):
-            return tagged(
-                Tag.closure,
-                .int(number),
-                .array(captures.map { capture in .array([.int(capture.0), .int(capture.1)]) })
-            )
-
-        case let .apply(callee, arguments):
-            return tagged(
-                Tag.apply,
-                try self.operation(callee),
-                .array(try arguments.map(argument))
-            )
-
-        case let .cast(read, as: type, optional: optional):
-            return tagged(Tag.cast, try self.operation(read), try lowered(type), .bool(optional))
-
+        case let .literal(value): return tagged(Tag.literal, try self.value(value))
+        case let .local(address): return tagged(Tag.local, try self.address(address))
+        case let .array(elements): return tagged(Tag.array, try operations(elements))
+        case let .struct(built): return tagged(Tag.struct, try structOperation(built))
+        case let .dictionary(entries): return tagged(Tag.dictionary, try self.entries(entries))
+        case let .closure(number, captures): return closureOperation(number, captures: captures)
+        case let .apply(callee, arguments): return try applyOperation(callee, arguments: arguments)
+        case let .cast(read, as: type, optional: optional): return try castOperation(read, as: type, optional: optional)
         case let .conditional(condition, then: then, else: otherwise):
-            return tagged(
-                Tag.conditional,
-                try self.operation(condition),
-                .array(try then.map(instruction)),
-                try ObjectWriter.maybe(otherwise) { (written) throws(ObjectUnwritable) -> Value in
-                    .array(try written.map(instruction))
-                }
-            )
-
+            return try conditionalOperation(condition, then: then, else: otherwise)
         case let .loop(while: condition, body: body, round: round):
-            return tagged(
-                Tag.loop,
-                try self.operation(condition),
-                .array(try body.map(instruction)),
-                ObjectWriter.maybe(round) { round in .int(round) }
-            )
-
+            return try loopOperation(condition, body: body, round: round)
         case let .attempt(body, rescue: rescue, failure: failure):
-            return tagged(
-                Tag.attempt,
-                try self.body(body),
-                try self.body(rescue),
-                ObjectWriter.maybe(failure) { failure in .int(failure) }
-            )
-
-        case let .call(call):
-            return tagged(Tag.call, try callOperation(call))
-
-        case let .dispatch(dispatch):
-            return tagged(Tag.dispatch, try dispatchOperation(dispatch))
-
-        case let .leave(reach, target: target, read):
-            return tagged(
-                Tag.leave,
-                self.reach(reach),
-                ObjectWriter.maybe(target, name),
-                try ObjectWriter.maybe(read, self.operation)
-            )
+            return try attemptOperation(body, rescue: rescue, failure: failure)
+        case let .call(call): return tagged(Tag.call, try callOperation(call))
+        case let .dispatch(dispatch): return tagged(Tag.dispatch, try dispatchOperation(dispatch))
+        case let .leave(reach, target: target, read): return try leaveOperation(reach, target: target, read)
         }
     }
 
+    private func closureOperation(_ number: Int, captures: [(Int, Int)]) -> Value {
+        tagged(
+            ObjectLayout.OperationTag.closure,
+            .int(number),
+            .array(captures.map { capture in .array([.int(capture.0), .int(capture.1)]) })
+        )
+    }
+
+    private func applyOperation(_ callee: Operation, arguments: [Argument]) throws(ObjectUnwritable) -> Value {
+        tagged(ObjectLayout.OperationTag.apply, try operation(callee), try self.arguments(arguments))
+    }
+
+    private func castOperation(
+        _ read: Operation,
+        as type: LoweredType,
+        optional: Bool
+    ) throws(ObjectUnwritable) -> Value {
+        tagged(ObjectLayout.OperationTag.cast, try operation(read), try lowered(type), .bool(optional))
+    }
+
+    private func conditionalOperation(
+        _ condition: Operation,
+        then: [Instruction],
+        else otherwise: [Instruction]?
+    ) throws(ObjectUnwritable) -> Value {
+        tagged(
+            ObjectLayout.OperationTag.conditional,
+            try operation(condition),
+            try instructions(then),
+            try ObjectWriter.maybe(otherwise, instructions)
+        )
+    }
+
+    private func loopOperation(
+        _ condition: Operation,
+        body: [Instruction],
+        round: Int?
+    ) throws(ObjectUnwritable) -> Value {
+        tagged(
+            ObjectLayout.OperationTag.loop,
+            try operation(condition),
+            try instructions(body),
+            ObjectWriter.maybe(round) { round in .int(round) }
+        )
+    }
+
+    private func attemptOperation(
+        _ body: LoweredBody,
+        rescue: LoweredBody,
+        failure: Int?
+    ) throws(ObjectUnwritable) -> Value {
+        tagged(
+            ObjectLayout.OperationTag.attempt,
+            try self.body(body),
+            try self.body(rescue),
+            ObjectWriter.maybe(failure) { failure in .int(failure) }
+        )
+    }
+
+    private func leaveOperation(
+        _ reach: Leave.Reach,
+        target: Name?,
+        _ read: Operation?
+    ) throws(ObjectUnwritable) -> Value {
+        tagged(
+            ObjectLayout.OperationTag.leave,
+            self.reach(reach),
+            ObjectWriter.maybe(target, name),
+            try ObjectWriter.maybe(read, operation)
+        )
+    }
+
+    // The operations a list holds, in its order.
+    private func operations(_ operations: [Operation]) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for operation in operations {
+            written.append(try self.operation(operation))
+        }
+
+        return .array(written)
+    }
+
+    // Each key before its value.
+    private func entries(_ entries: [(key: Operation, value: Operation)]) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for entry in entries {
+            written.append(.array([try operation(entry.key), try operation(entry.value)]))
+        }
+
+        return .array(written)
+    }
+
+    private func arguments(_ arguments: [Argument]) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for argument in arguments {
+            written.append(try self.argument(argument))
+        }
+
+        return .array(written)
+    }
+
     private func structOperation(_ built: StructOperation) throws(ObjectUnwritable) -> Value {
-        .array([layout(built.layout), .array(try built.fields.map(operation))])
+        .array([layout(built.layout), try operations(built.fields)])
     }
 
     private func callOperation(_ call: CallOperation) throws(ObjectUnwritable) -> Value {
         .array([
             .int(call.procedure),
-            .array(try call.arguments.map { (argument) throws(ObjectUnwritable) -> Value in
-                try ObjectWriter.maybe(argument, self.operation)
-            }),
+            try handedArguments(call.arguments),
             .array(try call.handed.map { (handed) throws(ObjectUnwritable) -> Value in
                 .array([.int(handed.position), try address(handed.address)])
             })
         ])
+    }
+
+    // What a call writes at each position, and nothing where what it hands
+    // in place stands.
+    private func handedArguments(_ arguments: [Operation?]) throws(ObjectUnwritable) -> Value {
+        var written: [Value] = []
+
+        for argument in arguments {
+            written.append(try ObjectWriter.maybe(argument, operation))
+        }
+
+        return .array(written)
     }
 
     // Without the calls beside it. Which row answers a contract is the link's
@@ -725,7 +885,7 @@ struct ObjectWriter {
             name(dispatch.contract),
             name(dispatch.procedure),
             try operation(dispatch.first),
-            .array(try dispatch.arguments.map(argument))
+            try arguments(dispatch.arguments)
         ])
     }
 

@@ -11,18 +11,50 @@ import Warp
 // A document's path: what `{ ref: }` reads and `set` writes. A name, then
 // `.name` for a field, and `[3]`, `["a"]` or `[i]` for what a list or a map
 // holds at a whole number, a text or a value read from a name. `?.` and `?[`
-// read an absence as null.
+// read an absence as null. A path between brackets is one deeper than the
+// path around it, and a path nests no deeper than a document may, counted on
+// from the containers around its string.
 struct PathParser: Sendable {
     // MARK: - Property
+    private static let deeper = "the path nests deeper than a document may, \(Value.nestingBound) levels: the containers"
+        + " around its string count, and a path between brackets is one level deeper than the path around it"
+
     // MARK: - Initializer
     init() {
     }
 
     // MARK: - Public
-    func parse(_ text: String) throws -> Path {
-        var segments: [PathSegment] = []
+    // `depth` is how many containers stand around the string the path is
+    // written in.
+    func parse(_ text: String, at depth: Int = 0) throws -> Path {
+        return try path(text, depth: depth)
+    }
+
+    // MARK: - Private
+    // Only the reading of a reference walks deeper, so a level of the walk
+    // holds this and `segment(_:depth:)`, and the scan is done before it.
+    private func path(_ text: String, depth: Int) throws -> Path {
+        guard depth <= Value.nestingBound else {
+            throw PathSyntaxError(Self.deeper)
+        }
+
+        return Path(try scan(text).map { scanned in try segment(scanned, depth: depth) })
+    }
+
+    private func segment(_ scanned: ScannedSegment, depth: Int) throws -> PathSegment {
+        switch scanned {
+        case let .read(segment):
+            return segment
+
+        case let .reference(text, optional):
+            return .indexRef(try path(text, depth: depth + 1), optional: optional)
+        }
+    }
+
+    private func scan(_ text: String) throws -> [ScannedSegment] {
+        var segments: [ScannedSegment] = []
         var buffer = ""
-        var depth = 0
+        var brackets = 0
 
         // Whether the segment being read was reached through `?.`. The `?` is
         // written at the end of the piece before the dot, so it is carried from
@@ -74,7 +106,7 @@ struct PathParser: Sendable {
                     )
                 }
             } else {
-                segments.append(.name(try name(key), optional: optional))
+                segments.append(.read(.name(try name(key), optional: optional)))
                 optional = false
                 expectsKey = false
                 appended = true
@@ -115,12 +147,12 @@ struct PathParser: Sendable {
             }
 
             switch character {
-            case "\"" where depth > 0:
+            case "\"" where brackets > 0:
                 quoted = true
                 buffer.append(character)
 
             case "[":
-                if depth == 0 {
+                if brackets == 0 {
                     try flushKey()
 
                     guard !expectsKey else {
@@ -130,18 +162,18 @@ struct PathParser: Sendable {
                     }
                 }
 
-                depth += 1
+                brackets += 1
                 buffer.append(character)
 
             case "]":
-                guard depth > 0 else {
+                guard brackets > 0 else {
                     throw PathSyntaxError("`]` closes no `[`")
                 }
 
-                depth -= 1
+                brackets -= 1
                 buffer.append(character)
 
-                if depth == 0 {
+                if brackets == 0 {
                     // A `?` carried to a bracket is the author's `?[`. The same
                     // mark `?.` puts on a name, on an index instead.
                     segments.append(try indexSegment(
@@ -152,7 +184,7 @@ struct PathParser: Sendable {
                     buffer = ""
                 }
 
-            case "." where depth == 0:
+            case "." where brackets == 0:
                 let appended = try flushKey()
 
                 // A dot follows a segment. The one state that says so is
@@ -185,7 +217,7 @@ struct PathParser: Sendable {
             throw PathSyntaxError("the path ends inside a text, and a text is closed by `\"`")
         }
 
-        guard depth == 0 else {
+        guard brackets == 0 else {
             throw PathSyntaxError("the path ends inside `[`, and a `[` is closed by `]`")
         }
 
@@ -208,10 +240,9 @@ struct PathParser: Sendable {
             throw PathSyntaxError("empty reference path")
         }
 
-        return Path(segments)
+        return segments
     }
 
-    // MARK: - Private
     // A segment's spelling as the name it stands for, refused in this
     // parser's own terms.
     private func name(_ spelling: String) throws -> Name {
@@ -224,35 +255,48 @@ struct PathParser: Sendable {
 
     // `[3]` and `["a"]` are written values; `[i]` and `[${i}]` are index
     // references; an empty `[]` refuses.
-    private func indexSegment(_ bracketed: String, optional: Bool) throws -> PathSegment {
-        var inner = String(bracketed.dropFirst().dropLast())
-            .trimmingCharacters(in: Path.whiteSpace)
+    private func indexSegment(_ bracketed: String, optional: Bool) throws -> ScannedSegment {
+        let inner = String(bracketed.dropFirst().dropLast()).trimmingCharacters(in: Path.whiteSpace)
 
+        if let written = try written(inner) {
+            return .read(.index(written, optional: optional))
+        }
+
+        return .reference(try reference(inner), optional: optional)
+    }
+
+    // The value written between the brackets, or nil where they hold a path.
+    private func written(_ inner: String) throws -> Value? {
         if inner.hasPrefix("\"") {
-            return .index(.string(try text(inner)), optional: optional)
+            return .string(try text(inner))
         }
 
-        if inner.hasPrefix("${"), inner.hasSuffix("}") {
-            inner = String(inner.dropFirst(2).dropLast())
-                .trimmingCharacters(in: Path.whiteSpace)
-        }
+        return Int(peeled(inner)).map(Value.int)
+    }
 
-        if let literal = Int(inner) {
-            return .index(.int(literal), optional: optional)
-        }
+    // The path written between the brackets, where they hold no value.
+    private func reference(_ inner: String) throws -> String {
+        let path = peeled(inner)
 
-        guard !inner.isEmpty else {
+        guard !path.isEmpty else {
             throw PathSyntaxError("empty index segment '[]' in reference path")
         }
 
         // Digits are a whole number however many there are, and never a name.
-        let digits = inner.first.map { sign in "+-".contains(sign) } == true ? inner.dropFirst() : Substring(inner)
+        let digits = path.first.map { sign in "+-".contains(sign) } == true ? path.dropFirst() : Substring(path)
 
         guard digits.isEmpty || !digits.allSatisfy({ digit in ("0"..."9").contains(digit) }) else {
-            throw PathSyntaxError("index segment '[\(inner)]' is a whole number past what an Int holds, and so no position")
+            throw PathSyntaxError("index segment '[\(path)]' is a whole number past what an Int holds, and so no position")
         }
 
-        return .indexRef(try parse(inner), optional: optional)
+        return path
+    }
+
+    // What stands between the brackets, out of the `${…}` it may be written in.
+    private func peeled(_ inner: String) -> String {
+        guard inner.hasPrefix("${"), inner.hasSuffix("}") else { return inner }
+
+        return String(inner.dropFirst(2).dropLast()).trimmingCharacters(in: Path.whiteSpace)
     }
 
     // A text between double quotes: `\"` is a quote and `\\` a backslash,

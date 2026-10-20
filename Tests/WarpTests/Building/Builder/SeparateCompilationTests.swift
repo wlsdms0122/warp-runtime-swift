@@ -630,54 +630,45 @@ struct SeparateCompilationTests {
 
     @Test("a call an object stands past what its callee takes is counted where its number is answered")
     func aCallStandingTooManyIsCountedWhereItsRowIsKnown() async throws {
-        // Given. A document whose body calls another document's declaration,
-        // written down with one argument added to what the call stands.
-        let library = try Module(
-            procedures: [
-                "Lib.twice": Procedure(
-                    signature: Signature(parameters: [Parameter(name: "n", type: .int)], returns: .int),
-                    body: [],
-                    result: reference("n")
-                )
-            ]
-        )
+        // Given. A document whose body calls another document's declaration
+        // with two arguments, compiled beside a version of it taking two and
+        // written down as standing on one taking one.
+        let declaring = { (parameters: [Parameter]) in
+            try Module(
+                procedures: [
+                    "Lib.twice": Procedure(
+                        signature: Signature(parameters: parameters, returns: .int),
+                        body: [],
+                        result: reference("n")
+                    )
+                ]
+            )
+        }
         let caller = try Module(
             procedures: [
                 "App.relay": Procedure(
                     signature: Signature(returns: .int),
                     body: [],
-                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(2))]))
+                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(2)), .literal(.int(3))]))
                 )
             ]
         )
-        let compiled = try await Builder { value in Fingerprint(Array("\(value)".utf8)) }.compile([library, caller])
+        let fingerprinting = Builder { value in Fingerprint(Array("\(value)".utf8)) }
+        let compiled = try await fingerprinting.compile([try declaring([Parameter(name: "n", type: .int)])])
+        let wider = try await fingerprinting.compile([
+            try declaring([Parameter(name: "n", type: .int), Parameter(name: "m", type: .int)]),
+            caller
+        ])
 
-        guard
-            case var .dictionary(parts) = try compiled[1].object(),
-            case var .array(table) = parts["rows"],
-            case var .array(row) = table[0],
-            case var .array(implementation) = row[3],
-            case var .array(body) = implementation[1],
-            case var .array(result) = body[1],
-            case var .array(operation) = result[0],
-            case var .array(call) = operation[1],
-            case let .array(arguments) = call[1]
-        else {
-            Issue.record("an object writes a body whose result is a call")
+        guard case var .dictionary(parts) = try wider[1].object(), let fingerprint = compiled[0].fingerprint else {
+            Issue.record("an object writes what it stands on")
 
             return
         }
 
-        call[1] = .array(arguments + [.array([.array([.int(0), .array([.int(2), .int(3)])])])])
-        operation[1] = .array(call)
-        result[0] = .array(operation)
-        body[1] = .array(result)
-        implementation[1] = .array(body)
-        row[3] = .array(implementation)
-        table[0] = .array(row)
-        parts = parts.writing("rows", with: .array(table))
+        parts = parts.writing("dependencies", with: [.bytes(fingerprint.bytes)])
 
-        let read = [compiled[0], try Compiled(written: .dictionary(parts), of: compiled[1].identity)]
+        let read = [compiled[0], try Compiled(written: .dictionary(parts), of: wider[1].identity)]
 
         // When / Then. The row the call reaches is another document's, so the
         // reading takes it, and a compile laying it down refuses it before a
@@ -732,8 +723,8 @@ struct SeparateCompilationTests {
         )
         let compiled = try await builder.compile([library, program] + Module.standard)
         let standard = Array(compiled[2...])
-        let libraryNaming = try written(compiled[0], types: [.array([.string("Lib.B"), .array([.int(14), .string("App.A")])])])
-        let programNaming = try written(compiled[1], types: [.array([.string("App.A"), .array([.int(14), .string("Lib.B")])])])
+        let libraryNaming = try written(compiled[0], standingFor: .array([.int(14), .string("App.A")]))
+        let programNaming = try written(compiled[1], standingFor: .array([.int(14), .string("Lib.B")]))
 
         // When / Then. One naming what the other declares links and runs, in
         // whichever order the host hands them over.
@@ -809,12 +800,16 @@ struct SeparateCompilationTests {
     // An object written down and read back with its declared types replaced
     // by the ones given, as a cache holding a document compiled beside other
     // counterparts would hand it over.
-    private func written(_ object: Compiled, types: [Value]) throws -> Compiled {
-        guard case let .dictionary(parts) = try object.object() else {
+    // The object with the type its one declared type stands for, the first
+    // entry of its type table, written as another.
+    private func written(_ object: Compiled, standingFor type: Value) throws -> Compiled {
+        guard case let .dictionary(parts) = try object.object(), case var .array(types) = parts["typeTable"] else {
             throw Unheld(description: "an object is written as a map of its parts")
         }
 
-        return try Compiled(written: .dictionary(parts.writing("types", with: .array(types))), of: object.identity)
+        types[0] = type
+
+        return try Compiled(written: .dictionary(parts.writing("typeTable", with: .array(types))), of: object.identity)
     }
 
     // A type, a contract, a claim about the two in a third document, and a

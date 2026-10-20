@@ -208,7 +208,7 @@ public struct ExpressionReader: Decodable {
         }
 
         do {
-            return .reference(try PathParser().parse(rendered))
+            return .reference(try PathParser().parse(rendered, at: steps.count))
         } catch {
             throw ReadingError("`ref` '\(rendered)': \(error)", at: steps)
         }
@@ -233,14 +233,13 @@ public struct ExpressionReader: Decodable {
             throw ExpressionFormError("`\(key)` takes `of`, the value, and `type`, the type, and nothing else")
         }
 
-        // A type has two spellings and a cast takes either: the string a
-        // built-in or a declared name is written as, and the mapping a
-        // procedure, an array or a dictionary type is written as.
+        // A type is written as a string, and anything else is refused where
+        // it stands, under `type`.
         let type: TypeExpression
 
         do {
             if case let .string(spelling) = spelled {
-                type = try TypeReader.parse(spelling, in: decoder.notation)
+                type = try TypeReader.parse(spelling, in: decoder.notation, at: inside + [.key(Self.typeKey.spelling)])
             } else {
                 let below = ValueDecoder(below: decoder, key: Self.typeKey.spelling, holding: spelled, at: inside)
 
@@ -354,7 +353,7 @@ public struct ExpressionReader: Decodable {
         let segments: [TemplateSegment]
 
         do {
-            segments = try TemplateParser().parse(template)
+            segments = try TemplateParser().parse(template, at: steps.count + 1)
         } catch {
             throw ExpressionFormError("`format`'s template: \(error)")
         }

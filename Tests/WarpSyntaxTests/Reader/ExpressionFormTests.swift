@@ -39,7 +39,7 @@ struct ExpressionFormTests {
     func aNamedStructStaysALiteral() throws {
         // Given. A struct standing under a name is a value of that type, not a
         // mapping read by its tag
-        let written = try TextEncoding().value(from: "warpt 1\nbank.Money { amount 7 }\n")
+        let written = try Value.holding([(name: "amount", value: .int(7))], named: "bank.Money")
 
         // When
         let read = try loader.expression(from: written)

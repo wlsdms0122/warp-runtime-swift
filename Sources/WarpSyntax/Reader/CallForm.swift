@@ -26,33 +26,41 @@ struct CallForm: Decodable, Sendable {
     let expression: Warp.Expression
 
     // MARK: - Initializer
+    // Each part is read out of line, so a level of calls nested to the bound
+    // spends little stack, a debug build's included.
     init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "call")
 
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let notation = decoder.notation
+        let arguments = try Self.arguments(in: decoder)
 
-        let arguments = try decoder.descendingIfPresent(to: CodingKeys.arguments)?
-            .read([ExpressionReader].self)
-            .map(\.expression) ?? []
-
-        guard let spelled = try? container.decode(String.self, forKey: .procedure) else {
-            self.expression = .apply(
-                try decoder.descending(to: CodingKeys.procedure).read(ExpressionReader.self).expression,
-                arguments: arguments
-            )
+        guard let selector = try Self.selector(in: decoder) else {
+            self.expression = .apply(try Self.callee(in: decoder), arguments: arguments)
 
             return
         }
 
-        self.expression = .call(
-            Call(
-                selector: notation.qualified(try Name.read(spelled, at: decoder.steps), as: .procedure),
-                arguments: arguments
-            )
-        )
+        self.expression = .call(Call(selector: selector, arguments: arguments))
     }
 
     // MARK: - Public
     // MARK: - Private
+    private static func arguments(in decoder: Decoder) throws -> [Warp.Expression] {
+        try decoder.descendingIfPresent(to: CodingKeys.arguments)?
+            .read([ExpressionReader].self)
+            .map(\.expression) ?? []
+    }
+
+    // The declaration a string names, or nil where `procedure` is an
+    // expression.
+    private static func selector(in decoder: Decoder) throws -> Name? {
+        guard let spelled = try? decoder.container(keyedBy: CodingKeys.self).decode(String.self, forKey: .procedure) else {
+            return nil
+        }
+
+        return decoder.notation.qualified(try Name.read(spelled, at: decoder.steps), as: .procedure)
+    }
+
+    private static func callee(in decoder: Decoder) throws -> Warp.Expression {
+        try decoder.descending(to: CodingKeys.procedure).read(ExpressionReader.self).expression
+    }
 }

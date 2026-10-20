@@ -8,13 +8,12 @@
 import Foundation
 
 extension Block: Traversable {
-    func walked<Trail>(
+    func walk<Trail>(
         at trail: Trail,
-        stepping: (Trail, Place.Step) -> Trail
-    ) -> [(Trail, Node)] {
-        body.walked(at: Child.body.steps.reduce(trail, stepping), stepping: stepping)
-            + (result.map { result in
-                result.walked(at: Child.result.steps.reduce(trail, stepping), stepping: stepping)
-            } ?? [])
+        stepping: (Trail, Place.Step) -> Trail,
+        into found: inout [(Trail, Node)]
+    ) {
+        body.walk(at: Child.body.steps.reduce(trail, stepping), stepping: stepping, into: &found)
+        result?.walk(at: Child.result.steps.reduce(trail, stepping), stepping: stepping, into: &found)
     }
 }

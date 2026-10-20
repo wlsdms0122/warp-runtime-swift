@@ -150,7 +150,7 @@ struct Numbering: Sendable {
     func written(dropping declared: Int) -> Value {
         .array([
             .array(spellings.dropLast(declared).map { name in .string(name.spelling) }),
-            .array(runs.map { run in .array([ObjectWriter().declaration(run.declaration), .int(run.count)]) })
+            .array(runs.map { run in .array([ObjectWriter.declaration(run.declaration), .int(run.count)]) })
         ])
     }
 

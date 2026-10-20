@@ -333,7 +333,7 @@ public struct Compiled: Sendable, Declaring {
     // and for the same reason: an object cannot work out what it is, because
     // that answer is about bytes and reading bytes is another package's.
     public init(written value: Value, of identity: Identity?, fingerprint: Fingerprint? = nil) throws {
-        let read = try ObjectReader(of: identity).compiled(from: value)
+        let read = try ObjectReader(value, of: identity).compiled()
 
         self = fingerprint.map(read.fingerprinted) ?? read
     }
@@ -352,7 +352,7 @@ public struct Compiled: Sendable, Declaring {
     // This object said as a value, so a host can keep it where bytes are
     // kept, or what keeps it from being one.
     public func object() throws(ObjectUnwritable) -> Value {
-        try ObjectWriter().value(of: self)
+        try ObjectWriter(self).value()
     }
 
     // The same object, said as what it was worked out to be.

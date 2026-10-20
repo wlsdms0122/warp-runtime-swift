@@ -440,18 +440,7 @@ struct DeclarationChecker {
                 try part(.associatedType(of: standing.of, name: standing.name), at: place)
             }
 
-            let contracts = table.loweredTypes.contracts(bounding: of, under: bounds)
-
-            guard table.loweredTypes.bounds(of: name, askedBy: contracts) != nil else {
-                let bounding = contracts.sorted().map(\.spelling).joined(separator: " & ")
-
-                throw BuildError(
-                    "writes `\(type.rendered)`, and "
-                        + (bounding.isEmpty ? "no contract bounds '\(of)'" : "'\(of)' is bounded by \(bounding)")
-                        + ", which asks no type '\(name)'. An associated type is one a contract bounding what it stands on asks",
-                    at: place
-                )
-            }
+            try asked(name, of: of, at: place, bounds: bounds, in: table)
 
         case let .procedure(type, _, _):
             guard let type else { return }
@@ -462,29 +451,14 @@ struct DeclarationChecker {
 
             try part(type.returns, at: place.part(.returns))
 
-        // A value of whatever type answers every name: each has to be a
-        // contract's, since a type is one thing and not a bound on some
-        // other.
         case let .composition(names):
-            for name in names.sorted() where table.contracts[name] == nil {
-                throw BuildError(
-                    "joins '\(name)' with `&`, and `&` joins the names of contracts,"
-                        + " which no module in this link declares '\(name)' as",
-                    at: place
-                )
-            }
+            try joined(names, at: place, in: table)
 
         // Types and contracts are two tables and no name is in both, so a
         // mention reaches whichever declares it. A contract standing here is
         // a value of whatever type answers it.
         case let .named(name, arguments):
-            guard table.types[name] != nil || table.contracts[name] != nil else {
-                throw BuildError(
-                    "names type '\(name)', which no module in this"
-                        + " link declares",
-                    at: place
-                )
-            }
+            try declared(name, at: place, in: table)
 
             for argument in arguments {
                 try part(argument, at: place)
@@ -510,26 +484,66 @@ struct DeclarationChecker {
                 try keyed(by: key, at: place, bounds: bounds, sameTypes: sameTypes, in: table)
             }
 
-        // The load held a `?` to saying something new on what it wraps as
-        // written. A name may stand for what it says nothing on, and that is
-        // known here, where names resolve: what the name lowers to, spelled.
         case let .nullable(inner):
             try part(inner, at: place)
+            try questioned(inner, at: place, in: table)
+        }
+    }
 
-            guard case .named = inner else { return }
+    // An associated type is one a contract bounding what it stands on asks.
+    private func asked(_ name: Name, of owner: Name, at place: Place, bounds: [Name: Set<Name>], in table: TypeTable) throws {
+        let contracts = table.loweredTypes.contracts(bounding: owner, under: bounds)
 
-            let stands = inner.lowered(in: table.loweredTypes).spelled(in: table.loweredTypes)
+        guard table.loweredTypes.bounds(of: name, askedBy: contracts) != nil else {
+            let bounding = contracts.sorted().map(\.spelling).joined(separator: " & ")
 
-            guard stands.takesQuestionMark else {
-                throw BuildError(
-                    "writes `?` on \(inner.rendered), which"
-                        + " stands for `\(stands.rendered)`. A `?` says"
-                        + " nothing there, the same rule the spelling"
-                        + " `\(stands.rendered)?` is refused by",
-                    at: place
-                )
-            }
+            throw BuildError(
+                "writes `\(TypeExpression.associatedType(of: owner, name: name).rendered)`, and "
+                    + (bounding.isEmpty ? "no contract bounds '\(owner)'" : "'\(owner)' is bounded by \(bounding)")
+                    + ", which asks no type '\(name)'. An associated type is one a contract bounding what it stands on asks",
+                at: place
+            )
+        }
+    }
 
+    // A value of whatever type answers every name: each has to be a
+    // contract's, since a type is one thing and not a bound on some other.
+    private func joined(_ names: Set<Name>, at place: Place, in table: TypeTable) throws {
+        for name in names.sorted() where table.contracts[name] == nil {
+            throw BuildError(
+                "joins '\(name)' with `&`, and `&` joins the names of contracts,"
+                    + " which no module in this link declares '\(name)' as",
+                at: place
+            )
+        }
+    }
+
+    private func declared(_ name: Name, at place: Place, in table: TypeTable) throws {
+        guard table.types[name] != nil || table.contracts[name] != nil else {
+            throw BuildError(
+                "names type '\(name)', which no module in this"
+                    + " link declares",
+                at: place
+            )
+        }
+    }
+
+    // The load held a `?` to saying something new on what it wraps as
+    // written. A name may stand for what it says nothing on, and that is
+    // known here, where names resolve: what the name lowers to, spelled.
+    private func questioned(_ inner: TypeExpression, at place: Place, in table: TypeTable) throws {
+        guard case .named = inner else { return }
+
+        let stands = inner.lowered(in: table.loweredTypes).spelled(in: table.loweredTypes)
+
+        guard stands.takesQuestionMark else {
+            throw BuildError(
+                "writes `?` on \(inner.rendered), which"
+                    + " stands for `\(stands.rendered)`. A `?` says"
+                    + " nothing there, the same rule the spelling"
+                    + " `\(stands.rendered)?` is refused by",
+                at: place
+            )
         }
     }
 

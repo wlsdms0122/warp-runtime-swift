@@ -1,65 +1,16 @@
-warpt 1
-{
-  imports [
-    "Standard.Comparable.lessThan"
-    "Standard.Numeric.plus"
-  ]
-  procedures {
-    entry {
-      access "public"
-      body [
-        {
-          value 0
-          var "count"
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  set "count"
-                  value {
-                    call {
-                      arguments [
-                        {
-                          ref "count"
-                        }
-                        1
-                      ]
-                      procedure "Standard.Numeric.plus"
-                    }
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "count"
-      }
-      returns "Int"
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.plus)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (var count 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set count (call Standard.Numeric.plus count 1))))))
+  (result count))

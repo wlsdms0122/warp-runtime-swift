@@ -1,72 +1,19 @@
-warpt 1
-{
-  imports [
-    "Standard.Comparable.lessThan"
-  ]
-  procedures {
-    entry {
-      access "public"
-      body [
-        {
-          let "data"
-          type "App.Data"
-          value {
-            struct {
-              a 1
-            }
-          }
-        }
-        {
-          value 0
-          var "seen"
-        }
-        {
-          let "round"
-          value {
-            loop {
-              body [
-                {
-                  set "seen"
-                  value {
-                    ref "data.a"
-                  }
-                }
-              ]
-              while {
-                call {
-                  arguments [
-                    {
-                      ref "round.index"
-                    }
-                    {
-                      ref "rounds"
-                    }
-                  ]
-                  procedure "Standard.Comparable.lessThan"
-                }
-              }
-            }
-          }
-        }
-      ]
-      parameters [
-        {
-          name "rounds"
-          type "Int"
-        }
-      ]
-      result {
-        ref "seen"
-      }
-      returns "Int"
-    }
-  }
-  types {
-    "App.Data" {
-      struct {
-        a "Int"
-      }
-    }
-  }
-  warp 1
-}
+(warp 1)
+(import Standard.Comparable.lessThan)
+
+(struct App.Data
+  (field a Int))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let data (type App.Data) (struct (field a 1)))
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (path data (field a)))))))
+  (result seen))

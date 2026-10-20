@@ -90,6 +90,9 @@ struct TypeReader: Decodable {
     // What a slot reads: the type, and the type parameters it names.
     var bounded: (type: TypeExpression, namings: [Naming]) { (written, namings) }
 
+    private static let deeper = "the type nests deeper than a document may, \(Value.nestingBound) levels: the containers"
+        + " around its string count, and a type written inside another is one level deeper than it"
+
     // What a type written as anything but a string is refused with.
     static let unread = "a type is written as a string like `String`, `Array<String>`, `Task` or"
         + " `(Int) -> Bool`. A struct is declared under its name in `types` as `{ struct: { … } }`,"
@@ -125,14 +128,15 @@ struct TypeReader: Decodable {
     }
 
     // A type from its spelling, a declared name written short standing for
-    // what the notation reads it as. `steps` are where it is written.
+    // what the notation reads it as. `steps` are where its string is written,
+    // and the type stands as deep as the containers they enter.
     static func reading(
         _ written: String,
         in notation: Notation = .canonical,
         at steps: [Place.Step] = []
     ) throws -> TypeReader {
         var namings: [Naming] = []
-        let type = try parse(written, qualifying: { name in notation.qualified(name, as: .type) }) { name, bound in
+        let type = try parse(written, depth: steps.count, qualifying: { name in notation.qualified(name, as: .type) }) { name, bound in
             namings.append(Naming(name: name, bound: bound, steps: steps))
         }
 
@@ -159,8 +163,12 @@ struct TypeReader: Decodable {
     }
 
     // The same, where no bound may stand.
-    static func parse(_ written: String, in notation: Notation = .canonical) throws -> TypeExpression {
-        let read = try reading(written, in: notation)
+    static func parse(
+        _ written: String,
+        in notation: Notation = .canonical,
+        at steps: [Place.Step] = []
+    ) throws -> TypeExpression {
+        let read = try reading(written, in: notation, at: steps)
 
         if let bounded = read.namings.first(where: { naming in naming.bound != nil }) {
             throw TypeFormError(unintroduced(bounded.name))
@@ -174,8 +182,12 @@ struct TypeReader: Decodable {
     // `some T` may stand beside its bounds, `some T: Hashable & Equatable`.
     // A type parameter is bounded where the head first names it, and the
     // head is a type a value is an instance of.
-    static func head(_ written: String, in notation: Notation = .canonical) throws -> Head {
-        let read = try reading(written, in: notation)
+    static func head(
+        _ written: String,
+        in notation: Notation = .canonical,
+        at steps: [Place.Step] = []
+    ) throws -> Head {
+        let read = try reading(written, in: notation, at: steps)
         let (bounds, again) = introduced(read.namings)
         let type = read.written
 
@@ -251,73 +263,187 @@ struct TypeReader: Decodable {
 
     // MARK: - Private
     // `qualifying` is the notation's reading of a declared name, handed down
-    // the spelling's parts.
+    // the spelling's parts. A type written inside another is one deeper, and
+    // a type nests no deeper than a document may, counted on from the
+    // containers around its string. The forms holding a type
+    // are read in functions of their own, and every check that ends the walk
+    // in others, so a level of the walk holds little more than the dispatch.
     private static func parse(
         _ written: String,
+        depth: Int,
         qualifying: (Name) -> Name,
         bounding: (Name, Set<Name>?) throws -> Void
     ) throws -> TypeExpression {
+        guard depth <= Value.nestingBound else {
+            throw TypeFormError(deeper)
+        }
+
+        let text = try trimmed(written)
+
+        if let marked = try marked(text, depth: depth, qualifying: qualifying, bounding: bounding) {
+            return marked
+        }
+
+        if let modified = try modified(text, depth: depth, qualifying: qualifying, bounding: bounding) {
+            return modified
+        }
+
+        if let procedure = try procedure(text, depth: depth, qualifying: qualifying, bounding: bounding) {
+            return procedure
+        }
+
+        if let nullable = try nullable(text, depth: depth, qualifying: qualifying, bounding: bounding) {
+            return nullable
+        }
+
+        if let unapplied = try unapplied(text, qualifying: qualifying, bounding: bounding) {
+            return unapplied
+        }
+
+        return try applied(text, depth: depth, qualifying: qualifying, bounding: bounding)
+    }
+
+    // `inout` and `var` stand in front of the whole type, including a
+    // trailing `?`, so they are read before anything else is.
+    private static func marked(
+        _ text: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression? {
+        guard let (mark, bare) = SlotMark.leading(of: text) else { return nil }
+
+        return mark.marking(try parse(bare, depth: depth + 1, qualifying: qualifying, bounding: bounding))
+    }
+
+    // What follows `->` is a procedure's answer to the end of the spelling,
+    // so the arrow reads before a trailing `?`: `(Int) -> Int?` answers what
+    // may be null.
+    private static func procedure(
+        _ text: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression? {
+        guard let arrow = Self.arrow(in: text) else { return nil }
+
+        return try procedure(text, at: arrow, depth: depth, qualifying: qualifying, bounding: bounding)
+    }
+
+    // A trailing `?` wraps the whole spelling before it: `Array<Int>?` is a
+    // nullable array and `A & B?` a nullable composition, and what may be
+    // inside the brackets never carries one. Parentheses before it group
+    // what it wraps.
+    private static func nullable(
+        _ text: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression? {
+        guard text.hasSuffix("?") else { return nil }
+
+        let inner = String(text.dropLast()).trimmingCharacters(in: Path.whiteSpace)
+
+        return .nullable(try parse(parenthesized(inner) ?? inner, depth: depth + 1, qualifying: qualifying, bounding: bounding))
+    }
+
+    // The text without the white space around it. Parentheses group a type
+    // where a `?` follows them and nowhere else, so the `?` is the whole
+    // procedure type's: `((Int) -> Int)?`, `(const Procedure)?`. A type is
+    // written one way, so a group standing anywhere else is refused.
+    private static func trimmed(_ written: String) throws -> String {
         let text = written.trimmingCharacters(in: Path.whiteSpace)
 
         guard !text.isEmpty else {
             throw TypeFormError("a type name must not be empty")
         }
 
-        // `inout` and `var` stand in front of the whole type, including a
-        // trailing `?`, so they are read before anything else is.
-        if let (mark, bare) = SlotMark.leading(of: text) {
-            return mark.marking(try parse(bare, qualifying: qualifying, bounding: bounding))
+        guard parenthesized(text) == nil else {
+            throw TypeFormError(
+                "type '\(text)' groups a type where no `?` follows. Parentheses group a procedure type before"
+                    + " its `?`, `((Int) -> Int)?`, and nowhere else"
+            )
         }
 
+        return text
+    }
+
+    // A modifier stands in front of the whole procedure type after it, so a
+    // nullable one is written `(const Procedure)?`. The procedure is the type
+    // the modifiers are written on, at their depth, and writes none of its
+    // own. Nil where the text writes no modifier.
+    private static func modified(
+        _ text: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression? {
+        guard let (constness, isolation, bare) = try modifiers(written: text) else { return nil }
+
+        // The procedure is read here rather than through the dispatch, so a
+        // modifier adds no level to the walk.
+        guard let arrow = Self.arrow(in: bare) else {
+            return .procedure(try procedure(named: bare, as: text), constness, isolation)
+        }
+
+        guard
+            case let .procedure(signature, _, _) = try procedure(
+                bare,
+                at: arrow,
+                depth: depth,
+                qualifying: qualifying,
+                bounding: bounding
+            )
+        else {
+            throw unmodifiable(text)
+        }
+
+        return .procedure(signature, constness, isolation)
+    }
+
+    // The modifiers a text writes and the procedure type they stand in front
+    // of, out of the parentheses that may group it. Nil where it writes none.
+    private static func modifiers(written text: String) throws -> (Constness, Isolation, String)? {
         guard let (constness, isolation, rest) = Self.modifiers(of: text) else {
             throw TypeFormError("type '\(text)' writes a modifier twice. Once says it")
         }
 
-        // A modifier stands in front of the whole procedure type after it, so a
-        // nullable one is written `(const Procedure)?`.
-        if constness == .const || isolation == .isolated {
-            guard
-                case let .procedure(signature, .unstated, .unstated) = try parse(
-                    rest,
-                    qualifying: qualifying,
-                    bounding: bounding
-                )
-            else {
-                throw TypeFormError(
-                    "type '\(text)' writes a modifier in front of what is no procedure type. A modifier stands in"
-                        + " front of a procedure type, and one that may be null is written in parentheses before"
-                        + " the `?`: `(const Procedure)?`"
-                )
-            }
+        guard constness == .const || isolation == .isolated else { return nil }
 
-            return .procedure(signature, constness, isolation)
+        let bare = try trimmed(rest)
+
+        guard case (.unstated, .unstated, _)? = Self.modifiers(of: bare) else {
+            throw unmodifiable(text)
         }
 
-        // What follows `->` is a procedure's answer to the end of the
-        // spelling, so the arrow reads before a trailing `?`: `(Int) -> Int?`
-        // answers what may be null.
-        if let arrow = Self.arrow(in: text) {
-            return try procedure(
-                String(text[..<arrow]),
-                answering: String(text[text.index(arrow, offsetBy: 2)...]),
-                qualifying: qualifying,
-                bounding: bounding
-            )
+        return (constness, isolation, bare)
+    }
+
+    // `Procedure` under modifiers, which says no signature.
+    private static func procedure(named bare: String, as text: String) throws -> ProcedureType? {
+        guard let name = try? named(bare), case .procedure(nil, _, _)? = TypeExpression.keywords[name] else {
+            throw unmodifiable(text)
         }
 
-        // A trailing `?` wraps the whole spelling before it: `Array<Int>?` is
-        // a nullable array and `A & B?` a nullable composition, and what may
-        // be inside the brackets never carries one.
-        if text.hasSuffix("?") {
-            return .nullable(try parse(String(text.dropLast()), qualifying: qualifying, bounding: bounding))
-        }
+        return nil
+    }
 
-        // Parentheses group, so a `?` after them is the whole procedure
-        // type's: `((Int) -> Int)?`, `(const Procedure)?`.
-        if let grouped = Self.parenthesized(text) {
-            return try parse(grouped, qualifying: qualifying, bounding: bounding)
-        }
+    private static func unmodifiable(_ text: String) -> TypeFormError {
+        TypeFormError(
+            "type '\(text)' writes a modifier in front of what is no procedure type. A modifier stands in"
+                + " front of a procedure type, and one that may be null is written in parentheses before"
+                + " the `?`: `(const Procedure)?`"
+        )
+    }
 
+    // A type that holds no other: a type parameter, an associated type, or
+    // contracts an `&` joins. Nil where the text is a name, applied to types
+    // or not. A parenthesis that opens it opens nothing a type is.
+    private static func unapplied(
+        _ text: String,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression? {
         if text.hasPrefix("(") {
             throw TypeFormError(
                 "type '\(text)' opens a parenthesis, and parentheses hold a procedure type's parameters before"
@@ -325,44 +451,8 @@ struct TypeReader: Decodable {
             )
         }
 
-        // A type parameter rather than a name: `some T` is worked out from the
-        // call, where `T` alone would be looked up in the table of declared
-        // types. Where it is introduced, the contracts it is bounded by stand
-        // beside it, `some T: Hashable & Equatable`, read before `&`, which
-        // joins the bounds here.
-        //
-        // `some T.Item` is the type the type filling `T` gives under `Item`,
-        // and `Self.Item` the type the type answering a contract does.
         if text == TypeSpelling.some.spelling || text.hasPrefix("\(TypeSpelling.some) ") {
-            let parameter = text.dropFirst(TypeSpelling.some.spelling.count)
-            let parts = parameter.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-            let label = parts[0].trimmingCharacters(in: Path.whiteSpace)
-
-            guard parts.count > 1 else {
-                if let associated = try associatedType(label) {
-                    return associated
-                }
-
-                let name = try named(label)
-
-                try bounding(name, nil)
-
-                return .parameter(name: name)
-            }
-
-            guard !label.contains(".") else {
-                throw TypeFormError(
-                    "writes a bound beside '\(label)', an associated type, and a bound stands beside a type"
-                        + " parameter where it is introduced. An associated type is held to what the contract asking"
-                        + " it says, and in a signature also to its `bounds`, keyed by '\(label)'"
-                )
-            }
-
-            let name = try named(label)
-
-            try bounding(name, try contracts(String(parts[1]), qualifying: qualifying))
-
-            return .parameter(name: name)
+            return try parameter(text, qualifying: qualifying, bounding: bounding)
         }
 
         // `A & B`: the names a value answers, and nothing else. Names joining
@@ -377,54 +467,148 @@ struct TypeReader: Decodable {
             return .composition(names)
         }
 
-        if text.hasPrefix("\(TypeSpelling.selfType.spelling)."), let associated = try associatedType(text) {
-            return associated
+        if text.hasPrefix("\(TypeSpelling.selfType.spelling).") {
+            return try associatedType(text)
         }
 
+        return nil
+    }
+
+    // A type parameter rather than a name: `some T` is worked out from the
+    // call, where `T` alone would be looked up in the table of declared
+    // types. Where it is introduced, the contracts it is bounded by stand
+    // beside it, `some T: Hashable & Equatable`, read before `&`, which
+    // joins the bounds here.
+    //
+    // `some T.Item` is the type the type filling `T` gives under `Item`,
+    // and `Self.Item` the type the type answering a contract does.
+    private static func parameter(
+        _ text: String,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression {
+        let parameter = text.dropFirst(TypeSpelling.some.spelling.count)
+        let parts = parameter.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+        let label = parts[0].trimmingCharacters(in: Path.whiteSpace)
+
+        guard parts.count > 1 else {
+            if let associated = try associatedType(label) {
+                return associated
+            }
+
+            let name = try named(label)
+
+            try bounding(name, nil)
+
+            return .parameter(name: name)
+        }
+
+        guard !label.contains(".") else {
+            throw TypeFormError(
+                "writes a bound beside '\(label)', an associated type, and a bound stands beside a type"
+                    + " parameter where it is introduced. An associated type is held to what the contract asking"
+                    + " it says, and in a signature also to its `bounds`, keyed by '\(label)'"
+            )
+        }
+
+        let name = try named(label)
+
+        try bounding(name, try contracts(String(parts[1]), qualifying: qualifying))
+
+        return .parameter(name: name)
+    }
+
+    // A name and what its brackets hold, or nil where it is written without
+    // them.
+    private static func application(of text: String) throws -> (head: String, inner: String)? {
         guard let open = text.firstIndex(of: "<") else {
             guard !text.contains(">") else {
                 throw TypeFormError("type '\(text)' closes an argument it never opened")
             }
 
-            let name = try named(text)
-
-            return TypeExpression.keywords[name] ?? .named(qualifying(name))
+            return nil
         }
-
-        let head = String(text[text.startIndex ..< open])
 
         guard text.hasSuffix(">") else {
             throw TypeFormError("type '\(text)' opens an argument it never closes")
         }
 
-        let inner = String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
+        return (
+            String(text[text.startIndex ..< open]),
+            String(text[text.index(after: open) ..< text.index(before: text.endIndex)])
+        )
+    }
 
-        // A declared name applied to types is a struct taking type
-        // parameters, and how many it takes is its declaration's, which the
-        // build reads where the name resolves. A type the language names
-        // takes none.
-        guard let holding = Holding(spelling: head) else {
-            let name = try named(head.trimmingCharacters(in: Path.whiteSpace))
+    // A name, or a built-in or a declared struct applied to the types its
+    // brackets hold.
+    private static func applied(
+        _ text: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> TypeExpression {
+        guard let (head, inner) = try application(of: text) else {
+            let name = try named(text)
 
-            guard TypeExpression.keywords[name] == nil else {
-                throw TypeFormError(
-                    "type '\(head)' takes no argument. Only "
-                        + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: ", ")
-                        + " and a struct a module declares with type parameters do"
-                )
-            }
+            return TypeExpression.keywords[name] ?? .named(qualifying(name))
+        }
 
-            return .named(
-                qualifying(name),
-                arguments: try arguments(inner).map { argument in try parse(argument, qualifying: qualifying, bounding: bounding) }
+        if let holding = Holding(spelling: head) {
+            return try held(
+                try types(inner, depth: depth, qualifying: qualifying, bounding: bounding),
+                in: holding,
+                as: head,
+                inner
             )
         }
 
-        let parts = try arguments(inner).map { argument in try parse(argument, qualifying: qualifying, bounding: bounding) }
+        let name = try applicable(head)
 
+        return .named(qualifying(name), arguments: try types(inner, depth: depth, qualifying: qualifying, bounding: bounding))
+    }
+
+    // The types a spelling's brackets hold, a level deeper than it.
+    private static func types(
+        _ inner: String,
+        depth: Int,
+        qualifying: (Name) -> Name,
+        bounding: (Name, Set<Name>?) throws -> Void
+    ) throws -> [TypeExpression] {
+        var types: [TypeExpression] = []
+
+        for argument in arguments(inner) {
+            types.append(try parse(argument, depth: depth + 1, qualifying: qualifying, bounding: bounding))
+        }
+
+        return types
+    }
+
+    // A declared name applied to types is a struct taking type parameters,
+    // and how many it takes is its declaration's, which the build reads where
+    // the name resolves. A type the language names takes none.
+    private static func applicable(_ head: String) throws -> Name {
+        let name = try named(head.trimmingCharacters(in: Path.whiteSpace))
+
+        guard TypeExpression.keywords[name] == nil else {
+            throw TypeFormError(
+                "type '\(head)' takes no argument. Only "
+                    + Holding.allCases.map { holding in "`\(holding.spelling)<…>`" }.joined(separator: ", ")
+                    + " and a struct a module declares with type parameters do"
+            )
+        }
+
+        return name
+    }
+
+    private static func held(
+        _ parts: [TypeExpression],
+        in holding: Holding,
+        as head: String,
+        _ inner: String
+    ) throws -> TypeExpression {
         guard let held = holding.holding(parts) else {
             throw TypeFormError(
-                "type '\(text)' is written with another count of types,"
+                "type '\(head)<\(inner)>' is written with another count of types,"
                     + " and `\(holding.spelling)` takes \(holding.arguments)"
             )
         }
@@ -553,14 +737,29 @@ struct TypeReader: Decodable {
 
     // A procedure type from what stands before its `->`, its parameters in
     // parentheses and then what it may fail with, and what stands after it.
-    // Leaving `throws` out says it fails with nothing, `throws` alone that it
-    // may fail with anything, and `throws(a, b)` with those.
     private static func procedure(
-        _ head: String,
-        answering answer: String,
+        _ text: String,
+        at arrow: String.Index,
+        depth: Int,
         qualifying: (Name) -> Name,
         bounding: (Name, Set<Name>?) throws -> Void
     ) throws -> TypeExpression {
+        let (inside, failing) = try signature(String(text[..<arrow]))
+        let parameters = inside.isEmpty ? [] : try types(inside, depth: depth, qualifying: qualifying, bounding: bounding)
+        let returns = try parse(
+            String(text[text.index(arrow, offsetBy: 2)...]),
+            depth: depth + 1,
+            qualifying: qualifying,
+            bounding: bounding
+        )
+
+        return .procedure(ProcedureType(parameters: parameters, returns: returns, failing: failing))
+    }
+
+    // What stands between a procedure type's parentheses, and what it may
+    // fail with. Leaving `throws` out says it fails with nothing, `throws`
+    // alone that it may fail with anything, and `throws(a, b)` with those.
+    private static func signature(_ head: String) throws -> (inside: String, failing: Failing) {
         let head = head.trimmingCharacters(in: Path.whiteSpace)
 
         guard head.hasPrefix("("), let close = closing(head) else {
@@ -570,17 +769,9 @@ struct TypeReader: Decodable {
             )
         }
 
-        let inside = head[head.index(after: head.startIndex) ..< close].trimmingCharacters(in: Path.whiteSpace)
-        let parameters = try (inside.isEmpty ? [] : arguments(inside)).map { parameter in
-            try parse(parameter, qualifying: qualifying, bounding: bounding)
-        }
-
-        return .procedure(
-            ProcedureType(
-                parameters: parameters,
-                returns: try parse(answer, qualifying: qualifying, bounding: bounding),
-                failing: try failing(String(head[head.index(after: close)...]))
-            )
+        return (
+            head[head.index(after: head.startIndex) ..< close].trimmingCharacters(in: Path.whiteSpace),
+            try failing(String(head[head.index(after: close)...]))
         )
     }
 

@@ -41,7 +41,8 @@ struct ParameterReader: Decodable {
 
             if let spelled = try? keyed.decode(String.self, forKey: key) {
                 do {
-                    let type = try TypeReader.reading(spelled, in: notation, at: decoder.steps).bounded
+                    let type = try TypeReader.reading(spelled, in: notation, at: decoder.steps + [.key(key.stringValue)])
+                        .bounded
 
                     self.parameter = Parameter(name: name, type: type.type)
                     self.namings = type.namings

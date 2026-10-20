@@ -29,8 +29,13 @@ public struct StatementReader: Decodable {
         // MARK: - Initializer
         // MARK: - Public
         // The binding the key spells, given what it was written with: a name
-        // under `let` and `var`, a path under `set`.
-        func binding(_ written: String, declaring declared: TypeExpression?) throws -> Statement.Binding {
+        // under `let` and `var`, a path under `set`. `depth` is how many
+        // containers stand around the string.
+        func binding(
+            _ written: String,
+            declaring declared: TypeExpression?,
+            at depth: Int
+        ) throws -> Statement.Binding {
             switch self {
             case .constant:
                 return .constant(try Name.read(written, at: []), declared: declared)
@@ -40,7 +45,7 @@ public struct StatementReader: Decodable {
 
             case .assignment:
                 do {
-                    return .assignment(try PathParser().parse(written))
+                    return .assignment(try PathParser().parse(written, at: depth))
                 } catch {
                     throw ReadingError("set \(written): \(error)", at: [])
                 }
@@ -76,7 +81,7 @@ public struct StatementReader: Decodable {
         // that is not text, is refused by the reading below, which reads the
         // name the same way and refuses what this lets pass.
         let binding = names.count == 1
-            ? try? names[0].binding(Self.name(names[0], in: naming), declaring: nil)
+            ? try? names[0].binding(Self.name(names[0], in: naming), declaring: nil, at: decoder.steps.count + 1)
             : nil
 
         do {
@@ -166,7 +171,9 @@ public struct StatementReader: Decodable {
         let binding: Statement.Binding?
 
         do {
-            binding = try name.map { name in try name.binding(Self.name(name, in: naming), declaring: declared) }
+            binding = try name.map { name in
+                try name.binding(Self.name(name, in: naming), declaring: declared, at: decoder.steps.count + 1)
+            }
         } catch let refusal as ReadingError {
             throw refusal.asked(at: decoder.steps)
         }

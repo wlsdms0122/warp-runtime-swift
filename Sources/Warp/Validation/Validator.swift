@@ -40,11 +40,8 @@ struct Validator: Sendable {
         // else.
         for (name, expression) in module.constants.sorted(by: { one, other in one.key < other.key }) {
             try held(name, as: .value, at: .constant(name.spelling, in: .of(module)))
-            try held(expression, asValueAt: .constant(name.spelling, in: .of(module)))
-
             try validate(
-                expression,
-                naming: nil,
+                value: expression,
                 visible: constants,
                 variables: [],
                 scope: .procedure(bound: bound),
@@ -68,10 +65,8 @@ struct Validator: Sendable {
                 )
             }
 
-            try held(variable.start, asValueAt: .variable(name.spelling, in: .of(module)))
             try validate(
-                variable.start,
-                naming: nil,
+                value: variable.start,
                 visible: constants,
                 variables: [],
                 scope: .procedure(bound: bound),
@@ -736,6 +731,10 @@ struct Validator: Sendable {
     // introduces, which a loop binds its round under and an attempt its
     // failure. The statement already held it to where a name may be
     // introduced.
+    //
+    // The parts of each kind are checked out of line, so a level of an
+    // expression nested to the bound spends little stack, a debug build's
+    // included.
     private func validate(
         _ expression: Expression,
         naming name: Name?,
@@ -745,271 +744,370 @@ struct Validator: Sendable {
         at place: Place
     ) throws {
         switch expression {
-        // A literal is data. One kind a value has is not data (a closure is
-        // made by running the expression that writes one) so a program carrying
-        // one as a literal is carrying something no text spells and nothing
-        // reads back. A caller assembling a program in Swift is the only one that
-        // can build it, and this is the door it comes through. Nor does a
-        // literal hold a struct: a struct is the value of a declared struct,
-        // made by a struct literal written where one is read.
         case let .literal(value):
-            guard !value.holdsProcedure else {
-                throw ValidationError(Value.procedureIsNotData, at: place)
-            }
-
-            guard !value.holdsStruct else {
-                throw ValidationError(
-                    "a literal holds a struct, and a struct is written by a struct literal where its declared"
-                        + " struct is read",
-                    at: place
-                )
-            }
-
-            guard !value.holdsNonFiniteNumber else {
-                throw ValidationError("a literal holds a fraction with no finite value, which no document carries", at: place)
-            }
+            try validate(literal: value, at: place)
 
         case let .reference(path):
             try validate(paths: path.expandingIndexReferences, visible: visible, at: place)
 
         case let .array(array):
-            for (position, element) in array.enumerated() {
-                let here = place.child(.element(position))
-
-                try held(element, asValueAt: here)
-                try validate(element, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
-            }
+            try validate(elements: array, visible: visible, variables: variables, scope: scope, at: place)
 
         case let .struct(literal):
-            for (name, field) in literal.sorted(by: { one, other in one.key < other.key }) {
-                let here = place.child(.field(name))
-
-                try held(field, asValueAt: here)
-                try validate(field, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
-            }
+            try validate(fields: literal, visible: visible, variables: variables, scope: scope, at: place)
 
         case let .dictionary(entries):
-            for (position, entry) in entries.enumerated() {
-                for (part, here) in [
-                    (entry.key, place.child(.entryKey(position))),
-                    (entry.value, place.child(.entryValue(position)))
-                ] {
-                    try held(part, asValueAt: here)
-                    try validate(part, naming: nil, visible: visible, variables: variables, scope: scope, at: here)
-                }
-            }
+            try validate(entries: entries, visible: visible, variables: variables, scope: scope, at: place)
 
-        // A cast names a type and reads a value as it. The type is the build's
-        // to resolve, so the check has only the value to walk, exactly as it
-        // walks any other operand.
         case let .cast(value, type, optional):
-            try written(type, in: .value, at: place)
-            try held(value, asValueAt: place.child(.subject(optional: optional)))
             try validate(
-                value,
-                naming: nil,
+                cast: value,
+                as: type,
+                optional: optional,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.child(.subject(optional: optional))
+                at: place
             )
 
         case let .leave(leave):
-            try validate(leave, in: scope, at: place)
+            try validate(leave: leave, visible: visible, variables: variables, scope: scope, at: place)
 
-            // What a `return` carries is a value like any other. A name it
-            // reads has to be visible where it was written. Only `return`
-            // reaches here with one: the check above refuses a value on the two
-            // that end a loop.
-            guard let value = leave.value else { return }
-
-            try held(value, asValueAt: place.child(.held))
-            try validate(
-                value,
-                naming: nil,
-                visible: visible,
-                variables: variables,
-                scope: scope,
-                at: place.child(.held)
-            )
-
-        // A closure sees where it was written plus what it declares, which is
-        // the capture read statically. Its parameters hold for its body the way
-        // a procedure's do, and it is written inside the parameters around it.
-        // It is a body written where it stands, so it is never the host's code.
         case let .closure(procedure):
-            guard let block = procedure.block else {
-                throw ValidationError("a closure is a body, and this one is the host's code", at: place)
-            }
-
-            let inside = place.child(.closure)
-            let parameters = Set(procedure.signature.names)
-
-            // Its `some T` is the `T` of the procedure it is written in, and
-            // the signature that declares a type parameter owns its bound.
-            if let bounded = procedure.signature.bounds.keys.min() {
-                throw ValidationError(
-                    "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
-                        + " held to the bounds that procedure declares",
-                    at: inside.bound(bounded, of: procedure.signature)
-                )
-            }
-
-            // The row a closure is lifted into is its document's alone.
-            guard procedure.access == .internal else {
-                throw ValidationError(
-                    "a closure writes no access. Access says who may name a declaration, and nothing names a closure",
-                    at: inside
-                )
-            }
-
-            try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
-
-            // The same rule the top-level signature gets. A closure's parameter
-            // is a name a body reads, wherever the signature sits.
-            for (position, parameter) in procedure.signature.names.enumerated() {
-                try collides(parameter, in: scope, at: inside.part(.parameters).index(position))
-            }
-
-            // A parameter it takes in place is a variable in its body, the way
-            // a declaration's is.
-            try validate(
-                block,
-                visible: visible.union(parameters),
-                variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
-                scope: scope.enclosed(taking: parameters),
-                at: inside
-            )
-            try answersOneWay(block, at: inside)
+            try validate(closure: procedure, visible: visible, variables: variables, scope: scope, at: place)
 
         case let .apply(callee, arguments):
-            try held(callee, asValueAt: place.child(.callee))
-            try validate(
-                callee,
-                naming: nil,
-                visible: visible,
-                variables: variables,
-                scope: scope,
-                at: place.child(.callee)
-            )
-
-            for (position, argument) in arguments.enumerated() {
-                let here = place.child(.argument(position))
-
-                try held(argument, asValueAt: here)
-                try validate(
-                    argument,
-                    naming: nil,
-                    visible: visible,
-                    variables: variables,
-                    scope: scope,
-                    at: here
-                )
-            }
+            try validate(value: callee, visible: visible, variables: variables, scope: scope, at: place.child(.callee))
+            try validate(arguments: arguments, visible: visible, variables: variables, scope: scope, at: place)
 
         case let .conditional(condition, then, otherwise):
-            try held(condition, asValueAt: place.child(.condition(of: .conditional)))
             try validate(
-                condition,
-                naming: nil,
+                conditional: condition,
+                then: then,
+                else: otherwise,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.child(.condition(of: .conditional))
-            )
-            try validate(
-                then,
-                visible: visible,
-                variables: variables,
-                scope: scope,
-                at: place.child(.then)
+                at: place
             )
 
-            if let otherwise {
-                try validate(
-                    otherwise,
-                    visible: visible,
-                    variables: variables,
-                    scope: scope,
-                    at: place.child(.otherwise)
-                )
-            }
-
-        // The round state is bound before the condition is asked, which is what
-        // lets `while` read how many rounds have passed.
         case let .loop(condition, body):
-            let round = name
-            let inner = visible.union(round.map { round in [round] } ?? [])
-
-            try held(condition, asValueAt: place.child(.condition(of: .loop)))
             try validate(
-                condition,
-                naming: nil,
-                visible: inner,
-                variables: variables,
-                scope: scope,
-                at: place.child(.condition(of: .loop))
-            )
-            try validate(
-                body,
-                visible: inner,
-                variables: variables,
-                scope: scope.inside(round),
-                at: place.child(.round)
-            )
-            try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
-
-        // While the rescue runs, the failure is a value under the declared name.
-        case let .attempt(block, rescue):
-            let failure = name
-
-            try validate(
-                block,
+                loop: condition,
+                body: body,
+                round: name,
                 visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.child(.held)
+                at: place
             )
 
-            guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-                // A rescue answers for the failure it caught, and an empty
-                // one answers nothing.
-                throw ValidationError("must not be empty", at: place.child(.rescue))
-            }
-
+        case let .attempt(block, rescue):
             try validate(
-                rescue,
-                visible: visible.union(failure.map { failure in [failure] } ?? []),
+                attempt: block,
+                rescue: rescue,
+                failure: name,
+                visible: visible,
                 variables: variables,
                 scope: scope,
-                at: place.child(.rescue)
+                at: place
             )
 
         case let .call(call):
-            for (position, argument) in call.arguments.enumerated() {
-                let here = place.child(.argument(position))
-
-                try held(argument, asValueAt: here)
-                try validate(
-                    argument,
-                    naming: nil,
-                    visible: visible,
-                    variables: variables,
-                    scope: scope,
-                    at: here
-                )
-            }
+            try validate(arguments: call.arguments, visible: visible, variables: variables, scope: scope, at: place)
         }
     }
 
     // A construct runs a body, so it stands as a statement's value and nowhere
     // a value is wanted: an operand, an element, a field, what a cast reads,
     // what `return` carries, a block's result, a constant and a variable's
-    // start.
-    private func held(_ expression: Expression, asValueAt place: Place) throws {
-        guard !expression.holdsConstruct else {
+    // start. Each of those is asked of itself, so one inside a value is
+    // refused where it is written.
+    private func validate(
+        value expression: Expression,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        guard !expression.isConstruct else {
             throw ValidationError(Expression.constructWhereAValueIsWanted, at: place)
         }
+
+        try validate(expression, naming: nil, visible: visible, variables: variables, scope: scope, at: place)
+    }
+
+    // A literal is data. One kind a value has is not data (a closure is
+    // made by running the expression that writes one) so a program carrying
+    // one as a literal is carrying something no text spells and nothing
+    // reads back. A caller assembling a program in Swift is the only one that
+    // can build it, and this is the door it comes through. Nor does a
+    // literal hold a struct: a struct is the value of a declared struct,
+    // made by a struct literal written where one is read.
+    private func validate(literal value: Value, at place: Place) throws {
+        guard !value.holdsProcedure else {
+            throw ValidationError(Value.procedureIsNotData, at: place)
+        }
+
+        guard !value.holdsStruct else {
+            throw ValidationError(
+                "a literal holds a struct, and a struct is written by a struct literal where its declared"
+                    + " struct is read",
+                at: place
+            )
+        }
+
+        guard !value.holdsNonFiniteNumber else {
+            throw ValidationError("a literal holds a fraction with no finite value, which no document carries", at: place)
+        }
+    }
+
+    private func validate(
+        elements: [Expression],
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        for (position, element) in elements.enumerated() {
+            try validate(
+                value: element,
+                visible: visible,
+                variables: variables,
+                scope: scope,
+                at: place.child(.element(position))
+            )
+        }
+    }
+
+    private func validate(
+        fields: [Name: Expression],
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        for (name, field) in fields.sorted(by: { one, other in one.key < other.key }) {
+            try validate(
+                value: field,
+                visible: visible,
+                variables: variables,
+                scope: scope,
+                at: place.child(.field(name))
+            )
+        }
+    }
+
+    private func validate(
+        entries: [(key: Expression, value: Expression)],
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        for (position, entry) in entries.enumerated() {
+            try validate(
+                value: entry.key,
+                visible: visible,
+                variables: variables,
+                scope: scope,
+                at: place.child(.entryKey(position))
+            )
+            try validate(
+                value: entry.value,
+                visible: visible,
+                variables: variables,
+                scope: scope,
+                at: place.child(.entryValue(position))
+            )
+        }
+    }
+
+    // A cast names a type and reads a value as it. The type is the build's
+    // to resolve, so the check has only the value to walk, exactly as it
+    // walks any other operand.
+    private func validate(
+        cast value: Expression,
+        as type: TypeExpression,
+        optional: Bool,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        try written(type, in: .value, at: place)
+        try validate(
+            value: value,
+            visible: visible,
+            variables: variables,
+            scope: scope,
+            at: place.child(.subject(optional: optional))
+        )
+    }
+
+    // What a `return` carries is a value like any other. A name it reads has
+    // to be visible where it was written. Only `return` reaches the value:
+    // the check of the leave refuses a value on the two that end a loop.
+    private func validate(
+        leave: Leave,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        try validate(leave, in: scope, at: place)
+
+        guard let value = leave.value else { return }
+
+        try validate(value: value, visible: visible, variables: variables, scope: scope, at: place.child(.held))
+    }
+
+    // A closure sees where it was written plus what it declares, which is
+    // the capture read statically. Its parameters hold for its body the way
+    // a procedure's do, and it is written inside the parameters around it.
+    // It is a body written where it stands, so it is never the host's code.
+    private func validate(
+        closure procedure: Procedure,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        guard let block = procedure.block else {
+            throw ValidationError("a closure is a body, and this one is the host's code", at: place)
+        }
+
+        let inside = place.child(.closure)
+        let parameters = Set(procedure.signature.names)
+
+        // Its `some T` is the `T` of the procedure it is written in, and
+        // the signature that declares a type parameter owns its bound.
+        if let bounded = procedure.signature.bounds.keys.min() {
+            throw ValidationError(
+                "a closure writes no bounds. Its `some T` is the `T` of the procedure it is written in,"
+                    + " held to the bounds that procedure declares",
+                at: inside.bound(bounded, of: procedure.signature)
+            )
+        }
+
+        // The row a closure is lifted into is its document's alone.
+        guard procedure.access == .internal else {
+            throw ValidationError(
+                "a closure writes no access. Access says who may name a declaration, and nothing names a closure",
+                at: inside
+            )
+        }
+
+        try validate(procedure.signature, in: .closure(of: scope.typeParameters), at: inside)
+
+        // The same rule the top-level signature gets. A closure's parameter
+        // is a name a body reads, wherever the signature sits.
+        for (position, parameter) in procedure.signature.names.enumerated() {
+            try collides(parameter, in: scope, at: inside.part(.parameters).index(position))
+        }
+
+        // A parameter it takes in place is a variable in its body, the way
+        // a declaration's is.
+        try validate(
+            block,
+            visible: visible.union(parameters),
+            variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
+            scope: scope.enclosed(taking: parameters),
+            at: inside
+        )
+        try answersOneWay(block, at: inside)
+    }
+
+    private func validate(
+        arguments: [Expression],
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        for (position, argument) in arguments.enumerated() {
+            try validate(
+                value: argument,
+                visible: visible,
+                variables: variables,
+                scope: scope,
+                at: place.child(.argument(position))
+            )
+        }
+    }
+
+    private func validate(
+        conditional condition: Expression,
+        then: Body,
+        else otherwise: Body?,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        try validate(
+            value: condition,
+            visible: visible,
+            variables: variables,
+            scope: scope,
+            at: place.child(.condition(of: .conditional))
+        )
+        try validate(then, visible: visible, variables: variables, scope: scope, at: place.child(.then))
+
+        if let otherwise {
+            try validate(otherwise, visible: visible, variables: variables, scope: scope, at: place.child(.otherwise))
+        }
+    }
+
+    // The round state is bound before the condition is asked, which is what
+    // lets `while` read how many rounds have passed.
+    private func validate(
+        loop condition: Expression,
+        body: Body,
+        round: Name?,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        let inner = visible.union(round.map { round in [round] } ?? [])
+
+        try validate(
+            value: condition,
+            visible: inner,
+            variables: variables,
+            scope: scope,
+            at: place.child(.condition(of: .loop))
+        )
+        try validate(body, visible: inner, variables: variables, scope: scope.inside(round), at: place.child(.round))
+        try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
+    }
+
+    // While the rescue runs, the failure is a value under the declared name.
+    private func validate(
+        attempt block: Block,
+        rescue: Block,
+        failure: Name?,
+        visible: Set<Name>,
+        variables: Set<Name>,
+        scope: Scope,
+        at place: Place
+    ) throws {
+        try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
+
+        guard !rescue.body.statements.isEmpty || rescue.result != nil else {
+            // A rescue answers for the failure it caught, and an empty
+            // one answers nothing.
+            throw ValidationError("must not be empty", at: place.child(.rescue))
+        }
+
+        try validate(
+            rescue,
+            visible: visible.union(failure.map { failure in [failure] } ?? []),
+            variables: variables,
+            scope: scope,
+            at: place.child(.rescue)
+        )
     }
 
     private func validate(
@@ -1034,11 +1132,8 @@ struct Validator: Sendable {
                 throw ValidationError(Expression.resultAfterWhatNeverFinishes, at: place.child(.result))
             }
 
-            try held(result, asValueAt: place.child(.result))
-
             try validate(
-                result,
-                naming: nil,
+                value: result,
                 visible: inner.visible,
                 variables: inner.variables,
                 scope: scope,
@@ -1316,88 +1411,6 @@ struct Validator: Sendable {
                 try written(argument, in: context, at: place)
             }
 
-        // One contract is written by its name, so a composition joins two
-        // or more.
-        case let .composition(names):
-            guard names.count > 1 else {
-                throw ValidationError(
-                    "joins \(names.count) with `&`, and `&` joins two contracts or more."
-                        + " One contract is written by its name",
-                    at: place
-                )
-            }
-
-            for name in names.sorted() {
-                try held(name, as: .contractMention, at: place)
-            }
-
-        case .selfType:
-            guard context.takesSelf else {
-                throw ValidationError(
-                    "writes `Self`, which stands for the type that answers a contract"
-                        + " and is written in that contract's procedures alone",
-                    at: place
-                )
-            }
-
-        // An associated type is filled by what fills the parameter it is
-        // one of, `Self` where a contract's procedure writes it.
-        case let .associatedType(of, name):
-            try held(name, as: .typeMember, at: place)
-
-            if let standing = of.associated {
-                return try written(.associatedType(of: standing.of, name: standing.name), in: context, at: place)
-            }
-
-            guard of != TypeSpelling.selfType else {
-                guard context.takesSelf else {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and `Self` stands for the type that answers a contract"
-                            + " and is written in that contract's procedures alone",
-                        at: place
-                    )
-                }
-
-                return
-            }
-
-            guard context.takesAssociatedType else {
-                throw ValidationError(
-                    "writes `\(type.rendered)`, and \(context.refusesAssociatedType)",
-                    at: place
-                )
-            }
-
-            try written(.parameter(name: of), in: context, at: place)
-
-        case let .parameter(name):
-            guard context.takes(typeParameter: name) else {
-                if case .typeMember = context {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and what it is given under names no '\(name)'. A type member"
-                            + " writes the type parameters of the head it is given under, or of the struct whose"
-                            + " declaration gives it, and under a bare head none",
-                        at: place
-                    )
-                }
-
-                guard case .struct = context else {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and nothing here is"
-                            + " filled by a call. A type parameter lives in a signature",
-                        at: place
-                    )
-                }
-
-                throw ValidationError(
-                    "writes `\(type.rendered)`, and the struct lists no '\(name)' under `typeParameters`."
-                        + " A field writes a type parameter its struct lists, which a mention fills",
-                    at: place
-                )
-            }
-
-            try held(name, as: .typeParameter, at: place)
-
         case let .array(inner):
             try written(inner, in: context, at: place)
 
@@ -1407,41 +1420,156 @@ struct Validator: Sendable {
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
+            try questioned(inner, in: type, at: place)
+            try written(inner, in: context, at: place)
+
+        case let .procedure(procedure, _, _):
+            guard let procedure else { return }
+
+            try written(procedure, in: context, at: place)
+
+        case let .composition(names):
+            try written(composition: names, at: place)
+
+        case .selfType:
+            try writtenSelf(in: context, at: place)
+
+        case let .associatedType(of, name):
+            try written(associated: name, of: of, in: context, at: place)
+
+        case let .parameter(name):
+            try written(parameter: name, in: context, at: place)
+
+        case .inout, .variable:
+            throw misplaced(type, at: place)
+        }
+    }
+
+    // A procedure type's parameters are slots, each of which may be handed in
+    // place.
+    private func written(_ procedure: ProcedureType, in context: TypeContext, at place: Place) throws {
+        for (position, parameter) in procedure.parameters.enumerated() {
+            try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+        }
+
+        try written(procedure.returns, in: context, at: place.part(.returns))
+        try held(procedure.failing, at: place)
+    }
+
+    private func questioned(_ inner: TypeExpression, in type: TypeExpression, at place: Place) throws {
             guard inner.takesQuestionMark else {
                 throw ValidationError(
                     "writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)",
                     at: place
                 )
             }
+    }
 
-            try written(inner, in: context, at: place)
+    // One contract is written by its name, so a composition joins two or
+    // more.
+    private func written(composition names: Set<Name>, at place: Place) throws {
+        guard names.count > 1 else {
+            throw ValidationError(
+                "joins \(names.count) with `&`, and `&` joins two contracts or more."
+                    + " One contract is written by its name",
+                at: place
+            )
+        }
 
-        // A procedure type's parameters are slots, each of which may be
-        // handed in place.
-        case let .procedure(procedure, _, _):
-            guard let procedure else { return }
+        for name in names.sorted() {
+            try held(name, as: .contractMention, at: place)
+        }
+    }
 
-            for (position, parameter) in procedure.parameters.enumerated() {
-                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+    private func writtenSelf(in context: TypeContext, at place: Place) throws {
+        guard context.takesSelf else {
+            throw ValidationError(
+                "writes `Self`, which stands for the type that answers a contract"
+                    + " and is written in that contract's procedures alone",
+                at: place
+            )
+        }
+    }
+
+    // An associated type is filled by what fills the parameter it is one of,
+    // `Self` where a contract's procedure writes it.
+    private func written(associated name: Name, of owner: Name, in context: TypeContext, at place: Place) throws {
+        try held(name, as: .typeMember, at: place)
+
+        if let standing = owner.associated {
+            return try written(associated: standing.name, of: standing.of, in: context, at: place)
+        }
+
+        let type = TypeExpression.associatedType(of: owner, name: name)
+
+        guard owner != TypeSpelling.selfType else {
+            guard context.takesSelf else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and `Self` stands for the type that answers a contract"
+                        + " and is written in that contract's procedures alone",
+                    at: place
+                )
             }
 
-            try written(procedure.returns, in: context, at: place.part(.returns))
-            try held(procedure.failing, at: place)
+            return
+        }
 
-        case .inout:
+        guard context.takesAssociatedType else {
             throw ValidationError(
+                "writes `\(type.rendered)`, and \(context.refusesAssociatedType)",
+                at: place
+            )
+        }
+
+        try written(parameter: owner, in: context, at: place)
+    }
+
+    private func written(parameter name: Name, in context: TypeContext, at place: Place) throws {
+        let type = TypeExpression.parameter(name: name)
+
+        guard context.takes(typeParameter: name) else {
+            if case .typeMember = context {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and what it is given under names no '\(name)'. A type member"
+                        + " writes the type parameters of the head it is given under, or of the struct whose"
+                        + " declaration gives it, and under a bare head none",
+                    at: place
+                )
+            }
+
+            guard case .struct = context else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and nothing here is"
+                        + " filled by a call. A type parameter lives in a signature",
+                    at: place
+                )
+            }
+
+            throw ValidationError(
+                "writes `\(type.rendered)`, and the struct lists no '\(name)' under `typeParameters`."
+                    + " A field writes a type parameter its struct lists, which a mention fills",
+                at: place
+            )
+        }
+
+        try held(name, as: .typeParameter, at: place)
+    }
+
+    // `inout` or `var` written where neither belongs.
+    private func misplaced(_ type: TypeExpression, at place: Place) -> ValidationError {
+        guard case .variable = type else {
+            return ValidationError(
                 "writes `\(type.rendered)`, and only a parameter is handed a"
                     + " variable in place. `inout` is written on a parameter's type",
                 at: place
             )
-
-        case .variable:
-            throw ValidationError(
-                "writes `\(type.rendered)`, and `var` is written on a field of the struct a type in"
-                    + " `types` declares",
-                at: place
-            )
         }
+
+        return ValidationError(
+            "writes `\(type.rendered)`, and `var` is written on a field of the struct a type in"
+                + " `types` declares",
+            at: place
+        )
     }
 
     // A declared type held to where it is written. A struct's field is
