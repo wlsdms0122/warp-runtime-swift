@@ -26,7 +26,7 @@ struct TraversableTests {
 
         let sut = Warp.Expression.array([
             .cast(marker("cast operand"), as: .int, optional: false),
-            .leave(Leave(reach: .procedure, value: marker("leave value"))),
+            .leave(.procedure(marker("leave value"))),
             .struct(["field": marker("struct field")]),
             .closure(Procedure(
                 body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
@@ -100,7 +100,7 @@ struct TraversableTests {
                 Statement(
                     expression: .loop(
                         while: name("going"),
-                        body: [call, Statement(expression: .leave(Leave(reach: .construct)))]
+                        body: [call, Statement(expression: .leave(.construct(nil)))]
                     )
                 ),
                 Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),

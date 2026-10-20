@@ -49,7 +49,7 @@ struct ConstnessTests {
             body: [
                 Statement(expression: .conditional(
                     .literal(.bool(true)),
-                    then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.string("taken")))))],
+                    then: [Statement(expression: .leave(.procedure(.literal(.string("taken")))))],
                     else: nil
                 ))
             ],
@@ -73,7 +73,7 @@ struct ConstnessTests {
                 Statement(expression: .loop(
                     while: .literal(.bool(true)),
                     body: [
-                        Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.string("counted")))))
+                        Statement(expression: .leave(.procedure(.literal(.string("counted")))))
                     ]
                 ))
             ],

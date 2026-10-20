@@ -941,8 +941,7 @@ struct Validator: Sendable {
     }
 
     // What a `return` carries is a value like any other. A name it reads has
-    // to be visible where it was written. Only `return` reaches the value:
-    // the check of the leave refuses a value on the two that end a loop.
+    // to be visible where it was written.
     private func validate(
         leave: Leave,
         visible: Set<Name>,
@@ -1146,24 +1145,7 @@ struct Validator: Sendable {
         in scope: Scope,
         at place: Place
     ) throws {
-        guard leave.reach != .procedure else {
-            guard leave.target == nil else {
-                throw ValidationError(
-                    "answering leaves the procedure it is written in,"
-                        + " and names no other",
-                    at: place
-                )
-            }
-
-            return
-        }
-
-        guard leave.value == nil else {
-            throw ValidationError(
-                "a loop answers nothing, so ending one carries nothing",
-                at: place
-            )
-        }
+        guard leave.reach != .procedure else { return }
 
         guard let nearest = scope.rounds.last else {
             throw ValidationError("there is no loop here to leave", at: place)

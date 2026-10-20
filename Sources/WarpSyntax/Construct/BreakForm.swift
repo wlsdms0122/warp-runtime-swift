@@ -23,7 +23,7 @@ public struct BreakForm: ConstructForm {
 
     // MARK: - Public
     public func expression(boundTo name: Name?) -> Warp.Expression {
-        .leave(Leave(reach: .construct, target: target))
+        .leave(.construct(target))
     }
 
     // Which loop, or nothing for the nearest. A loop answers nothing, so there

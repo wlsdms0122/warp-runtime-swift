@@ -233,7 +233,7 @@ struct ValidationTests {
             ([Statement(binding: .constant("list"), expression: .array([construct]))], "body.list[0].array[0]"),
             ([Statement(binding: .constant("pair"), expression: .struct(["a": construct]))], "body.pair[0].struct.fields.a"),
             ([Statement(binding: .constant("read"), expression: .cast(construct, as: .int, optional: false))], "body.read[0].cast.subject"),
-            ([Statement(expression: .leave(Leave(reach: .procedure, value: construct)))], "body[0].leave")
+            ([Statement(expression: .leave(.procedure(construct)))], "body[0].leave")
         ]
 
         for (body, place) in places {
@@ -958,10 +958,10 @@ struct ValidationTests {
         let conditional = Warp.Expression.conditional(
             .literal(.bool(true)),
             then: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+                Statement(expression: .leave(.procedure(.literal(.int(1)))))
             ],
             else: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
+                Statement(expression: .leave(.procedure(.literal(.int(2)))))
             ]
         )
 
@@ -980,13 +980,13 @@ struct ValidationTests {
                 Statement(
                     expression: .conditional(
                         .literal(.bool(false)),
-                        then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))],
-                        else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(3)))))]
+                        then: [Statement(expression: .leave(.procedure(.literal(.int(1)))))],
+                        else: [Statement(expression: .leave(.procedure(.literal(.int(3)))))]
                     )
                 )
             ],
             else: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(2)))))
+                Statement(expression: .leave(.procedure(.literal(.int(2)))))
             ]
         )
 
@@ -1004,7 +1004,7 @@ struct ValidationTests {
         let conditional = Warp.Expression.conditional(
             .literal(.bool(false)),
             then: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+                Statement(expression: .leave(.procedure(.literal(.int(1)))))
             ],
             else: nil
         )
@@ -1021,7 +1021,7 @@ struct ValidationTests {
         // Given. The syntactic half of the same rule, held where leaves are
         let sut = Procedure(
             body: [
-                Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(1)))))
+                Statement(expression: .leave(.procedure(.literal(.int(1)))))
             ],
             result: .literal(.int(2))
         )

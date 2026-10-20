@@ -1269,7 +1269,7 @@ struct TypeChecker {
             // one carrying nothing hands back the null a body with no result
             // hands back, which is the run's own answer for it.
             func answering(_ flowed: Flow, carrying carried: Inspection?) -> Flow {
-                guard leave.reach == .procedure else { return flowed }
+                guard case .procedure = leave else { return flowed }
 
                 var answering = flowed
                 answering.answered = flowed.answered + [
@@ -1279,7 +1279,7 @@ struct TypeChecker {
                 return answering
             }
 
-            guard let value = leave.value else {
+            guard case let .procedure(value?) = leave else {
                 return Inspection(
                     rewritten: expression,
                     reading: .never,
@@ -1289,7 +1289,7 @@ struct TypeChecker {
 
             // What a `return` carries stands where the body declares its
             // answer.
-            let answer = leave.reach == .procedure ? ask.answer : nil
+            let answer = ask.answer
             let carried = try await inspected(
                 value,
                 naming: nil,
@@ -1304,9 +1304,7 @@ struct TypeChecker {
 
             return Inspection(
                 rewritten: ask.rewrites
-                    ? .leave(
-                        Leave(reach: leave.reach, target: leave.target, value: handed)
-                    )
+                    ? .leave(.procedure(handed))
                     : expression,
                 calls: carried.calls,
                 judgements: carried.judgements,

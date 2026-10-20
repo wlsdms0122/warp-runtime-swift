@@ -98,7 +98,7 @@ struct ObservationTests {
                                 while: .literal(.bool(true)),
                                 body: [
                                     Statement(binding: .constant("inner"), expression: .literal(.int(7))),
-                                    Statement(expression: .leave(Leave(reach: .construct)))
+                                    Statement(expression: .leave(.construct(nil)))
                                 ]
                             )
                         )
@@ -369,7 +369,7 @@ struct ObservationTests {
                         Statement(binding: .constant("walk"), expression: .loop(
                                 while: .literal(.bool(true)),
                                 body: [
-                                    Statement(expression: .leave(Leave(reach: .construct)))
+                                    Statement(expression: .leave(.construct(nil)))
                                 ]
                             )
                         )
