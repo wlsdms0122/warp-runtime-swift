@@ -497,7 +497,9 @@ struct ContractTests {
             try await run([sut])
         } throws: { error in
             error is BuildError
-                && "\(error)".contains("reads 'App.Describable.describe', which answers only by running")
+                && "\(error)".contains(
+                    "it calls 'App.Describable.describe', which is not declared const, and an operand is read"
+                )
         }
     }
 

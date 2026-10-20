@@ -1186,12 +1186,7 @@ struct TypeChecker {
         given context: TypingContext,
         when ask: Ask
     ) throws {
-        guard
-            let running = EffectChecker(context).running(
-                expression,
-                bound: { name in environment[name]?.declaredType }
-            )
-        else { return }
+        guard let running = EffectChecker(context).running(expression, in: environment) else { return }
 
         try refuse(
             "\(running), and an operand is read rather than run. A procedure"
