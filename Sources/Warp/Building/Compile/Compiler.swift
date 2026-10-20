@@ -64,8 +64,8 @@ struct Compiler {
             compiling.context(of: origin)
         }
 
-        // This document's declarations by its block: what it declares is its
-        // own whoever else may name it.
+        // This document's declarations by the rows they stand at: what it
+        // declares is its own whoever else may name it.
         func row(of symbol: Symbol) throws -> Int {
             guard let row = compiling.lowering.own(origin)[symbol.declared] else {
                 throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
@@ -198,14 +198,14 @@ struct Compiler {
             concealing: behind.concealed
         )
 
-        // This document's block of the table, in name order. What a
+        // The rows this document's declarations stand at, in name order. What a
         // document declares is a run of rows rather than declarations
         // scattered through the table, so where its rows begin is a number
         // and its own are that number and an offset. A native answers as
         // it is from the start; a written body stands as the refusal it
         // would earn until it is lowered, so nothing folds through a body
         // half-made.
-        let (heldAt, block) = compiling.lowering.hold(
+        let (heldAt, standing) = compiling.lowering.hold(
             standing: try holding.map { symbol in
                 Linked.unlowered(
                     label: symbol.declared,
@@ -288,7 +288,7 @@ struct Compiler {
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            Array(block) + compiling.lowering.documents[origin].closureRows
+            Array(standing) + compiling.lowering.documents[origin].closureRows
         )
 
         return Compiled(
