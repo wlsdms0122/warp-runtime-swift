@@ -18,7 +18,10 @@ import WarpSyntax
 @Suite("Every scalar and every name a text case reads is pinned by bytes")
 struct TextPinTests {
     // What a text spells and a reader could take wrongly: a scalar, a map's
-    // keys among them, or a name, whether a struct's or a field's.
+    // keys among them, or a name, whether a struct's or a field's. Two
+    // scalars are one spelling where the binary writes them alike, since a
+    // value's sameness takes `-0.0` for `0.0` and a decomposed text for the
+    // composed one, and those are two spellings.
     private enum Spelling: Equatable, CustomStringConvertible {
         case scalar(Value)
         case name(Name)
@@ -33,6 +36,19 @@ struct TextPinTests {
 
         // MARK: - Initializer
         // MARK: - Public
+        static func == (lhs: Spelling, rhs: Spelling) -> Bool {
+            switch (lhs, rhs) {
+            case let (.scalar(left), .scalar(right)):
+                (try? BinaryEncoding().data(from: left)) == (try? BinaryEncoding().data(from: right))
+
+            case let (.name(left), .name(right)):
+                left == right
+
+            case (.scalar, .name), (.name, .scalar):
+                false
+            }
+        }
+
         // MARK: - Private
     }
 
