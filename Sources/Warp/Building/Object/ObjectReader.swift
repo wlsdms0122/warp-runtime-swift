@@ -210,9 +210,6 @@ struct ObjectReader {
             try table.end()
         }
 
-        let declared = declaredRows.map(\.label)
-        let table = declaredRows + liftedRows
-
         return try Compiled(
             document: Place.Document(identity: identity, types: types, members: members),
             types: types,
@@ -221,9 +218,9 @@ struct ObjectReader {
             members: members,
             typeMembers: typeMembers,
             importedClaims: importedClaims,
-            declared: declared,
+            rows: declaredRows,
+            lifted: liftedRows,
             constants: constants,
-            table: table,
             numbering: numbering,
             typeNumbering: typeNumbering,
             judging: variables,
