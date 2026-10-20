@@ -134,10 +134,11 @@ struct TypeChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // A block with every dot judged and every call gathered, each site carrying
-    // what was in scope where it was written. Statements are read in order
-    // because that is what a body means. A name holds what the statement before
-    // it bound.
+    // A block with every dot judged and every call it writes judged against
+    // the signature its selector names, before what the block answers is: a
+    // call whose types fail to fill is refused for itself, not for the answer
+    // it leaves. Statements are read in order because that is what a body
+    // means. A name holds what the statement before it bound.
     func resolvedSites(
         in block: Block,
         at place: Place,
@@ -146,7 +147,7 @@ struct TypeChecker {
         answering returns: TypeExpression,
         with context: TypingContext,
         folding: Folding?
-    ) async throws -> (block: Block, calls: [CallSite], judgements: JudgementTable) {
+    ) async throws -> (block: Block, judgements: JudgementTable) {
         let promised = returns.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
         let inner = try await inspected(
             block: block,
@@ -157,6 +158,7 @@ struct TypeChecker {
             ask: .judging(folding: folding, answering: promised)
         )
 
+        try checked(inner.calls, in: context)
         try refuseAnswers(
             written: LiteralShape(inner.literalShape, reading: inner.reading),
             answered: inner.flow.answered,
@@ -166,7 +168,7 @@ struct TypeChecker {
             in: context.loweredTypes
         )
 
-        return (promised.written(inner.block, in: context.loweredTypes), inner.calls, inner.judgements)
+        return (promised.written(inner.block, in: context.loweredTypes), inner.judgements)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -179,7 +181,7 @@ struct TypeChecker {
         in environment: [Name: Binding],
         with context: TypingContext,
         folding: Folding?
-    ) async throws -> (Expression, [CallSite], JudgementTable, LiteralShape) {
+    ) async throws -> (Expression, JudgementTable, LiteralShape) {
         let ask = Ask.judging(folding: folding, answering: nil)
         let inner = try await inspected(
             expression,
@@ -192,9 +194,10 @@ struct TypeChecker {
         )
         let written = LiteralShape(inner.literalShape, reading: inner.reading)
 
+        try checked(inner.calls, in: context)
         _ = try held(inner.reading, writing: written, declaredAs: declared, at: place, with: context, when: ask)
 
-        return (inner.rewritten, inner.calls, inner.judgements, written)
+        return (inner.rewritten, inner.judgements, written)
     }
 
     // A constant and a variable's start settle at the build, so what each is
@@ -216,10 +219,11 @@ struct TypeChecker {
         )
     }
 
+    // MARK: - Private
     // The one gate every gathered call passes, wherever its body sits, and
     // whether its selector names a declaration or a contract's procedure. The
     // call is judged against the signature its selector names.
-    func checked(_ calls: [CallSite], in context: TypingContext) throws {
+    private func checked(_ calls: [CallSite], in context: TypingContext) throws {
         for call in calls {
             guard let signature = context.signature(of: call.call.selector) else {
                 throw BuildError.unjudged(
@@ -232,7 +236,6 @@ struct TypeChecker {
         }
     }
 
-    // MARK: - Private
     // One answer, held to the `returns`. The refusal stands where the author
     // can act on it: at the `result` when one is written, at the `returns`
     // when the body answers nothing at all, and at a `return` for what it
@@ -1721,7 +1724,6 @@ struct TypeChecker {
                 signature: written.signature.bounded(by: context.bounds, sameTypes: context.sameTypes)
             )
             var rewritten = expression
-            var calls: [CallSite] = []
             var judgements = JudgementTable()
             var body = block
 
@@ -1800,6 +1802,7 @@ struct TypeChecker {
                     }
                 }
 
+                try checked(inner.calls, in: context)
                 try refuseAnswers(
                     written: LiteralShape(inner.literalShape, reading: inner.reading),
                     answered: inner.flow.answered,
@@ -1810,7 +1813,6 @@ struct TypeChecker {
                 )
 
                 body = promised.written(inner.block, in: context.loweredTypes)
-                calls = inner.calls
                 judgements = inner.judgements
 
                 // Held as it was written, as a declaration's body is, from
@@ -1837,7 +1839,7 @@ struct TypeChecker {
 
             return Inspection(
                 rewritten: rewritten,
-                calls: calls,
+                calls: [],
                 judgements: judgements,
                 reading: procedure.signature.type.lowered(
                     in: context.loweredTypes,

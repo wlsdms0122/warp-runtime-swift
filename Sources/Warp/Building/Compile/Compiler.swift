@@ -120,7 +120,7 @@ struct Compiler {
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
+            var answer = (procedure: declaration, judgements: JudgementTable())
 
             if let block = declaration.block {
                 let folding = Folding(
@@ -135,7 +135,7 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, judgements) = try await TypeChecker().resolvedSites(
+                let (rewritten, judgements) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -162,16 +162,11 @@ struct Compiler {
                         signature: declaration.signature,
                         implementation: .body(rewritten)
                     ),
-                    calls: gathered,
                     judgements: judgements
                 )
             }
 
             resolvedBodies[symbol.declared] = answer.procedure
-
-            // Judged as the declaration reads its own type parameters, since an
-            // associated type a call fills from one is the declaration's.
-            try TypeChecker().checked(answer.calls, in: context().reading(answer.procedure.signature))
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
@@ -453,7 +448,7 @@ struct Compiler {
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
         let environment = bindings(of: known, declaring: declaredConstants)
-        let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
+        let (judged, judgements, written) = try await TypeChecker().resolvedSites(
             in: expression,
             into: declared,
             at: place,
@@ -462,7 +457,6 @@ struct Compiler {
             folding: nil
         )
 
-        try TypeChecker().checked(calls, in: context)
         try TypeChecker().refuseRunning(in: judged, at: place, bound: environment, given: context)
 
         do {
