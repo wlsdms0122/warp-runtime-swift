@@ -172,16 +172,26 @@ struct TextEncodingTests {
             "(warp 1) (description \"a\") (description \"b\")",
             "(warp 1) (procedure f) (procedure f)",
             "(warp 1) (procedure f (const) (const))",
-            "(warp 1) (procedure f (body (let x)))",
-            "(warp 1) (procedure f (body (let x (type Int))))",
-            "(warp 1) (procedure f (body (set x)))",
-            "(warp 1) (procedure f (body (set x (type Int) 1)))",
             "(warp 1) (procedure f (bound C.Item `A & B`))",
             "(warp 1) (import App.P `B & `)",
             "(test 1) (expect (answers (dictionary (entry 1 1) (entry 1.0 2))))"
         ] {
             // When / Then
             #expect(throws: EncodingRefused.self, "\(text)") { try TextEncoding().value(from: text) }
+        }
+    }
+
+    @Test("a statement the load refuses for what it says is read and written back as itself")
+    func aStatementTheLoadRefusesIsWritten() throws {
+        // Given
+        for statement in ["(let x)", "(let x (type Int))", "(set x)", "(set x (type Int) 1)"] {
+            let text = "(warp 1)\n\n(procedure f\n  (body\n    \(statement)))\n"
+
+            // When
+            let read = try TextEncoding().value(from: text)
+
+            // Then
+            #expect(try TextEncoding().text(from: read) == text)
         }
     }
 

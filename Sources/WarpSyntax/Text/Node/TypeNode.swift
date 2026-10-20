@@ -157,8 +157,8 @@ struct TypeNode {
     private func composition(_ node: Node) throws -> String {
         let names = try node.operands.map(name)
 
-        guard names.count > 1, Set(names).count == names.count else {
-            throw Unplaced("`composition` holds two names or more, none of them twice", at: node.offset)
+        guard names.count > 1 else {
+            throw Unplaced("`composition` holds two names or more, and a name alone is written bare", at: node.offset)
         }
 
         return names.joined(separator: " & ")
@@ -168,15 +168,7 @@ struct TypeNode {
         let (_, bounds) = try node.declared()
         let named = try name(node.operands[0])
 
-        guard named != TypeSpelling.selfType.spelling, !named.hasPrefix("\(TypeSpelling.selfType).") else {
-            throw Unplaced("`Self` and what it holds are written bare, not under `some`", at: node.offset)
-        }
-
         guard !bounds.isEmpty else { return "\(TypeSpelling.some) \(named)" }
-
-        guard !named.contains(".") else {
-            throw Unplaced("a bound stands on a type parameter's name, and '\(named)' is an associated type", at: node.offset)
-        }
 
         return "\(TypeSpelling.some) \(named): \(try bounds.map(name).joined(separator: " & "))"
     }

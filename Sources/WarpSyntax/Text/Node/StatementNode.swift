@@ -86,10 +86,6 @@ struct StatementNode {
         try keyed.write(.string(binding), under: word, at: node.offset)
 
         if let typed = operands.first, typed.word == StatementReader.typeKey.spelling {
-            guard word != StatementReader.NamingKeys.assignment.name.spelling else {
-                throw Unplaced("a `set` writes no type", at: typed.offset)
-            }
-
             operands.removeFirst()
 
             try keyed.write(.string(try TypeNode().text(of: Node(typed).one())), under: StatementReader.typeKey.spelling, at: typed.offset)
@@ -97,8 +93,6 @@ struct StatementNode {
 
         if let held = operands.popFirst() {
             try keyed.write(try bound(held), under: StatementReader.valueKey.spelling, at: held.offset)
-        } else if word != StatementReader.NamingKeys.variable.name.spelling {
-            throw Unplaced("a `\(word)` writes a value", at: node.offset)
         }
 
         if let extra = operands.first {
@@ -131,10 +125,6 @@ struct StatementNode {
         var operands: [Datum]
 
         if word == StatementReader.NamingKeys.assignment.name.spelling {
-            guard type == nil else {
-                throw EncodingRefused("a `set` writes no type, and no node writes one beside it")
-            }
-
             operands = [try PathNode().datum(of: try Fields.text(binding, as: "what a `set` writes"))]
         } else {
             operands = [.name(try Fields.text(binding, as: "what a `\(word)` binds"))]
@@ -146,8 +136,6 @@ struct StatementNode {
 
         if let held {
             operands.append(try datum(bound: held))
-        } else if word != StatementReader.NamingKeys.variable.name.spelling {
-            throw EncodingRefused("a `\(word)` writes a value, and no node writes one without it")
         }
 
         return .node(word, operands)
