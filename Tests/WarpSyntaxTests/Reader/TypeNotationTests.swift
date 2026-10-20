@@ -71,7 +71,8 @@ struct TypeNotationTests {
 
         // And. After `->` stands a procedure's answer, so a `?` there is the
         // answer's, and parentheses group, so one after them is the whole
-        // procedure's, as one after a modifier is.
+        // procedure's, as one after a modifier is. They group before a `?`
+        // and nowhere else.
         let answer = ProcedureType(parameters: [.int], returns: .nullable(.int), failing: .these([]))
         let whole = ProcedureType(parameters: [.int], returns: .int, failing: .these([]))
 
@@ -81,7 +82,8 @@ struct TypeNotationTests {
         #expect(try TypeReader.parse("(isolated Procedure)?") == .nullable(.procedure(nil, .unstated, .isolated)))
         #expect(throws: TypeFormError.self) { try TypeReader.parse("const Procedure?") }
         #expect(try TypeReader.parse("(Int)?") == .nullable(.int))
-        #expect(try TypeReader.parse("((Int) -> Int)") == .procedure(whole))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("((Int) -> Int)") }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse("(((Int) -> Int))?") }
     }
 
     @Test("names joined with & read as the set of them, and write back in name order")
@@ -186,6 +188,23 @@ struct TypeNotationTests {
     func unknownNameIsNamed() throws {
         // When / Then
         #expect(try TypeReader.parse("Task") == .named("Task"))
+    }
+
+    @Test("a type written inside another is a level deeper, and a type nests as deep as a document may")
+    func aTypeNestsToTheBound() throws {
+        // Given
+        let nested = { (deep: Int, open: String, inner: String, close: String) in
+            String(repeating: open, count: deep - 1) + inner + String(repeating: close, count: deep - 1)
+        }
+
+        // When / Then. A modifier and the parentheses grouping a type add no
+        // level
+        #expect(try TypeReader.parse(nested(Value.nestingBound, "Array<", "Int", ">")).rendered
+            == nested(Value.nestingBound, "Array<", "Int", ">"))
+        #expect(try TypeReader.parse(nested(Value.nestingBound, "const (", "Int", ") -> Int")).rendered
+            == nested(Value.nestingBound, "const (", "Int", ") -> Int"))
+        #expect(throws: TypeFormError.self) { try TypeReader.parse(nested(Value.nestingBound + 1, "Array<", "Int", ">")) }
+        #expect(throws: TypeFormError.self) { try TypeReader.parse(nested(Value.nestingBound + 1, "(", "Int", ")?")) }
     }
 
     @Test("an unbalanced argument is an author mistake, caught while reading")

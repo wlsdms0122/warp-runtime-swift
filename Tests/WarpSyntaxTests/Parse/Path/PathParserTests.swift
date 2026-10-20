@@ -37,6 +37,22 @@ struct PathParserTests {
         #expect(throws: PathSyntaxError.self) { try sut.parse("d[99999999999999999999]") }
     }
 
+    @Test("a path between brackets is a level deeper, and a path nests as deep as a document may")
+    func aPathNestsToTheBound() throws {
+        // Given
+        let sut = PathParser()
+        let nested = { (deep: Int) in
+            String(repeating: "a[", count: deep - 1) + "i" + String(repeating: "]", count: deep - 1)
+        }
+
+        let literal = String(repeating: "a[", count: Value.nestingBound) + "0" + String(repeating: "]", count: Value.nestingBound)
+
+        // When / Then. A whole number between brackets is no path
+        #expect(try sut.parse(nested(Value.nestingBound)).rendered == nested(Value.nestingBound))
+        #expect(try sut.parse(literal).rendered == literal)
+        #expect(throws: PathSyntaxError.self) { try sut.parse(nested(Value.nestingBound + 1)) }
+    }
+
     @Test("an optional dot parses and renders as itself")
     func optionalDotRoundTrips() throws {
         // Given

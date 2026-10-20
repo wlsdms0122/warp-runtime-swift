@@ -80,11 +80,30 @@ struct TypeNode {
         case "nullable": return try nullable(node, depth: depth)
         case "composition": return try composition(node)
         case "some": return try some(node)
-        case "inout": return "\(TypeSpelling.inout) \(try spelled(node.one(), depth: depth + 1))"
-        case "var": return "\(TypeSpelling.variable) \(try spelled(node.one(), depth: depth + 1))"
+        case "inout": return try marked(TypeSpelling.inout, node, depth: depth)
+        case "var": return try marked(TypeSpelling.variable, node, depth: depth)
         case "procedure": return try procedure(node, depth: depth)
-        default: throw Unplaced("no type is written `(\(node.word) …)`", at: node.offset)
+        default: throw unwritten(node)
         }
+    }
+
+    private func unwritten(_ node: Node) -> Unplaced {
+        Unplaced("no type is written `(\(node.word) …)`", at: node.offset)
+    }
+
+    private func marked(_ mark: Name, _ node: Node, depth: Int) throws -> String {
+        "\(mark) \(try spelled(node.one(), depth: depth + 1))"
+    }
+
+    // Each of these, a level deeper.
+    private func spelled(_ operands: [Datum], depth: Int) throws -> [String] {
+        var spelled: [String] = []
+
+        for operand in operands {
+            spelled.append(try self.spelled(operand, depth: depth + 1))
+        }
+
+        return spelled
     }
 
     private func array(_ node: Node, depth: Int) throws -> String {
@@ -103,6 +122,13 @@ struct TypeNode {
     }
 
     private func named(_ node: Node, depth: Int) throws -> String {
+        let (applied, arguments) = try application(node)
+
+        return "\(applied)<\(try spelled(arguments, depth: depth).joined(separator: ", "))>"
+    }
+
+    // The name `named` applies and the types it applies it to.
+    private func application(_ node: Node) throws -> (applied: String, arguments: [Datum]) {
         let (applied, arguments) = try node.declared()
 
         guard ![TypeSpelling.array.spelling, TypeSpelling.dictionary.spelling].contains(applied) else {
@@ -113,9 +139,7 @@ struct TypeNode {
             throw Unplaced("`named` holds a name and one type or more, and a name alone is written bare", at: node.offset)
         }
 
-        let spelled = try arguments.map { argument in try self.spelled(argument, depth: depth + 1) }
-
-        return "\(try name(node.operands[0]))<\(spelled.joined(separator: ", "))>"
+        return (try name(node.operands[0]), Array(arguments))
     }
 
     private func nullable(_ node: Node, depth: Int) throws -> String {
@@ -171,8 +195,16 @@ struct TypeNode {
     // they hold stands in a function of its own.
     private func procedure(_ node: Node, depth: Int) throws -> String {
         let shape = try self.shape(of: node)
-        let parameters = try shape.parameters?.map { operand in try spelled(operand, depth: depth + 1) }
-        let returns = try shape.returns.map { returns in try spelled(returns, depth: depth + 1) }
+        var parameters: [String]?
+        var returns: String?
+
+        if let operands = shape.parameters {
+            parameters = try spelled(operands, depth: depth)
+        }
+
+        if let written = shape.returns {
+            returns = try spelled(written, depth: depth + 1)
+        }
 
         return try spelling(shape.modifiers, parameters, shape.failing, returns, at: node.offset)
     }
@@ -245,14 +277,26 @@ struct TypeNode {
     private func parsed(_ text: Substring, depth: Int) -> Datum {
         guard depth <= Value.nestingBound else { return .name(String(text)) }
 
-        return marked(text, depth: depth)
-            ?? grouped(text, depth: depth)
-            ?? modified(text, depth: depth)
-            ?? optional(text, depth: depth)
-            ?? some(text)
-            ?? composition(text)
-            ?? applied(text, depth: depth)
-            ?? .name(String(text))
+        if let marked = marked(text, depth: depth) { return marked }
+        if let grouped = grouped(text, depth: depth) { return grouped }
+        if let modified = modified(text, depth: depth) { return modified }
+        if let optional = optional(text, depth: depth) { return optional }
+        if let some = some(text) { return some }
+        if let composition = composition(text) { return composition }
+        if let applied = applied(text, depth: depth) { return applied }
+
+        return .name(String(text))
+    }
+
+    // Each of these, a level deeper.
+    private func parsed(_ texts: [Substring], depth: Int) -> [Datum] {
+        var parsed: [Datum] = []
+
+        for text in texts {
+            parsed.append(self.parsed(text, depth: depth + 1))
+        }
+
+        return parsed
     }
 
     // `inout T` and `var T`.
@@ -277,6 +321,20 @@ struct TypeNode {
 
     // A procedure type, its modifiers in front.
     private func modified(_ text: Substring, depth: Int) -> Datum? {
+        let (rest, modifiers) = self.modifiers(of: text)
+
+        if rest == TypeSpelling.procedure.spelling, !modifiers.isEmpty {
+            return .node("procedure", modifiers)
+        }
+
+        guard rest.first == "(" || !modifiers.isEmpty else { return nil }
+
+        return procedure(rest, modifiers: modifiers, depth: depth) ?? .name(String(text))
+    }
+
+    // The modifiers in front of a procedure type, in their one order, and
+    // the text after them.
+    private func modifiers(of text: Substring) -> (rest: Substring, modifiers: [Datum]) {
         var rest = text
         var modifiers: [Datum] = []
 
@@ -287,13 +345,7 @@ struct TypeNode {
             }
         }
 
-        if rest == TypeSpelling.procedure.spelling, !modifiers.isEmpty {
-            return .node("procedure", modifiers)
-        }
-
-        guard rest.first == "(" || !modifiers.isEmpty else { return nil }
-
-        return procedure(rest, modifiers: modifiers, depth: depth) ?? .name(String(text))
+        return (rest, modifiers)
     }
 
     private func optional(_ text: Substring, depth: Int) -> Datum? {
@@ -326,7 +378,7 @@ struct TypeNode {
 
         let base = String(text[..<open])
         let inside = text[text.index(after: open)..<text.index(before: text.endIndex)]
-        let arguments = split(inside, at: ", ").map { argument in parsed(argument, depth: depth + 1) }
+        let arguments = parsed(split(inside, at: ", "), depth: depth)
 
         switch (base, arguments.count) {
         case (TypeSpelling.array.spelling, 1): return .node("array", arguments)
@@ -336,23 +388,31 @@ struct TypeNode {
     }
 
     private func procedure(_ text: Substring, modifiers: [Datum], depth: Int) -> Datum? {
-        guard let (inside, failing, returns) = pieces(of: text) else { return nil }
+        guard let pieces = pieces(of: text) else { return nil }
 
-        let parameters = inside.isEmpty ? [] : split(inside, at: ", ").map { argument in parsed(argument, depth: depth + 1) }
-
-        return .node(
-            "procedure",
-            modifiers + [.node("parameters", parameters)] + (failing.map { failing in [failing] } ?? [])
-                + [.node("returns", [parsed(returns, depth: depth + 1)])]
+        return procedure(
+            modifiers,
+            parsed(pieces.parameters, depth: depth),
+            pieces.failing,
+            parsed([pieces.returns], depth: depth)
         )
     }
 
-    // A procedure type's spelling cut into what its parentheses hold, what
-    // it may fail with and what follows its arrow.
-    private func pieces(of text: Substring) -> (inside: Substring, failing: Datum?, returns: Substring)? {
+    private func procedure(_ modifiers: [Datum], _ parameters: [Datum], _ failing: Datum?, _ returns: [Datum]) -> Datum {
+        .node(
+            "procedure",
+            modifiers + [.node("parameters", parameters)] + (failing.map { failing in [failing] } ?? [])
+                + [.node("returns", returns)]
+        )
+    }
+
+    // A procedure type's spelling cut into the parameters its parentheses
+    // hold, what it may fail with and what follows its arrow.
+    private func pieces(of text: Substring) -> (parameters: [Substring], failing: Datum?, returns: Substring)? {
         guard text.first == "(", let close = closing(in: text) else { return nil }
 
         let inside = text[text.index(after: text.startIndex)..<close]
+        let parameters = inside.isEmpty ? [] : split(inside, at: ", ")
         let after = text[text.index(after: close)...]
 
         guard let arrow = split(after, at: " -> ").first.map(\.endIndex), arrow < after.endIndex else { return nil }
@@ -361,17 +421,17 @@ struct TypeNode {
 
         switch after[..<arrow] {
         case "":
-            return (inside, nil, returns)
+            return (parameters, nil, returns)
 
         case " \(TypeSpelling.throws)":
-            return (inside, .node("failing", [.node(Failing.anythingSpelling)]), returns)
+            return (parameters, .node("failing", [.node(Failing.anythingSpelling)]), returns)
 
         case let thrown:
             guard let listed = dropped(from: thrown, " \(TypeSpelling.throws)("), listed.last == ")" else { return nil }
 
             let names = listed.dropLast()
 
-            return (inside, .node("failing", names.isEmpty ? [] : names.components(separatedBy: ", ").map(Datum.name)), returns)
+            return (parameters, .node("failing", names.isEmpty ? [] : names.components(separatedBy: ", ").map(Datum.name)), returns)
         }
     }
 

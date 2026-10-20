@@ -500,14 +500,37 @@ struct TypeChecker {
     // body does not know the type, and what a type gives is asked through a
     // contract. On `Never` nothing arrives to be read at all, so there is
     // nothing to judge and nothing to refuse.
+    //
+    // An index reference is a path of its own, judged wherever the outer
+    // walk stops, so each is read before the walk and the walk meets what it
+    // reads. The walk itself reads no path, and a path between brackets is a
+    // level of this function alone.
     private func reading(
         of path: Path,
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
+        let references = path.segments.map { segment -> PathReading? in
+            guard case let .indexRef(inner, _) = segment else { return nil }
+
+            return reading(of: inner, in: environment, with: context, at: place)
+        }
+
+        return reading(of: path, references: references, in: environment, with: context, at: place)
+    }
+
+    // `references` stand beside the path's segments, what each index
+    // reference reads.
+    private func reading(
+        of path: Path,
+        references: [PathReading?],
+        in environment: [Name: Binding],
+        with context: TypingContext,
+        at place: Place
+    ) -> PathReading {
         guard let head = path.head, let bound = environment[head] else {
-            return asWritten(path, in: environment, with: context, at: place)
+            return asWritten(path, references: references, in: environment, with: context, at: place)
         }
 
         var current = bound.type
@@ -527,8 +550,14 @@ struct TypeChecker {
 
             // This segment and the ones after it, as written. For the walks
             // that stop judging early.
-            func rest() -> Path {
-                Path(Array(path.segments.dropFirst(offset + 1)))
+            func rest() -> PathReading {
+                asWritten(
+                    Path(Array(path.segments.dropFirst(offset + 1))),
+                    references: Array(references.dropFirst(offset + 1)),
+                    in: environment,
+                    with: context,
+                    at: place
+                )
             }
 
             // Whether this segment's `?.` read past a possible absence. A
@@ -591,7 +620,7 @@ struct TypeChecker {
                 // stops. That the reading is unreachable is the leaving rules'
                 // fact, said where they are said.
                 if current == .never {
-                    switch asWritten(rest(), in: environment, with: context, at: place) {
+                    switch rest() {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -612,7 +641,7 @@ struct TypeChecker {
                         break
                     }
 
-                    switch asWritten(rest(), in: environment, with: context, at: place) {
+                    switch rest() {
                     case let .refused(reason):
                         return .refused(reason)
 
@@ -667,7 +696,11 @@ struct TypeChecker {
             // of its own judged like one. The walk goes on with the element
             // type either way.
             case let (.indexRef(inner, optionally), .array(element)):
-                let judged = indexReference(inner, in: environment, with: context, at: place)
+                let judged = indexReference(
+                    inner,
+                    reading: references[offset + 1] ?? reading(of: inner, in: environment, with: context, at: place),
+                    in: context
+                )
 
                 guard case let .reads(_, standing) = judged else { return judged }
 
@@ -690,7 +723,12 @@ struct TypeChecker {
             // place. Which keys are there is the run's fact, so absence
             // follows the mark, the rule every entry reading shares.
             case let (.indexRef(inner, optionally), .dictionary(key, entry)):
-                let judged = keyReference(inner, keyedBy: key, in: environment, with: context, at: place)
+                let judged = keyReference(
+                    inner,
+                    reading: references[offset + 1] ?? reading(of: inner, in: environment, with: context, at: place),
+                    keyedBy: key,
+                    in: context
+                )
 
                 guard case let .reads(_, standing) = judged else { return judged }
 
@@ -823,7 +861,12 @@ struct TypeChecker {
             // What stands between the brackets is judged as a read's is: a
             // position in a list and a key in a map.
             case let (.indexRef(inner, optionally), .dictionary(key, entry)):
-                switch keyReference(inner, keyedBy: key, in: environment, with: context, at: place) {
+                switch keyReference(
+                    inner,
+                    reading: reading(of: inner, in: environment, with: context, at: place),
+                    keyedBy: key,
+                    in: context
+                ) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -841,7 +884,11 @@ struct TypeChecker {
                 placed.append(.index(key.written(index, in: context.loweredTypes), optional: optionally))
 
             case let (.indexRef(inner, optionally), .array(element)):
-                switch indexReference(inner, in: environment, with: context, at: place) {
+                switch indexReference(
+                    inner,
+                    reading: reading(of: inner, in: environment, with: context, at: place),
+                    in: context
+                ) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -961,17 +1008,19 @@ struct TypeChecker {
 
     // The segments a stopped walk leaves stand as written, and an index
     // reference among them is a path of its own, judged wherever the outer
-    // walk stops. What they reach is not read, so what the reference reads
-    // is judged by the run against what arrived, a position or a key.
+    // walk stops: `references` stand beside the segments, what each read.
+    // What they reach is not read, so what a reference reads is judged by
+    // the run against what arrived, a position or a key.
     private func asWritten(
         _ path: Path,
+        references: [PathReading?],
         in environment: [Name: Binding],
         with context: TypingContext,
         at place: Place
     ) -> PathReading {
         var placed = LoweredPath([])
 
-        for segment in path.segments {
+        for (segment, reference) in zip(path.segments, references) {
             switch segment {
             case let .name(name, optional):
                 placed.append(.name(name, optional: optional))
@@ -980,7 +1029,7 @@ struct TypeChecker {
                 placed.append(.index(index, optional: optional))
 
             case let .indexRef(inner, optional):
-                switch reading(of: inner, in: environment, with: context, at: place) {
+                switch reference ?? reading(of: inner, in: environment, with: context, at: place) {
                 case let .refused(reason):
                     return .refused(reason)
 
@@ -996,14 +1045,7 @@ struct TypeChecker {
     // The one machine that judges an index reference on a list, answering
     // the refusal or what the inner path reads. The inner path is a path of
     // its own, and what it reads stands where an `Int` is read.
-    private func indexReference(
-        _ inner: Path,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        at place: Place
-    ) -> PathReading {
-        let judged = reading(of: inner, in: environment, with: context, at: place)
-
+    private func indexReference(_ inner: Path, reading judged: PathReading, in context: TypingContext) -> PathReading {
         guard
             case let .reads(innerType, _) = judged,
             !LoweredType.int.accepts(innerType, in: context.loweredTypes)
@@ -1022,13 +1064,10 @@ struct TypeChecker {
     // brackets on a map stands where its key type is read.
     private func keyReference(
         _ inner: Path,
+        reading judged: PathReading,
         keyedBy key: LoweredType,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        at place: Place
+        in context: TypingContext
     ) -> PathReading {
-        let judged = reading(of: inner, in: environment, with: context, at: place)
-
         guard
             case let .reads(innerType, _) = judged,
             !key.accepts(innerType, in: context.loweredTypes)

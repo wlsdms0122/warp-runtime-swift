@@ -38,10 +38,6 @@ struct PathNode {
     func datum(of text: String) throws -> Datum {
         let path: Path
 
-        guard nesting(of: text) <= Value.nestingBound else {
-            throw EncodingRefused("the path '\(text.prefix(40))…' nests deeper than a document may, and no node writes it")
-        }
-
         do {
             path = try PathParser().parse(text)
         } catch {
@@ -80,7 +76,13 @@ struct PathNode {
             throw Unplaced("a path of one name is the name, written bare", at: node.offset)
         }
 
-        return Path([.name(Name(normal: head))] + (try parts.map { part in try segment(part, depth: depth) }))
+        var segments: [PathSegment] = [.name(Name(normal: head))]
+
+        for part in parts {
+            segments.append(try segment(part, depth: depth))
+        }
+
+        return Path(segments)
     }
 
     private func segment(_ datum: Datum, depth: Int) throws -> PathSegment {
@@ -106,32 +108,12 @@ struct PathNode {
             }
 
         default:
-            throw Unplaced("a path's segment is `field`, `field?`, `index` or `index?`, and here is `\(node.word)`", at: node.offset)
+            throw unsegmented(node)
         }
     }
 
-    // How deep a path's text nests its brackets, counted without reading it.
-    // A bracket inside a quoted key is the key's.
-    private func nesting(of text: String) -> Int {
-        var depth = 0
-        var deepest = 0
-        var quoted = false
-        var escaped = false
-
-        for character in text.unicodeScalars {
-            switch character {
-            case _ where escaped: escaped = false
-            case "\\" where quoted: escaped = true
-            case "\"": quoted.toggle()
-            case "[" where !quoted: depth += 1
-            case "]" where !quoted: depth -= 1
-            default: break
-            }
-
-            deepest = max(deepest, depth)
-        }
-
-        return deepest + 1
+    private func unsegmented(_ node: Node) -> Unplaced {
+        Unplaced("a path's segment is `field`, `field?`, `index` or `index?`, and here is `\(node.word)`", at: node.offset)
     }
 
     private func datum(of path: Path) throws -> Datum {
@@ -141,7 +123,13 @@ struct PathNode {
 
         guard path.segments.count > 1 else { return .name(head.spelling) }
 
-        return .node("path", [.name(head.spelling)] + (try path.segments.dropFirst().map(datum)))
+        var parts: [Datum] = [.name(head.spelling)]
+
+        for segment in path.segments.dropFirst() {
+            parts.append(try datum(of: segment))
+        }
+
+        return .node("path", parts)
     }
 
     private func datum(of segment: PathSegment) throws -> Datum {

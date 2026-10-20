@@ -1316,88 +1316,6 @@ struct Validator: Sendable {
                 try written(argument, in: context, at: place)
             }
 
-        // One contract is written by its name, so a composition joins two
-        // or more.
-        case let .composition(names):
-            guard names.count > 1 else {
-                throw ValidationError(
-                    "joins \(names.count) with `&`, and `&` joins two contracts or more."
-                        + " One contract is written by its name",
-                    at: place
-                )
-            }
-
-            for name in names.sorted() {
-                try held(name, as: .contractMention, at: place)
-            }
-
-        case .selfType:
-            guard context.takesSelf else {
-                throw ValidationError(
-                    "writes `Self`, which stands for the type that answers a contract"
-                        + " and is written in that contract's procedures alone",
-                    at: place
-                )
-            }
-
-        // An associated type is filled by what fills the parameter it is
-        // one of, `Self` where a contract's procedure writes it.
-        case let .associatedType(of, name):
-            try held(name, as: .typeMember, at: place)
-
-            if let standing = of.associated {
-                return try written(.associatedType(of: standing.of, name: standing.name), in: context, at: place)
-            }
-
-            guard of != TypeSpelling.selfType else {
-                guard context.takesSelf else {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and `Self` stands for the type that answers a contract"
-                            + " and is written in that contract's procedures alone",
-                        at: place
-                    )
-                }
-
-                return
-            }
-
-            guard context.takesAssociatedType else {
-                throw ValidationError(
-                    "writes `\(type.rendered)`, and \(context.refusesAssociatedType)",
-                    at: place
-                )
-            }
-
-            try written(.parameter(name: of), in: context, at: place)
-
-        case let .parameter(name):
-            guard context.takes(typeParameter: name) else {
-                if case .typeMember = context {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and what it is given under names no '\(name)'. A type member"
-                            + " writes the type parameters of the head it is given under, or of the struct whose"
-                            + " declaration gives it, and under a bare head none",
-                        at: place
-                    )
-                }
-
-                guard case .struct = context else {
-                    throw ValidationError(
-                        "writes `\(type.rendered)`, and nothing here is"
-                            + " filled by a call. A type parameter lives in a signature",
-                        at: place
-                    )
-                }
-
-                throw ValidationError(
-                    "writes `\(type.rendered)`, and the struct lists no '\(name)' under `typeParameters`."
-                        + " A field writes a type parameter its struct lists, which a mention fills",
-                    at: place
-                )
-            }
-
-            try held(name, as: .typeParameter, at: place)
-
         case let .array(inner):
             try written(inner, in: context, at: place)
 
@@ -1407,41 +1325,156 @@ struct Validator: Sendable {
 
         // What a `?` wraps behind a name is the build's, where names resolve.
         case let .nullable(inner):
+            try questioned(inner, in: type, at: place)
+            try written(inner, in: context, at: place)
+
+        case let .procedure(procedure, _, _):
+            guard let procedure else { return }
+
+            try written(procedure, in: context, at: place)
+
+        case let .composition(names):
+            try written(composition: names, at: place)
+
+        case .selfType:
+            try writtenSelf(in: context, at: place)
+
+        case let .associatedType(of, name):
+            try written(associated: name, of: of, in: context, at: place)
+
+        case let .parameter(name):
+            try written(parameter: name, in: context, at: place)
+
+        case .inout, .variable:
+            throw misplaced(type, at: place)
+        }
+    }
+
+    // A procedure type's parameters are slots, each of which may be handed in
+    // place.
+    private func written(_ procedure: ProcedureType, in context: TypeContext, at place: Place) throws {
+        for (position, parameter) in procedure.parameters.enumerated() {
+            try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+        }
+
+        try written(procedure.returns, in: context, at: place.part(.returns))
+        try held(procedure.failing, at: place)
+    }
+
+    private func questioned(_ inner: TypeExpression, in type: TypeExpression, at place: Place) throws {
             guard inner.takesQuestionMark else {
                 throw ValidationError(
                     "writes `\(type.rendered)`, and a `?` says nothing on \(inner.rendered)",
                     at: place
                 )
             }
+    }
 
-            try written(inner, in: context, at: place)
+    // One contract is written by its name, so a composition joins two or
+    // more.
+    private func written(composition names: Set<Name>, at place: Place) throws {
+        guard names.count > 1 else {
+            throw ValidationError(
+                "joins \(names.count) with `&`, and `&` joins two contracts or more."
+                    + " One contract is written by its name",
+                at: place
+            )
+        }
 
-        // A procedure type's parameters are slots, each of which may be
-        // handed in place.
-        case let .procedure(procedure, _, _):
-            guard let procedure else { return }
+        for name in names.sorted() {
+            try held(name, as: .contractMention, at: place)
+        }
+    }
 
-            for (position, parameter) in procedure.parameters.enumerated() {
-                try written(parameter.slotUnwrapped, in: context, at: place.index(position))
+    private func writtenSelf(in context: TypeContext, at place: Place) throws {
+        guard context.takesSelf else {
+            throw ValidationError(
+                "writes `Self`, which stands for the type that answers a contract"
+                    + " and is written in that contract's procedures alone",
+                at: place
+            )
+        }
+    }
+
+    // An associated type is filled by what fills the parameter it is one of,
+    // `Self` where a contract's procedure writes it.
+    private func written(associated name: Name, of owner: Name, in context: TypeContext, at place: Place) throws {
+        try held(name, as: .typeMember, at: place)
+
+        if let standing = owner.associated {
+            return try written(associated: standing.name, of: standing.of, in: context, at: place)
+        }
+
+        let type = TypeExpression.associatedType(of: owner, name: name)
+
+        guard owner != TypeSpelling.selfType else {
+            guard context.takesSelf else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and `Self` stands for the type that answers a contract"
+                        + " and is written in that contract's procedures alone",
+                    at: place
+                )
             }
 
-            try written(procedure.returns, in: context, at: place.part(.returns))
-            try held(procedure.failing, at: place)
+            return
+        }
 
-        case .inout:
+        guard context.takesAssociatedType else {
             throw ValidationError(
+                "writes `\(type.rendered)`, and \(context.refusesAssociatedType)",
+                at: place
+            )
+        }
+
+        try written(parameter: owner, in: context, at: place)
+    }
+
+    private func written(parameter name: Name, in context: TypeContext, at place: Place) throws {
+        let type = TypeExpression.parameter(name: name)
+
+        guard context.takes(typeParameter: name) else {
+            if case .typeMember = context {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and what it is given under names no '\(name)'. A type member"
+                        + " writes the type parameters of the head it is given under, or of the struct whose"
+                        + " declaration gives it, and under a bare head none",
+                    at: place
+                )
+            }
+
+            guard case .struct = context else {
+                throw ValidationError(
+                    "writes `\(type.rendered)`, and nothing here is"
+                        + " filled by a call. A type parameter lives in a signature",
+                    at: place
+                )
+            }
+
+            throw ValidationError(
+                "writes `\(type.rendered)`, and the struct lists no '\(name)' under `typeParameters`."
+                    + " A field writes a type parameter its struct lists, which a mention fills",
+                at: place
+            )
+        }
+
+        try held(name, as: .typeParameter, at: place)
+    }
+
+    // `inout` or `var` written where neither belongs.
+    private func misplaced(_ type: TypeExpression, at place: Place) -> ValidationError {
+        guard case .variable = type else {
+            return ValidationError(
                 "writes `\(type.rendered)`, and only a parameter is handed a"
                     + " variable in place. `inout` is written on a parameter's type",
                 at: place
             )
-
-        case .variable:
-            throw ValidationError(
-                "writes `\(type.rendered)`, and `var` is written on a field of the struct a type in"
-                    + " `types` declares",
-                at: place
-            )
         }
+
+        return ValidationError(
+            "writes `\(type.rendered)`, and `var` is written on a field of the struct a type in"
+                + " `types` declares",
+            at: place
+        )
     }
 
     // A declared type held to where it is written. A struct's field is

@@ -23,16 +23,7 @@ public struct Path: Sendable, Equatable {
         var rendered = ""
 
         for segment in segments {
-            switch segment {
-            case let .name(key, optional):
-                rendered += (optional ? "?." : (rendered.isEmpty ? "" : ".")) + key.spelling
-
-            case let .index(index, optional):
-                rendered += (optional ? "?[" : "[") + spelling(of: index) + "]"
-
-            case let .indexRef(indexPath, optional):
-                rendered += (optional ? "?[" : "[") + "\(indexPath.rendered)]"
-            }
+            rendered += spelling(of: segment, first: rendered.isEmpty)
         }
 
         return rendered
@@ -105,6 +96,19 @@ public struct Path: Sendable, Equatable {
     }
 
     // MARK: - Private
+    private func spelling(of segment: PathSegment, first: Bool) -> String {
+        switch segment {
+        case let .name(key, optional):
+            return (optional ? "?." : (first ? "" : ".")) + key.spelling
+
+        case let .index(index, optional):
+            return (optional ? "?[" : "[") + spelling(of: index) + "]"
+
+        case let .indexRef(indexPath, optional):
+            return (optional ? "?[" : "[") + "\(indexPath.rendered)]"
+        }
+    }
+
     // A value between the brackets as a path writes it: a whole number in
     // its digits and text between double quotes, `\"` a quote and `\\` a
     // backslash inside them. A value of another kind has no spelling in a
