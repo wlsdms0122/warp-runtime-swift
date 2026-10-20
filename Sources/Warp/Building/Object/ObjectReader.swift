@@ -212,15 +212,6 @@ struct ObjectReader {
 
         let declared = declaredRows.map(\.label)
         let table = declaredRows + liftedRows
-        let spelled = Set(declared)
-
-        if let (head, member) = members.sorted(by: { $0.key < $1.key }).lazy.flatMap({ head, names in
-            names.sorted().map { member in (head, member) }
-        }).first(where: { head, member in !spelled.contains(member.spelled(under: head.type)) }) {
-            throw ObjectRefused(
-                "'members' gives '\(head.spelling)' the member '\(member)', and no row stands under its spelling"
-            )
-        }
 
         return try Compiled(
             document: Place.Document(identity: identity, types: types, members: members),
@@ -609,8 +600,7 @@ struct ObjectReader {
     }
 
     // A contract: the types it asks, the bounds of those it bounds, and the
-    // procedures it asks. Each bound holds a type the contract asks, to one
-    // contract at least.
+    // procedures it asks. Each bound holds a type to one contract at least.
     private func contract(_ value: Value) throws -> Contract {
         var cursor = try FieldCursor(value, of: "contract")
         let types = try Field(cursor.next(), of: "types").ordered(name)
@@ -626,10 +616,6 @@ struct ObjectReader {
         let procedures = try keyed(cursor.next(), of: "contract", signature)
 
         try cursor.end()
-
-        if let unasked = bounds.keys.sorted().first(where: { name in !types.contains(name) }) {
-            throw ObjectRefused("'bounds' holds '\(unasked)', which the contract asks as no type")
-        }
 
         return Contract(procedures: procedures, types: Set(types), bounds: bounds)
     }
@@ -731,13 +717,7 @@ struct ObjectReader {
         switch ObjectLayout.FailingTag(rawValue: try cursor.field().integer()) {
         case .anything: read = .anything
         case .these:
-            let failures = try cursor.field().ordered(text)
-
-            for failure in failures where !((try? Name(failure)).map(NameGrammar.failure.holds) ?? false) {
-                throw ObjectRefused("'failing' lists '\(failure)', which is no failure's name")
-            }
-
-            read = .these(Set(failures))
+            read = .these(Set(try cursor.field().ordered(text)))
         case nil: throw ObjectRefused("'failing' says neither anything nor which failures")
         }
 
