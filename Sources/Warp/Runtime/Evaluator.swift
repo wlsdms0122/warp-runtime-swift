@@ -404,7 +404,7 @@ struct Evaluator: Sendable {
         let callee = linked[row]
 
         switch callee.implementation {
-        case .native(.query, _):
+        case let .native(.query(query), _):
             // A variable handed in place is read as what it holds now, since
             // nothing here writes it.
             var values = try await given(call, to: callee, first: first, in: &activation, at: trace)
@@ -413,7 +413,7 @@ struct Evaluator: Sendable {
                 values[handed.position] = try activation.value(at: handed.address)
             }
 
-            return try await answer(callee, with: ArgumentList(values: values), at: trace)
+            return try await evaluate(query, of: callee, arguments: ArgumentList(values: values), at: trace)
 
         case let .native(.effect(effect), _):
             let holds = try holds(call.handed, of: callee, in: activation)
@@ -532,18 +532,31 @@ struct Evaluator: Sendable {
     }
 
     // A row answered with its arguments and nothing handed in place:
-    // what a send reaches and what a run starts from. An effect runs here,
-    // and every other row answers the way it does as data.
+    // what a send reaches and what a run starts from. A query answers
+    // through its own door, an effect runs, and a body runs on a frame of
+    // its own.
     private func answer(
         _ callee: Linked,
         arguments: ArgumentList,
         at trace: Trace
     ) async throws -> Value {
-        guard case let .native(.effect(effect), _) = callee.implementation else {
-            return try await answer(callee, with: arguments, at: trace)
-        }
+        switch callee.implementation {
+        case let .native(.query(query), _):
+            return try await evaluate(query, of: callee, arguments: arguments, at: trace)
 
-        return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
+        case let .native(.effect(effect), _):
+            return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
+
+        case let .body(body, frame):
+            return try await answer(
+                callee,
+                running: body,
+                in: frame,
+                arguments: arguments,
+                holding: [],
+                at: trace
+            )
+        }
     }
 
     // The one way a written procedure is called: its frame, the arguments
@@ -754,35 +767,6 @@ struct Evaluator: Sendable {
         }
 
         return given
-    }
-
-    // What a row answers from its arguments, with nothing handed in
-    // place. A query answers through its own door and a body runs on a frame
-    // of its own. An effect answers only by running, so it is not read here.
-    private func answer(
-        _ callee: Linked,
-        with arguments: ArgumentList,
-        at trace: Trace
-    ) async throws -> Value {
-        switch callee.implementation {
-        case let .native(.query(query), _):
-            return try await evaluate(query, of: callee, arguments: arguments, at: trace)
-
-        case let .body(body, frame):
-            return try await answer(
-                callee,
-                running: body,
-                in: frame,
-                arguments: arguments,
-                holding: [],
-                at: trace
-            )
-
-        case .native(.effect, _):
-            throw ExecutionError(
-                "this answers only by running, so it cannot be read as data here"
-            )
-        }
     }
 
     private func bool(_ value: Value) throws -> Bool {
