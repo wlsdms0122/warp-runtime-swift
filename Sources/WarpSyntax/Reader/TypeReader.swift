@@ -458,15 +458,12 @@ struct TypeReader: Decodable {
     }
 
     // What the modifiers say, where they stand on a procedure type or on
-    // `Procedure`, each once.
+    // `Procedure`. One written twice says it once, and the load's write-back
+    // holds a document to one spelling.
     private static func effects(
         _ modifiers: [TypeSyntax.Modifier],
         on inner: TypeSyntax
     ) throws -> (Constness, Isolation) {
-        guard Set(modifiers).count == modifiers.count else {
-            throw TypeFormError("type '\(TypeSyntax.modified(modifiers, inner).spelling)' writes a modifier twice. Once says it")
-        }
-
         switch inner {
         case .procedure, .name(TypeSpelling.procedure.spelling):
             break

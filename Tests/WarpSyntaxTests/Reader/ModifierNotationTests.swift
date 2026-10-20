@@ -207,13 +207,19 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
-    @Test("a modifier written twice is refused", arguments: [
-        "const const Procedure", "isolated isolated Procedure"
+    @Test("a modifier written twice says it once, and the load refuses it as a second spelling", arguments: [
+        ("const const Procedure", TypeExpression.procedure(nil, .const)),
+        ("isolated isolated Procedure", .procedure(nil, .unstated, .isolated))
     ])
-    func aModifierWrittenTwiceIsRefused(written: String) {
+    func aModifierWrittenTwiceSaysItOnce(written: String, expected: TypeExpression) throws {
         // When / Then
-        #expect(throws: TypeFormError.self) {
-            try TypeReader.parse(written)
+        #expect(try TypeReader.parse(written) == expected)
+        #expect(throws: ReadingError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["parameters": [["name": "f", "type": .string(written)]]]]
+            ])
         }
     }
 

@@ -84,20 +84,7 @@ struct TypeDeclarationReader: Decodable {
     }
 
     // The names a struct takes types under, in order, each beside its bound.
-    // A struct taking none writes no list, so the one way to say it is to
-    // leave the key out.
     private static func typeParameters(from decoder: Decoder?) throws -> IntroducedNamesReader? {
-        guard let decoder else { return nil }
-
-        let read = try IntroducedNamesReader(reading: decoder)
-
-        guard !read.names.isEmpty else {
-            throw ReadingError(
-                "lists no type parameters, and a struct taking none leaves `\(Self.typeParametersKey)` out",
-                at: decoder.steps
-            )
-        }
-
-        return read
+        try decoder.map(IntroducedNamesReader.init(reading:))
     }
 }
