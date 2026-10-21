@@ -14,5 +14,5 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (set held (call Standard.Collection.setting held (call Standard.Text.text (call Standard.Numeric.remainder (path round (field index)) 100)) 1))))))
-  (result held))
+          (set held (call Standard.Collection.setting held (call Standard.Text.text (call Standard.Numeric.remainder (path round (field index)) 100)) 1)))))
+    (return held)))

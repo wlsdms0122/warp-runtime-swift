@@ -7,7 +7,8 @@
 (procedure App.read
   (parameter account (type App.Account))
   (returns Int)
-  (result (path account (field balance))))
+  (body
+    (return (path account (field balance)))))
 
 (procedure entry
   (access public)
@@ -20,5 +21,5 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (set seen (call App.read account))))))
-  (result seen))
+          (set seen (call App.read account)))))
+    (return seen)))

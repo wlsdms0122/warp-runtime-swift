@@ -19,5 +19,6 @@
                 (isolated)
                 (parameter item (type Int))
                 (returns Int)
-                (result item))))))))
-  (result items))
+                (body
+                  (return item))))))))
+    (return items)))

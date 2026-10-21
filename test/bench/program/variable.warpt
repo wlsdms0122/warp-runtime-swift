@@ -12,5 +12,5 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (set count (call Standard.Numeric.plus count 1))))))
-  (result count))
+          (set count (call Standard.Numeric.plus count 1)))))
+    (return count)))

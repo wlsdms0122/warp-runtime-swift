@@ -16,5 +16,5 @@
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
           (let made (type App.Made) (struct (field x 1) (field y 2)))
-          (set seen (path made (field y)))))))
-  (result seen))
+          (set seen (path made (field y))))))
+    (return seen)))
