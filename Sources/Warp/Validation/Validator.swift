@@ -604,7 +604,7 @@ struct Validator: Sendable {
             let here = place.statement(statement, at: position)
 
             if let binding = statement.binding {
-                if statement.expression.alwaysLeaves {
+                if statement.bindingAfter != nil, statement.expression.alwaysLeaves {
                     throw ValidationError(Expression.nameOnWhatNeverFinishes, at: here)
                 }
 
@@ -1044,7 +1044,7 @@ struct Validator: Sendable {
     // lets `while` read how many rounds have passed. The round is a fixed
     // name, whatever its spelling named outside.
     private func validate(
-        loop condition: Expression,
+        loop condition: Expression?,
         body: Body,
         round: Name?,
         visible: Set<Name>,
@@ -1056,14 +1056,23 @@ struct Validator: Sendable {
         let inner = visible.union(named)
         let writable = variables.subtracting(named)
 
+        if let condition {
+            try validate(
+                value: condition,
+                visible: inner,
+                variables: writable,
+                scope: scope,
+                at: place.child(.condition(of: .loop))
+            )
+        }
+
         try validate(
-            value: condition,
+            body,
             visible: inner,
             variables: writable,
-            scope: scope,
-            at: place.child(.condition(of: .loop))
+            scope: scope.inside(Scope.Round(name: round, finishes: condition != nil)),
+            at: place.child(.round)
         )
-        try validate(body, visible: inner, variables: writable, scope: scope.inside(round), at: place.child(.round))
     }
 
     // While the rescue runs, the failure is a value under the declared name,
@@ -1108,15 +1117,25 @@ struct Validator: Sendable {
             throw ValidationError("there is no loop here to leave", at: place)
         }
 
-        guard let target = leave.target else { return }
+        // The round a leave names is the nearest one under that name.
+        let ended = try leave.target.map { target in
+            guard let named = scope.rounds.last(where: { round in round.name == target }) else {
+                let around = scope.rounds.reversed().map { round in round.name?.spelling ?? "a nameless one" }
 
-        guard scope.rounds.contains(target) else {
-            let around = scope.rounds.reversed().map { round in round?.spelling ?? "a nameless one" }
+                throw ValidationError(
+                    "names '\(target)', which is not a loop around it."
+                        + " The ones here are \(around.joined(separator: ", "));"
+                        + " the nearest is \(nearest.name.map { nearest in "'\(nearest)'" } ?? "nameless")",
+                    at: place
+                )
+            }
 
+            return named
+        } ?? nearest
+
+        guard leave.reach != .construct || ended.finishes else {
             throw ValidationError(
-                "names '\(target)', which is not a loop around it."
-                    + " The ones here are \(around.joined(separator: ", "));"
-                    + " the nearest is \(nearest.map { nearest in "'\(nearest)'" } ?? "nameless")",
+                "ends a loop written with no condition, which declares that it does not finish",
                 at: place
             )
         }

@@ -73,7 +73,10 @@ extension Expression: Traversable {
             otherwise?.walk(at: stepped(here, to: .otherwise, by: stepping), stepping: stepping, into: &found)
 
         case let .loop(condition, body):
-            walk(condition, as: .condition(of: .loop), from: here, stepping: stepping, into: &found)
+            if let condition {
+                walk(condition, as: .condition(of: .loop), from: here, stepping: stepping, into: &found)
+            }
+
             body.walk(at: stepped(here, to: .round, by: stepping), stepping: stepping, into: &found)
 
         case let .attempt(attempted, rescue):

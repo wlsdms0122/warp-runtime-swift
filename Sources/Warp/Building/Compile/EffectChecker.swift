@@ -224,7 +224,7 @@ struct EffectChecker {
                 .joined(otherwise.map { arm in read(arm) } ?? .these([]))
 
         case let .loop(condition, body):
-            return read(condition).joined(read(body))
+            return (condition.map(read) ?? .these([])).joined(read(body))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
@@ -367,7 +367,7 @@ struct EffectChecker {
             return breaking(condition) ?? breaking(then) ?? otherwise.flatMap(breaking)
 
         case let .loop(condition, body):
-            return breaking(condition) ?? breaking(body)
+            return condition.flatMap(breaking) ?? breaking(body)
 
         case let .attempt(body, rescue):
             return breaking(body) ?? breaking(rescue)

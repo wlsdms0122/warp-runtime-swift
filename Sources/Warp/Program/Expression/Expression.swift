@@ -67,17 +67,19 @@ public indirect enum Expression: Sendable {
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
     case conditional(Expression, then: Body, else: Body?)
-    // A loop is a statement too, answering nothing.
-    case loop(while: Expression, body: Body)
+    // A loop is a statement too, answering nothing. One written with no
+    // condition declares that it does not finish: a round runs after every
+    // round, and only a leave reaching past the loop ends it.
+    case loop(while: Expression?, body: Body)
 
     // An attempt is a statement as well: a body, and the rescue that runs
     // where the body fails. What either keeps it writes to an outer variable.
     case attempt(Body, rescue: Body)
     case call(Call)
 
-    // Carrying on somewhere further out than the next statement. The one case
-    // that never even finishes: what comes after it in its body does not run,
-    // so a body may not have anything after it.
+    // Carrying on somewhere further out than the next statement. It never
+    // finishes: what comes after it in its body does not run, so a body may
+    // not have anything after it.
     case leave(Leave)
 
     // Where a child of an expression stands, by the part it plays, as the steps
@@ -239,8 +241,9 @@ public indirect enum Expression: Sendable {
         "a construct runs a body, and is written only as a statement's value."
             + " A statement before this one runs the body and its name is read here,"
             + " or a closure carries the body"
-    // What never finishes, said once for the load, which sees a leave, and
-    // the build, which sees a call answering `Never`.
+    // What never finishes, said once for the load, which sees a leave and a
+    // loop with no condition, and the build, which sees a call answering
+    // `Never`.
     static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
     static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
     static let declarationOnABoundName =
@@ -270,12 +273,12 @@ public indirect enum Expression: Sendable {
     }
 
     // Whether every way through this expression leaves, read off the text
-    // alone: a loop may run no round and an attempt's rescue may finish
-    // normally, so neither counts, and a call is judged at the build, where
-    // its signature is known.
+    // alone: a loop with a condition may run no round and an attempt's rescue
+    // may finish normally, so neither counts, and a call is judged at the
+    // build, where its signature is known.
     var alwaysLeaves: Bool {
         switch self {
-        case .leave:
+        case .leave, .loop(nil, _):
             return true
 
         case let .conditional(_, then, otherwise):
@@ -343,7 +346,7 @@ public indirect enum Expression: Sendable {
             }
 
         case let .loop(condition, body):
-            condition.gather(into: &free, naming: nil, outside: named)
+            condition?.gather(into: &free, naming: nil, outside: named)
             Self.gather(body, into: &free, outside: named)
 
         case let .attempt(body, rescue):

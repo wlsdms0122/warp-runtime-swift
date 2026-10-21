@@ -14,11 +14,18 @@ import Foundation
 // reads as a body outside any loop, so carrying the whole is the default and
 // every place that breaks it has to say so.
 struct Scope: Sendable {
+    // A round of a loop around here: the name the loop binds it under, nil
+    // for a nameless loop, and whether the loop may finish, which one written
+    // with no condition declares it does not.
+    struct Round: Sendable {
+        let name: Name?
+        let finishes: Bool
+    }
+
     // MARK: - Property
-    // The loops around here, nearest last, a nameless one as nil. A name
-    // reaches past the nearer ones, and nothing here means there is no loop
-    // to end.
-    let rounds: [Name?]
+    // The rounds of the loops around here, nearest last. A name reaches past
+    // the nearer ones, and nothing here means there is no loop to end.
+    let rounds: [Round]
 
     // The type parameters the procedure this body is written in declares,
     // which are the ones a closure inside it may name.
@@ -31,7 +38,7 @@ struct Scope: Sendable {
         Scope(rounds: [], typeParameters: typeParameters)
     }
 
-    func inside(_ round: Name?) -> Scope {
+    func inside(_ round: Round) -> Scope {
         Scope(rounds: rounds + [round], typeParameters: typeParameters)
     }
 

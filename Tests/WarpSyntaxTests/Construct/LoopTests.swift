@@ -117,6 +117,30 @@ struct LoopTests {
         }
     }
 
+    @Test("a loop with no while stops when the host cancels the run")
+    func aLoopWithNoWhileObservesCancellation() async throws {
+        // Given. A loop that declares it does not finish runs until the host
+        // cancels the run, like any loop
+        let spec = try loader.loadProcedure([
+            "body": [
+                ["value": ["loop": ["body": []]]]
+            ]
+        ])
+
+        // When
+        let task = Task {
+            try await run(spec)
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+
+        // Then
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
+    }
+
     @Test("a loop body may rebind an outer id by shadowing")
     func loopRebindsOuterIDByShadowing() throws {
         // Given. The retry-loop idiom rebinds an outer id inside loop steps
