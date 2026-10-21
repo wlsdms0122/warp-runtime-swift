@@ -22,11 +22,6 @@ public struct AttemptForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "attempt"
 
-    // The attempted body is decoded as a key that must be there, so an attempt
-    // at nothing is still written with an empty one. The rescue is a key that
-    // must be there as well.
-    public static let requiresBody = true
-
     private let attempted: Body
     private let rescue: Body
 

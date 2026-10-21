@@ -21,10 +21,6 @@ public protocol ConstructForm: Sendable, Decodable {
     // key is a fact about a notation, and a form is not one.
     static var key: Name { get }
 
-    // Whether this form reads `body` as a key it must have, which a writer
-    // asks so that it never drops an empty body a reader demands.
-    static var requiresBody: Bool { get }
-
     // Procedures this form's expression sends, which a link has to declare for the
     // spelling to reach anything. Most forms build the language's own constructs
     // and send nothing, so most leave this empty.
@@ -43,8 +39,6 @@ public protocol ConstructForm: Sendable, Decodable {
 }
 
 public extension ConstructForm {
-    static var requiresBody: Bool { false }
-
     static func vocabulary(with notation: Notation) -> Set<Name> { [] }
 
     func statement(binding: Statement.Binding?) throws -> Statement {

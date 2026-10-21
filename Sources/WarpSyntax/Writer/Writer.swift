@@ -173,7 +173,7 @@ public struct Writer: Sendable {
         }
 
         written.merge(try fields(of: procedure.signature)) { one, _ in one }
-        written.merge(try fields(of: block, in: nil)) { one, _ in one }
+        written.merge(try fields(of: block)) { one, _ in one }
 
         return .dictionary(written)
     }
@@ -330,17 +330,12 @@ public struct Writer: Sendable {
 
         return spelling
     }
-    // The keys a block writes, with whoever reads it asked whether an empty
-    // `body` is written or dropped. A rescue and a procedure are read by their
-    // own readers, which take `body` as a key that may be absent, and say
-    // `nil`.
-    private func fields(
-        of block: Block,
-        in form: (any ConstructForm.Type)?
-    ) throws -> [Name: Value] {
+    // The keys a procedure's block writes. A procedure reads `body` as a key
+    // that may be absent, so an empty one is dropped.
+    private func fields(of block: Block) throws -> [Name: Value] {
         var written: [Name: Value] = [:]
 
-        if form?.requiresBody == true || !block.body.statements.isEmpty {
+        if !block.body.statements.isEmpty {
             written[BlockReader.CodingKeys.body.name] = .array(try block.body.statements.map(value(of:)))
         }
 
