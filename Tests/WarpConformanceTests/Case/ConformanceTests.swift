@@ -42,7 +42,7 @@ struct ConformanceTests {
             case let .builds(expected):
                 let built = try await built(program)
 
-                #expect(built == expected, "\(sut.name): \(sut.note)")
+                #expect(built.matchesStrictly(expected), "\(sut.name): \(sut.note)")
             }
 
         case let .object(object):
