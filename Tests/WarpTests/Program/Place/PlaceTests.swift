@@ -225,14 +225,15 @@ struct PlaceTests {
     @Test("every walk that reports a place steps through the same slots to reach one")
     func theWalksAgreeOnHowDeepASlotIs() async throws {
         // Given. One call, held under an attempt's rescue: a slot no walk
-        // reaches without stepping through the keys between. Four walks report
+        // reaches without stepping through the keys between. Five walks report
         // places and each destructures the language for itself, so what one of
         // them forgets to step into is a place that reads like another one.
         //
         // Each of them is made to speak about this call in the way only it can:
         // a name nothing declares for the walk that checks the document against
         // itself, a procedure nothing declares for the walk that resolves names, a
-        // claim the types already prove for the walk that reads them.
+        // claim the types already prove for the walk that reads them, a type
+        // nothing declares for the walk that holds what a body names.
         let reached = "procedures.entry.body.guarded[0].attempt.rescue.sent[0].call"
 
         func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
@@ -277,10 +278,21 @@ struct PlaceTests {
             )
         }
 
+        let named = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [module(
+                    sending: "helper",
+                    with: .cast(.literal(.int(1)), as: .named("App.Nowhere"), optional: false)
+                )] + Module.standard
+            )
+        }
+
         // Then. Each says something different about the call, from one place
         #expect(load?.place?.rendered?.hasPrefix(reached) == true)
         #expect(bound?.place?.rendered?.hasPrefix(reached) == true)
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(named?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(named?.message.contains("names type 'App.Nowhere'") == true)
 
         // And the walk that only gathers puts it in the same place
         let gathered = try #require(

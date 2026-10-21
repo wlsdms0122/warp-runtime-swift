@@ -59,7 +59,7 @@ struct DeclarationChecker {
                 if case let .body(body) = procedure.implementation {
                     try judge(
                         subexpressions: body,
-                        at: .procedure(name.spelling, in: .of(module)),
+                        at: .procedure(name.spelling, in: .of(module)).part(.body),
                         bounds: procedure.signature.bounds,
                         sameTypes: procedure.signature.sameTypes,
                         in: table
