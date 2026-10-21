@@ -30,16 +30,18 @@ public struct TextEncoding {
             throw EncodingRefused("the tree nests deeper than a document may")
         }
 
-        let isCase = (try? Fields.entries(value, as: "a tree"))?.contains { key, _ in key == CaseNode.test } == true
-        let nodes = isCase ? try CaseNode().nodes(of: value) : try DocumentNode().nodes(of: value)
+        let text = try refusing(in: []) {
+            let isCase = (try? Subtree(value, as: "a tree").entries())?.contains { key, _ in key == CaseNode.test } == true
+            let nodes = isCase ? try CaseNode().nodes(of: value) : try DocumentNode().nodes(of: value)
 
-        guard let first = nodes.first?.word, first == (isCase ? CaseNode.test : Module.versionKey.spelling) else {
-            throw EncodingRefused(
-                "a text begins with what it is, `(\(Module.versionKey) …)` or `(\(CaseNode.test) …)`, and this tree writes neither"
-            )
+            guard let first = nodes.first?.word, first == (isCase ? CaseNode.test : Module.versionKey.spelling) else {
+                throw TextRefused(
+                    "a text begins with what it is, `(\(Module.versionKey) …)` or `(\(CaseNode.test) …)`, and this tree writes neither"
+                )
+            }
+
+            return try DatumWriter().text(of: nodes)
         }
-
-        let text = try DatumWriter().text(of: nodes)
 
         guard (try? self.value(from: text)) == value else {
             throw EncodingRefused("no node writes this tree: its text reads back as another")
@@ -50,7 +52,9 @@ public struct TextEncoding {
 
     // The same value as data on one line, for a sentence that quotes it.
     func line(from value: Value) throws -> String {
-        try DatumWriter().line(of: DataNode().datum(of: value))
+        try refusing(in: []) {
+            try DatumWriter().line(of: DataNode().datum(of: value))
+        }
     }
 
     public func data(from value: Value) throws -> Data {
@@ -67,13 +71,7 @@ public struct TextEncoding {
 
     public func value(from text: String) throws -> Value {
         let scalars = Array(text.unicodeScalars)
-        let value: Value
-
-        do {
-            value = try read(scalars)
-        } catch let unplaced as Unplaced {
-            throw refused(unplaced.said, at: unplaced.offset, in: scalars)
-        }
+        let value = try refusing(in: scalars) { try read(scalars) }
 
         guard value.nesting <= Value.nestingBound else {
             throw EncodingRefused("the document nests deeper than a reader must follow")
@@ -96,30 +94,36 @@ public struct TextEncoding {
             return try CaseNode().value(of: nodes)
 
         default:
-            throw Unplaced(
+            throw TextRefused(
                 "a text begins with what it is, `(\(Module.versionKey) …)` or `(\(CaseNode.test) …)`",
                 at: nodes.first?.offset ?? 0
             )
         }
     }
 
-    // Said with the line and column the offset stands at, both counted from
-    // one, the column in scalars.
-    private func refused(_ said: String, at offset: Int?, in scalars: [Unicode.Scalar]) -> Error {
-        guard let offset else { return EncodingRefused(said) }
+    // The door the text's layers refuse through: what they refuse said once,
+    // with the line and column the offset stands at, both counted from one,
+    // the column in scalars. A refusal of what is being written stands at
+    // no line.
+    private func refusing<Made>(in scalars: [Unicode.Scalar], _ making: () throws -> Made) throws -> Made {
+        do {
+            return try making()
+        } catch let refusal as TextRefused {
+            guard let offset = refusal.offset else { throw EncodingRefused(refusal.said) }
 
-        var line = 1
-        var column = 1
+            var line = 1
+            var column = 1
 
-        for (index, scalar) in scalars.prefix(offset).enumerated() {
-            if scalar == "\n" || scalar == "\r" && (index + 1 < scalars.count ? scalars[index + 1] : nil) != "\n" {
-                line += 1
-                column = 1
-            } else {
-                column += 1
+            for (index, scalar) in scalars.prefix(offset).enumerated() {
+                if scalar == "\n" || scalar == "\r" && (index + 1 < scalars.count ? scalars[index + 1] : nil) != "\n" {
+                    line += 1
+                    column = 1
+                } else {
+                    column += 1
+                }
             }
-        }
 
-        return EncodingRefused(said, at: EncodingRefused.Position(line: line, column: column))
+            throw EncodingRefused(refusal.said, at: EncodingRefused.Position(line: line, column: column))
+        }
     }
 }

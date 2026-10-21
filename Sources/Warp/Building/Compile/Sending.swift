@@ -62,10 +62,8 @@ struct Sending {
         guard let sends = implementation.nativeImports else { return [] }
 
         let declared = symbol.procedure.signature
-        let answersWithoutRunning = declared.constness == .const
-        let touchesNothingShared = declared.isolation == .isolated
 
-        if answersWithoutRunning, case .effect = implementation {
+        if declared.constness == .const, case .effect = implementation {
             throw BuildError(
                 "'\(label)' is declared const and answered by an effect, which answers by running",
                 at: symbol.place
@@ -91,20 +89,26 @@ struct Sending {
                     throw BuildError("sends '\(send.selector)', which no module in this link declares", at: place)
                 }
 
-                guard !answersWithoutRunning || signature.constness == .const else {
+                // A failure out of what it sends comes back to the native
+                // code, which may catch it, so only what it declares of its
+                // own failures says what comes out of it.
+                switch signature.effects.exceeding(declared.effects) {
+                case .constness:
                     throw BuildError(
                         "'\(label)' answers without running and sends '\(send.selector)',"
                             + " which answers only by running",
                         at: place
                     )
-                }
 
-                guard !touchesNothingShared || signature.isolation == .isolated else {
+                case .isolation:
                     throw BuildError(
                         "'\(label)' says it touches no name another body could touch at"
                             + " the same time, and sends '\(send.selector)', which does",
                         at: place
                     )
+
+                case .failing, nil:
+                    break
                 }
 
                 try handing(of: send, reaching: signature, called: label, at: place)

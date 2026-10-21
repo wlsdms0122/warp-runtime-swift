@@ -26,11 +26,11 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse(written) == expected)
     }
 
-    @Test("every mark reads and writes back, whichever ones there are", arguments: SlotMark.allCases)
-    func everyMarkRoundTrips(mark: SlotMark) throws {
+    @Test("every mark reads and writes back, whichever ones there are", arguments: TypeSyntax.Mark.allCases)
+    func everyMarkRoundTrips(mark: TypeSyntax.Mark) throws {
         // Given. A name, and a procedure type, each in front of the mark
-        let named = mark.marking(.named("Handle"))
-        let form = mark.marking(.procedure(ProcedureType(returns: .int, failing: .anything)))
+        let named = Self.marked(mark, .named("Handle"))
+        let form = Self.marked(mark, .procedure(ProcedureType(returns: .int, failing: .anything)))
 
         // When
         let writtenName = try Writer().value(of: named)
@@ -39,7 +39,7 @@ struct ModifierNotationTests {
         // Then
         #expect(writtenName == .string("\(mark.word) Handle"))
         #expect(try TypeReader.parse("\(mark.word) Handle") == named)
-        #expect(SlotMark.marked(named) == mark)
+        #expect(TypeSyntax(named) { _ in nil } == .marked(mark, .name("Handle")))
 
         #expect(writtenForm == .string("\(mark.word) () throws -> Int"))
 
@@ -69,11 +69,11 @@ struct ModifierNotationTests {
 
     @Test(
         "a mark inside a mark is written as it is, in front of a name or a procedure type",
-        arguments: SlotMark.allCases, SlotMark.allCases
+        arguments: TypeSyntax.Mark.allCases, TypeSyntax.Mark.allCases
     )
-    func aMarkInsideAMarkIsWrittenAsItIs(mark: SlotMark, inside: SlotMark) throws {
+    func aMarkInsideAMarkIsWrittenAsItIs(mark: TypeSyntax.Mark, inside: TypeSyntax.Mark) throws {
         // Given
-        let named = mark.marking(inside.marking(.named("Handle")))
+        let named = Self.marked(mark, Self.marked(inside, .named("Handle")))
 
         // When / Then. A name takes both in front of it, and reads back as it
         // was written
@@ -81,7 +81,7 @@ struct ModifierNotationTests {
         #expect(try TypeReader.parse("\(mark.word) \(inside.word) Handle") == named)
 
         // And a procedure type takes both the same way
-        let procedure = mark.marking(inside.marking(.procedure(ProcedureType(returns: .int, failing: .these([])))))
+        let procedure = Self.marked(mark, Self.marked(inside, .procedure(ProcedureType(returns: .int, failing: .these([])))))
 
         #expect(try Writer().value(of: procedure) == .string("\(mark.word) \(inside.word) () -> Int"))
         #expect(try TypeReader.parse("\(mark.word) \(inside.word) () -> Int") == procedure)
@@ -89,9 +89,9 @@ struct ModifierNotationTests {
 
     @Test(
         "a mark inside a mark is refused where the document is read, whichever two they are",
-        arguments: SlotMark.allCases, SlotMark.allCases
+        arguments: TypeSyntax.Mark.allCases, TypeSyntax.Mark.allCases
     )
-    func aMarkInsideAMarkIsRefused(mark: SlotMark, inside: SlotMark) throws {
+    func aMarkInsideAMarkIsRefused(mark: TypeSyntax.Mark, inside: TypeSyntax.Mark) throws {
         // When / Then. Each mark stands where it may alone, and no slot takes
         // two
         #expect(throws: ValidationError.self) {
@@ -114,12 +114,12 @@ struct ModifierNotationTests {
         }
     }
 
-    @Test("a marked type is not written under a `?`", arguments: SlotMark.allCases)
-    func aMarkIsNotWrittenUnderADoubt(mark: SlotMark) throws {
+    @Test("a marked type is not written under a `?`", arguments: TypeSyntax.Mark.allCases)
+    func aMarkIsNotWrittenUnderADoubt(mark: TypeSyntax.Mark) throws {
         // Given. `var Task?` reads as a `var` of a nullable, so a nullable of a
         // `var` has no spelling of its own: writing it would hand two types one
         // spelling and bring only one of them back
-        let type = TypeExpression.nullable(mark.marking(.named("Task")))
+        let type = TypeExpression.nullable(Self.marked(mark, .named("Task")))
 
         // When / Then
         #expect(throws: WritingError.self) {
@@ -127,7 +127,7 @@ struct ModifierNotationTests {
         }
 
         // And the same spelling read back is the mark outside the doubt
-        #expect(try TypeReader.parse("\(mark.word) Task?") == mark.marking(.nullable(.named("Task"))))
+        #expect(try TypeReader.parse("\(mark.word) Task?") == Self.marked(mark, .nullable(.named("Task"))))
     }
 
     @Test(
@@ -207,13 +207,19 @@ struct ModifierNotationTests {
         #expect(module.procedures["entry"]?.signature.parameter(named: "f")?.type == type)
     }
 
-    @Test("a modifier written twice is refused", arguments: [
-        "const const Procedure", "isolated isolated Procedure"
+    @Test("a modifier written twice says it once, and the load refuses it as a second spelling", arguments: [
+        ("const const Procedure", TypeExpression.procedure(nil, .const)),
+        ("isolated isolated Procedure", .procedure(nil, .unstated, .isolated))
     ])
-    func aModifierWrittenTwiceIsRefused(written: String) {
+    func aModifierWrittenTwiceSaysItOnce(written: String, expected: TypeExpression) throws {
         // When / Then
-        #expect(throws: TypeFormError.self) {
-            try TypeReader.parse(written)
+        #expect(try TypeReader.parse(written) == expected)
+        #expect(throws: ReadingError.self) {
+            try Loader().load([
+                "warp": 1,
+                "imports": [],
+                "procedures": ["entry": ["parameters": [["name": "f", "type": .string(written)]]]]
+            ])
         }
     }
 
@@ -286,4 +292,10 @@ struct ModifierNotationTests {
 
     // MARK: - Public
     // MARK: - Private
+    private static func marked(_ mark: TypeSyntax.Mark, _ inner: TypeExpression) -> TypeExpression {
+        switch mark {
+        case .variable: .variable(inner)
+        case .inout: .inout(inner)
+        }
+    }
 }

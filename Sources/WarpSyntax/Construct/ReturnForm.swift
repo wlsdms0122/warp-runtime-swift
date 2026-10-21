@@ -31,7 +31,7 @@ public struct ReturnForm: ConstructForm {
     // Nothing is bound: a statement names what its expression answered, and this
     // one does not answer.
     public func expression(boundTo name: Name?) -> Warp.Expression {
-        .leave(Leave(reach: .procedure, value: value))
+        .leave(.procedure(value))
     }
 
     // MARK: - Private

@@ -539,7 +539,6 @@ struct Validator: Sendable {
             scope: .procedure(typeParameters: procedure.signature.parameterNames),
             at: place
         )
-        try answersOneWay(block, at: place)
     }
 
     // A native procedure reads its arguments at the places its own keys stand at,
@@ -597,7 +596,7 @@ struct Validator: Sendable {
     ) throws -> (visible: Set<Name>, variables: Set<Name>) {
         var visible = startVisible
         var variables = startVariables
-        var declared: Set<Name> = []
+        var declared = parameters
 
         for (position, statement) in body.statements.enumerated() {
             // A statement is its name and the construct it writes under. Both,
@@ -626,7 +625,7 @@ struct Validator: Sendable {
                     )
                 }
 
-                if statement.expression.answersNothing, case .assignment = binding {
+                if case .loop = statement.expression, case .assignment = binding {
                     throw ValidationError(
                         "a loop answers nothing, so there is nothing to write."
                             + " What a round keeps is written to an outer variable with 'set'",
@@ -651,15 +650,11 @@ struct Validator: Sendable {
                 case let .constant(name, _), let .variable(name, _):
                     try held(name, as: .value, at: named)
 
-                    guard !parameters.contains(name) else {
+                    guard !declared.contains(name) else {
                         throw ValidationError(
-                            "'\(name)' is a parameter this body takes, and a body introduces a name once",
+                            "'\(name)' is a name this body introduced already, and a body introduces a name once",
                             at: named
                         )
-                    }
-
-                    guard !declared.contains(name) else {
-                        throw ValidationError("two statements here are named '\(name)'", at: named)
                     }
 
                     declared.insert(name)
@@ -701,7 +696,7 @@ struct Validator: Sendable {
 
             try validate(
                 statement.expression,
-                naming: statement.binding?.introduced,
+                naming: statement.nameInside,
                 visible: visible,
                 variables: variables,
                 scope: scope,
@@ -725,10 +720,7 @@ struct Validator: Sendable {
         return (visible, variables)
     }
 
-    // `name` is what the statement this expression is the value of
-    // introduces, which a loop binds its round under and an attempt its
-    // failure. The statement already held it to where a name may be
-    // introduced.
+    // `name` is the statement's `nameInside`.
     //
     // The parts of each kind are checked out of line, so a level of an
     // expression nested to the bound spends little stack, a debug build's
@@ -944,8 +936,7 @@ struct Validator: Sendable {
     }
 
     // What a `return` carries is a value like any other. A name it reads has
-    // to be visible where it was written. Only `return` reaches the value:
-    // the check of the leave refuses a value on the two that end a loop.
+    // to be visible where it was written.
     private func validate(
         leave: Leave,
         visible: Set<Name>,
@@ -1008,7 +999,6 @@ struct Validator: Sendable {
             scope: scope.enclosed(),
             at: inside
         )
-        try answersOneWay(block, at: inside)
     }
 
     private func validate(
@@ -1076,7 +1066,6 @@ struct Validator: Sendable {
             at: place.child(.condition(of: .loop))
         )
         try validate(body, visible: inner, variables: writable, scope: scope.inside(round), at: place.child(.round))
-        try refuseLeave(.round, endingAt: body, named: round, at: place.child(.round))
     }
 
     // While the rescue runs, the failure is a value under the declared name,
@@ -1149,25 +1138,7 @@ struct Validator: Sendable {
         in scope: Scope,
         at place: Place
     ) throws {
-        guard leave.reach != .procedure else {
-            guard leave.target == nil else {
-                throw ValidationError(
-                    "answering leaves the procedure it is written in,"
-                        + " and names no other",
-                    at: place
-                )
-            }
-
-            return
-        }
-
-        guard leave.value == nil else {
-            throw ValidationError(
-                "a loop answers what it was going to answer,"
-                    + " so ending one carries nothing",
-                at: place
-            )
-        }
+        guard leave.reach != .procedure else { return }
 
         guard let nearest = scope.rounds.last else {
             throw ValidationError("there is no loop here to leave", at: place)
@@ -1185,30 +1156,6 @@ struct Validator: Sendable {
                 at: place
             )
         }
-    }
-
-    // One program has one text, so a leave landing where its body ends anyway
-    // is not written: a `return` ending a procedure's own body answers what
-    // its `result` would, and a `continue` ending a round goes where the round
-    // goes on its own.
-    private func answersOneWay(_ block: Block, at place: Place) throws {
-        try refuseLeave(.procedure, endingAt: block.body, named: nil, at: place.child(.body))
-    }
-
-    private func refuseLeave(_ reach: Leave.Reach, endingAt body: Body, named loop: Name?, at place: Place) throws {
-        guard
-            let last = body.statements.last,
-            case let .leave(leave) = last.expression,
-            leave.reach == reach,
-            leave.target == nil || leave.target == loop
-        else { return }
-
-        let reason = switch reach {
-        case .procedure: "ends its body with 'return', which answers what 'result' does. A body says what it answers one way: under 'result'"
-        default: "ends its round with 'continue', where the round ends on its own"
-        }
-
-        throw ValidationError(reason, at: place.statement(last, at: body.statements.count - 1))
     }
 
     private func validate(

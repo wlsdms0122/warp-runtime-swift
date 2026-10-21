@@ -21,11 +21,11 @@ struct PathNode {
     // MARK: - Initializer
     // MARK: - Public
     func text(of datum: Datum) throws -> String {
-        let path = try self.path(of: datum, depth: 1)
+        let path = try self.path(of: datum, depth: 0)
         let rendered = path.rendered
 
         guard (try? PathParser().parse(rendered)) == path else {
-            throw Unplaced(
+            throw TextRefused(
                 "'\(rendered)' reads back as another path: a name in it holds what a path is spelled with",
                 at: datum.offset
             )
@@ -41,13 +41,13 @@ struct PathNode {
         do {
             path = try PathParser().parse(text)
         } catch {
-            throw EncodingRefused("the path is written '\(text)', which no node writes: \(error)")
+            throw TextRefused("the path is written '\(text)', which no node writes: \(error)")
         }
 
         let datum = try self.datum(of: path)
 
         guard (try? self.text(of: datum)) == text else {
-            throw EncodingRefused("the path is written '\(text)', which no node writes. The nearest writes '\(path.rendered)'")
+            throw TextRefused("the path is written '\(text)', which no node writes. The nearest writes '\(path.rendered)'")
         }
 
         return datum
@@ -57,26 +57,26 @@ struct PathNode {
     // A path's nodes nest no deeper than a tree may.
     private func path(of datum: Datum, depth: Int) throws -> Path {
         guard depth <= Value.nestingBound else {
-            throw Unplaced("the path nests deeper than a document may", at: datum.offset)
+            throw TextRefused("the path nests deeper than a document may", at: datum.offset)
         }
 
         if case let .name(name) = datum.form {
-            return Path([.name(Name(normal: name))])
+            return Path([.name(try Node.name(name, at: datum.offset))])
         }
 
         let node = try Node(datum)
 
         guard node.word == "path" else {
-            throw Unplaced("a path is a name or `(path …)`, and here is `(\(node.word) …)`", at: node.offset)
+            throw TextRefused("a path is a name or `(path …)`, and here is `(\(node.word) …)`", at: node.offset)
         }
 
         let (head, parts) = try node.declared()
 
         guard !parts.isEmpty else {
-            throw Unplaced("a path of one name is the name, written bare", at: node.offset)
+            throw TextRefused("a path of one name is the name, written bare", at: node.offset)
         }
 
-        var segments: [PathSegment] = [.name(Name(normal: head))]
+        var segments: [PathSegment] = [.name(try Node.name(head, at: node.operands[0].offset))]
 
         for part in parts {
             segments.append(try segment(part, depth: depth))
@@ -90,7 +90,9 @@ struct PathNode {
 
         switch node.word {
         case "field", "field?":
-            return .name(Name(normal: try Node.name(node.one())), optional: node.word == "field?")
+            let field = try node.one()
+
+            return .name(try Node.name(Node.name(field), at: field.offset), optional: node.word == "field?")
 
         case "index", "index?":
             let index = try node.one()
@@ -112,13 +114,13 @@ struct PathNode {
         }
     }
 
-    private func unsegmented(_ node: Node) -> Unplaced {
-        Unplaced("a path's segment is `field`, `field?`, `index` or `index?`, and here is `\(node.word)`", at: node.offset)
+    private func unsegmented(_ node: Node) -> TextRefused {
+        TextRefused("a path's segment is `field`, `field?`, `index` or `index?`, and here is `\(node.word)`", at: node.offset)
     }
 
     private func datum(of path: Path) throws -> Datum {
         guard case let .name(head, false)? = path.segments.first else {
-            throw EncodingRefused("the path '\(path.rendered)' begins with no unmarked name, and no node writes it")
+            throw TextRefused("the path '\(path.rendered)' begins with no unmarked name, and no node writes it")
         }
 
         guard path.segments.count > 1 else { return .name(head.spelling) }
@@ -144,7 +146,7 @@ struct PathNode {
             return .node(optional ? "index?" : "index", [Datum(.text(key))])
 
         case let .index(index, _):
-            throw EncodingRefused("a path indexes by \(Rendering(index).text()), and no node writes it")
+            throw TextRefused("a path indexes by \(Rendering(index).text()), and no node writes it")
 
         case let .indexRef(path, optional):
             return .node(optional ? "index?" : "index", [try datum(of: path)])

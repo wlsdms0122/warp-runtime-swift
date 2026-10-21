@@ -289,23 +289,23 @@ struct Lowering {
     // written with.
     //
     // A document being compiled lifts its closures as it lowers, so it hands
-    // none over here. One already compiled hands over the block it left.
+    // none over here. One already compiled hands over the rows it left.
     //
     // Its origin is where it is held, which is what this answers beside the
     // rows its declarations took.
     mutating func hold(
-        standing block: [Linked],
+        standing declarations: [Linked],
         closures lifted: [Linked] = [],
         numbering held: Numbering,
         variables ordered: [Name]
-    ) -> (origin: Int, block: Range<Int>) {
+    ) -> (origin: Int, declarations: Range<Int>) {
         let start = table.count
 
         // A private declaration takes no spelling from the link: its own
-        // document reaches it by the block, and nothing else reaches it.
+        // document reaches it by its row, and nothing else reaches it.
         var own: [Name: Int] = [:]
 
-        for (offset, row) in block.enumerated() {
+        for (offset, row) in declarations.enumerated() {
             own[row.label] = start + offset
 
             guard row.access.reachesOtherDocuments else { continue }
@@ -320,14 +320,14 @@ struct Lowering {
                 variables: ordered.enumerated().reduce(into: [Name: Int]()) { positions, name in
                     positions[name.element] = name.offset
                 },
-                closureRows: lifted.indices.map { offset in start + block.count + offset }
+                closureRows: lifted.indices.map { offset in start + declarations.count + offset }
             )
         )
 
-        table.append(contentsOf: block)
+        table.append(contentsOf: declarations)
         table.append(contentsOf: lifted)
 
-        return (origin: documents.count - 1, block: start ..< start + block.count)
+        return (origin: documents.count - 1, declarations: start ..< start + declarations.count)
     }
 
     // Which row each number a document gave stands for. A number of its own
@@ -529,7 +529,7 @@ struct Lowering {
 
         for (position, statement) in body.statements.enumerated() {
             let here = place.statement(statement, at: position)
-            let code = try lower(statement.expression, naming: statement.binding?.introduced, in: scope, on: context, at: here)
+            let code = try lower(statement.expression, naming: statement.nameInside, in: scope, on: context, at: here)
             let binding: Instruction.Binding?
 
             switch statement.bindingAfter {
@@ -567,9 +567,7 @@ struct Lowering {
         return instructions
     }
 
-    // `name` is what the statement this expression is the value of
-    // introduces, which a loop binds its round under and an attempt its
-    // failure.
+    // `name` is the statement's `nameInside`.
     private mutating func lower(
         _ expression: Expression,
         naming name: Name?,
@@ -918,7 +916,7 @@ struct Lowering {
             throw BuildError.unjudged("a call to '\(call.selector)', which the document never asked for", at: place)
         }
 
-        // The document's own declaration by its block, another document's by
+        // The document's own declaration by its row, another document's by
         // its spelling.
         guard let row = reached(stands, on: context.slots) else {
             throw BuildError.unjudged("a call to '\(call.selector)', which has no row", at: place)

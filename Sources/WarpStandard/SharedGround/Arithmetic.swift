@@ -99,38 +99,28 @@ struct Arithmetic: Sendable {
         return .int(answered.partialValue)
     }
 
-    // The answer two fractions have. Infinity is a fraction the arithmetic
-    // can reach and no document can carry, so it has no answer.
+    // The answer two fractions have, which the door every answer crosses
+    // refuses where it has no finite value.
     private func real(_ left: Double, _ right: Double) throws -> Double {
         guard !divides || right != 0 else { throw zeroDivisor }
 
-        let answered: Double
-
         switch operation {
         case .plus:
-            answered = left + right
+            return left + right
 
         case .minus:
-            answered = left - right
+            return left - right
 
         case .times:
-            answered = left * right
+            return left * right
 
         case .dividedBy:
-            answered = left / right
+            return left / right
 
         // Truncating toward zero, the same as the whole answer, so both take
         // the dividend's sign.
         case .remainder:
-            answered = left.truncatingRemainder(dividingBy: right)
+            return left.truncatingRemainder(dividingBy: right)
         }
-
-        guard answered.isFinite else {
-            throw ExecutionError(
-                "\(procedure) of \(left) and \(right) has no finite answer"
-            )
-        }
-
-        return answered
     }
 }

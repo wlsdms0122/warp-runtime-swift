@@ -195,5 +195,18 @@ struct TypeNamespace {
     }
 
     // MARK: - Public
+    // The type table of these declarations. A document's types take a run of
+    // type rows the way its declarations take a run of table rows, in the
+    // order the documents stand.
+    func table(standing documents: [any Declaring], numbered linkage: Linkage) -> TypeTable {
+        TypeTable(
+            types: types.mapValues(\.held),
+            contracts: contracts.mapValues(\.held),
+            typeMembers: typeMembers.values.map(\.held),
+            standing: Prelude.types.keys.sorted() + documents.flatMap { document in document.types.keys.sorted() },
+            of: linkage
+        )
+    }
+
     // MARK: - Private
 }

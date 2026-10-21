@@ -40,14 +40,23 @@ struct Handle: Sendable {
     // MARK: - Public
     // What the path holds. The build judged the path against the box's
     // declared type, so a part not there now is a box whose scope
-    // changed under the hold.
+    // changed under the hold. A path handed in place marks no step.
     func value() throws -> Value {
-        try box.value.reading(at: path, under: spelled)
-    }
+        var current = box.value
 
-    // The same, with nil where the path reaches a place nothing holds now.
-    func written() throws -> Value? {
-        try box.value.written(at: path, under: spelled)
+        for (index, projection) in path.enumerated() {
+            let walked = { Path([.name(head)] + path[...index].map(\.spelled)) }
+
+            switch projection.part(of: current, as: { projection.spelled }, walked: walked) {
+            case let .found(part):
+                current = part
+
+            case let .unfit(reason):
+                throw ExecutionError(reason)
+            }
+        }
+
+        return current
     }
 
     // Writes the part a path below the hold names. The box is read once,

@@ -1331,7 +1331,7 @@ struct InferenceTests {
                                                 Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                                 Statement(
                                                     expression: .leave(
-                                                        Leave(reach: .construct, target: nil, value: nil)
+                                                        Leave.construct(nil)
                                                     )
                                                 )
                                             ],
@@ -1540,7 +1540,7 @@ struct InferenceTests {
                                 Block(body: [
                                     mayFail("risky"),
                                     Statement(
-                                        expression: .leave(Leave(reach: .procedure, value: nil))
+                                        expression: .leave(.procedure(nil))
                                     )
                                 ]),
                                 rescue: Block(body: [

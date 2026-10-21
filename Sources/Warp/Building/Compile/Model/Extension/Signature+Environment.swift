@@ -8,8 +8,8 @@
 import Foundation
 
 extension Signature {
-    // The environment a procedure's body starts from: its own parameters,
-    // which are the only names declared before the first statement.
+    // The bindings of the parameters, which a body declares before its first
+    // statement.
     func environment(in table: LoweredTypeTable) -> [Name: Binding] {
         Dictionary(
             parameters.map { parameter in

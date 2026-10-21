@@ -9,8 +9,9 @@ import Foundation
 import Warp
 
 // What a struct, a contract and an extension hold, and the mappings they
-// write. A name introduced beside its bounds is one text in the tree, cut at
-// its `:` and its `&`, so a name holding either has no node there.
+// write. A name introduced beside its bounds is one text in the tree, which
+// the load cuts at its `:` and its `&`, so a name it would cut otherwise has
+// no node there.
 //
 //   (struct App.Box
 //     (typeParameter K App.Named Hashable)     typeParameters += "K: App.Named & Hashable"
@@ -24,6 +25,7 @@ import Warp
 //   (extension (head (array Int)) …)           extensions { "Array<Int>" { … } }
 struct DeclarationNode {
     // MARK: - Property
+    private static let importWord = "import"
     private static let structKey = TypeDeclarationReader.structKey.spelling
     private static let typeParameters = TypeDeclarationReader.typeParametersKey.spelling
     private static let satisfies = ExtensionReader.CodingKeys.satisfies.name.spelling
@@ -61,7 +63,7 @@ struct DeclarationNode {
         var fields = try Fields(value, as: "a struct's declaration")
 
         guard let declared = fields.take(Self.structKey) else {
-            throw EncodingRefused("a struct's declaration writes `struct`, and no node writes one without it")
+            throw TextRefused("a struct's declaration writes `struct`, and no node writes one without it")
         }
 
         var parts: [Datum] = []
@@ -73,8 +75,8 @@ struct DeclarationNode {
         let given = try self.given(&fields, as: "a struct's declaration")
 
         parts += given.satisfies
-        parts += try Fields.entries(declared, as: "a struct's fields").map { name, type in
-            .node("field", [.name(name), try TypeNode().datum(of: try Fields.text(type, as: "a field's type"))])
+        parts += try Subtree(declared, as: "a struct's fields").entries().map { name, type in
+            .node("field", [.name(name), try TypeNode().datum(of: try Subtree(type, as: "a field's type").text())])
         }
         parts += given.rest
 
@@ -99,7 +101,7 @@ struct DeclarationNode {
                 try keyed.write(try ProcedureNode().value(of: held), named: name, under: Self.procedures, at: part.offset)
 
             default:
-                throw Unplaced("a contract holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("a contract holds no `\(part.word)`", at: part.offset)
             }
         }
 
@@ -138,14 +140,14 @@ struct DeclarationNode {
             }
 
             guard head == nil else {
-                throw Unplaced("`head` is written twice", at: part.offset)
+                throw TextRefused("`head` is written twice", at: part.offset)
             }
 
             head = try TypeNode().text(of: part.one())
         }
 
         guard let head else {
-            throw Unplaced("an extension writes its `head`, the type it extends", at: offset)
+            throw TextRefused("an extension writes its `head`, the type it extends", at: offset)
         }
 
         return (head, try keyed.value())
@@ -160,36 +162,35 @@ struct DeclarationNode {
         return [.node("head", [try TypeNode().datum(of: head)])] + given.satisfies + given.rest
     }
 
-    // A name and the contracts bounding it, `K: A & B`, as `(word K A B)`.
+    // A name and the contracts bounding it, `K: A & B`, as `(word K A B)`,
+    // and an import, `(import App.Point Hashable)` for `App.Point: Hashable`:
+    // names joined into the tree's one string, where the load cuts that
+    // string back into the same names.
     func introduced(_ node: Node) throws -> String {
         let (name, contracts) = try node.declared()
         let names = try [name] + contracts.map(Node.name)
+        let text = contracts.isEmpty ? name : "\(name): \(names.dropFirst().joined(separator: " & "))"
 
-        if let held = names.first(where: { name in name.rangeOfCharacter(from: TypeNode.cut) != nil }) {
-            throw Unplaced("'\(held)' holds what the tree cuts a name from its bounds at", at: node.offset)
+        guard cut(text, as: node.word) == names else {
+            throw TextRefused("'\(text)' is read as other names than these, so they have no text", at: node.offset)
         }
 
-        guard !contracts.isEmpty else { return name }
-
-        return "\(name): \(names.dropFirst().joined(separator: " & "))"
+        return text
     }
 
     func introduced(_ value: Value, as word: String) throws -> [Datum] {
-        let list = try Fields.list(value, as: "a list of names")
+        let list = try Subtree(value, as: "a list of names").list()
 
         guard !list.isEmpty else {
-            throw EncodingRefused("no node writes an empty list of `\(word)`")
+            throw TextRefused("no node writes an empty list of `\(word)`")
         }
 
         return try list.map { element in
-            let text = try Fields.text(element, as: "a name and its bounds")
-            let parts = text.components(separatedBy: ": ")
-
-            let names = parts.count == 2 ? [parts[0]] + parts[1].components(separatedBy: " & ") : parts
-            let datum = Datum.node(word, names.map(Datum.name))
+            let text = try Subtree(element, as: "a name and its bounds").text()
+            let datum = Datum.node(word, cut(text, as: word).map(Datum.name))
 
             guard (try? introduced(Node(datum))) == text else {
-                throw EncodingRefused("'\(text)' cuts at its `:` into names no node writes back as itself")
+                throw TextRefused("'\(text)' is read as names no node writes back as itself")
             }
 
             return datum
@@ -197,6 +198,12 @@ struct DeclarationNode {
     }
 
     // MARK: - Private
+    // The names the load reads a string as: an import's, or a name and the
+    // contracts bounding it.
+    private func cut(_ text: String, as word: String) -> [String] {
+        word == Self.importWord ? ModuleReader.parts(ofImport: text) : IntroducedNamesReader.names(of: text)
+    }
+
     // What a struct's declaration and an extension both give a type: the
     // contracts it satisfies, its types and its members.
     private func given(_ part: Node, into keyed: inout Keyed) throws {
@@ -215,7 +222,7 @@ struct DeclarationNode {
             try keyed.write(try ProcedureNode().value(of: held), named: name, under: Self.procedures, at: part.offset)
 
         default:
-            throw Unplaced("no declaration here holds `\(part.word)`", at: part.offset)
+            throw TextRefused("no declaration here holds `\(part.word)`", at: part.offset)
         }
     }
 
@@ -224,16 +231,16 @@ struct DeclarationNode {
         var rest: [Datum] = []
 
         if let contracts = fields.take(Self.satisfies) {
-            let names = try Fields.list(contracts, as: "what \(place) satisfies").map { contract in
-                Datum.name(try Fields.text(contract, as: "a contract's name"))
+            let names = try Subtree(contracts, as: "what \(place) satisfies").list().map { contract in
+                Datum.name(try Subtree(contract, as: "a contract's name").text())
             }
 
             satisfies.append(.node(Self.satisfies, names))
         }
 
         if let types = fields.take(Self.types) {
-            rest += try Fields.entries(types, as: "the types \(place) gives").map { name, type in
-                .node("type", [.name(name), try TypeNode().datum(of: try Fields.text(type, as: "a given type"))])
+            rest += try Subtree(types, as: "the types \(place) gives").entries().map { name, type in
+                .node("type", [.name(name), try TypeNode().datum(of: try Subtree(type, as: "a given type").text())])
             }
         }
 
@@ -245,7 +252,7 @@ struct DeclarationNode {
     }
 
     private func procedures(_ value: Value) throws -> [Datum] {
-        try Fields.entries(value, as: "a mapping of procedures").map { name, procedure in
+        try Subtree(value, as: "a mapping of procedures").entries().map { name, procedure in
             .block("procedure", [.name(name)] + (try ProcedureNode().parts(of: procedure)))
         }
     }

@@ -21,9 +21,8 @@ import Foundation
 //   dictionary. Entries are a key and a value, each an expression
 //   call      . The procedure it names and its arguments by position
 //
-// The control constructs carry a `Block` and, where a name has to exist inside that
-// block, the name itself, so an expression means the same thing wherever it
-// appears, rather than taking the name of whatever bound it.
+// The control constructs carry a `Block`. A name one binds inside itself is
+// the statement's, under `Statement.nameInside`.
 //
 // `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
@@ -68,9 +67,7 @@ public indirect enum Expression: Sendable {
     // value leaves through `return`. A condition chooses a way through the body,
     // not a value.
     case conditional(Expression, then: Body, else: Body?)
-    // A loop is a statement too, answering nothing. The round is the name the
-    // statement this is the value of introduces, and a loop under no such name
-    // binds none; the same for an attempt's failure.
+    // A loop is a statement too, answering nothing.
     case loop(while: Expression, body: Body)
     case attempt(Block, rescue: Block)
     case call(Call)
@@ -204,9 +201,8 @@ public indirect enum Expression: Sendable {
 
     // Whether this construct answers nothing by its own grammar. A conditional
     // chooses a way through a body and a loop repeats one, not a value, so
-    // neither has anything to give a slot that holds an answer. A loop's name
-    // binds its round, read inside the loop. What never finishes is
-    // `alwaysLeaves`'s to say, refused with its own sentence.
+    // neither has anything to give a slot that holds an answer. What never
+    // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
     var answersNothing: Bool {
         switch self {
         case .conditional, .loop:
@@ -289,8 +285,7 @@ public indirect enum Expression: Sendable {
     // MARK: - Initializer
     // MARK: - Public
     // MARK: - Private
-    // `name` is the statement's this is the value of, which a loop binds its
-    // round under and an attempt its failure; `introduced` the names the
+    // `name` is the statement's `nameInside`; `introduced` the names the
     // bodies around this introduced.
     private func gather(into free: inout Set<Name>, naming name: Name?, outside introduced: Set<Name>) {
         let named = introduced.union(name.map { name in [name] } ?? [])
@@ -371,7 +366,7 @@ public indirect enum Expression: Sendable {
 
             statement.expression.gather(
                 into: &free,
-                naming: statement.expression.namesItsOwn ? statement.binding?.introduced : nil,
+                naming: statement.nameInside,
                 outside: introduced
             )
 

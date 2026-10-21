@@ -47,16 +47,17 @@ enum ObjectCoverageFixture {
             members: ["a": ["ten"]],
             typeMembers: ["a.seven": ["Item": .int, "Key": .string]],
             importedClaims: [ClaimPair("b.one", "b.two"), ClaimPair("b.one", "b.three")],
-            declared: ["a.eleven", "a.ten"],
-            constants: ["a.sixteen"],
             // Two declarations and the two closures their bodies lifted, which
             // is the order a document numbers its rows in.
-            table: [
+            rows: [
                 try row(label: "a.eleven", body: true),
-                try row(label: "a.ten", body: false),
+                try row(label: "a.ten", body: false)
+            ],
+            lifted: [
                 try lifted(label: "a.eleven"),
                 try lifted(label: "a.eleven")
             ],
+            constants: ["a.sixteen"],
             // The two closures behind the spellings belong to the declaration whose
             // body stands them up, which is the one with a body.
             numbering: Numbering(

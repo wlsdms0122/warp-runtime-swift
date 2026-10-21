@@ -469,23 +469,15 @@ public struct Writer: Sendable {
             return (try spelling(LoopForm.self), .dictionary(written))
 
         case let .leave(leave):
-            let target = leave.target.map { name in Value.string(name.spelling) } ?? .null
+            switch leave {
+            case let .procedure(written):
+                return (try spelling(ReturnForm.self), try written.map(value(of:)) ?? .null)
 
-            switch leave.reach {
-            case .procedure:
-                var carried = Value.null
+            case let .construct(target):
+                return (try spelling(BreakForm.self), target.map { name in Value.string(name.spelling) } ?? .null)
 
-                if let written = leave.value {
-                    carried = try value(of: written)
-                }
-
-                return (try spelling(ReturnForm.self), carried)
-
-            case .construct:
-                return (try spelling(BreakForm.self), target)
-
-            case .round:
-                return (try spelling(ContinueForm.self), target)
+            case let .round(target):
+                return (try spelling(ContinueForm.self), target.map { name in Value.string(name.spelling) } ?? .null)
             }
 
         case let .attempt(attempted, rescue):

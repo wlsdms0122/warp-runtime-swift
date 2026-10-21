@@ -332,6 +332,11 @@ public indirect enum Value: Sendable, Equatable {
     }
 
     // MARK: - Property
+    // How deep a written tree may nest: a document, and every tree an object
+    // writes as the entries of a table. The bound is exact: a reading takes a
+    // tree within it and refuses the first level past it.
+    public static let nestingBound = 128
+
     // What is said wherever a value stands where a document can reach it.
     static let procedureIsNotData = "a procedure is not data, so it cannot stand"
         + " where a document reaches; a body a program carries is written as a closure"
@@ -390,7 +395,7 @@ public indirect enum Value: Sendable, Equatable {
     // where the `bytes = Array<Int>` equation lives on the value side: an
     // array answers its own elements and bytes answer theirs as the ints they
     // are, lazily, so a compact spelling is not unpacked to read one element,
-    // and a procedure taking either through `Any` reads this one projection
+    // and a procedure taking either through `Any` reads these elements
     // instead of knowing the equation itself.
     public var elements: AnyRandomAccessCollection<Value>? {
         switch self {
@@ -625,10 +630,10 @@ public indirect enum Value: Sendable, Equatable {
         return respelled(atFront ? [element] + elements : elements + [element])
     }
 
-    // These elements, spelled the way this value is. The other half of the
-    // projection above: `elements` reads a compact spelling as the array it is,
-    // and this writes an array back into the compact spelling where it still
-    // holds, so a procedure that answers a collection's own elements, rearranged or
+    // These elements, spelled the way this value is. The other half of
+    // `elements`, which reads a compact spelling as the array it is: this
+    // writes an array back into the compact spelling where it still holds,
+    // so a procedure that answers a collection's own elements, rearranged or
     // fewer, answers bytes when it was given bytes.
     //
     // Where it no longer holds, a byte's slot now carrying something that is
@@ -705,8 +710,8 @@ public indirect enum Value: Sendable, Equatable {
             return Value.sameWorth(whole: whole, fraction: fraction)
 
         // Bytes are an array of whole numbers in a compact spelling, so the
-        // elements are compared, read through the one projection that owns
-        // the equation.
+        // elements are compared, read through `elements`, which owns the
+        // equation.
         case (.bytes, .array), (.array, .bytes):
             guard let mine = elements, let theirs = other.elements else { return false }
 
@@ -731,99 +736,6 @@ public indirect enum Value: Sendable, Equatable {
 
         default:
             return self == other
-        }
-    }
-
-    // The part a path names, in a struct by the place the build put the field
-    // at, in a map by key and in a list by position, bytes read through the
-    // one projection that owns their equation. Every index was read
-    // to a value before this, and the build judged the path against the
-    // value's declared type, so a part not held is refused as what it is: an
-    // entry not written yet, or a type with no such part.
-    func reading(at path: [Projection], under rendered: String) throws -> Value {
-        guard let step = path.first else { return self }
-
-        let rest = Array(path.dropFirst())
-
-        if case let .index(.int(index)) = step, let elements {
-            guard index >= 0, index < elements.count else {
-                throw ExecutionError("'\(rendered)' reads element \(index) of an array holding \(elements.count)")
-            }
-
-            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
-
-            return try element.reading(at: rest, under: rendered)
-        }
-
-        switch (self, step) {
-        case let (.struct(instance), .field(position, name)):
-            guard instance.values.indices.contains(position) else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
-            }
-
-            return try instance.values[position].reading(at: rest, under: rendered)
-
-        case let (.struct(instance), .name(name)):
-            guard let field = instance[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
-            }
-
-            return try field.reading(at: rest, under: rendered)
-
-        case let (.dictionary(map), .index(key)):
-            guard let entry = map[key: key] else {
-                throw ExecutionError(
-                    "'\(rendered)' reads \(Path([step.spelled]).rendered), which is not written yet"
-                )
-            }
-
-            return try entry.reading(at: rest, under: rendered)
-
-        default:
-            throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
-            )
-        }
-    }
-
-    // The same, with nil where the path reaches an entry not written yet or
-    // an element past the end of a list, places nothing holds now rather
-    // than mistakes.
-    func written(at path: [Projection], under rendered: String) throws -> Value? {
-        guard let step = path.first else { return self }
-
-        let rest = Array(path.dropFirst())
-
-        if case let .index(.int(index)) = step, let elements {
-            guard index >= 0, index < elements.count else { return nil }
-
-            let element = elements[elements.index(elements.startIndex, offsetBy: index)]
-
-            return try element.written(at: rest, under: rendered)
-        }
-
-        switch (self, step) {
-        case let (.struct(instance), .field(position, name)):
-            guard instance.values.indices.contains(position) else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
-            }
-
-            return try instance.values[position].written(at: rest, under: rendered)
-
-        case let (.struct(instance), .name(name)):
-            guard let field = instance[name] else {
-                throw ExecutionError("'\(rendered)' reads '\(name)' past the fields this struct holds")
-            }
-
-            return try field.written(at: rest, under: rendered)
-
-        case let (.dictionary(map), .index(key)):
-            return try map[key: key]?.written(at: rest, under: rendered)
-
-        default:
-            throw ExecutionError(
-                "'\(rendered)' reads \(Path([step.spelled]).rendered) of \(nominal), which has no such part"
-            )
         }
     }
 

@@ -76,7 +76,7 @@ struct StatementNode {
         var operands = node.operands[...]
 
         guard let named = operands.popFirst() else {
-            throw Unplaced("`\(word)` begins with what it binds", at: node.offset)
+            throw TextRefused("`\(word)` begins with what it binds", at: node.offset)
         }
 
         let binding = word == StatementReader.NamingKeys.assignment.name.spelling
@@ -86,10 +86,6 @@ struct StatementNode {
         try keyed.write(.string(binding), under: word, at: node.offset)
 
         if let typed = operands.first, typed.word == StatementReader.typeKey.spelling {
-            guard word != StatementReader.NamingKeys.assignment.name.spelling else {
-                throw Unplaced("a `set` writes no type", at: typed.offset)
-            }
-
             operands.removeFirst()
 
             try keyed.write(.string(try TypeNode().text(of: Node(typed).one())), under: StatementReader.typeKey.spelling, at: typed.offset)
@@ -97,12 +93,10 @@ struct StatementNode {
 
         if let held = operands.popFirst() {
             try keyed.write(try bound(held), under: StatementReader.valueKey.spelling, at: held.offset)
-        } else if word != StatementReader.NamingKeys.variable.name.spelling {
-            throw Unplaced("a `\(word)` writes a value", at: node.offset)
         }
 
         if let extra = operands.first {
-            throw Unplaced("`\(word)` holds what it binds, a type and a value, and nothing after", at: extra.offset)
+            throw TextRefused("`\(word)` holds what it binds, a type and a value, and nothing after", at: extra.offset)
         }
 
         return try keyed.value()
@@ -118,48 +112,42 @@ struct StatementNode {
 
         guard let (word, binding) = bindings.first else {
             guard let held, type == nil else {
-                throw EncodingRefused("a statement that binds nothing is a value alone, and no node writes this one")
+                throw TextRefused("a statement that binds nothing is a value alone, and no node writes this one")
             }
 
             return try datum(bound: held)
         }
 
         guard bindings.count == 1 else {
-            throw EncodingRefused("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
+            throw TextRefused("a statement binds once, and this one writes \(bindings.map { word, _ in "`\(word)`" }.joined(separator: " and "))")
         }
 
         var operands: [Datum]
 
         if word == StatementReader.NamingKeys.assignment.name.spelling {
-            guard type == nil else {
-                throw EncodingRefused("a `set` writes no type, and no node writes one beside it")
-            }
-
-            operands = [try PathNode().datum(of: try Fields.text(binding, as: "what a `set` writes"))]
+            operands = [try PathNode().datum(of: try Subtree(binding, as: "what a `set` writes").text())]
         } else {
-            operands = [.name(try Fields.text(binding, as: "what a `\(word)` binds"))]
+            operands = [.name(try Subtree(binding, as: "what a `\(word)` binds").text())]
         }
 
         if let type {
-            operands.append(.node(StatementReader.typeKey.spelling, [try TypeNode().datum(of: try Fields.text(type, as: "a binding's type"))]))
+            operands.append(.node(StatementReader.typeKey.spelling, [try TypeNode().datum(of: try Subtree(type, as: "a binding's type").text())]))
         }
 
         if let held {
             operands.append(try datum(bound: held))
-        } else if word != StatementReader.NamingKeys.variable.name.spelling {
-            throw EncodingRefused("a `\(word)` writes a value, and no node writes one without it")
         }
 
         return .node(word, operands)
     }
 
-    // A list of statements, as a block's parts hold them.
+    // A list of statements, as a construct's parts hold them.
     func value(of statements: ArraySlice<Datum>) throws -> Value {
         .array(try statements.map(value(of:)))
     }
 
     func data(of statements: Value, as place: String) throws -> [Datum] {
-        try Fields.list(statements, as: place).map(datum(of:))
+        try Subtree(statements, as: place).list().map(datum(of:))
     }
 
     // MARK: - Private
@@ -177,19 +165,29 @@ struct StatementNode {
     private func construct(_ node: Node) throws -> Value {
         switch node.word {
         case ReturnForm.key.spelling:
-            return node.operands.isEmpty ? .null : try ExpressionNode().value(of: node.one())
+            return try returned(node)
 
         case BreakForm.key.spelling, ContinueForm.key.spelling:
             return node.operands.isEmpty ? .null : .string(try Node.name(node.one()))
 
         default:
-            return try block(node)
+            return try keyedParts(node)
         }
+    }
+
+    // What a `return` hands back. Null is written by leaving the operand
+    // out, so `(return null)` is a second text of `(return)`.
+    private func returned(_ node: Node) throws -> Value {
+        guard let operand = node.operands.first else { return .null }
+
+        guard case .null = operand.form else { return try ExpressionNode().value(of: node.one()) }
+
+        throw TextRefused("`(return)` returns null, and is the one text of it", at: operand.offset)
     }
 
     // A construct holding parts under keys: a conditional, a loop, an
     // attempt and its rescue.
-    private func block(_ node: Node) throws -> Value {
+    private func keyedParts(_ node: Node) throws -> Value {
         var keyed = Keyed()
         let parts = Self.parts[node.word] ?? []
 
@@ -197,13 +195,13 @@ struct StatementNode {
             let part = try Node(operand)
 
             guard let (_, holding) = parts.first(where: { key, _ in key == part.word }) else {
-                throw Unplaced("`\(node.word)` holds no `\(part.word)`", at: part.offset)
+                throw TextRefused("`\(node.word)` holds no `\(part.word)`", at: part.offset)
             }
 
             let held: Value = switch holding {
             case .expression: try ExpressionNode().value(of: part.one())
             case .statements: try value(of: part.operands[...])
-            case .rescue: try block(part)
+            case .rescue: try keyedParts(part)
             }
 
             try keyed.write(held, under: part.word, at: part.offset)
@@ -229,7 +227,7 @@ struct StatementNode {
             return .node(word, body == .null ? [] : [try ExpressionNode().datum(of: body)])
 
         case BreakForm.key.spelling, ContinueForm.key.spelling:
-            return .node(word, body == .null ? [] : [.name(try Fields.text(body, as: "what a `\(word)` leaves"))])
+            return .node(word, body == .null ? [] : [.name(try Subtree(body, as: "what a `\(word)` leaves").text())])
 
         default:
             return .block(word, try parts(of: body, in: word))

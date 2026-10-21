@@ -455,7 +455,7 @@ struct PlaceTests {
         let error = #expect(throws: ValidationError.self) {
             try module(
                 refusing: Statement(
-                    expression: .leave(Leave(reach: .procedure, value: reference("missing")))
+                    expression: .leave(.procedure(reference("missing")))
                 )
             )
         }
@@ -497,7 +497,7 @@ struct PlaceTests {
             try Module(
                 procedures: [
                     entryName: Procedure(access: .public, body: [
-                        Statement(expression: .leave(Leave(reach: .procedure))),
+                        Statement(expression: .leave(.procedure(nil))),
                         Statement(binding: .constant("after"), expression: .literal(.int(1)))
                     ])
                 ]

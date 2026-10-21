@@ -783,24 +783,22 @@ indirect enum LoweredType: Sendable, Hashable {
     // Whether this reading is `declared` itself: what one struct's two
     // mentions have to be to be one type. What the reading says of one value
     // and no declaration writes is read as what is declared: a whole literal
-    // as the number it names, `Never`, what holds no value, as any type, and
-    // a procedure as its positions and answer, the constness, isolation and
-    // failing it declares meeting what the declaration asks, as a write
-    // handed in place is judged.
+    // as the number it names, and `Never`, what holds no value, as any type.
+    // A procedure type is that type: its effects are declared, and the same
+    // as the declaration's rather than within them.
     func reads(as declared: LoweredType) -> Bool {
         switch (self, declared) {
         case (.wholeLiteral, .int), (.wholeLiteral, .double), (.never, _):
             return true
 
         case let (.procedure(given, constness, isolation), .procedure(asked, wanted, wantedIsolation)):
-            guard wanted != .const || constness == .const, wantedIsolation != .isolated || isolation == .isolated else {
+            guard effects(of: given, constness, isolation) == effects(of: asked, wanted, wantedIsolation) else {
                 return false
             }
 
             guard let asked, let given else { return asked == given }
 
-            return given.failing.fails(within: asked.failing)
-                && given.parameters.count == asked.parameters.count
+            return given.parameters.count == asked.parameters.count
                 && zip(given.parameters, asked.parameters).allSatisfy { mine, theirs in mine.reads(as: theirs) }
                 && given.returns.reads(as: asked.returns)
 
@@ -972,21 +970,15 @@ indirect enum LoweredType: Sendable, Hashable {
 
         case let (.procedure(required, wantedConstness, wantedIsolation),
                   .procedure(given, offeredConstness, offeredIsolation)):
-            // A slot asking for constness takes only what says it is const, and one
-            // asking for isolation only what says it is isolated. The two are
-            // separate claims: a const body answers without running and can
-            // still reach a native procedure that holds state.
-            guard wantedConstness != .const || offeredConstness == .const else { return false }
-            guard wantedIsolation != .isolated || offeredIsolation == .isolated else { return false }
+            // What stands here does no more than the slot allows.
+            let allowed = effects(of: required, wantedConstness, wantedIsolation)
+
+            guard effects(of: given, offeredConstness, offeredIsolation).exceeding(allowed) == nil else { return false }
 
             // A slot that says nothing of its parameters takes any, and a
             // value that says nothing stands only where nothing is said.
             guard let required else { return true }
             guard let given else { return false }
-
-            // A slot naming what may fail takes only what fails within it, the
-            // way constness and isolation are asked.
-            guard given.failing.fails(within: required.failing) else { return false }
 
             // What stands here takes exactly the positions the slot hands: an
             // application gives every position, so a value of another count
@@ -1053,15 +1045,17 @@ indirect enum LoweredType: Sendable, Hashable {
         case let (.nullable(mine), _):
             return mine.takesInPlace(written, in: table)
 
-        // A procedure's positions and answer are written as themselves, and a
-        // value saying it is const or isolated, or failing within what is
-        // named, fits a slot that does not ask that much.
+        // A procedure's positions and answer are written as themselves, and
+        // its effects within what the slot asks, since a write is a value
+        // standing where the slot is.
         case let (.procedure(signature, constness, isolation), .procedure(offered, given, held)):
-            guard constness != .const || given == .const, isolation != .isolated || held == .isolated else { return false }
+            let allowed = effects(of: signature, constness, isolation)
+
+            guard effects(of: offered, given, held).exceeding(allowed) == nil else { return false }
 
             guard let signature, let offered else { return signature == offered }
 
-            return offered.failing.fails(within: signature.failing) && offered.with(failing: signature.failing) == signature
+            return offered.with(failing: signature.failing) == signature
 
         default:
             return self == written
@@ -2013,19 +2007,6 @@ indirect enum LoweredType: Sendable, Hashable {
             throw ArgumentError("\(path()): \(Linked.unreadable)")
         }
 
-        if constness == .const, linked.signature.constness != .const {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), got a procedure not declared const"
-            )
-        }
-
-        if isolation == .isolated, linked.signature.isolation != .isolated {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), got a procedure that writes"
-                    + " what another body could touch"
-            )
-        }
-
         // It is read as answering what its own signature says it answers.
         let given = LoweredType.procedure(
             LoweredProcedureType(parameters: linked.slots.map(\.type), returns: linked.returns, failing: linked.signature.failing),
@@ -2047,18 +2028,32 @@ indirect enum LoweredType: Sendable, Hashable {
 
         // A type parameter the slot names is filled by what arrived, the way
         // a call fills it at the build.
-        let slot = LoweredType.procedure(required, constness: .unstated, isolation: .unstated)
+        let slot = LoweredType.procedure(required, constness: constness, isolation: isolation)
         let asked = slot.filling(Substitution(filling: [slot], against: [given], in: table).readings)
 
         guard asked.accepts(given, in: table) else {
-            throw ArgumentError(
-                "\(path()): expected \(rendered(in: table)), got \(given.rendered(in: table))"
-            )
+            let got = switch linked.signature.effects.exceeding(effects(of: required, constness, isolation)) {
+            case .constness: "a procedure not declared const"
+            case .isolation: "a procedure that writes what another body could touch"
+            case .failing, nil: given.rendered(in: table)
+            }
+
+            throw ArgumentError("\(path()): expected \(rendered(in: table)), got \(got)")
         }
 
         // A slot takes a procedure as it is, and a call of it hands its
         // answer on as it came.
         return value
+    }
+
+    // What a procedure type of these parts declares beside what it takes
+    // and answers. Anything may fail out of one that writes no signature.
+    private func effects(
+        of signature: LoweredProcedureType?,
+        _ constness: Constness,
+        _ isolation: Isolation
+    ) -> EffectSet {
+        EffectSet(constness: constness, isolation: isolation, failing: signature?.failing ?? .anything)
     }
 
     // A scalar of the kind this declares, as it is.

@@ -95,7 +95,7 @@ The line between them is the numbering. **A lowered body carries the numbers its
 
 A refusal from load or build carries a `Place`, the path to it through the program. The language names its own slots, which a host that built the program in Swift can follow. `Loader.reading { }` reads the same place in the keys the document writes, such as `procedures.greet.body.total[2].call.arguments[1]`, which an author can follow in the text.
 
-A place is a list of steps, so a front end holding the file a document was written from can walk them to a line. A `key` step is one the document writes. A `landmark` is this implementation's key for a construct the document does not name on its own, since `{ call: … }` and `{ value: { call: … } }` arrive as one.
+A place is a list of steps, so a front end holding the file a document was written from can walk them to a line. A `key` step is one the document writes. A `landmark` is this implementation's step for a construct: it names the construct's key and stands for that key and the statement's `value` it is written under together, so `procedures.entry.body.spin[0].loop.while` is the `while` of a loop the statement `spin` writes under `value`.
 
 A refusal from a run carries a `Trace` instead: where the run had been.
 

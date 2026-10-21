@@ -39,10 +39,7 @@ public struct Executor: Sendable {
             // A spelling only a private declaration wears is declared, and by
             // nothing the host may name.
             guard !image.concealed.contains(entry) else {
-                throw ExecutionError(
-                    "entry '\(entry)' is private to the document that declares it, and a run"
-                        + " starts only from a public declaration"
-                )
+                throw refusal(entry: entry, access: .private)
             }
 
             throw ExecutionError(
@@ -54,13 +51,8 @@ public struct Executor: Sendable {
 
         let entry = image.linked[start]
 
-        // A run starts from outside the link, and only a public declaration
-        // is named from there.
         guard entry.access.reachesHost else {
-            throw ExecutionError(
-                "entry '\(entry.label)' is \(entry.access.rawValue), and a run starts"
-                    + " only from a public declaration"
-            )
+            throw refusal(entry: entry.label, access: entry.access)
         }
 
         return try await Evaluator(image, observer: observer, environment: environment)
@@ -68,4 +60,9 @@ public struct Executor: Sendable {
     }
 
     // MARK: - Private
+    // A run starts from outside the link, and only a public declaration is
+    // named from there.
+    private func refusal(entry: Name, access: Access) -> ExecutionError {
+        ExecutionError("entry '\(entry)' is \(access.rawValue), and a run starts only from a public declaration")
+    }
 }

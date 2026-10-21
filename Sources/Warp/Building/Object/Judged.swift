@@ -243,7 +243,7 @@ struct Judged: Sendable {
             )
         }
 
-        guard frame.captures.allSatisfy({ slot in slot >= 0 && slot < frame.size }) else {
+        guard frame.captures.allSatisfy({ slot in slot < frame.size }) else {
             throw ObjectRefused("a frame is filled from a closure's cells at a slot it has not")
         }
 

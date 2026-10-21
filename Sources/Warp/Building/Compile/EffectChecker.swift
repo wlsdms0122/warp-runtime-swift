@@ -24,6 +24,16 @@ struct EffectChecker {
         let word: String
 
         // MARK: - Initializer
+        // Answering without running, lost by reading a name in `unread`.
+        static func const(unread: Set<Name>) -> Fact {
+            Fact(
+                held: { callee in callee.constness == .const },
+                claim: \.isConstProcedure,
+                unread: unread,
+                word: "const"
+            )
+        }
+
         // MARK: - Public
         // The same fact where a body introduced `name`: under it the spelling
         // reads the new name.
@@ -57,11 +67,8 @@ struct EffectChecker {
         // A body reading a module variable answers by the run's state, and so
         // does one writing a name outside the parameters it owns, or handing
         // such a name in place to a call.
-        let const = Fact(
-            held: { callee in callee.constness == .const },
-            claim: \.isConstProcedure,
-            unread: Set(environment.filter { _, bound in bound.declarer == .module && bound.isBox }.keys),
-            word: "const"
+        let const = Fact.const(
+            unread: Set(environment.filter { _, bound in bound.declarer == .module && bound.isBox }.keys)
         )
 
         // A name written that the body does not declare is one it reached from
@@ -98,56 +105,18 @@ struct EffectChecker {
 
     // What reading an operand runs, or nil where it answers without running.
     // An operand is read rather than run: a call's and a value call's
-    // operands, a condition, a constant and a variable's start. A call in one
-    // reaches a declaration that says const, and a value call a value the
-    // type written for it says is const, by the rule `reached` reads. A
-    // module variable it reads is read as any name is: what it costs a body
-    // is the promise of answering the same thing twice, and an operand makes
-    // none. A construct in one is the load's to refuse.
-    func running(_ operand: Expression, bound declared: (Name) -> LoweredType?) -> String? {
-        func first(_ parts: [Expression]) -> String? {
-            for part in parts {
-                if let broken = running(part, bound: declared) { return broken }
-            }
-
-            return nil
-        }
-
-        switch operand {
-        case .literal, .reference, .closure, .conditional, .loop, .attempt, .leave:
-            return nil
-
-        case let .cast(value, _, _):
-            return running(value, bound: declared)
-
-        case let .array(array):
-            return first(array)
-
-        case let .struct(literal):
-            return first(literal.keys.sorted().compactMap { field in literal[field] })
-
-        case let .dictionary(entries):
-            return first(entries.flatMap { entry in [entry.key, entry.value] })
-
-        // A contract's procedure is answered by whatever type the value turns
-        // out to be, so what a call through one reads as is what the contract
-        // asked of every declaration answering it.
-        case let .call(call):
-            if let signature = context.signature(of: call.selector), signature.constness != .const {
-                return "reads '\(call.selector)', which answers only by running"
-            }
-
-            return first(call.arguments)
-
-        case let .apply(callee, arguments):
-            if let broken = running(callee, bound: declared) { return broken }
-
-            guard reached(callee, given: declared)?.isConstProcedure == true else {
-                return "calls a value nothing written says is const"
-            }
-
-            return first(arguments)
-        }
+    // operands, a condition, a constant and a variable's start. It is held
+    // as a body declared const is, except that every name in scope is one it
+    // may read: what reading a module variable costs a body is the promise
+    // of answering the same thing twice, and an operand makes none. A
+    // construct in one is the load's to refuse.
+    func running(_ operand: Expression, in environment: [Name: Binding]) -> String? {
+        breaking(
+            operand,
+            .const(unread: []),
+            declaring: Set(environment.keys),
+            bound: environment.compactMapValues(\.declaredType)
+        )
     }
 
     // What may come out of this node itself, apart from the nodes it holds:
@@ -296,19 +265,12 @@ struct EffectChecker {
                 }
             }
 
-            // A loop binds its round under the statement's name, inside the
-            // whole of it, and an attempt its failure, inside its rescue.
-            let naming = fact.introducing(statement.binding?.introduced)
-            let broken: String? = switch statement.expression {
-            case .loop:
-                breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
-
-            case let .attempt(body, rescue):
+            let naming = fact.introducing(statement.nameInside)
+            let broken: String? = if case let .attempt(body, rescue) = statement.expression {
                 breaking(body, fact, declaring: declared, bound: declaredTypes)
                     ?? breaking(rescue, naming, declaring: declared, bound: declaredTypes)
-
-            default:
-                breaking(statement.expression, fact, declaring: declared, bound: declaredTypes)
+            } else {
+                breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
             }
 
             if let broken {

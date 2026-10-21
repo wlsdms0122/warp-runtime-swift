@@ -89,7 +89,7 @@ struct DocumentNode {
                 try keyed.write(try ProcedureNode().value(of: parts), named: name, under: Self.procedures, at: node.offset)
 
             default:
-                throw Unplaced("a document holds no `(\(node.word) …)`", at: node.offset)
+                throw TextRefused("a document holds no `(\(node.word) …)`", at: node.offset)
             }
         }
 
@@ -101,7 +101,7 @@ struct DocumentNode {
         var nodes: [Datum] = []
 
         guard let imports = fields.take(Self.imports) else {
-            throw EncodingRefused("a document writes `imports`, and no node writes one without it")
+            throw TextRefused("a document writes `imports`, and no node writes one without it")
         }
 
         if let version = fields.take(Self.warp) {
@@ -112,22 +112,22 @@ struct DocumentNode {
             nodes.append(.node(Self.description, [try DataNode().datum(of: description)]))
         }
 
-        if !(try Fields.list(imports, as: "a document's imports")).isEmpty {
+        if !(try Subtree(imports, as: "a document's imports").list()).isEmpty {
             nodes += try DeclarationNode().introduced(imports, as: "import")
         }
 
         if let constants = fields.take(Self.constants) {
-            nodes += try Fields.entries(constants, as: "a document's constants").map { name, held in
+            nodes += try Subtree(constants, as: "a document's constants").entries().map { name, held in
                 .node(Self.constants, [.name(name), try ExpressionNode().datum(of: held)])
             }
         }
 
         if let variables = fields.take(Self.variables) {
-            nodes += try Fields.entries(variables, as: "a document's variables").map(variable)
+            nodes += try Subtree(variables, as: "a document's variables").entries().map(variable)
         }
 
         if let types = fields.take(Self.types) {
-            nodes += try Fields.entries(types, as: "a document's types").map { name, declared in
+            nodes += try Subtree(types, as: "a document's types").entries().map { name, declared in
                 guard case let .string(type) = declared else {
                     return .block("struct", [.name(name)] + (try DeclarationNode().struct(of: declared)))
                 }
@@ -137,19 +137,19 @@ struct DocumentNode {
         }
 
         if let contracts = fields.take(Self.contracts) {
-            nodes += try Fields.entries(contracts, as: "a document's contracts").map { name, contract in
+            nodes += try Subtree(contracts, as: "a document's contracts").entries().map { name, contract in
                 .block("contract", [.name(name)] + (try DeclarationNode().contract(of: contract)))
             }
         }
 
         if let extensions = fields.take(Self.extensions) {
-            nodes += try Fields.entries(extensions, as: "a document's extensions").map { head, given in
+            nodes += try Subtree(extensions, as: "a document's extensions").entries().map { head, given in
                 .block("extension", try DeclarationNode().extension(of: head, given))
             }
         }
 
         if let procedures = fields.take(Self.procedures) {
-            nodes += try Fields.entries(procedures, as: "a document's procedures").map { name, procedure in
+            nodes += try Subtree(procedures, as: "a document's procedures").entries().map { name, procedure in
                 .block("procedure", [.name(name)] + (try ProcedureNode().parts(of: procedure)))
             }
         }
@@ -180,7 +180,7 @@ struct DocumentNode {
             break
         }
 
-        throw Unplaced("a document's `var` holds a name, a type where it declares one, and its start", at: node.offset)
+        throw TextRefused("a document's `var` holds a name, a type where it declares one, and its start", at: node.offset)
     }
 
     private func variable(_ name: String, _ start: Value) throws -> Datum {
@@ -197,7 +197,7 @@ struct DocumentNode {
             Self.variables,
             [
                 .name(name),
-                .node(Self.type, [try TypeNode().datum(of: try Fields.text(type, as: "a variable's type"))]),
+                .node(Self.type, [try TypeNode().datum(of: try Subtree(type, as: "a variable's type").text())]),
                 try ExpressionNode().datum(of: value)
             ]
         )

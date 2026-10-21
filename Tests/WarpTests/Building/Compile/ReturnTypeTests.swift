@@ -83,7 +83,7 @@ struct ReturnTypeTests {
                         Statement(
                             expression: .conditional(
                                 .literal(.bool(true)),
-                                then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.string("x")))))],
+                                then: [Statement(expression: .leave(.procedure(.literal(.string("x")))))],
                                 else: nil
                             )
                         )

@@ -83,8 +83,8 @@ struct NeverTests {
                     body: [
                         Statement(expression: .conditional(
                             .literal(.bool(true)),
-                            then: [Statement(expression: .leave(Leave(reach: .procedure, value: .reference([.name("C")]))))],
-                            else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(0)))))]
+                            then: [Statement(expression: .leave(.procedure(.reference([.name("C")]))))],
+                            else: [Statement(expression: .leave(.procedure(.literal(.int(0)))))]
                         ))
                     ]
                 )
@@ -106,12 +106,11 @@ struct NeverTests {
                 Statement(expression: .conditional(
                     .literal(.bool(true)),
                     then: [
-                        Statement(expression: .leave(Leave(
-                            reach: .procedure,
-                            value: .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
+                        Statement(expression: .leave(.procedure(
+                            .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
                         )))
                     ],
-                    else: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.int(0)))))]
+                    else: [Statement(expression: .leave(.procedure(.literal(.int(0)))))]
                 ))
             ]
         )

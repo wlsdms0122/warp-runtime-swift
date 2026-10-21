@@ -58,10 +58,10 @@ struct Flow {
 
         // MARK: - Initializer
         init(_ leave: Leave) {
-            switch leave.reach {
+            switch leave {
             case .procedure: self = .procedure
-            case .construct: self = .loop(leave.target)
-            case .round: self = .round(leave.target)
+            case let .construct(target): self = .loop(target)
+            case let .round(target): self = .round(target)
             }
         }
 

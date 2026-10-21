@@ -250,8 +250,8 @@ public struct Compiled: Sendable, Declaring {
 
     // The same, where an object's parts were read apart and what has to be
     // true is how they stand to each other. Each one alone says nothing
-    // wrong; a table shorter than the spellings it stands for, or a variable
-    // numbered past the ones this holds, is a fact about two of them.
+    // wrong; a numbering counting other closures than the lifted rows, or a
+    // variable numbered past the ones this holds, is a fact about two of them.
     //
     // This is the only door that sees all of them, so it is the only place
     // those facts can be asked of bytes read back.
@@ -263,21 +263,15 @@ public struct Compiled: Sendable, Declaring {
         members: [Head: Set<Name>],
         typeMembers: [Head: [Name: TypeExpression]],
         importedClaims: Set<ClaimPair>,
-        declared: [Name],
+        rows: [Judged],
+        lifted liftedRows: [Judged],
         constants: [Name],
-        table: [Judged],
         numbering: Numbering,
         typeNumbering: LoweredTypeNumbering,
         judging variables: [(name: Name, value: Value)],
         dependencies: [Fingerprint]?,
         token: Token = Token()
     ) throws {
-        guard declared.count <= table.count else {
-            throw ObjectRefused(
-                "an object declares \(declared.count) row(s) in a table of \(table.count)"
-            )
-        }
-
         self.init(
             document: document,
             types: types,
@@ -286,9 +280,9 @@ public struct Compiled: Sendable, Declaring {
             members: members,
             typeMembers: typeMembers,
             importedClaims: importedClaims,
-            declared: declared,
+            declared: rows.map(\.label),
             constants: constants,
-            table: table,
+            table: rows + liftedRows,
             numbering: numbering,
             typeNumbering: typeNumbering,
             variables: variables,

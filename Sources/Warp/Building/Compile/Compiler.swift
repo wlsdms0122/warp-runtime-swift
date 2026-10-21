@@ -64,16 +64,6 @@ struct Compiler {
             compiling.context(of: origin)
         }
 
-        // This document's declarations by its block: what it declares is its
-        // own whoever else may name it.
-        func row(of symbol: Symbol) throws -> Int {
-            guard let row = compiling.lowering.own(origin)[symbol.declared] else {
-                throw BuildError("'\(symbol.declared)' has no row in the table", at: symbol.place)
-            }
-
-            return row
-        }
-
         // What this document declares, by the spelling a call in it writes.
         // Its own rows do not stand yet, and this is what says what they take
         // until they do.
@@ -115,12 +105,12 @@ struct Compiler {
         //
         // Every call the body writes is checked here too, reached or not:
         // callee declared, arguments taken.
-        func resolved(_ symbol: Symbol) async throws -> Procedure {
+        func resolved(_ symbol: Symbol, at row: Int) async throws -> Procedure {
             if let done = resolvedBodies[symbol.declared] { return done }
 
             let declaration = symbol.procedure
 
-            var answer = (procedure: declaration, calls: [CallSite](), judgements: JudgementTable())
+            var answer = (procedure: declaration, judgements: JudgementTable())
 
             if let block = declaration.block {
                 let folding = Folding(
@@ -135,7 +125,7 @@ struct Compiler {
                 // The starting environment knows the constants beside the
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
-                let (rewritten, gathered, judgements) = try await TypeChecker().resolvedSites(
+                let (rewritten, judgements) = try await TypeChecker().resolvedSites(
                     in: block,
                     at: symbol.place,
                     in: opening(declaration.signature),
@@ -162,21 +152,16 @@ struct Compiler {
                         signature: declaration.signature,
                         implementation: .body(rewritten)
                     ),
-                    calls: gathered,
                     judgements: judgements
                 )
             }
 
             resolvedBodies[symbol.declared] = answer.procedure
 
-            // Judged as the declaration reads its own type parameters, since an
-            // associated type a call fills from one is the declaration's.
-            try TypeChecker().checked(answer.calls, in: context().reading(answer.procedure.signature))
-
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
             if let rewritten = answer.procedure.block {
-                try compiling.lower(try row(of: symbol), body: rewritten, judgements: answer.judgements, at: symbol.place)
+                try compiling.lower(row, body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 
             return answer.procedure
@@ -198,14 +183,14 @@ struct Compiler {
             concealing: behind.concealed
         )
 
-        // This document's block of the table, in name order. What a
+        // The rows this document's declarations stand at, in name order. What a
         // document declares is a run of rows rather than declarations
         // scattered through the table, so where its rows begin is a number
         // and its own are that number and an offset. A native answers as
         // it is from the start; a written body stands as the refusal it
         // would earn until it is lowered, so nothing folds through a body
         // half-made.
-        let (heldAt, block) = compiling.lowering.hold(
+        let (heldAt, standing) = compiling.lowering.hold(
             standing: try holding.map { symbol in
                 Linked.unlowered(
                     label: symbol.declared,
@@ -276,8 +261,8 @@ struct Compiler {
         // the order its rows stand in. What a document says has to hold
         // whether or not a run walks that way, so which declarations are
         // judged is not a question any run answers.
-        for symbol in holding {
-            _ = try await resolved(symbol)
+        for (symbol, row) in zip(holding, standing) {
+            _ = try await resolved(symbol, at: row)
         }
 
         // The types its bodies stand on, written as this document's own
@@ -288,7 +273,7 @@ struct Compiler {
         // Its rows are its declarations in name order, then the closures its
         // bodies lifted, in the order it numbers them.
         let lowered = try compiling.lowering.numbered(
-            Array(block) + compiling.lowering.documents[origin].closureRows
+            Array(standing) + compiling.lowering.documents[origin].closureRows
         )
 
         return Compiled(
@@ -453,7 +438,7 @@ struct Compiler {
         in context: TypingContext
     ) async throws -> (value: Value, written: LiteralShape) {
         let environment = bindings(of: known, declaring: declaredConstants)
-        let (judged, calls, judgements, written) = try await TypeChecker().resolvedSites(
+        let (judged, judgements, written) = try await TypeChecker().resolvedSites(
             in: expression,
             into: declared,
             at: place,
@@ -462,7 +447,6 @@ struct Compiler {
             folding: nil
         )
 
-        try TypeChecker().checked(calls, in: context)
         try TypeChecker().refuseRunning(in: judged, at: place, bound: environment, given: context)
 
         do {

@@ -23,8 +23,7 @@ import Warp
 public extension Place {
     // The same address, walkable in the text. What a slot is written under
     // becomes a key; what a construct is written under becomes a landmark,
-    // since a document may nest it under `value` or write it bare and both are
-    // the same type by the time anything here sees one.
+    // one step for the statement's `value` and the construct's key together.
     func written(by registry: ConstructRegistry) -> Place {
         Place(
             steps.flatMap { step -> [Place.Step] in

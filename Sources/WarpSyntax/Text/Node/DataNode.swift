@@ -40,7 +40,7 @@ struct DataNode {
             return .bytes(bytes)
 
         case let .name(name):
-            throw Unplaced("'\(name)' is a name, and data holds values", at: datum.offset)
+            throw TextRefused("'\(name)' is a name, and data holds values", at: datum.offset)
 
         case .list:
             let node = try Node(datum)
@@ -49,7 +49,7 @@ struct DataNode {
             case "array": return .array(try node.operands.map(value(of:)))
             case "dictionary": return try dictionary(node)
             case "struct": return try `struct`(node)
-            default: throw Unplaced("data holds no `(\(node.word) …)`", at: node.offset)
+            default: throw TextRefused("data holds no `(\(node.word) …)`", at: node.offset)
             }
         }
     }
@@ -67,7 +67,7 @@ struct DataNode {
 
         case let .double(double):
             guard double.isFinite else {
-                throw EncodingRefused("only a finite fraction has a spelling, and \(double) is none")
+                throw TextRefused("only a finite fraction has a spelling, and \(double) is none")
             }
 
             return Datum(.double(double))
@@ -88,7 +88,7 @@ struct DataNode {
             return try `struct`(instance)
 
         case .procedure:
-            throw EncodingRefused("a procedure closed over a scope is not data, and a text holds data")
+            throw TextRefused("a procedure closed over a scope is not data, and a text holds data")
         }
     }
 
@@ -98,7 +98,7 @@ struct DataNode {
             let entry = try Node(operand)
 
             guard entry.word == "entry", entry.operands.count == 2 else {
-                throw Unplaced("a map holds `(entry key value)`", at: operand.offset)
+                throw TextRefused("a map holds `(entry key value)`", at: operand.offset)
             }
 
             return (key: try value(of: entry.operands[0]), value: try value(of: entry.operands[1]))
@@ -107,7 +107,7 @@ struct DataNode {
         do {
             return .dictionary(try Value.Dictionary(entries))
         } catch let refusal as ValueRefused {
-            throw Unplaced(refusal.message, at: node.offset)
+            throw TextRefused(refusal.message, at: node.offset)
         }
     }
 
@@ -118,18 +118,18 @@ struct DataNode {
             let field = try Node(operand)
 
             guard field.word == "field" else {
-                throw Unplaced("a struct holds `(field name value)`", at: operand.offset)
+                throw TextRefused("a struct holds `(field name value)`", at: operand.offset)
             }
 
             let (named, held) = try field.named()
 
-            return (name: try self.name(named, at: field.offset), value: try value(of: held))
+            return (name: try Node.name(named, at: field.offset), value: try value(of: held))
         }
 
         do {
-            return try .holding(fields, named: try self.name(name, at: node.offset))
+            return try .holding(fields, named: try Node.name(name, at: node.offset))
         } catch let refusal as ValueRefused {
-            throw Unplaced(refusal.message, at: node.offset)
+            throw TextRefused(refusal.message, at: node.offset)
         }
     }
 
@@ -147,13 +147,5 @@ struct DataNode {
                 .node("field", [.name(name.spelling), try datum(of: value)])
             })
         )
-    }
-
-    private func name(_ spelling: String, at offset: Int?) throws -> Name {
-        do {
-            return try Name(spelling)
-        } catch let refusal as NameRefused {
-            throw Unplaced(refusal.message, at: offset)
-        }
     }
 }

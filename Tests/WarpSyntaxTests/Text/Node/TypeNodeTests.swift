@@ -27,13 +27,19 @@ struct TypeNodeTests {
         ("(nullable (procedure (const)))", "(const Procedure)?"),
         ("(nullable (procedure (parameters) (returns Int)))", "(() -> Int)?"),
         ("(composition B A)", "B & A"),
+        ("(composition A A)", "A & A"),
         ("(some T)", "some T"),
         ("(some T App.Named Hashable)", "some T: App.Named & Hashable"),
         ("(some T.Item)", "some T.Item"),
+        ("(some T.Item Hashable)", "some T.Item: Hashable"),
+        ("(some Self.Item)", "some Self.Item"),
         ("(inout (nullable Int))", "inout Int?"),
         ("(var Int)", "var Int"),
         ("Procedure", "Procedure"),
         ("(procedure (const))", "const Procedure"),
+        ("(procedure (isolated) (const))", "isolated const Procedure"),
+        ("(procedure (const) (const))", "const const Procedure"),
+        ("(named Dictionary Int)", "Dictionary<Int>"),
         ("(procedure (const) (isolated) (parameters Int (inout B)) (failing b a) (returns (nullable R)))",
          "const isolated (Int, inout B) throws(b, a) -> R?"),
         ("(procedure (parameters) (failing (anything)) (returns Int))", "() throws -> Int"),
@@ -59,20 +65,16 @@ struct TypeNodeTests {
         "(named Array Int)",
         "(named App.Box)",
         "(composition A)",
-        "(composition A A)",
         "(nullable (inout Int))",
         "(procedure)",
         "(procedure (parameters Int))",
         "(procedure (const) (failing a))",
-        "(some Self.Item)",
-        "(some T.Item Hashable)",
         "`A & B`",
         "(array `Int>`)",
         "(failing (anything))",
         "(composition some A)",
         "(composition inout A)",
         "(procedure (returns R) (parameters A))",
-        "(procedure (isolated) (const))",
         "(array \u{301})",
         "\"Int\""
     ])
@@ -81,20 +83,33 @@ struct TypeNodeTests {
         let node = try Self.datum(written)
 
         // When / Then
-        #expect(throws: Unplaced.self) { try TypeNode().text(of: node) }
+        #expect(throws: TextRefused.self) { try TypeNode().text(of: node) }
     }
 
     @Test("a spelling no node writes back is refused on the way out", arguments: [
         "Array<Int,Int>",
         "Array< Int>",
         "Int -> Int",
-        "isolated const Procedure",
         "(Int)",
-        "Dictionary<Int>"
+        "(Int)?"
     ])
     func aSpellingNoNodeWrites(text: String) {
         // When / Then
-        #expect(throws: EncodingRefused.self) { try TypeNode().datum(of: text) }
+        #expect(throws: TextRefused.self) { try TypeNode().datum(of: text) }
+    }
+
+    @Test("a type node nests as deep as the bound, counted from the type written inside the outermost")
+    func aNodeNestsToTheBound() throws {
+        // Given
+        let bound = Value.nestingBound
+        let node = { (levels: Int) in String(repeating: "(array ", count: levels) + "Int" + String(repeating: ")", count: levels) }
+        let text = { (levels: Int) in String(repeating: "Array<", count: levels) + "Int" + String(repeating: ">", count: levels) }
+
+        // When / Then
+        #expect(try TypeNode().text(of: Self.datum(node(bound))) == text(bound))
+        #expect(try DatumWriter().line(of: TypeNode().datum(of: text(bound))) == node(bound))
+        #expect(throws: TextRefused.self) { try TypeNode().text(of: Self.datum(node(bound + 1))) }
+        #expect(throws: TextRefused.self) { try TypeNode().datum(of: text(bound + 1)) }
     }
 
     // MARK: - Public

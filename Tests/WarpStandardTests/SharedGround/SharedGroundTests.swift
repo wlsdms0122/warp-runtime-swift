@@ -71,7 +71,7 @@ struct SharedGroundTests {
             await #expect {
                 try await run(sending(procedure, .double(subject), .double(operand)))
             } throws: { error in
-                "\(error)".contains("no finite answer")
+                "\(error)".contains("holds a fraction with no finite value")
             }
         }
     }

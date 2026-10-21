@@ -19,7 +19,7 @@ struct BlockTests {
         // Given. A block no validator has seen: the property answers from the
         // block itself, so a leaving body counts whatever the result declares,
         // and wherever in the body the leave sits
-        let leave = Expression.leave(Leave(reach: .procedure, value: .literal(.int(1))))
+        let leave = Expression.leave(.procedure(.literal(.int(1))))
 
         // When / Then
         #expect(Block(body: [Statement(expression: leave)], result: .literal(.int(2))).alwaysLeaves)

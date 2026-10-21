@@ -771,8 +771,8 @@ struct SeparateCompilationTests {
         }
     }
 
-    @Test("an object's signature naming a type nothing in the link declares is refused at the build")
-    func anObjectsSignatureNamingNothingIsRefused() async throws {
+    @Test("an object whose signature names a type nothing in the link declares links as written, and its run refuses")
+    func anObjectsSignatureNamingNothingLinksAsWritten() async throws {
         // Given. A document whose declaration takes a type its counterpart
         // declares, linked without the counterpart.
         let program = try Module(
@@ -787,11 +787,14 @@ struct SeparateCompilationTests {
         )
         let compiled = try await builder.compile([program, try Module(types: ["Lib.B": .alias(.int)])])
 
-        // When / Then
-        #expect {
-            try builder.link([compiled[0]], supplying: .none)
+        // When
+        let image = try builder.link([compiled[0]], supplying: .none)
+
+        // Then
+        await #expect {
+            try await Executor().run(image, entry: entryName, arguments: ["a": .int(1)])
         } throws: { error in
-            error is BuildError && "\(error)".contains("names type 'Lib.B', which no module in this link declares")
+            error is ArgumentError && "\(error)".contains("input 'a': declares Never, and nothing is ever that")
         }
     }
 

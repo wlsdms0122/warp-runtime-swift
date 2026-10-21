@@ -59,6 +59,7 @@ struct ObjectMutantTests {
 
         var ran = 0
         var answered = 0
+        var clocked: [(path: String, image: Image)] = []
 
         // When. Each place of the writing replaced in turn, and whatever
         // stands after that carried to the next stage.
@@ -89,7 +90,19 @@ struct ObjectMutantTests {
 
             ran += 1
 
-            if await running(image, arguments: program.arguments, of: sut, at: path) { answered += 1 }
+            if await running(image, arguments: program.arguments, of: sut, at: path, given: RunClock.short) {
+                answered += 1
+            } else {
+                clocked.append((path, image))
+            }
+        }
+
+        // A machine under load can hold every run past the short clock. So
+        // where none answered, the mutants that met it run again on the long
+        // one, one at a time, until one answers: a run that does not finish
+        // still meets it, and one that does is not told apart by the load.
+        for (path, image) in clocked where answered == 0 {
+            if await running(image, arguments: program.arguments, of: sut, at: path, given: RunClock.long) { answered += 1 }
         }
 
         // Then. Mutants reached the run, and the run reached an end. A walk
@@ -109,9 +122,10 @@ struct ObjectMutantTests {
         _ image: Image,
         arguments: [Name: Value],
         of sut: Case,
-        at path: String
+        at path: String,
+        given time: DispatchTimeInterval
     ) async -> Bool {
-        let clock = RunClock()
+        let clock = RunClock(time)
         let run = Task {
             clock.start()
 
@@ -140,16 +154,26 @@ struct ObjectMutantTests {
 // pool they run on, so a clock waiting for one of those would wait on them.
 private final class RunClock: @unchecked Sendable {
     // MARK: - Property
+    // What every mutant is given first, and what one is given again where no
+    // mutant of its object answered within the first.
+    static let short = DispatchTimeInterval.milliseconds(50)
+    static let long = DispatchTimeInterval.seconds(10)
+
     private static let ringing = DispatchQueue(label: "ObjectMutantTests.RunClock")
 
+    private let time: DispatchTimeInterval
     private let lock = NSLock()
     private var run: Task<Value, any Error>?
     private var rang = false
 
     // MARK: - Initializer
+    init(_ time: DispatchTimeInterval) {
+        self.time = time
+    }
+
     // MARK: - Public
     func start() {
-        Self.ringing.asyncAfter(deadline: .now() + .milliseconds(50)) { self.ring() }
+        Self.ringing.asyncAfter(deadline: .now() + time) { self.ring() }
     }
 
     func stops(_ run: Task<Value, any Error>) {

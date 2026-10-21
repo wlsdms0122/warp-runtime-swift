@@ -210,7 +210,7 @@ struct ControlFlowTests {
             body: [
                 Statement(expression: .conditional(
                     equals(reference("item"), .literal(.int(2))),
-                    then: [Statement(expression: .leave(Leave(reach: .procedure, value: .literal(.bool(true)))))],
+                    then: [Statement(expression: .leave(.procedure(.literal(.bool(true)))))],
                     else: nil
                 ))
             ],
