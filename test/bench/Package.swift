@@ -10,7 +10,7 @@ let package = Package(
     dependencies: [
         // A consumer of the runtime's build product, kept outside the package
         // it measures: it imports what any host imports and nothing more.
-        .package(path: "../../runtime/warp-runtime-swift")
+        .package(path: "../..")
     ],
     targets: [
         .executableTarget(
