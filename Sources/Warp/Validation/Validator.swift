@@ -1117,8 +1117,18 @@ struct Validator: Sendable {
             throw ValidationError("there is no loop here to leave", at: place)
         }
 
-        // The round a leave names is the nearest one under that name.
+        // The round a leave names is the nearest one under that name, and a
+        // name reaches past the nearest: naming it says what naming none says.
         let ended = try leave.target.map { target in
+            guard nearest.name != target else {
+                throw ValidationError(
+                    "a document says each thing one way, and this says it another way here:"
+                        + " '\(target)' is the nearest loop, the one a leave naming none reaches."
+                        + " The one way names none",
+                    at: place
+                )
+            }
+
             guard let named = scope.rounds.last(where: { round in round.name == target }) else {
                 let around = scope.rounds.reversed().map { round in round.name?.spelling ?? "a nameless one" }
 
