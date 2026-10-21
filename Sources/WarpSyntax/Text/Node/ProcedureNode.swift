@@ -21,7 +21,7 @@ import Warp
 //                                      failing ["a", "b"], failing "anything"
 //   (bound C.Item A B)                 bounds { "C.Item" "A & B" }
 //   (sameType C.Item T)                sameTypes { "C.Item" "T" }
-//   (body …)  (result e)               body [ … ], result e
+//   (body …)                           body [ … ]
 //   (answers v)                        answers v, read as data
 struct ProcedureNode {
     // MARK: - Property

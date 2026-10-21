@@ -7,8 +7,8 @@
 
 import Foundation
 
-// Statements run in order. What a procedure, a block and a conditional's arm
-// are made of.
+// Statements run in order. What a procedure, a closure and each body of a
+// construct are made of.
 public struct Body: Sendable {
     // MARK: - Property
     public private(set) var statements: [Statement]

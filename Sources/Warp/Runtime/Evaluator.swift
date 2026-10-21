@@ -190,7 +190,7 @@ struct Evaluator: Sendable {
             case let .bind(slot)?:
                 activation.cells[slot] = .value(result)
 
-            // A new box, so a variable declared inside a block shadows rather
+            // A new box, so a variable declared inside a nested body shadows rather
             // than writes an outer one of the same name.
             case let .declare(slot)?:
                 activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))

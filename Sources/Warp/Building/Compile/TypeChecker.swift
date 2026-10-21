@@ -105,7 +105,7 @@ struct TypeChecker {
 
         // What a list or map literal holds where it is written into a slot,
         // part by part, where its reading, joined across the parts, does not
-        // say. A block holds what its result holds.
+        // say.
         var literalShape: LiteralShape?
 
         // What the expression holds where it is written into a slot.
@@ -162,9 +162,9 @@ struct TypeChecker {
         return (inner.body, inner.judgements)
     }
 
-    // The expression form, with what it was judged to hold. A constant's body
-    // is one rather than a block, and a variable's start is written into
-    // the type the variable declares and held to it, as a name's value is.
+    // The expression form, with what it was judged to hold. A constant's
+    // value is one, and a variable's start is written into the type the
+    // variable declares and held to it, as a name's value is.
     func resolvedSites(
         in expression: Expression,
         into declared: LoweredType?,
@@ -227,10 +227,7 @@ struct TypeChecker {
         }
     }
 
-    // One answer, held to the `returns`. The refusal stands where the author
-    // can act on it: at the `result` when one is written, at the `returns`
-    // when the body answers nothing at all, and at a `return` for what it
-    // carries.
+    // What one `return` carries, held to the `returns` at the `return`.
     private func refuseAnswer(
         _ written: LiteralShape,
         to promised: LoweredType,
@@ -1260,9 +1257,8 @@ struct TypeChecker {
         // value wrote left with the leave.
         case let .leave(leave):
             // What the procedure answers this way. Only a `return` reaches the
-            // caller (a `break` ends its loop and a `continue` its round) and
-            // one carrying nothing hands back the null a body with no result
-            // hands back, which is the run's own answer for it.
+            // caller (a `break` ends its loop and a `continue` its round), and
+            // one carrying nothing hands back null.
             func answering(_ flowed: Flow, carrying carried: Inspection?) -> Flow {
                 guard case .procedure = leave else { return flowed }
 
@@ -2476,7 +2472,7 @@ struct TypeChecker {
     // `Never` where one of them ends every way through, and its outward writes.
     // Each statement's own binding included, except the names the body declared
     // itself, which die with it. Only the box a `set` writes outlives the
-    // block. The one statement of the sequence rule, whichever ask is walking.
+    // body. The one statement of the sequence rule, whichever ask is walking.
     private func inspected(
         _ body: Body,
         at place: Place,
@@ -2508,7 +2504,7 @@ struct TypeChecker {
             calls += inner.calls
             judgements.absorb(inner.judgements)
 
-            // A write outlives the block it was written in, so a name written
+            // A write outlives the body it was written in, so a name written
             // anywhere inside this statement may hold something else by the
             // time the next one reads it, and bubbles outward, except through
             // the names this body declared itself.

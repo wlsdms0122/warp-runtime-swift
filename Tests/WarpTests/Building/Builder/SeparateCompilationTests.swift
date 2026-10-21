@@ -916,7 +916,7 @@ struct SeparateCompilationTests {
         return body
     }
 
-    // The type the cast in a row's result stands on.
+    // The type the cast a row's last `return` carries stands on.
     private func cast(in body: LoweredBody) throws -> LoweredType {
         guard case let .leave(.procedure, _, .cast(_, type, _)?)? = body.instructions.last?.code else {
             throw Unheld(description: "the entry holds no cast")
@@ -947,7 +947,7 @@ struct SeparateCompilationTests {
         ]
     }
 
-    // The call through a contract a row's result holds.
+    // The call through a contract a row's last `return` carries.
     private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
         guard case let .leave(.procedure, _, .dispatch(dispatch)?)? = body.instructions.last?.code else {
             throw Unheld(description: "'App.tell' holds no call through a contract")
@@ -1049,7 +1049,7 @@ struct SeparateCompilationTests {
         ]
     }
 
-    // The number the call in a row's result carries.
+    // The number the call a row's last `return` carries holds.
     private func called(in body: LoweredBody) throws -> Int {
         guard case let .leave(.procedure, _, .call(call)?)? = body.instructions.last?.code else {
             throw Unheld(description: "'B.asks' holds no call")

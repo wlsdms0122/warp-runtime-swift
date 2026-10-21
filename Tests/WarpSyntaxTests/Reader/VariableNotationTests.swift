@@ -20,7 +20,7 @@ struct VariableNotationTests {
 
     // MARK: - Initializer
     // MARK: - Test
-    @Test("a write inside a block outlives the block")
+    @Test("a write inside a nested body outlives it")
     func assignmentOutlivesItsBlock() async throws {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
@@ -71,7 +71,7 @@ struct VariableNotationTests {
         #expect(outputs.map?["result"] == .string("untouched"))
     }
 
-    @Test("a variable declared inside a block does not escape it")
+    @Test("a variable declared inside a nested body does not escape it")
     func innerVariableDoesNotEscape() throws {
         // Given. The box is shared, but which names exist is not: `var` inside
         // a conditional introduces a name that dies with the conditional
@@ -94,7 +94,7 @@ struct VariableNotationTests {
         }
     }
 
-    @Test("a var inside a block shadows the outer one instead of writing it")
+    @Test("a var inside a nested body shadows the outer one instead of writing it")
     func innerVariableShadowsOuter() async throws {
         // Given. `var` always introduces, so the inner name is a different name
         // with a box of its own. Writing the outer one is `set`.

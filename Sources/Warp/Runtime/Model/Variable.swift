@@ -11,11 +11,11 @@ import Foundation
 // same thing everywhere the name is visible.
 //
 // The two halves of scoping fall out of where the reference sits rather than
-// from any rule about blocks. The link gives a variable declared inside a
-// block its own slot, so it does not escape the block. The box a slot points
-// at is shared, so a write inside a conditional is a write the enclosing body
-// sees, which is the whole reason to have variables and the one thing a plain
-// binding cannot do.
+// from any rule about nested bodies. The link gives a variable declared
+// inside a nested body its own slot, so it does not escape that body. The box
+// a slot points at is shared, so a write inside a conditional is a write the
+// enclosing body sees, which is the whole reason to have variables and the one
+// thing a plain binding cannot do.
 final class Variable: @unchecked Sendable {
     // MARK: - Property
     var value: Value {

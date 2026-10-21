@@ -95,7 +95,7 @@ public indirect enum Expression: Sendable {
         case entryKey(Int)
         case entryValue(Int)
 
-        // The block a closure literal carries.
+        // The body a closure literal carries.
         case closure
 
         // What a cast reads.

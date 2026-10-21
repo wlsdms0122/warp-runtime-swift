@@ -264,7 +264,7 @@ struct WriterTests {
                 ]
             ]
         ],
-        // Branch, block and the condition spellings
+        // Branch and the condition spellings
         [
             "imports": ["Standard.Logic.and", "Standard.Logic.equal", "Standard.Logic.not"],
             "procedures": [

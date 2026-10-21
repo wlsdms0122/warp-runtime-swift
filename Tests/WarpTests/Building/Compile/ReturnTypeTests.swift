@@ -73,7 +73,7 @@ struct ReturnTypeTests {
 
     @Test("a return carrying something else is refused where it is written")
     func wrongReturnIsRefusedAtTheBuild() async throws {
-        // Given. The result fits; a `return` on one way through does not.
+        // Given. The last `return` fits; one on another way through does not.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(

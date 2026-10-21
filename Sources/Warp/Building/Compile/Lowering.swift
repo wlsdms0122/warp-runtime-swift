@@ -51,8 +51,8 @@ struct Lowering {
         // MARK: - Private
     }
 
-    // The names visible at one point of a body, by slot. A value, so a block
-    // takes a copy and what it introduces dies with it.
+    // The names visible at one point of a body, by slot. A value, so a nested
+    // body takes a copy and what it introduces dies with it.
     private struct SlotScope {
         // MARK: - Property
         var slots: [Name: Int] = [:]
