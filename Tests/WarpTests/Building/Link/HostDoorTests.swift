@@ -318,7 +318,7 @@ struct HostDoorTests {
     @Test("what a failure carries comes in through the door, a struct under an alias's name as its struct")
     func aFailuresPayloadComesInThroughTheDoor() async throws {
         // Given. `App.carry` fails carrying `App.Q { a: 1 }`, `App.Q` an alias
-        // of the struct `App.P`, and the rescue answers what it carried
+        // of the struct `App.P`, and the rescue keeps what it carried
         let image = try await Builder().build(try carrying(.struct(Struct(name: "App.Q", ["a": .int(1)]))))
 
         // When
