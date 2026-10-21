@@ -1141,8 +1141,8 @@ struct ObjectReader {
 
     private func attemptOperation(_ cursor: inout FieldCursor) throws -> Operation {
         .attempt(
-            try body(cursor.next()),
-            rescue: try body(cursor.next()),
+            try instructions(cursor.next(), of: "body"),
+            rescue: try instructions(cursor.next(), of: "rescue"),
             failure: try cursor.field().maybe(counted)
         )
     }

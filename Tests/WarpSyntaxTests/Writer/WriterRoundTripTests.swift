@@ -34,10 +34,7 @@ struct WriterRoundTripTests {
                 while: .literal(.bool(false)),
                 body: []
             ),
-            "guarded": .attempt(
-                Block(body: []),
-                rescue: Block(body: [], result: .literal(.int(0)))
-            )
+            "guarded": .attempt([], rescue: [Statement(expression: .literal(.int(0)))])
         ]
 
         for (name, expression) in constructs {

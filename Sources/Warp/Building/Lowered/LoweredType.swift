@@ -818,13 +818,6 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
-    // Two ways that each answer, where they meet. Each way is a place of its
-    // own, so a whole literal one of them answers is the Int it is before
-    // the two join.
-    func meeting(_ way: LoweredType) -> LoweredType {
-        asHeld.joined(way.asHeld)
-    }
-
     // The type a value read as this is an instance of, under the name a claim
     // writes and `Value.nominal` answers once the value arrives: a declared
     // struct by its name, and bytes as the list they are. Nil where the
@@ -1617,8 +1610,7 @@ indirect enum LoweredType: Sendable, Hashable {
     }
 
     // The same for an expression written into a place of this type: the
-    // literals in it, at the depths a list, a map, a struct and the answer of
-    // a block or an attempt hand on.
+    // literals in it, at the depths a list, a map and a struct hand on.
     func written(_ expression: Expression, in table: LoweredTypeTable) -> Expression {
         reaching(expression, in: table) { place, standing in
             guard case let .literal(value) = standing else { return nil }
@@ -2073,27 +2065,14 @@ indirect enum LoweredType: Sendable, Hashable {
 
     // The walk `written` and `completing` share: an expression standing where
     // this is read, through what may be null and the names around it, at the
-    // depths a list, a map, a struct and the answer of an attempt hand on. `replacing` is asked first at each depth, with the type
-    // read there, and answers what stands in place of the expression, or nil
-    // to walk on.
+    // depths a list, a map and a struct hand on. `replacing` is asked first at
+    // each depth, with the type read there, and answers what stands in place
+    // of the expression, or nil to walk on.
     private func reaching(
         _ expression: Expression,
         in table: LoweredTypeTable,
         replacing: (LoweredType, Expression) -> Expression?
     ) -> Expression {
-        func answering(_ block: Block) -> Block {
-            Block(
-                body: block.body,
-                result: block.result.map { result in reaching(result, in: table, replacing: replacing) }
-            )
-        }
-
-        // What an attempt answers stands where this is read, so it is walked
-        // with this type as it stands, a name around it included.
-        if case let .attempt(block, rescue) = expression {
-            return .attempt(answering(block), rescue: answering(rescue))
-        }
-
         switch self {
         case let .nullable(inner), let .variable(inner), let .inout(inner):
             return inner.reaching(expression, in: table, replacing: replacing)

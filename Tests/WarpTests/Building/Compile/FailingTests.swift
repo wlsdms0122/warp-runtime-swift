@@ -135,16 +135,17 @@ struct FailingTests {
                         failing: .these(["cast_refused"])
                     ),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .call(
-                                    Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
-                                )),
-                                rescue: Block(
-                                    body: [],
-                                    result: .cast(reference("it"), as: .int, optional: false)
-                                )
+                                [
+                                    Statement(expression: .call(
+                                        Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
+                                    ))
+                                ],
+                                rescue: [
+                                    Statement(binding: .assignment([.name("tried")]), expression: .cast(reference("it"), as: .int, optional: false))
+                                ]
                             )
                         )
                     ],
@@ -169,11 +170,11 @@ struct FailingTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .literal(.int(1))),
-                                rescue: Block(body: [], result: .literal(.int(2)))
+                                [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(1)))],
+                                rescue: [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(2)))]
                             )
                         )
                     ],
@@ -202,11 +203,11 @@ struct FailingTests {
                         returns: .int
                     ),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .apply(reference("piece"), arguments: [])),
-                                rescue: Block(body: [], result: .literal(.int(2)))
+                                [Statement(binding: .assignment([.name("tried")]), expression: .apply(reference("piece"), arguments: []))],
+                                rescue: [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(2)))]
                             )
                         )
                     ],

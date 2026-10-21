@@ -216,16 +216,14 @@ struct InPlaceTests {
                         Statement(
                             binding: .constant("tried"),
                             expression: .attempt(
-                                Block(
-                                    body: [
-                                        Statement(
-                                            expression: .call(
-                                                Call(selector: "poke", arguments: [.reference([.name("xs"), .index(1)])])
-                                            )
+                                [
+                                    Statement(
+                                        expression: .call(
+                                            Call(selector: "poke", arguments: [.reference([.name("xs"), .index(1)])])
                                         )
-                                    ]
-                                ),
-                                rescue: Block(body: [Statement(binding: .constant("seen"), expression: .literal(.int(1)))])
+                                    )
+                                ],
+                                rescue: [Statement(binding: .constant("seen"), expression: .literal(.int(1)))]
                             )
                         )
                     ],

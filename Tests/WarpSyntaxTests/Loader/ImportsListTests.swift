@@ -350,11 +350,7 @@ struct ImportsListTests {
                             "let": "tried",
                             "value": ["attempt": [
                                 "body": [["let": "risky", "value": ["call": ["procedure": "inBody"]]]],
-                                "result": ["ref": "risky"],
-                                "rescue": [
-                                    "body": [["let": "back", "value": ["call": ["procedure": "inRescue"]]]],
-                                    "result": ["ref": "back"]
-                                ]
+                                "rescue": [["let": "back", "value": ["call": ["procedure": "inRescue"]]]]
                             ]
                         ]],
                         [
@@ -362,7 +358,7 @@ struct ImportsListTests {
                             "value": ["struct": ["a": [["call": ["procedure": "inNestedData"]]]]]
                         ]
                     ],
-                    "result": ["ref": "tried"]
+                    "result": ["ref": "deep"]
                 ]
             ]
         ])

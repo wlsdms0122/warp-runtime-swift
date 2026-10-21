@@ -18,14 +18,13 @@ import Warp
 //   (set (path a (field b)) v)         { set "a.b", value v }
 //   (conditional (when c) (then …) (else …))
 //   (loop (while c) (body …))
-//   (attempt (body …) (result e) (rescue (body …) (result e)))
+//   (attempt (body …) (rescue …))
 //   (return)  (return e)  (break)  (break w)  (continue)  (continue w)
 struct StatementNode {
     // What a construct's part holds.
     private enum Part {
         case expression
         case statements
-        case rescue
     }
 
     // MARK: - Property
@@ -42,7 +41,7 @@ struct StatementNode {
     .reduce(into: []) { words, key in words.insert(key.spelling) }
 
     // The parts a construct holding parts holds, in the order they are
-    // written, and an attempt's rescue among them.
+    // written.
     private static let parts: [String: [(key: String, part: Part)]] = [
         ConditionalForm.key.spelling: [
             (ConditionalForm.CodingKeys.when.name.spelling, .expression),
@@ -55,12 +54,7 @@ struct StatementNode {
         ],
         AttemptForm.key.spelling: [
             (AttemptForm.CodingKeys.body.name.spelling, .statements),
-            (AttemptForm.CodingKeys.result.name.spelling, .expression),
-            (AttemptForm.CodingKeys.rescue.name.spelling, .rescue)
-        ],
-        AttemptForm.CodingKeys.rescue.name.spelling: [
-            (BlockReader.CodingKeys.body.name.spelling, .statements),
-            (BlockReader.CodingKeys.result.name.spelling, .expression)
+            (AttemptForm.CodingKeys.rescue.name.spelling, .statements)
         ]
     ]
 
@@ -185,8 +179,8 @@ struct StatementNode {
         throw TextRefused("`(return)` returns null, and is the one text of it", at: operand.offset)
     }
 
-    // A construct holding parts under keys: a conditional, a loop, an
-    // attempt and its rescue.
+    // A construct holding parts under keys: a conditional, a loop and an
+    // attempt.
     private func keyedParts(_ node: Node) throws -> Value {
         var keyed = Keyed()
         let parts = Self.parts[node.word] ?? []
@@ -201,7 +195,6 @@ struct StatementNode {
             let held: Value = switch holding {
             case .expression: try ExpressionNode().value(of: part.one())
             case .statements: try value(of: part.operands[...])
-            case .rescue: try keyedParts(part)
             }
 
             try keyed.write(held, under: part.word, at: part.offset)
@@ -243,7 +236,6 @@ struct StatementNode {
             return switch holding {
             case .expression: .node(key, [try ExpressionNode().datum(of: held)])
             case .statements: .block(key, try data(of: held, as: "a `\(key)`"))
-            case .rescue: .block(key, try self.parts(of: held, in: key))
             }
         }
 

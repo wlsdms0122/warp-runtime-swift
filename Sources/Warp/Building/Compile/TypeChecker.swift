@@ -105,8 +105,7 @@ struct TypeChecker {
 
         // What a list or map literal holds where it is written into a slot,
         // part by part, where its reading, joined across the parts, does not
-        // say. A block holds what its result holds, and an attempt what each
-        // of its two ways answers.
+        // say. A block holds what its result holds.
         var literalShape: LiteralShape?
 
         // What the expression holds where it is written into a slot.
@@ -2418,21 +2417,21 @@ struct TypeChecker {
                 literalShape: nil
             )
 
-        // The body and the rescue are two ways through, not a sequence. A body
-        // that fails midway made some of its writes and the rescue runs then,
-        // so what the body did on its way through and on every way that failed
-        // may be there, whichever way ran and however far it got. That is the
-        // environment the rescue reads as well as the one it writes. No write
-        // on either side is definite. A way that left the body by a leave
+        // An attempt answers nothing. The body and the rescue are its two ways
+        // through, not a sequence: a body that fails midway made some of its
+        // writes and the rescue runs then, so the rescue reads what the ways
+        // that failed did before they failed. Past the attempt, the way that
+        // finished the body meets the way that finished the rescue, each with
+        // what ran on it, so a write both make is definite the way one both
+        // arms of a conditional make is. A way that left the body by a leave
         // lands where the leave lands; what it did before a failure is on the
         // way that failed.
-        case let .attempt(block, rescue):
+        case let .attempt(body, rescue):
             let failure = name
 
             let attempted = try await inspected(
-                block: block,
-                into: declared,
-                at: place.child(.held),
+                body,
+                at: place.child(.attempted),
                 in: environment,
                 with: context,
                 ask: ask
@@ -2457,40 +2456,28 @@ struct TypeChecker {
                 )
             }
             let rescued = try await inspected(
-                block: rescue,
-                into: declared,
+                rescue,
                 at: place.child(.rescue),
                 in: caught(soaking: failed, failure: failure, in: environment, with: context),
                 with: context,
                 ask: ask
             )
 
-            // What goes on past the body joins what goes on past the rescue,
-            // and no write on either side is certain.
-            var flow = try failed.map { failed in
+            // The failure is bound in the rescue alone. The body reads the
+            // names around the attempt.
+            let flow = try failed.map { failed in
                 try past.joined(
                     with: rescued.flow.outside(Set([failure].compactMap { $0 })).preceded(by: failed),
                     meeting: meets
                 )
             } ?? past
 
-            flow.going = flow.going?.indefinite()
-
-            // What the attempt answers is where its two ways meet.
-            let shape = LiteralShape.either(
-                LiteralShape(attempted.literalShape, reading: attempted.reading),
-                LiteralShape(rescued.literalShape, reading: rescued.reading)
-            )
-
             return Inspection(
-                rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
+                rewritten: ask.rewrites ? .attempt(attempted.body, rescue: rescued.body) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
-                reading: shape.folded,
-                // The failure is bound in the rescue alone. The body reads
-                // the names around the attempt.
-                flow: flow,
-                literalShape: shape
+                reading: attempted.reading == .never && rescued.reading == .never ? .never : .null,
+                flow: flow
             )
         }
     }
@@ -2788,9 +2775,9 @@ struct TypeChecker {
         return environment.merging([round: Binding(.fixed(declared: nil), table.prelude(TypeSpelling.round))]) { _, new in new }
     }
 
-    // The environment a rescue stands in: the entry, soaked with what the
-    // ways that failed did before they failed (no write certain, none ruled
-    // out) plus the failure under its name, where the attempt binds one.
+    // The environment a rescue stands in: the entry, after what the ways that
+    // failed did before they failed, met as ways do, plus the failure under
+    // its name, where the attempt binds one.
     private func caught(
         soaking failed: Way?,
         failure: Name?,
@@ -2799,7 +2786,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         var caught = environment
 
-        failed?.indefinite().apply(to: &caught)
+        failed?.apply(to: &caught)
 
         if let failure {
             caught[failure] = Binding(.fixed(declared: nil), context.loweredTypes.prelude(TypeSpelling.failure))

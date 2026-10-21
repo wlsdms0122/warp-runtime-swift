@@ -83,6 +83,7 @@ struct ConcurrentTests {
         let spec = try loader.loadProcedure([
             "returns": "Any",
             "body": [
+                ["var": "kept"],
                 [
                     "let": "par",
                     "value": ["attempt": [
@@ -105,14 +106,11 @@ struct ConcurrentTests {
                                 ]
                             ]]
                         ],
-                        "rescue": [
-                            "body": [["let": "recovery", "value": "recovered"]],
-                            "result": ["ref": "recovery"]
-                        ]
+                        "rescue": [["set": "kept", "value": "recovered"]]
                     ]
                 ]]
             ],
-            "result": ["dictionary": [["result", ["ref": "par"]]]]
+            "result": ["dictionary": [["result", ["ref": "kept"]]]]
         ], importing: ["Standard.Concurrent.allKeyed", "Test.fail"])
 
         // When
@@ -157,7 +155,7 @@ struct ConcurrentTests {
                                 ]
                             ]]
                         ],
-                        "rescue": ["body": [["let": "recovery", "value": "recovered"]]]
+                        "rescue": [["let": "recovery", "value": "recovered"]]
                     ]
                 ]]
             ]

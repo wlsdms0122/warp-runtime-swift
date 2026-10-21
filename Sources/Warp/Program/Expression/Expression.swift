@@ -21,8 +21,8 @@ import Foundation
 //   dictionary. Entries are a key and a value, each an expression
 //   call      . The procedure it names and its arguments by position
 //
-// The control constructs carry a `Block`. A name one binds inside itself is
-// the statement's, under `Statement.nameInside`.
+// The control constructs carry bodies. A name one binds inside itself is the
+// statement's, under `Statement.nameInside`.
 //
 // `call` is the one open case. A procedure, a bundled procedure and a host's own
 // all lower to it, because they differ only in where the name is found, and
@@ -69,7 +69,10 @@ public indirect enum Expression: Sendable {
     case conditional(Expression, then: Body, else: Body?)
     // A loop is a statement too, answering nothing.
     case loop(while: Expression, body: Body)
-    case attempt(Block, rescue: Block)
+
+    // An attempt is a statement as well: a body, and the rescue that runs
+    // where the body fails. What either keeps it writes to an outer variable.
+    case attempt(Body, rescue: Body)
     case call(Call)
 
     // Carrying on somewhere further out than the next statement. The one case
@@ -110,13 +113,15 @@ public indirect enum Expression: Sendable {
         case condition(of: Place.ConditionHolder)
         case then
         case otherwise
-        case rescue
 
         // The statements a loop runs each round.
         case round
 
-        // What stands at the expression's own place: the block of an attempt,
-        // and the value a leave carries.
+        // The statements an attempt runs, and the ones it runs where they fail.
+        case attempted
+        case rescue
+
+        // What stands at the expression's own place: the value a leave carries.
         case held
 
         // MARK: - Property
@@ -134,8 +139,9 @@ public indirect enum Expression: Sendable {
             case let .condition(holder): [.part(.condition(of: holder))]
             case .then: [.part(.then)]
             case .otherwise: [.part(.otherwise)]
-            case .rescue: [.part(.rescue)]
             case .round: [.part(.body)]
+            case .attempted: [.part(.body)]
+            case .rescue: [.part(.rescue)]
             case .held: []
             }
         }
@@ -200,12 +206,13 @@ public indirect enum Expression: Sendable {
     }
 
     // Whether this construct answers nothing by its own grammar. A conditional
-    // chooses a way through a body and a loop repeats one, not a value, so
-    // neither has anything to give a slot that holds an answer. What never
-    // finishes is `alwaysLeaves`'s to say, refused with its own sentence.
+    // chooses a way through a body, a loop repeats one and an attempt runs
+    // one under a rescue, not a value, so none has anything to give a slot
+    // that holds an answer. What never finishes is `alwaysLeaves`'s to say,
+    // refused with its own sentence.
     var answersNothing: Bool {
         switch self {
-        case .conditional, .loop:
+        case .conditional, .loop, .attempt:
             return true
 
         default:
@@ -341,8 +348,8 @@ public indirect enum Expression: Sendable {
             Self.gather(Block(body: body), into: &free, outside: named)
 
         case let .attempt(body, rescue):
-            Self.gather(body, into: &free, outside: introduced)
-            Self.gather(rescue, into: &free, outside: named)
+            Self.gather(Block(body: body), into: &free, outside: introduced)
+            Self.gather(Block(body: rescue), into: &free, outside: named)
 
         case let .call(call):
             for argument in call.arguments {

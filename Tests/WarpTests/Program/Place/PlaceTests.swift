@@ -233,19 +233,19 @@ struct PlaceTests {
         // a name nothing declares for the walk that checks the document against
         // itself, a procedure nothing declares for the walk that resolves names, a
         // claim the types already prove for the walk that reads them.
-        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
+        let reached = "procedures.entry.body.guarded[0].attempt.rescue.sent[0].call"
 
         func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("guarded"), expression: .attempt(
-                                Block(body: [mayFail()]),
-                                rescue: Block(body: [
+                                [mayFail()],
+                                rescue: [
                                     Statement(binding: .constant("sent"), expression: .call(
                                         Call(selector: selector, arguments: [argument])
                                     ))
-                                ])
+                                ]
                             )
                         )
                     ]),

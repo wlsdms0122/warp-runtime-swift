@@ -44,8 +44,8 @@ struct TraversableTests {
                 body: [Statement(expression: marker("loop body"))]
             ),
             .attempt(
-                Block(body: [Statement(expression: marker("attempt body"))]),
-                rescue: Block(body: [Statement(expression: marker("attempt rescue"))])
+                [Statement(expression: marker("attempt body"))],
+                rescue: [Statement(expression: marker("attempt rescue"))]
             )
         ])
 
@@ -103,7 +103,7 @@ struct TraversableTests {
                         body: [call, Statement(expression: .leave(.construct(nil)))]
                     )
                 ),
-                Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
+                Statement(expression: .attempt([call], rescue: [call])),
                 Statement(binding: .constant("listed"), expression: .array([closure()])),
                 Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .struct(["held": closure()])),
                 Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
@@ -163,17 +163,17 @@ struct TraversableTests {
         // it carries answer under one name, so a refusal says which closure
         // without having to say it twice.
         let sut = Block(
-            body: [Statement(binding: .constant("held"), expression: .closure(Procedure(
-                    body: [],
-                    result: .cast(.literal(.int(1)), as: .int, optional: false)
+            body: [
+                Statement(binding: .constant("held"), expression: .closure(Procedure(
+                        body: [],
+                        result: .cast(.literal(.int(1)), as: .int, optional: false)
+                    ))
+                ),
+                Statement(expression: .attempt(
+                    [],
+                    rescue: [Statement(expression: .cast(.literal(.int(2)), as: .string, optional: false))]
                 ))
-            )],
-            result: .attempt(
-                Block(body: []),
-                rescue: Block(
-                    body: [Statement(expression: .cast(.literal(.int(2)), as: .string, optional: false))]
-                )
-            )
+            ]
         )
 
         // When
@@ -184,7 +184,7 @@ struct TraversableTests {
         }
 
         // Then
-        #expect(casts == ["entry.body.held[0].closure.closure.result", "entry.result.rescue.body[0].cast"])
+        #expect(casts == ["entry.body.held[0].closure.closure.result", "entry.body[1].attempt.rescue[0].cast"])
 
         // And the closure literal is found at the place its body is
         let closures = sut.subexpressions(at: .given("entry")).compactMap { place, expression -> String? in

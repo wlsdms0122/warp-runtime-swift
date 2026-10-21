@@ -360,8 +360,12 @@ struct Evaluator: Sendable {
 
             return .null
 
+        // An attempt answers nothing: what either way keeps it writes to an
+        // outer variable.
         case let .attempt(body, rescue, failure):
-            return try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
+            try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
+
+            return .null
 
         // Nothing comes back, so this answers by not answering. What it carries
         // is worked out here, where the names it reads are still in scope.
@@ -617,14 +621,14 @@ struct Evaluator: Sendable {
     }
 
     private func attempt(
-        _ body: LoweredBody,
-        rescue: LoweredBody,
+        _ body: [Instruction],
+        rescue: [Instruction],
         failure: Int?,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> Value {
+    ) async throws {
         do {
-            return try await run(body, in: &activation, at: trace)
+            try await perform(body, in: &activation, at: trace)
         } catch {
             guard !Task.isCancelled else { throw error }
 
@@ -651,7 +655,7 @@ struct Evaluator: Sendable {
                 error: error
             )
 
-            return try await run(rescue, in: &activation, at: trace)
+            try await perform(rescue, in: &activation, at: trace)
         }
     }
 

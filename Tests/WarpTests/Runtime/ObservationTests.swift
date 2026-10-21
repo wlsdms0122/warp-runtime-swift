@@ -404,19 +404,20 @@ struct ObservationTests {
                     access: .public,
                     signature: Signature(returns: .nullable(.string)),
                     body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.null)),
                         Statement(binding: .constant("fragile"), expression: .attempt(
-                                Block(
-                                    body: [
-                                        Statement(binding: .constant("doomed"), expression: .call(
-                                            Call(selector: "App.fail", arguments: [.literal(.bool(true))])
-                                        ))
-                                    ]
-                                ),
-                                rescue: Block(body: [], result: .literal(.string("caught")))
+                                [
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                        Call(selector: "App.fail", arguments: [.literal(.bool(true))])
+                                    ))
+                                ],
+                                rescue: [
+                                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("caught")))
+                                ]
                             )
                         )
                     ],
-                    result: reference("fragile")
+                    result: reference("kept")
                 )
             ]
         )

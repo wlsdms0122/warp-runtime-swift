@@ -194,6 +194,7 @@ struct LeaveTests {
         let sut = try loader.loadProcedure([
             "returns": "String",
             "body": [
+                ["var": "said", "value": "nothing ran"],
                 [
                     "let": "tried",
                     "value": ["attempt": [
@@ -201,11 +202,11 @@ struct LeaveTests {
                             ["let": "checked", "value": ["as": ["of": Value.null, "type": "Int?"]]],
                             ["value": ["return": "left from inside"]]
                         ],
-                        "rescue": ["result": "the rescue ran"]
+                        "rescue": [["set": "said", "value": "the rescue ran"]]
                     ]
                 ]]
             ],
-            "result": ["ref": "tried"]
+            "result": ["ref": "said"]
         ])
 
         // When / Then
@@ -349,7 +350,7 @@ struct LeaveTests {
                                         ]],
                                         ["value": ["break": Value.null]]
                                     ],
-                                    "rescue": ["result": "the rescue ran"]
+                                    "rescue": [["let": "noted", "value": "the rescue ran"]]
                                 ]
                             ]]
                         ]

@@ -481,9 +481,10 @@ public struct Writer: Sendable {
             }
 
         case let .attempt(attempted, rescue):
-            var written = try fields(of: attempted, in: AttemptForm.self)
-
-            written[AttemptForm.CodingKeys.rescue.name] = .dictionary(try fields(of: rescue, in: nil))
+            let written: [Name: Value] = [
+                AttemptForm.CodingKeys.body.name: .array(try attempted.statements.map(value(of:))),
+                AttemptForm.CodingKeys.rescue.name: .array(try rescue.statements.map(value(of:)))
+            ]
 
             return (try spelling(AttemptForm.self), .dictionary(written))
 

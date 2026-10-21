@@ -794,14 +794,14 @@ struct ObjectWriter {
     }
 
     private func attemptOperation(
-        _ body: LoweredBody,
-        rescue: LoweredBody,
+        _ body: [Instruction],
+        rescue: [Instruction],
         failure: Int?
     ) throws(ObjectUnwritable) -> Value {
         tagged(
             ObjectLayout.OperationTag.attempt,
-            try self.body(body),
-            try self.body(rescue),
+            try instructions(body),
+            try instructions(rescue),
             ObjectWriter.maybe(failure) { failure in .int(failure) }
         )
     }

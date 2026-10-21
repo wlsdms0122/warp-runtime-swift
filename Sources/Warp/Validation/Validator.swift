@@ -618,17 +618,18 @@ struct Validator: Sendable {
                     )
                 }
 
-                if case .loop = statement.expression, case .variable = binding {
+                if statement.expression.namesItsOwn, case .variable = binding {
                     throw ValidationError(
-                        "a loop's name is its round, which nothing writes, so it is introduced with 'let'",
+                        "this construct binds the name, a loop's round or an attempt's failure,"
+                            + " which nothing writes, so it is introduced with 'let'",
                         at: here
                     )
                 }
 
-                if case .loop = statement.expression, case .assignment = binding {
+                if statement.expression.answersNothing, case .assignment = binding {
                     throw ValidationError(
-                        "a loop answers nothing, so there is nothing to write."
-                            + " What a round keeps is written to an outer variable with 'set'",
+                        "this construct answers nothing, so there is nothing to write."
+                            + " What its body keeps is written to an outer variable with 'set'",
                         at: here
                     )
                 }
@@ -792,9 +793,9 @@ struct Validator: Sendable {
                 at: place
             )
 
-        case let .attempt(block, rescue):
+        case let .attempt(body, rescue):
             try validate(
-                attempt: block,
+                attempt: body,
                 rescue: rescue,
                 failure: name,
                 visible: visible,
@@ -1071,19 +1072,19 @@ struct Validator: Sendable {
     // While the rescue runs, the failure is a value under the declared name,
     // a fixed one whatever its spelling named outside.
     private func validate(
-        attempt block: Block,
-        rescue: Block,
+        attempt body: Body,
+        rescue: Body,
         failure: Name?,
         visible: Set<Name>,
         variables: Set<Name>,
         scope: Scope,
         at place: Place
     ) throws {
-        try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
+        try validate(body, visible: visible, variables: variables, scope: scope, at: place.child(.attempted))
 
-        guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-            // A rescue answers for the failure it caught, and an empty
-            // one answers nothing.
+        // A rescue is what runs for the failure it caught, and one with no
+        // statement in it drops the failure without a trace.
+        guard !rescue.statements.isEmpty else {
             throw ValidationError("must not be empty", at: place.child(.rescue))
         }
 

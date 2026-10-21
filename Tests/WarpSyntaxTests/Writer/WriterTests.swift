@@ -206,11 +206,7 @@ struct WriterTests {
                         "let": "tried",
                         "value": ["attempt": [
                             "body": [["let": "risky", "value": 1]],
-                            "result": ["ref": "risky"],
-                            "rescue": [
-                                "body": [["let": "instead", "value": 0]],
-                                "result": ["ref": "instead"]
-                            ]
+                            "rescue": [["let": "instead", "value": 0]]
                         ]
                     ]],
                     [
@@ -353,12 +349,11 @@ struct WriterTests {
                                 "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                             ]
                         ]],
+                        ["var": "tried"],
                         [
-                            "let": "tried",
                             "value": ["attempt": [
-                                "body": [["let": "risky", "value": ["fail": true]]],
-                                "result": ["ref": "risky"],
-                                "rescue": ["result": "recovered"]
+                                "body": [["let": "risky", "value": ["fail": true]], ["set": "tried", "value": ["ref": "risky"]]],
+                                "rescue": [["set": "tried", "value": "recovered"]]
                             ]
                         ]]
                     ],

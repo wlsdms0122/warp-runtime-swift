@@ -500,15 +500,21 @@ struct HostDoorTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [
+                        Statement(binding: .variable("carried"), expression: .literal(.null)),
                         Statement(
                             binding: .constant("failed"),
                             expression: .attempt(
-                                Block(body: [Statement(expression: .call(Call(selector: "App.carry")))]),
-                                rescue: Block(body: [], result: .reference([.name("failed"), .name("details"), .index("held")]))
+                                [Statement(expression: .call(Call(selector: "App.carry")))],
+                                rescue: [
+                                    Statement(
+                                        binding: .assignment([.name("carried")]),
+                                        expression: .reference([.name("failed"), .name("details"), .index("held")])
+                                    )
+                                ]
                             )
                         )
                     ],
-                    result: .reference([.name("failed")])
+                    result: .reference([.name("carried")])
                 )
             ]
         )

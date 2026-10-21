@@ -102,13 +102,13 @@ struct LoadGateTests {
 
     @Test("an empty rescue is rejected")
     func emptyRescueRejected() {
-        // Given. An attempt whose rescue produces nothing swallows the failure
-        // into null without a trace; the honest form is no attempt at all
+        // Given. An attempt whose rescue runs nothing drops the failure
+        // without a trace; the honest form is no attempt at all
         let fixture: Value = [
             "body": [
                 [
                     "let": "fragile",
-                    "value": ["attempt": ["body": [["let": "broken", "value": ["fail": true]]], "rescue": ["body": []]]
+                    "value": ["attempt": ["body": [["let": "broken", "value": ["fail": true]]], "rescue": []]
                 ]]
             ]
         ]

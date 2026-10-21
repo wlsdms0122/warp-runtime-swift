@@ -56,21 +56,19 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.null)),
+                        Statement(binding: .constant("fragile"), expression: .attempt([
                                         Statement(binding: .constant("fragile"), expression: .call(Call(
                                             selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
-                                    ]), rescue: Block(
-                                        body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                        ],
-                                        result: .reference([.name("recovery")])
-                                    ))
+                                    ], rescue: [
+                                        Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
+                                    ])
                         )
                     ],
                     result: map([
-                            "result": .reference([.name("fragile")])
+                            "result": .reference([.name("kept")])
                         ])
                 )
             ]
@@ -79,7 +77,7 @@ struct ExecutorTests {
         // When
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
-        // Then. The rescue's result is what the attempt answers
+        // Then. What the rescue wrote is there after the attempt
         #expect(outputs.map?["result"] == .string("recovered"))
     }
 
@@ -87,30 +85,30 @@ struct ExecutorTests {
     func rescueSeesFailurePayload() async throws {
         // Given
         let spec = try Module(
+            constants: ["fragile": .literal(.string("before"))],
             procedures: [
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
-                                        Statement(binding: .constant("fragile"), expression: .call(Call(
+                        Statement(binding: .variable("reason"), expression: .literal(.null)),
+                        Statement(binding: .constant("fragile"), expression: .attempt([
+                                        Statement(binding: .constant("doomed"), expression: .call(Call(
                                             selector: "App.fail",
                                             arguments: [.literal(.bool(true))]
                                         )))
-                                    ]), rescue: Block(
-                                        body: [
-                                            Statement(binding: .constant("reason"), expression: interpolated(
-                                                    literal("saw: "),
-                                                    spelling(reference("fragile", "message"))
-                                                )
+                                    ], rescue: [
+                                        Statement(binding: .assignment([.name("reason")]), expression: interpolated(
+                                                literal("saw: "),
+                                                spelling(reference("fragile", "message"))
                                             )
-                                        ],
-                                        result: .reference([.name("reason")])
-                                    ))
+                                        )
+                                    ])
                         )
                     ],
                     result: map([
-                            "result": .reference([.name("fragile")])
+                            "reason": .reference([.name("reason")]),
+                            "after": .reference([.name("fragile")])
                         ])
                 )
             ]
@@ -120,9 +118,10 @@ struct ExecutorTests {
         let outputs = try await run(spec, vocabulary: Module.standard + [.failing])
 
         // Then. Inside the rescue, `fragile` was the failure payload; after it,
-        // `fragile` is the rescue's output (a string here), so the payload
-        // never leaks past the rescue
-        #expect(outputs.map?["result"] == .string("saw: the world did not cooperate"))
+        // `fragile` is the name around the attempt, so the payload never leaks
+        // past the rescue
+        #expect(outputs.map?["reason"] == .string("saw: the world did not cooperate"))
+        #expect(outputs.map?["after"] == .string("before"))
     }
 
     @Test("an unrescued failure propagates")
@@ -162,16 +161,16 @@ struct ExecutorTests {
                         ]
                     ),
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                        Statement(binding: .constant("fragile"), expression: .attempt([
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: interpolated(
+                                        Statement(binding: .constant("spelled"), expression: interpolated(
                                                 literal("x="),
                                                 spelling(reference("n", "field"))
                                             )
                                         )
-                                    ]), rescue: Block(body: [
+                                    ], rescue: [
                                         Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]))
+                                    ])
                         )
                     ]
                 )
@@ -202,16 +201,17 @@ struct ExecutorTests {
                         returns: .any
                     ),
                     body: [
-                        Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.string("unread"))),
+                        Statement(binding: .constant("fragile"), expression: .attempt([
                                         mayFail(),
-                                        Statement(binding: .constant("fragile"), expression: .reference([.name("data"), .index("missing", optional: true)]))
-                                    ]), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]))
+                                        Statement(binding: .assignment([.name("kept")]), expression: .reference([.name("data"), .index("missing", optional: true)]))
+                                    ], rescue: [
+                                        Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
+                                    ])
                         )
                     ],
                     result: map([
-                            "result": .reference([.name("fragile")])
+                            "result": .reference([.name("kept")])
                         ])
                 )
             ]
@@ -275,20 +275,21 @@ struct ExecutorTests {
                                 else: nil
                             )
                         ),
-                        Statement(binding: .constant("fragile"), expression: .attempt(Block(body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.null)),
+                        Statement(binding: .constant("fragile"), expression: .attempt([
                                         mayFail(),
-                                        Statement(binding: .constant("spelled"), expression: interpolated(
+                                        Statement(binding: .assignment([.name("kept")]), expression: interpolated(
                                                 literal("name="),
                                                 spelling(reference("maybe"))
                                             )
                                         )
-                                    ], result: reference("spelled")), rescue: Block(body: [
-                                        Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                    ]))
+                                    ], rescue: [
+                                        Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
+                                    ])
                         )
                     ],
                     result: map([
-                            "result": .reference([.name("fragile")])
+                            "result": .reference([.name("kept")])
                         ])
                 )
             ]
@@ -345,20 +346,18 @@ struct ExecutorTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [
-                        Statement(binding: .constant("bail"), expression: .attempt(Block(body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.null)),
+                        Statement(binding: .constant("bail"), expression: .attempt([
                                         Statement(
                                             expression: aborting(literal("giving up"))
                                         )
-                                    ]), rescue: Block(
-                                        body: [
-                                            Statement(binding: .constant("recovery"), expression: .literal(.string("recovered")))
-                                        ],
-                                        result: .reference([.name("recovery")])
-                                    ))
+                                    ], rescue: [
+                                        Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
+                                    ])
                         )
                     ],
                     result: map([
-                            "result": .reference([.name("bail")])
+                            "result": .reference([.name("kept")])
                         ])
                 )
             ]

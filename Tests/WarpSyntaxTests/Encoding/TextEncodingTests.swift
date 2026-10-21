@@ -99,11 +99,8 @@ struct TextEncodingTests {
           (attempt
             (body
               (apply (apply f) `null`))
-            (result 1)
             (rescue
-              (body
-                (break))
-              (result 2))))
+              (break))))
         (return (array 1 "a" x"6a" null -2.5))
         (struct (field x 1))
         (dictionary (entry "k" (struct App.Point (field x 1))))

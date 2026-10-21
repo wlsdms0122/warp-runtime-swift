@@ -232,7 +232,7 @@ struct EffectChecker {
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
         case let .attempt(_, rescue):
-            return read(rescue)
+            return read(Block(body: rescue))
 
         case let .leave(leave):
             return leave.value.map(read) ?? .these([])
@@ -267,8 +267,8 @@ struct EffectChecker {
 
             let naming = fact.introducing(statement.nameInside)
             let broken: String? = if case let .attempt(body, rescue) = statement.expression {
-                breaking(body, fact, declaring: declared, bound: declaredTypes)
-                    ?? breaking(rescue, naming, declaring: declared, bound: declaredTypes)
+                breaking(Block(body: body), fact, declaring: declared, bound: declaredTypes)
+                    ?? breaking(Block(body: rescue), naming, declaring: declared, bound: declaredTypes)
             } else {
                 breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
             }

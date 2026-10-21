@@ -164,10 +164,10 @@ struct ValidationTests {
             )
         }
 
-        let body = Block(body: [Statement(expression: .literal(.null))])
+        let body: Body = [Statement(expression: .literal(.null))]
 
         // When / Then
-        try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body.body)))
+        try Validator().validate(module(running: .loop(while: .literal(.bool(false)), body: body)))
         try Validator().validate(module(running: .attempt(body, rescue: body)))
     }
 

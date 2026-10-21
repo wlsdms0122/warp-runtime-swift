@@ -77,7 +77,7 @@ extension Expression: Traversable {
             body.walk(at: stepped(here, to: .round, by: stepping), stepping: stepping, into: &found)
 
         case let .attempt(attempted, rescue):
-            attempted.walk(at: stepped(here, to: .held, by: stepping), stepping: stepping, into: &found)
+            attempted.walk(at: stepped(here, to: .attempted, by: stepping), stepping: stepping, into: &found)
             rescue.walk(at: stepped(here, to: .rescue, by: stepping), stepping: stepping, into: &found)
         }
     }

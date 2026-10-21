@@ -212,8 +212,8 @@ enum ObjectCoverageFixture {
             Instruction(
                 binding: nil,
                 code: .attempt(
-                    LoweredBody(instructions: [], result: .literal(.int(7))),
-                    rescue: LoweredBody(instructions: [], result: .literal(.int(8))),
+                    [Instruction(binding: nil, code: .literal(.int(7)), label: "attempted")],
+                    rescue: [Instruction(binding: nil, code: .literal(.int(8)), label: "rescued")],
                     failure: 10
                 ),
                 label: "attempt"

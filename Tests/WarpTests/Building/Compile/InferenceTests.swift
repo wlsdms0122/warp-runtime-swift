@@ -1369,11 +1369,11 @@ struct InferenceTests {
         }
     }
 
-    @Test("a rescue reads what the body may have written before it failed")
+    @Test("a rescue reads what the body wrote before it failed")
     func aRescueReadsTheBodysPartialWrites() async throws {
         // Given. The body writes a null and then risks a failing cast: the
         // rescue runs with that write in the box, so inside the rescue the name
-        // reads `String?` and the plain `String` slot refuses.
+        // reads `Null` and the plain `String` slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1382,16 +1382,16 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(
                             expression: .attempt(
-                                Block(body: [
+                                [
                                     Statement(binding: .assignment([.name("held")]), expression: .literal(.null)),
                                     mayFail("risky")
-                                ]),
-                                rescue: Block(body: [
+                                ],
+                                rescue: [
                                     Statement(binding: .constant("saidInside"), expression: .call(Call(
                                         selector: "wants",
                                         arguments: [.reference([.name("held")])]
                                     )))
-                                ], result: .literal(.string("rescued")))
+                                ]
                             )
                         )
                     ]
@@ -1413,7 +1413,7 @@ struct InferenceTests {
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("with text, which holds String? where String is declared")
+            error is BuildError && "\(error)".contains("with text, which holds Null where String is declared")
         }
     }
 
@@ -1527,8 +1527,8 @@ struct InferenceTests {
         // Given. The rescue runs on the world failing, which no reading of the
         // body's leaves rules out: a body that always returns can still fail
         // before its return, and what the rescue wrote is then in the box. The
-        // write may be a null, so the name reads back nullable and the plain
-        // slot refuses.
+        // rescue's is the one way past the attempt and it writes a null, so
+        // the name reads `Null` and the plain slot refuses.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1537,15 +1537,15 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.string("seed"))),
                         Statement(
                             expression: .attempt(
-                                Block(body: [
+                                [
                                     mayFail("risky"),
                                     Statement(
                                         expression: .leave(.procedure(nil))
                                     )
-                                ]),
-                                rescue: Block(body: [
+                                ],
+                                rescue: [
                                     Statement(binding: .assignment([.name("held")]), expression: .literal(.null))
-                                ], result: .literal(.string("rescued")))
+                                ]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1568,22 +1568,22 @@ struct InferenceTests {
             ]
         )
 
-        // When / Then. `held` reads `String?`, and the plain `String` slot says
+        // When / Then. `held` reads `Null`, and the plain `String` slot says
         // so
         await #expect {
             try await builder.build([sut] + Module.standard)
         } throws: { error in
-            error is BuildError && "\(error)".contains("with text, which holds String? where String is declared")
+            error is BuildError && "\(error)".contains("with text, which holds Null where String is declared")
         }
     }
 
-    @Test("what the body may have written is not overwritten by the rescue's write")
+    @Test("what the body wrote is not overwritten by the rescue's write")
     func aBodyWriteJoinsTheRescueWrite() async throws {
-        // Given. The body wrote a String or got nowhere, the rescue wrote an
-        // Int or never ran: the name holds any of null, the String and the
-        // Int. That is `Any` (where readings disagree the slot holds neither),
-        // which the String slot below takes only through a cast. A rescue that
-        // overwrote the body's write would read `Int` instead.
+        // Given. The way that finished the body wrote a String, the way that
+        // finished the rescue an Int: the name holds either. That is `Any`
+        // (where readings disagree the slot holds neither), which the String
+        // slot below takes only through a cast. A rescue that overwrote the
+        // body's write would read `Int` instead.
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
@@ -1592,13 +1592,13 @@ struct InferenceTests {
                         Statement(binding: .variable("held"), expression: .literal(.null)),
                         Statement(
                             expression: .attempt(
-                                Block(body: [
+                                [
                                     mayFail(),
                                     Statement(binding: .assignment([.name("held")]), expression: .literal(.string("text")))
-                                ]),
-                                rescue: Block(body: [
+                                ],
+                                rescue: [
                                     Statement(binding: .assignment([.name("held")]), expression: .literal(.int(1)))
-                                ], result: .literal(.string("rescued")))
+                                ]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(
@@ -1682,17 +1682,21 @@ struct InferenceTests {
         }
     }
 
-    @Test("an attempt whose body only refuses holds what the rescue answers")
+    @Test("past an attempt whose body never finishes, a name holds what the rescue wrote")
     func attemptHoldsTheRescueWhenTheBodyRefuses() async throws {
-        // Given
+        // Given. The rescue's is the one way past the attempt, so its write is
+        // definite there
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("many"), expression: .attempt(
-                                Block(body: [], result: aborting(literal("no"))),
-                                rescue: Block(body: [], result: .literal(.string("fallback")))
+                        Statement(binding: .variable("many"), expression: .literal(.null)),
+                        Statement(expression: .attempt(
+                                [Statement(expression: aborting(literal("no")))],
+                                rescue: [
+                                    Statement(binding: .assignment([.name("many")]), expression: .literal(.string("fallback")))
+                                ]
                             )
                         ),
                         Statement(binding: .constant("said"), expression: .call(Call(

@@ -16,7 +16,6 @@ import Warp
 public struct AttemptForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case body
-        case result
         case rescue
     }
 
@@ -24,24 +23,19 @@ public struct AttemptForm: ConstructForm {
     public static let key: Name = "attempt"
 
     // The attempted body is decoded as a key that must be there, so an attempt
-    // at nothing is still written with an empty one. The rescue is a block of
-    // its own and reads its body as a key that may be absent.
+    // at nothing is still written with an empty one. The rescue is a key that
+    // must be there as well.
     public static let requiresBody = true
 
-    private let attempted: Block
-    private let rescue: Block
+    private let attempted: Body
+    private let rescue: Body
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "attempt")
 
-        self.attempted = Block(
-            body: try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body,
-            result: try decoder.descendingIfPresent(to: CodingKeys.result)?
-                .read(ExpressionReader.self)
-                .expression
-        )
-        self.rescue = try decoder.descending(to: CodingKeys.rescue).read(BlockReader.self).block
+        self.attempted = try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body
+        self.rescue = try decoder.descending(to: CodingKeys.rescue).read(BodyReader.self).body
     }
 
     // MARK: - Public

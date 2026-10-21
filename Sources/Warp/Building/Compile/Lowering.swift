@@ -619,8 +619,8 @@ struct Lowering {
         case let .loop(condition, body):
             return try lower(loop: condition, body: body, round: name, in: scope, on: context, at: place)
 
-        case let .attempt(block, rescue):
-            return try lower(attempt: block, rescue: rescue, failure: name, in: scope, on: context, at: place)
+        case let .attempt(body, rescue):
+            return try lower(attempt: body, rescue: rescue, failure: name, in: scope, on: context, at: place)
 
         case let .call(call):
             // A selector naming a contract's procedure names no row. Which row
@@ -826,24 +826,25 @@ struct Lowering {
     }
 
     private mutating func lower(
-        attempt block: Block,
-        rescue: Block,
+        attempt body: Body,
+        rescue: Body,
         failure: Name?,
         in scope: SlotScope,
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        let attempted = try lower(block, in: scope, on: context, at: place.child(.held))
-        var inner = scope
+        var attemptedScope = scope
+        let attempted = try lower(body, in: &attemptedScope, on: context, at: place.child(.attempted))
+        var rescueScope = scope
         let slot = failure.map { failure in context.slots.allocate(failure) }
 
         if let failure, let slot {
-            inner.slots[failure] = slot
+            rescueScope.slots[failure] = slot
         }
 
         return .attempt(
             attempted,
-            rescue: try lower(rescue, in: inner, on: context, at: place.child(.rescue)),
+            rescue: try lower(rescue, in: &rescueScope, on: context, at: place.child(.rescue)),
             failure: slot
         )
     }

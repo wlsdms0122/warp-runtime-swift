@@ -237,10 +237,10 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("attempt"), expression: .attempt(
-                                Block(body: [mayFail()]),
-                                rescue: Block(body: [
+                                [mayFail()],
+                                rescue: [
                                     Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing")))
-                                ])
+                                ]
                             )
                         )
                     ]

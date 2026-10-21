@@ -178,19 +178,22 @@ struct ControlFlowTests {
         // Given. Recovery is for a world that did not cooperate, not for a
         // procedure that is wrong
         let sut = Warp.Expression.attempt(
-            Block(body: [
+            [
                 Statement(binding: .constant("boom"), expression: .call(
                     Call(selector: "App.fail", arguments: [.literal(.bool(false))])
                 ))
-            ]),
-            rescue: Block(body: [], result: .literal(.string("recovered")))
+            ],
+            rescue: [Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))]
         )
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
             try await answer(
-                of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: reference("probe"),
+                of: [
+                    Statement(binding: .variable("kept"), expression: .literal(.null)),
+                    Statement(binding: .constant("probe"), expression: sut)
+                ],
+                result: reference("kept"),
                 vocabulary: Module.standard + [.failing]
             )
         }

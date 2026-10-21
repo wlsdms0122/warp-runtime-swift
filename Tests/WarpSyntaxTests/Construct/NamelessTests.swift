@@ -151,7 +151,7 @@ struct NamelessTests {
         // Given / When. A loop and an attempt with no naming key
         let module = try loader.loadProcedure(["body": [
             ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
-            ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
+            ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": [["value": 0]]]]]
         ]])
 
         // Then. Each reads under a statement introducing no name, so there is
