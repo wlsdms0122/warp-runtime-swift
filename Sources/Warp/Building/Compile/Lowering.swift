@@ -801,7 +801,7 @@ struct Lowering {
     }
 
     private mutating func lower(
-        loop condition: Expression,
+        loop condition: Expression?,
         body: Body,
         round: Name?,
         in scope: SlotScope,
@@ -815,7 +815,11 @@ struct Lowering {
             inner.slots[round] = slot
         }
 
-        let taking = try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))
+        // A loop written with no condition runs on condition `true`: that it
+        // does not finish is a fact the build already held it to.
+        let taking = try condition.map { condition in
+            try lower(condition, naming: nil, in: inner, on: context, at: place.child(.condition(of: .loop)))
+        } ?? .literal(.bool(true))
         let instructions = try lower(body, in: &inner, on: context, at: place.child(.round))
 
         return .loop(while: taking, body: instructions, round: slot)

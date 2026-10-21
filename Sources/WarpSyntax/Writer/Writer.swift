@@ -448,10 +448,11 @@ public struct Writer: Sendable {
             return (try spelling(ConditionalForm.self), .dictionary(written))
 
         case let .loop(condition, body):
-            let written: [Name: Value] = [
-                LoopForm.CodingKeys.while.name: try value(of: condition),
-                LoopForm.CodingKeys.body.name: .array(try body.statements.map(value(of:)))
-            ]
+            var written: [Name: Value] = [LoopForm.CodingKeys.body.name: .array(try body.statements.map(value(of:)))]
+
+            if let condition {
+                written[LoopForm.CodingKeys.while.name] = try value(of: condition)
+            }
 
             return (try spelling(LoopForm.self), .dictionary(written))
 

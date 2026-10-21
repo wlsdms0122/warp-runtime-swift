@@ -2320,18 +2320,21 @@ struct TypeChecker {
                 from: entry,
                 start: { flow in try flow.start(of: round, meeting: climbing) }
             ) { seeding -> (round: BodyWalk, flow: Flow) in
-                let asked = try await inspected(
-                    condition,
-                    naming: nil,
-                    into: nil,
-                    at: place.child(.condition(of: .loop)),
-                    in: seeding,
-                    with: context,
-                    ask: .probing
-                )
+                var asked = Flow()
                 var asking = seeding
 
-                asked.flow.apply(to: &asking)
+                if let condition {
+                    asked = try await inspected(
+                        condition,
+                        naming: nil,
+                        into: nil,
+                        at: place.child(.condition(of: .loop)),
+                        in: seeding,
+                        with: context,
+                        ask: .probing
+                    ).flow
+                    asked.apply(to: &asking)
+                }
 
                 let walk = try await inspected(
                     body,
@@ -2341,7 +2344,7 @@ struct TypeChecker {
                     ask: .probing
                 )
 
-                return (walk, asked.flow.followed(by: walk.flow))
+                return (walk, asked.followed(by: walk.flow))
             }
 
             if !converged {
@@ -2354,23 +2357,29 @@ struct TypeChecker {
                 )
             }
 
-            let head = try await inspected(
-                condition,
-                naming: nil,
-                into: nil,
-                at: place.child(.condition(of: .loop)),
-                in: seeded,
-                with: context,
-                ask: ask
-            )
+            var head: Inspection?
 
-            try refuseRunning(condition, asOperand: place.child(.condition(of: .loop)), in: seeded, given: context, when: ask)
-            try refuseCondition(head.reading, at: place.child(.condition(of: .loop)), in: context, when: ask)
+            if let condition {
+                let asked = try await inspected(
+                    condition,
+                    naming: nil,
+                    into: nil,
+                    at: place.child(.condition(of: .loop)),
+                    in: seeded,
+                    with: context,
+                    ask: ask
+                )
+
+                try refuseRunning(condition, asOperand: place.child(.condition(of: .loop)), in: seeded, given: context, when: ask)
+                try refuseCondition(asked.reading, at: place.child(.condition(of: .loop)), in: context, when: ask)
+
+                head = asked
+            }
 
             // The statements run where the condition left things.
             var asked = seeded
 
-            head.flow.apply(to: &asked)
+            head?.flow.apply(to: &asked)
 
             let rounds = ask.rewrites
                 ? try await inspected(body, at: place.child(.round), in: asked, with: context, ask: ask)
@@ -2380,22 +2389,27 @@ struct TypeChecker {
             // runs it from where none or more rounds before left things, so
             // every way a round hands further out went through that start. It
             // ends where the condition declines there, or where a round of it
-            // broke or continued.
-            let turn = head.flow.followed(by: rounds.flow)
+            // broke or continued. A loop with no condition ends on no way: no
+            // round declines it, the load refused a `break` of it, and a
+            // `continue` starts another round.
+            let turn = (head?.flow ?? Flow()).followed(by: rounds.flow)
             let start = try turn.start(of: round, meeting: meets)
             let (stopped, outward) = try turn.gathered(where: { reach in reach.endsLoop(round) }, meeting: meets)
-            let declined = head.flow.going.map { declined in start.followed(by: declined) }
             var ended = outward.preceded(by: start)
 
-            ended.going = try Way.met(
-                [declined, stopped.map { stopped in start.followed(by: stopped) }].compactMap { way in way },
-                meeting: meets
-            )
+            ended.going = try head.flatMap { head in
+                let declined = head.flow.going.map { declined in start.followed(by: declined) }
+
+                return try Way.met(
+                    [declined, stopped.map { stopped in start.followed(by: stopped) }].compactMap { way in way },
+                    meeting: meets
+                )
+            }
 
             return Inspection(
-                rewritten: ask.rewrites ? .loop(while: head.rewritten, body: rounds.body) : expression,
-                calls: head.calls + rounds.calls,
-                judgements: head.judgements.absorbing(rounds.judgements),
+                rewritten: ask.rewrites ? .loop(while: head?.rewritten, body: rounds.body) : expression,
+                calls: (head?.calls ?? []) + rounds.calls,
+                judgements: (head?.judgements ?? JudgementTable()).absorbing(rounds.judgements),
                 reading: .null,
                 // The round is the loop's own name, read in the condition and
                 // the body alike.

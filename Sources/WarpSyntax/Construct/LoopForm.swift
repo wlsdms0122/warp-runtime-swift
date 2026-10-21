@@ -8,9 +8,10 @@
 import Foundation
 import Warp
 
-// Repetition governed by a condition: the body runs while `while` holds. An
-// author bounds a loop with a counter and a procedure, and the host stops one
-// by cancelling the run.
+// Repetition governed by a condition: the body runs while `while` holds, and
+// a loop written with no `while` does not finish. An author bounds a loop
+// with a counter and a procedure, and the host stops one by cancelling the
+// run.
 public struct LoopForm: ConstructForm {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case `while`
@@ -20,14 +21,14 @@ public struct LoopForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "loop"
 
-    private let condition: Warp.Expression
+    private let condition: Warp.Expression?
     private let body: Body
 
     // MARK: - Initializer
     public init(from decoder: Decoder) throws {
         try KeyGate().rejectUnknownKeys(in: decoder, known: CodingKeys.self, context: "loop")
 
-        self.condition = try decoder.descending(to: CodingKeys.while).read(ExpressionReader.self).expression
+        self.condition = try decoder.descendingIfPresent(to: CodingKeys.while)?.read(ExpressionReader.self).expression
         self.body = try decoder.descending(to: CodingKeys.body).read(BodyReader.self).body
     }
 
