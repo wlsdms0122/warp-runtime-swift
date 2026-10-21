@@ -148,7 +148,7 @@ struct CaseTests {
         // When / Then. A failure matches no stage, and a refusal is the run's.
         guard let reached else {
             await #expect {
-                try await ConformanceTests().reached(program)
+                try await Runner().reached(program)
             } throws: { error in
                 error is ConformanceError && "\(error)".contains("a failure escaped the entry: aborted: on purpose")
             }
@@ -156,7 +156,7 @@ struct CaseTests {
             return
         }
 
-        #expect(try await ConformanceTests().reached(program) == reached)
+        #expect(try await Runner().reached(program)?.stage == reached)
     }
 
     // MARK: - Public
