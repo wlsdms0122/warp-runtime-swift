@@ -1,6 +1,6 @@
 # warp-runtime-swift
 
-The Swift runtime for [Warp](../../spec/README.md). It reads documents, builds them before anything runs, runs them under a host that can always stop them, and brings the host's vocabulary. The language is defined by the specification; this package is one implementation of it.
+The Swift runtime for [Warp](warp/spec/README.md). It reads documents, builds them before anything runs, runs them under a host that can always stop them, and brings the host's vocabulary. The language is defined by the specification; this package is one implementation of it.
 
 A program can also be built directly from Swift values (`Module`, `Procedure`, `Statement`, `Expression`) without a document.
 
@@ -158,7 +158,14 @@ A run can always be stopped from outside. Cancellation is observed between state
 
 ## Conformance
 
-`WarpConformanceTests` runs the cases in [`spec/conformance/`](../../spec/conformance) through public API, so a case passes by what the specification says and not by what the implementation holds inside.
+`WarpConformanceTests` runs the cases in [`spec/conformance/`](warp/spec/conformance) through public API, so a case passes by what the specification says and not by what the implementation holds inside. The specification is the `warp` submodule, at the version this runtime conforms to; `git submodule update --init` brings it.
+
+```sh
+PROBE_DIR=~/cases swift test --filter ProbeTests
+PROBE_REWRITE=~/written tool/probe.sh ~/cases ~/more-cases
+```
+
+A folder of cases of one's own is asked the same way: `PROBE_DIR` enables the probe suite, which prints one line per case saying what it got and whether that held against its `expect`. `PROBE_REWRITE` also writes each program case there with its `expect` replaced by what it got, in the writer's layout, which is how a new case is generated. `tool/probe.sh` builds once and probes each folder given, writing its lines to `.build/probe/<folder name>.txt`.
 
 ## Status
 

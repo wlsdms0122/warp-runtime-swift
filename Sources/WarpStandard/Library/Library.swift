@@ -2,12 +2,12 @@
 //  Library.swift
 //  WarpStandard
 //
-//  Written by script/embed-library.sh. Edit lib/standard and run it again.
+//  Written by tool/embed-library.sh. Edit warp/lib/standard and run it again.
 //
 
 import Foundation
 
-// The documents of `lib/standard`, as they stand in the repository.
+// The documents of `lib/standard`, as they stand in the `warp` submodule.
 enum Library {
     static let documents: [String: String] = [
         "collection": """

@@ -299,16 +299,15 @@ struct Case: Sendable, CustomStringConvertible {
     // for the same reason `warp` does and on its own schedule.
     static let version = 1
 
-    // The specification's folder. The cases live in its `conformance`,
-    // beside the pages they belong to, since they are the language's and not
-    // this implementation's.
+    // The specification's folder, in the `warp` submodule. The cases live in
+    // its `conformance`, beside the pages they belong to, since they are the
+    // language's and not this implementation's.
     static let specification = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent()   // Case
         .deletingLastPathComponent()   // WarpConformanceTests
         .deletingLastPathComponent()   // Tests
-        .deletingLastPathComponent()   // warp-runtime-swift
-        .deletingLastPathComponent()   // runtime
         .deletingLastPathComponent()   // the repository
+        .appendingPathComponent("warp")
         .appendingPathComponent("spec")
 
     // What a case's file is named with after the case's name.
