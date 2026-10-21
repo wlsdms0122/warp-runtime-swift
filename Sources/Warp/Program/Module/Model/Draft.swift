@@ -56,8 +56,6 @@ public struct Draft: Sendable {
     }
 
     // MARK: - Property
-    public let description: String?
-
     // What the document said it imports, and nil where it said nothing. A
     // module resolves this; here it is still only what was written.
     public private(set) var imports: Set<Name>?
@@ -140,7 +138,6 @@ public struct Draft: Sendable {
 
     // MARK: - Initializer
     public init(
-        description: String? = nil,
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
@@ -152,7 +149,6 @@ public struct Draft: Sendable {
         variables: [Name: ModuleVariable] = [:],
         procedures: [Name: Procedure] = [:]
     ) {
-        self.description = description
         self.imports = imports
         self.importedClaims = importedClaims
         self.types = types

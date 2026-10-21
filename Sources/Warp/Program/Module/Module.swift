@@ -16,9 +16,6 @@ public struct Module: Sendable {
     // a listing that names them one at a time loses a new one silently.
     private let source: Draft
 
-    // Metadata only. Which document a thing came out of is `identity`.
-    public var description: String? { source.description }
-
     // The names this module uses and does not declare. Everything else here is
     // what the module declares; this is what it asks of whatever it is linked
     // with, and a link that does not declare all of them cannot run it.
@@ -140,7 +137,6 @@ public struct Module: Sendable {
     // in Swift says nothing and the module states the fact instead. Either way
     // `imports` afterwards is what the module uses.
     public init(
-        description: String? = nil,
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
@@ -155,7 +151,6 @@ public struct Module: Sendable {
         builtin: Bool = false
     ) throws {
         try self.init(
-            description: description,
             imports: imports,
             importedClaims: importedClaims,
             types: types,
@@ -173,7 +168,6 @@ public struct Module: Sendable {
 
     // The same, with variables that may say what they hold.
     public init(
-        description: String? = nil,
         imports: Set<Name>? = nil,
         importedClaims: Set<ClaimPair> = [],
         types: [Name: TypeDeclaration] = [:],
@@ -189,7 +183,6 @@ public struct Module: Sendable {
     ) throws {
         try self.init(
             Draft(
-                description: description,
                 imports: imports,
                 importedClaims: importedClaims,
                 types: types,

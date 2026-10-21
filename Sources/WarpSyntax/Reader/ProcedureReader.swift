@@ -11,7 +11,6 @@ import Warp
 // A procedure: its own keys, the signature's and its body.
 struct ProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case description
         case access
         case body
     }
@@ -31,7 +30,6 @@ struct ProcedureReader: Decodable {
         // A procedure has no name of its own. It is named by the key its module
         // declares it under.
         self.procedure = Procedure(
-            description: try Self.description(in: decoder),
             access: access ?? .internal,
             signature: try SignatureFieldsReader(reading: decoder).signature,
             body: body
@@ -69,10 +67,6 @@ struct ProcedureReader: Decodable {
         body.append(Statement(expression: .leave(.procedure(answer))))
 
         return body
-    }
-
-    private static func description(in decoder: Decoder) throws -> String? {
-        try decoder.container(keyedBy: CodingKeys.self).decodeIfPresent(String.self, forKey: .description)
     }
 
     // One of three words, and a fourth is a document no reader can hold to

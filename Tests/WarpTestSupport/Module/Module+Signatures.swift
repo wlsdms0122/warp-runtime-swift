@@ -12,7 +12,6 @@ public extension Module {
     // A module whose contracts are written as signatures alone, asking
     // nothing beyond them. What most tests declare, kept to one line each.
     init(
-        description: String? = nil,
         imports: Set<Name>? = nil,
         types: [Name: TypeDeclaration] = [:],
         contracts: [Name: [Name: Signature]],
@@ -25,7 +24,6 @@ public extension Module {
         builtin: Bool = false
     ) throws {
         try self.init(
-            description: description,
             imports: imports,
             types: types,
             contracts: contracts.mapValues { procedures in

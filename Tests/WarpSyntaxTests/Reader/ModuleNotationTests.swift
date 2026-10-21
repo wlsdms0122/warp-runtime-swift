@@ -23,7 +23,6 @@ struct ModuleNotationTests {
     func documentDeclaresProcedures() throws {
         // Given / When
         let sut = try loader.loadDocument([
-            "description": "a document is a module",
             "procedures": [
                 "verify": [
                     "parameters": [["name": "path", "type": "String"]],
@@ -94,22 +93,6 @@ struct ModuleNotationTests {
         #expect(throws: ReadingError.self) {
             try loader.loadDocument(fixture)
         }
-    }
-
-    @Test("a procedure may describe itself")
-    func procedureKeepsItsDescription() throws {
-        // Given / When
-        let sut = try loader.loadDocument([
-            "procedures": [
-                "verify": [
-                    "description": "checks the thing",
-                    "body": [["let": "done", "value": "end"]]
-                ]
-            ]
-        ])
-
-        // Then
-        #expect(sut.procedures["verify"]?.description == "checks the thing")
     }
 
     @Test("every procedure in a module is validated, not only the one that runs")

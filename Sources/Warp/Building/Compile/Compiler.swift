@@ -148,7 +148,6 @@ struct Compiler {
 
                 answer = (
                     procedure: Procedure(
-                        description: declaration.description,
                         signature: declaration.signature,
                         implementation: .body(rewritten)
                     ),

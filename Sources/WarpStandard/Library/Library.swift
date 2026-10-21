@@ -12,7 +12,6 @@ enum Library {
     static let documents: [String: String] = [
         "collection": """
             (warp 1)
-            (description "Reading a collection by walking it, written from its count and its index.")
             (import Standard.Collection.appending)
             (import Standard.Collection.count)
             (import Standard.Collection.gathering)
@@ -24,7 +23,6 @@ enum Library {
             (import Standard.Numeric.plus)
             
             (procedure Standard.Collection.append
-              (description "Writes one element onto the end of the array a variable holds, in place.")
               (isolated)
               (parameter array (type (inout (array (some Element)))))
               (parameter element (type (some Element)))
@@ -32,7 +30,6 @@ enum Library {
                 (set array (call Standard.Collection.appending array element))))
             
             (procedure Standard.Collection.contains
-              (description "Whether an array holds a value.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -52,7 +49,6 @@ enum Library {
                 (return found)))
             
             (procedure Standard.Collection.dropFirst
-              (description "The elements after the first.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -67,7 +63,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.dropLast
-              (description "The elements before the last.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -82,7 +77,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.filter
-              (description "The elements a procedure answers true for.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -102,7 +96,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.first
-              (description "The first element.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -111,7 +104,6 @@ enum Library {
                 (return (path array (index 0)))))
             
             (procedure Standard.Collection.last
-              (description "The last element.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -121,7 +113,6 @@ enum Library {
                 (return (path array (index at)))))
             
             (procedure Standard.Collection.map
-              (description "Each element answered by a procedure, in order.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -138,7 +129,6 @@ enum Library {
                 (return answers)))
             
             (procedure Standard.Collection.prepending
-              (description "The elements with one more at the front.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -150,7 +140,6 @@ enum Library {
                 (return (call Standard.Collection.reversed grown))))
             
             (procedure Standard.Collection.reduce
-              (description "The elements folded into one, starting from a value.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -168,7 +157,6 @@ enum Library {
                 (return carried)))
             
             (procedure Standard.Collection.reversed
-              (description "The elements back to front.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -183,7 +171,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.sorted
-              (description "The elements in the order lessThan puts them in, for any type that orders.")
               (const)
               (isolated)
               (parameter array (type (array (some Element Standard.Comparable))))
@@ -243,7 +230,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.tryFilter
-              (description "The elements a procedure that may fail answers true for.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -264,7 +250,6 @@ enum Library {
                 (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.tryMap
-              (description "Each element answered by a procedure that may fail, in order.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -282,7 +267,6 @@ enum Library {
                 (return answers)))
             
             (procedure Standard.Collection.tryReduce
-              (description "The elements folded into one by a procedure that may fail, starting from a value.")
               (const)
               (isolated)
               (parameter array (type (array (some Element))))
@@ -301,7 +285,6 @@ enum Library {
                 (return carried)))
             
             (procedure Standard.Collection.values
-              (description "What a map holds, by its keys in the key order.")
               (const)
               (isolated)
               (parameter dictionary (type (dictionary (some Key Hashable) (some Entry))))
@@ -319,14 +302,12 @@ enum Library {
             """,
         "concurrent": """
             (warp 1)
-            (description "Running one closure once per element, written from the fan-out that runs a list of them.")
             (import Standard.Collection.appending)
             (import Standard.Collection.count)
             (import Standard.Comparable.lessThan)
             (import Standard.Concurrent.all)
             
             (procedure Standard.Concurrent.map
-              (description "Each element answered by a procedure, run at once, in the collection's order.")
               (isolated)
               (parameter array (type (array (some Element))))
               (parameter transform (type (procedure (isolated) (parameters (some Element) Int) (failing (anything)) (returns (some Answer)))))
@@ -353,13 +334,11 @@ enum Library {
             """,
         "logic": """
             (warp 1)
-            (description "Negation, difference, choosing and the connectives, written from equality.")
             (import Standard.Collection.count)
             (import Standard.Comparable.lessThan)
             (import Standard.Logic.equal)
             
             (procedure Standard.Logic.and
-              (description "Whether every one answers true, asked until one does not.")
               (const)
               (isolated)
               (parameter conditions (type (array (procedure (const) (isolated) (parameters) (returns Bool)))))
@@ -378,7 +357,6 @@ enum Library {
                 (return true)))
             
             (procedure Standard.Logic.not
-              (description "The opposite of a truth.")
               (const)
               (isolated)
               (parameter value (type Bool))
@@ -387,7 +365,6 @@ enum Library {
                 (return (call Standard.Logic.equal value false))))
             
             (procedure Standard.Logic.notEqual
-              (description "Whether two values differ.")
               (const)
               (isolated)
               (parameter lhs)
@@ -397,7 +374,6 @@ enum Library {
                 (return (call Standard.Logic.equal (call Standard.Logic.equal lhs rhs) false))))
             
             (procedure Standard.Logic.or
-              (description "Whether one answers true, asked until one does.")
               (const)
               (isolated)
               (parameter conditions (type (array (procedure (const) (isolated) (parameters) (returns Bool)))))
@@ -416,7 +392,6 @@ enum Library {
                 (return false)))
             
             (procedure Standard.Logic.select
-              (description "The value one of two sides answers, chosen by a truth.")
               (const)
               (isolated)
               (parameter condition (type Bool))
@@ -433,7 +408,6 @@ enum Library {
                 (return left)))
             
             (procedure Standard.Logic.tryAnd
-              (description "Whether every side, each of which may fail, answers true, asked until one does not.")
               (const)
               (isolated)
               (parameter conditions (type (array (procedure (const) (isolated) (parameters) (failing (anything)) (returns Bool)))))
@@ -453,7 +427,6 @@ enum Library {
                 (return true)))
             
             (procedure Standard.Logic.tryOr
-              (description "Whether one side, each of which may fail, answers true, asked until one does.")
               (const)
               (isolated)
               (parameter conditions (type (array (procedure (const) (isolated) (parameters) (failing (anything)) (returns Bool)))))
@@ -473,7 +446,6 @@ enum Library {
                 (return false)))
             
             (procedure Standard.Logic.trySelect
-              (description "The value one of two sides, each of which may fail, answers, chosen by a truth.")
               (const)
               (isolated)
               (parameter condition (type Bool))
@@ -492,14 +464,12 @@ enum Library {
             """,
         "math": """
             (warp 1)
-            (description "Ordering the other way round, choosing between two and dropping a sign, written from lessThan and minus.")
             (import Standard.Comparable)
             (import Standard.Comparable.lessThan)
             (import Standard.Numeric)
             (import Standard.Numeric.minus)
             
             (procedure Standard.Math.absolute
-              (description "The number without its sign.")
               (const)
               (isolated)
               (parameter number (type (some N Standard.Comparable Standard.Numeric)))
@@ -513,7 +483,6 @@ enum Library {
                 (return (call Standard.Numeric.minus zero number))))
             
             (procedure Standard.Math.greaterThan
-              (description "Whether the first is larger, by the one order.")
               (const)
               (isolated)
               (parameter lhs (type (some T Standard.Comparable)))
@@ -523,7 +492,6 @@ enum Library {
                 (return (call Standard.Comparable.lessThan rhs lhs))))
             
             (procedure Standard.Math.max
-              (description "The larger of two of one type, by the one order.")
               (const)
               (isolated)
               (parameter lhs (type (some T Standard.Comparable)))
@@ -537,7 +505,6 @@ enum Library {
                 (return rhs)))
             
             (procedure Standard.Math.min
-              (description "The smaller of two of one type, by the one order.")
               (const)
               (isolated)
               (parameter lhs (type (some T Standard.Comparable)))
@@ -552,7 +519,6 @@ enum Library {
             """,
         "text": """
             (warp 1)
-            (description "Scanning text, written from its characters.")
             (import Standard.Collection.appending)
             (import Standard.Collection.count)
             (import Standard.Comparable.lessThan)
@@ -565,7 +531,6 @@ enum Library {
             (import Standard.Text.joined)
             
             (procedure Standard.Text.contains
-              (description "Whether a string holds another inside it.")
               (const)
               (isolated)
               (parameter text (type String))
@@ -596,7 +561,6 @@ enum Library {
                 (return false)))
             
             (procedure Standard.Text.replacing
-              (description "Every occurrence of a piece swapped for another.")
               (const)
               (isolated)
               (parameter text (type String))
@@ -612,7 +576,6 @@ enum Library {
                 (return (call Standard.Text.joined (call Standard.Text.split text target) replacement))))
             
             (procedure Standard.Text.split
-              (description "The text cut on a separator.")
               (const)
               (isolated)
               (parameter text (type String))
@@ -661,7 +624,6 @@ enum Library {
                 (return (call Standard.Collection.appending pieces (call Standard.Text.joined current "")))))
             
             (procedure Standard.Text.startsWith
-              (description "Whether a string begins with another.")
               (const)
               (isolated)
               (parameter text (type String))

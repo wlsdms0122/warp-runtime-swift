@@ -675,11 +675,9 @@ struct ObjectReader {
             throw ObjectRefused("a parameter taking anything writes no type")
         }
 
-        let read = Parameter(name: name, type: type ?? .any, description: try cursor.field().maybe(text))
-
         try cursor.end()
 
-        return read
+        return Parameter(name: name, type: type ?? .any)
     }
 
     private func access(_ value: Value) throws -> Access {

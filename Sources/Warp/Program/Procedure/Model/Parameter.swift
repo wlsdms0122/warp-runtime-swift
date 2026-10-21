@@ -7,26 +7,19 @@
 
 import Foundation
 
-// One parameter of a declaration: the name its body reads it by, what it
-// takes, and what it says of itself to a reader. The name is the
-// declaration's; a procedure type carries none.
+// One parameter of a declaration: the name its body reads it by and what it
+// takes. The name is the declaration's; a procedure type carries none.
 public struct Parameter: Sendable, Equatable {
     // MARK: - Property
     public let name: Name
 
     // What this takes. A document writing no type for it says `Any`.
     public let type: TypeExpression
-    public let description: String?
 
     // MARK: - Initializer
-    public init(
-        name: Name,
-        type: TypeExpression = .any,
-        description: String? = nil
-    ) {
+    public init(name: Name, type: TypeExpression = .any) {
         self.name = name
         self.type = type
-        self.description = description
     }
 
     // MARK: - Public

@@ -8,19 +8,17 @@
 import Foundation
 import Warp
 
-// What a parameter says beside its name: the type and a description. Read
-// apart from the name because the pair form a notation offers writes the name
-// as the key and these under it.
+// What a parameter says beside its name: the type. Read apart from the name
+// because the pair form a notation offers writes the name as the key and this
+// under it.
 struct ParameterFieldsReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case type
-        case description
     }
 
     // MARK: - Property
     // Omitting `type:` says `Any`, the one way a document says it.
     let type: TypeExpression
-    let description: String?
 
     // The type parameters the type names, where a bound may stand beside the
     // first.
@@ -46,7 +44,6 @@ struct ParameterFieldsReader: Decodable {
 
         self.type = type?.type ?? .any
         self.namings = type?.namings ?? []
-        self.description = try container.decodeIfPresent(String.self, forKey: .description)
     }
 
     // MARK: - Public

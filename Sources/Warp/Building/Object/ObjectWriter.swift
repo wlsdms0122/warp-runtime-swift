@@ -461,8 +461,7 @@ struct ObjectWriter {
     private func parameter(_ parameter: Parameter) throws(ObjectUnwritable) -> Value {
         .array([
             name(parameter.name),
-            try ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type),
-            ObjectWriter.maybe(parameter.description, Value.string)
+            try ObjectWriter.maybe(parameter.type == .any ? nil : parameter.type, type)
         ])
     }
 

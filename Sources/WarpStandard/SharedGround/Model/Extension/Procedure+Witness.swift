@@ -17,11 +17,9 @@ extension Procedure {
         _ query: Q,
         taking type: TypeExpression,
         returns: TypeExpression,
-        bounds: [Name: Set<Name>] = [:],
-        description: String
+        bounds: [Name: Set<Name>] = [:]
     ) -> Procedure {
         Procedure(
-            description: description,
             signature: Signature(
                 parameters: Q.Parameters.allCases.map { parameter in Parameter(name: parameter.name, type: type) },
                 returns: returns,

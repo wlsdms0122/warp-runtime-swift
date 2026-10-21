@@ -20,7 +20,6 @@ import Foundation
 // order.
 public struct Procedure: Sendable {
     // MARK: - Property
-    public let description: String?
     public let signature: Signature
     public let implementation: Implementation
 
@@ -32,12 +31,10 @@ public struct Procedure: Sendable {
 
     // MARK: - Initializer
     public init(
-        description: String? = nil,
         access: Access = .internal,
         signature: Signature = Signature(),
         implementation: Implementation
     ) {
-        self.description = description
         self.access = access
         self.signature = signature
         self.implementation = implementation
@@ -46,13 +43,11 @@ public struct Procedure: Sendable {
     // A procedure written in the language. The common case, and the one a
     // document can spell.
     public init(
-        description: String? = nil,
         access: Access = .internal,
         signature: Signature = Signature(),
         body: Body
     ) {
         self.init(
-            description: description,
             access: access,
             signature: signature,
             implementation: .body(body)
@@ -64,7 +59,6 @@ public struct Procedure: Sendable {
     // signature reads as once it is completed or bounded.
     func with(signature: Signature) -> Procedure {
         Procedure(
-            description: description,
             access: access,
             signature: signature,
             implementation: implementation
@@ -73,7 +67,6 @@ public struct Procedure: Sendable {
 
     public func with(access: Access) -> Procedure {
         Procedure(
-            description: description,
             access: access,
             signature: signature,
             implementation: implementation

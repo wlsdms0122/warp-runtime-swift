@@ -56,8 +56,8 @@ public struct Notation: Sendable {
     public private(set) var interpolation: Interpolation?
 
     // Whether a parameter may be written as one pair, `count: Int` for
-    // `{ name: count, type: Int }` and `count: { type: Int, description: … }`
-    // for the mapping with the name inside. A document writes the mapping.
+    // `{ name: count, type: Int }` and `count: {}` for `{ name: count }`. A
+    // document writes the mapping.
     public let pairedParameter: Bool
 
     // The key a procedure and a closure may end with, holding what the body

@@ -70,7 +70,7 @@ struct CaseTests {
     }
 
     @Test("is refused where its vocabulary writes what a vocabulary does not declare", arguments: [
-        "(warp 1)", "(const k 1)", "(var v 2)", "(description \"d\")"
+        "(warp 1)", "(const k 1)", "(var v 2)"
     ])
     func aVocabularyKeyItDoesNotDeclare(key: String) throws {
         // When / Then. The runner builds the host's module from what a

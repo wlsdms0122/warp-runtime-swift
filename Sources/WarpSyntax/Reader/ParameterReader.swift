@@ -55,11 +55,7 @@ struct ParameterReader: Decodable {
 
             let rest = try keyed.decode(ParameterFieldsReader.self, forKey: key)
 
-            self.parameter = Parameter(
-                name: name,
-                type: rest.type,
-                description: rest.description
-            )
+            self.parameter = Parameter(name: name, type: rest.type)
             self.namings = rest.namings
 
             return
@@ -76,7 +72,7 @@ struct ParameterReader: Decodable {
         let name = try Name.read(try container.decode(String.self, forKey: .name), at: decoder.steps)
         let fields = try ParameterFieldsReader(reading: decoder)
 
-        self.parameter = Parameter(name: name, type: fields.type, description: fields.description)
+        self.parameter = Parameter(name: name, type: fields.type)
         self.namings = fields.namings
     }
 
