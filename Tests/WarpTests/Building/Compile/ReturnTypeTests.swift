@@ -106,14 +106,14 @@ struct ReturnTypeTests {
     func aLiteralAnsweredTakesTheDeclaredName() async throws {
         // Given. The same list written straight into the answer, and held
         // first by a name that says nothing of the struct
-        func module(answering result: Warp.Expression, holding body: Body = []) throws -> Module {
+        func module(answering answer: Warp.Expression, holding body: Body = []) throws -> Module {
             try Module(
                 types: ["Task": .struct(["id": .string])],
                 procedures: [
                     "entry": Procedure(
                         access: .public,
                         signature: Signature(returns: .array(.named("Task"))),
-                        body: Body(body.statements + [returning(result)])
+                        body: Body(body.statements + [returning(answer)])
                     )
                 ]
             )

@@ -903,7 +903,7 @@ struct ValidationTests {
     }
 
     @Test("what a return carries is checked against what the body left visible")
-    func resultsSeeTheWholeBody() throws {
+    func returnsSeeTheWholeBody() throws {
         // Given
         let sut = Procedure(
             body: [

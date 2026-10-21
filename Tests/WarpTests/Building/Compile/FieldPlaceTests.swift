@@ -42,7 +42,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then. `y` follows `x` in the layout's order.
         #expect(steps == [.field(1, "y", optional: false)])
@@ -64,7 +64,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then
         #expect(steps == [.field(1, "b", optional: false)])
@@ -82,7 +82,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then
         #expect(steps == [.index("a", optional: false)])
@@ -100,7 +100,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then. `inner` follows `head`, and `deep` follows `beside`
         #expect(steps == [.field(1, "inner", optional: false), .field(1, "deep", optional: false)])
@@ -151,7 +151,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: [
@@ -181,7 +181,7 @@ struct FieldPlaceTests {
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: ["given": .dictionary(["a": .int(0), "y": .int(2)])]
@@ -196,7 +196,7 @@ struct FieldPlaceTests {
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests
     // read what the build lowered.
-    private func resultSteps(of procedure: Procedure) async throws -> [Step] {
+    private func answerSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
             [try Module(types: Self.types, procedures: [entryName: procedure.with(access: .public)])] + Module.standard
         )

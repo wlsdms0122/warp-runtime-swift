@@ -64,7 +64,7 @@ struct DictionaryProcedureTests {
     // MARK: - Private
     // An entry handed a map of whole numbers and a key, answering what it
     // asks of them.
-    private static func asking(_ result: Warp.Expression) -> Procedure {
+    private static func asking(_ answer: Warp.Expression) -> Procedure {
         Procedure(
             signature: Signature(
                 parameters: [
@@ -74,7 +74,7 @@ struct DictionaryProcedureTests {
                 returns: .any,
                 failing: .anything
             ),
-            body: [returning(result)]
+            body: [returning(answer)]
         )
     }
 }

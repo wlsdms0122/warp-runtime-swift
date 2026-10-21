@@ -21,7 +21,7 @@ struct VariableNotationTests {
     // MARK: - Initializer
     // MARK: - Test
     @Test("a write inside a nested body outlives it")
-    func assignmentOutlivesItsBlock() async throws {
+    func assignmentOutlivesItsBody() async throws {
         // Given. The one thing a binding cannot do: a conditional that ran changes
         // what an enclosing name means afterwards
         let sut = try loader.loadProcedure([
