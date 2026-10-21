@@ -2,7 +2,7 @@
 //  Library.swift
 //  WarpStandard
 //
-//  Written by script/embed-library.sh. Edit warp/lib/standard and run it again.
+//  Written by tool/embed-library.sh. Edit warp/lib/standard and run it again.
 //
 
 import Foundation

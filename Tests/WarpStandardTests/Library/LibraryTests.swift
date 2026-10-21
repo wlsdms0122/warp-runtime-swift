@@ -13,7 +13,7 @@ import WarpSyntax
 
 // The documents of `lib/standard` are the source and what ships is a copy of them,
 // so the two being the same bytes is what the copy is worth. A document edited
-// without running `script/embed-library.sh` is caught here rather than by a
+// without running `tool/embed-library.sh` is caught here rather than by a
 // runtime that quietly answers the old one.
 @Suite("The vocabulary written in Warp")
 struct LibraryTests {
@@ -45,7 +45,7 @@ struct LibraryTests {
 
             #expect(
                 Library.documents[name] == written.trimmingCharacters(in: .newlines),
-                "\(name).warpt differs from what ships. Run script/embed-library.sh"
+                "\(name).warpt differs from what ships. Run tool/embed-library.sh"
             )
         }
     }
