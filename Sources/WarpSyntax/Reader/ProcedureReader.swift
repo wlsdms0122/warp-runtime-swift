@@ -8,11 +8,12 @@
 import Foundation
 import Warp
 
-// A procedure: its own keys, the signature's and the block's.
+// A procedure: its own keys, the signature's and its body.
 struct ProcedureReader: Decodable {
     enum CodingKeys: String, CodingKey, CaseIterable {
         case description
         case access
+        case body
     }
 
     // MARK: - Property
@@ -24,7 +25,7 @@ struct ProcedureReader: Decodable {
     init(from decoder: Decoder) throws {
         try Self.gate(decoder)
 
-        let block = try BlockReader(reading: decoder).block
+        let body = try Self.body(in: decoder)
         let access = try Self.access(in: decoder)
 
         // A procedure has no name of its own. It is named by the key its module
@@ -33,8 +34,7 @@ struct ProcedureReader: Decodable {
             description: try Self.description(in: decoder),
             access: access ?? .internal,
             signature: try SignatureFieldsReader(reading: decoder).signature,
-            body: block.body,
-            result: block.result
+            body: body
         )
     }
 
@@ -45,9 +45,30 @@ struct ProcedureReader: Decodable {
             in: decoder,
             known: CodingKeys.self,
             extra: SignatureFieldsReader.CodingKeys.allCases.map(\.stringValue)
-                + BlockReader.CodingKeys.allCases.map(\.stringValue),
+                + [decoder.notation.answerKey?.spelling].compactMap { key in key },
             context: "procedure"
         )
+    }
+
+    // The statements under `body`, and where the notation offers an answer
+    // key, the `return` it is read as after them.
+    private static func body(in decoder: Decoder) throws -> Body {
+        var body = try decoder.descendingIfPresent(to: CodingKeys.body)?
+            .read(BodyReader.self)
+            .body ?? []
+
+        guard
+            let key = decoder.notation.answerKey.map({ key in AnyCodingKey(stringValue: key.spelling) }),
+            try decoder.container(keyedBy: AnyCodingKey.self).contains(key)
+        else {
+            return body
+        }
+
+        let answer = try decoder.descendingIfPresent(to: key)?.read(ExpressionReader.self).expression
+
+        body.append(Statement(expression: .leave(.procedure(answer))))
+
+        return body
     }
 
     private static func description(in decoder: Decoder) throws -> String? {

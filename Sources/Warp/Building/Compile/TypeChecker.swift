@@ -105,8 +105,7 @@ struct TypeChecker {
 
         // What a list or map literal holds where it is written into a slot,
         // part by part, where its reading, joined across the parts, does not
-        // say. A block holds what its result holds, and an attempt what each
-        // of its two ways answers.
+        // say.
         var literalShape: LiteralShape?
 
         // What the expression holds where it is written into a slot.
@@ -134,46 +133,38 @@ struct TypeChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // A block with every dot judged and every call it writes judged against
-    // the signature its selector names, before what the block answers is: a
+    // A body with every dot judged and every call it writes judged against
+    // the signature its selector names, before what the body answers is: a
     // call whose types fail to fill is refused for itself, not for the answer
     // it leaves. Statements are read in order because that is what a body
     // means. A name holds what the statement before it bound.
     func resolvedSites(
-        in block: Block,
+        in body: Body,
         at place: Place,
         in environment: [Name: Binding],
         declaring selector: Name,
         answering returns: TypeExpression,
         with context: TypingContext,
         folding: Folding?
-    ) async throws -> (block: Block, judgements: JudgementTable) {
+    ) async throws -> (body: Body, judgements: JudgementTable) {
         let promised = returns.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
         let inner = try await inspected(
-            block: block,
-            into: promised,
-            at: place,
+            body,
+            at: place.part(.body),
             in: environment,
             with: context,
             ask: .judging(folding: folding, answering: promised)
         )
 
         try checked(inner.calls, in: context)
-        try refuseAnswers(
-            written: LiteralShape(inner.literalShape, reading: inner.reading),
-            answered: inner.flow.answered,
-            to: promised,
-            result: inner.block.result,
-            at: place,
-            in: context.loweredTypes
-        )
+        try refuseAnswers(of: inner, to: promised, at: place.part(.body), in: context.loweredTypes)
 
-        return (promised.written(inner.block, in: context.loweredTypes), inner.judgements)
+        return (inner.body, inner.judgements)
     }
 
-    // The expression form, with what it was judged to hold. A constant's body
-    // is one rather than a block, and a variable's start is written into
-    // the type the variable declares and held to it, as a name's value is.
+    // The expression form, with what it was judged to hold. A constant's
+    // value is one, and a variable's start is written into the type the
+    // variable declares and held to it, as a name's value is.
     func resolvedSites(
         in expression: Expression,
         into declared: LoweredType?,
@@ -236,10 +227,7 @@ struct TypeChecker {
         }
     }
 
-    // One answer, held to the `returns`. The refusal stands where the author
-    // can act on it: at the `result` when one is written, at the `returns`
-    // when the body answers nothing at all, and at a `return` for what it
-    // carries.
+    // What one `return` carries, held to the `returns` at the `return`.
     private func refuseAnswer(
         _ written: LiteralShape,
         to promised: LoweredType,
@@ -938,22 +926,22 @@ struct TypeChecker {
         return .reads(current, placed: placed)
     }
 
-    // What a body answers, held to the `returns` written beside it: what the
-    // result and every `return` that carried something out hold written into
-    // the answer, each at its own place. A declaration and a closure literal
-    // each write both in one document, so each asks here rather than working
-    // the question out again further on.
+    // What a body answers, held to the `returns` written beside it: what
+    // every `return` carried out held written into the answer, each at its
+    // own place, and a body whose declaration promises an answer leaving on
+    // every way through it, since a way that reaches the end answers
+    // nothing. A declaration and a closure literal each write both in one
+    // document, so each asks here rather than working the question out again
+    // further on.
     //
     // What opens to `Any` stands only where `Any` is declared.
     private func refuseAnswers(
-        written answer: LiteralShape,
-        answered: [Flow.Answer],
+        of walk: BodyWalk,
         to promised: LoweredType,
-        result: Expression?,
         at place: Place,
         in table: LoweredTypeTable
     ) throws {
-        for one in answered {
+        for one in walk.flow.answered {
             try refuseAnswer(
                 LiteralShape(one.literalShape, reading: one.reading),
                 to: promised,
@@ -962,11 +950,12 @@ struct TypeChecker {
             )
         }
 
-        try refuseAnswer(
-            answer,
-            to: promised,
-            at: place.part(result != nil ? .result : .returns),
-            in: table
+        guard promised != .null, walk.reading != .never else { return }
+
+        throw BuildError(
+            "reaches its end on a way that returns nothing, and its"
+                + " declaration promises \(promised.rendered(in: table))",
+            at: place
         )
     }
 
@@ -1268,9 +1257,8 @@ struct TypeChecker {
         // value wrote left with the leave.
         case let .leave(leave):
             // What the procedure answers this way. Only a `return` reaches the
-            // caller (a `break` ends its loop and a `continue` its round) and
-            // one carrying nothing hands back the null a body with no result
-            // hands back, which is the run's own answer for it.
+            // caller (a `break` ends its loop and a `continue` its round), and
+            // one carrying nothing hands back null.
             func answering(_ flowed: Flow, carrying carried: Inspection?) -> Flow {
                 guard case .procedure = leave else { return flowed }
 
@@ -1711,7 +1699,7 @@ struct TypeChecker {
         // is held to its signature the way a declaration's body is.
         case let .closure(written):
             // The Validator refuses a closure literal that is not a body.
-            guard case let .body(block) = written.implementation else {
+            guard case let .body(writtenBody) = written.implementation else {
                 assertionFailure("a closure literal reached the type check without a body")
 
                 return Inspection(rewritten: expression, reading: .any)
@@ -1725,7 +1713,7 @@ struct TypeChecker {
             )
             var rewritten = expression
             var judgements = JudgementTable()
-            var body = block
+            var body = writtenBody
 
             // What the closure takes from where it was written: every name
             // there but the ones it declares, which are its own whatever a
@@ -1750,9 +1738,8 @@ struct TypeChecker {
                 _, own in own
             }
             let inner = try await inspected(
-                block: block,
-                into: promised,
-                at: place.child(.closure),
+                writtenBody,
+                at: place.child(.closure).part(.body),
                 in: opening,
                 with: context,
                 ask: ask.answering(promised)
@@ -1804,22 +1791,20 @@ struct TypeChecker {
 
                 try checked(inner.calls, in: context)
                 try refuseAnswers(
-                    written: LiteralShape(inner.literalShape, reading: inner.reading),
-                    answered: inner.flow.answered,
+                    of: inner,
                     to: promised,
-                    result: inner.block.result,
-                    at: place.child(.closure),
+                    at: place.child(.closure).part(.body),
                     in: context.loweredTypes
                 )
 
-                body = promised.written(inner.block, in: context.loweredTypes)
+                body = inner.body
                 judgements = inner.judgements
 
                 // Held as it was written, as a declaration's body is, from
                 // the names its body was read in: a name it captured carries
                 // what the slot it came from said about it.
                 if let refusal = EffectChecker(context).refusal(
-                    of: block,
+                    of: writtenBody,
                     declared: procedure.signature,
                     in: opening
                 ) {
@@ -2418,21 +2403,21 @@ struct TypeChecker {
                 literalShape: nil
             )
 
-        // The body and the rescue are two ways through, not a sequence. A body
-        // that fails midway made some of its writes and the rescue runs then,
-        // so what the body did on its way through and on every way that failed
-        // may be there, whichever way ran and however far it got. That is the
-        // environment the rescue reads as well as the one it writes. No write
-        // on either side is definite. A way that left the body by a leave
+        // An attempt answers nothing. The body and the rescue are its two ways
+        // through, not a sequence: a body that fails midway made some of its
+        // writes and the rescue runs then, so the rescue reads what the ways
+        // that failed did before they failed. Past the attempt, the way that
+        // finished the body meets the way that finished the rescue, each with
+        // what ran on it, so a write both make is definite the way one both
+        // arms of a conditional make is. A way that left the body by a leave
         // lands where the leave lands; what it did before a failure is on the
         // way that failed.
-        case let .attempt(block, rescue):
+        case let .attempt(body, rescue):
             let failure = name
 
             let attempted = try await inspected(
-                block: block,
-                into: declared,
-                at: place.child(.held),
+                body,
+                at: place.child(.attempted),
                 in: environment,
                 with: context,
                 ask: ask
@@ -2457,125 +2442,37 @@ struct TypeChecker {
                 )
             }
             let rescued = try await inspected(
-                block: rescue,
-                into: declared,
+                rescue,
                 at: place.child(.rescue),
                 in: caught(soaking: failed, failure: failure, in: environment, with: context),
                 with: context,
                 ask: ask
             )
 
-            // What goes on past the body joins what goes on past the rescue,
-            // and no write on either side is certain.
-            var flow = try failed.map { failed in
+            // The failure is bound in the rescue alone. The body reads the
+            // names around the attempt.
+            let flow = try failed.map { failed in
                 try past.joined(
                     with: rescued.flow.outside(Set([failure].compactMap { $0 })).preceded(by: failed),
                     meeting: meets
                 )
             } ?? past
 
-            flow.going = flow.going?.indefinite()
-
-            // What the attempt answers is where its two ways meet.
-            let shape = LiteralShape.either(
-                LiteralShape(attempted.literalShape, reading: attempted.reading),
-                LiteralShape(rescued.literalShape, reading: rescued.reading)
-            )
-
             return Inspection(
-                rewritten: ask.rewrites ? .attempt(attempted.block, rescue: rescued.block) : expression,
+                rewritten: ask.rewrites ? .attempt(attempted.body, rescue: rescued.body) : expression,
                 calls: attempted.calls + rescued.calls,
                 judgements: attempted.judgements.absorbing(rescued.judgements),
-                reading: shape.folded,
-                // The failure is bound in the rescue alone. The body reads
-                // the names around the attempt.
-                flow: flow,
-                literalShape: shape
+                reading: attempted.reading == .never && rescued.reading == .never ? .never : .null,
+                flow: flow
             )
         }
-    }
-
-    // A block: its body, then the result in the environment the body left
-    // visible, written into `declared`. A result after a statement no run
-    // comes back from is judging's to refuse. The probing ask answers `Never`
-    // and moves on.
-    private func inspected(
-        block: Block,
-        into declared: LoweredType?,
-        at place: Place,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        ask: Ask
-    ) async throws -> (
-        block: Block,
-        calls: [CallSite],
-        judgements: JudgementTable,
-        reading: LoweredType,
-        literalShape: LiteralShape?,
-        flow: Flow
-    ) {
-        let body = try await inspected(
-            block.body,
-            at: place.child(.body),
-            in: environment,
-            with: context,
-            ask: ask
-        )
-
-        // Where the result reads, or why it does not. A block's result sits
-        // after its statements. It reads in the environment the body left, and
-        // a body no run comes back from leaves it nothing to run, refused.
-        let tail: Inspection?
-        let reading: LoweredType
-        let flow: Flow
-
-        if body.reading == .never {
-            if block.result != nil {
-                try refuse(Expression.resultAfterWhatNeverFinishes, at: place.child(.result), when: ask)
-            }
-
-            tail = nil
-            reading = .never
-            flow = body.flow
-        } else if let result = block.result {
-            let read = try await inspected(
-                result,
-                naming: nil,
-                into: declared,
-                at: place.child(.result),
-                in: body.environment,
-                with: context,
-                ask: ask
-            )
-
-            tail = read
-            reading = read.reading
-            flow = body.flow.followed(by: read.flow.outside(body.locals))
-        } else {
-            tail = nil
-            reading = .null
-            flow = body.flow
-        }
-
-        // One assembly for every way through, so no way out can drop what
-        // judging rewrote.
-        return (
-            ask.rewrites
-                ? Block(body: body.body, result: tail?.rewritten ?? block.result)
-                : block,
-            body.calls + (tail?.calls ?? []),
-            body.judgements.absorbing(tail?.judgements),
-            reading,
-            tail?.literalShape,
-            flow
-        )
     }
 
     // A body read in order: the environment its statements leave behind,
     // `Never` where one of them ends every way through, and its outward writes.
     // Each statement's own binding included, except the names the body declared
     // itself, which die with it. Only the box a `set` writes outlives the
-    // block. The one statement of the sequence rule, whichever ask is walking.
+    // body. The one statement of the sequence rule, whichever ask is walking.
     private func inspected(
         _ body: Body,
         at place: Place,
@@ -2607,7 +2504,7 @@ struct TypeChecker {
             calls += inner.calls
             judgements.absorb(inner.judgements)
 
-            // A write outlives the block it was written in, so a name written
+            // A write outlives the body it was written in, so a name written
             // anywhere inside this statement may hold something else by the
             // time the next one reads it, and bubbles outward, except through
             // the names this body declared itself.
@@ -2788,9 +2685,9 @@ struct TypeChecker {
         return environment.merging([round: Binding(.fixed(declared: nil), table.prelude(TypeSpelling.round))]) { _, new in new }
     }
 
-    // The environment a rescue stands in: the entry, soaked with what the
-    // ways that failed did before they failed (no write certain, none ruled
-    // out) plus the failure under its name, where the attempt binds one.
+    // The environment a rescue stands in: the entry, after what the ways that
+    // failed did before they failed, met as ways do, plus the failure under
+    // its name, where the attempt binds one.
     private func caught(
         soaking failed: Way?,
         failure: Name?,
@@ -2799,7 +2696,7 @@ struct TypeChecker {
     ) -> [Name: Binding] {
         var caught = environment
 
-        failed?.indefinite().apply(to: &caught)
+        failed?.apply(to: &caught)
 
         if let failure {
             caught[failure] = Binding(.fixed(declared: nil), context.loweredTypes.prelude(TypeSpelling.failure))

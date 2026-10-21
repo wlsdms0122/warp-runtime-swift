@@ -143,8 +143,12 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let returned: Value
 
+        // A body answers through `return`, so one that reaches its end
+        // answers nothing.
         do {
-            returned = try await run(body, in: &activation, at: trace)
+            try await perform(body.instructions, in: &activation, at: trace)
+
+            returned = .null
         } catch let leaving as Leaving where leaving.reach == .procedure {
             // A closure is a procedure, so this is also what stops a `return`
             // written inside one from answering for the procedure around it.
@@ -164,16 +168,6 @@ struct Evaluator: Sendable {
         }
 
         return returned
-    }
-
-    // A body answers what it says it answers, and a body that says nothing
-    // answers nothing.
-    private func run(_ body: LoweredBody, in activation: inout Activation, at trace: Trace) async throws -> Value {
-        try await perform(body.instructions, in: &activation, at: trace)
-
-        guard let result = body.result else { return .null }
-
-        return try await evaluate(result, in: &activation, at: trace)
     }
 
     // Instructions in order, each landing its answer in the slot it binds.
@@ -196,7 +190,7 @@ struct Evaluator: Sendable {
             case let .bind(slot)?:
                 activation.cells[slot] = .value(result)
 
-            // A new box, so a variable declared inside a block shadows rather
+            // A new box, so a variable declared inside a nested body shadows rather
             // than writes an outer one of the same name.
             case let .declare(slot)?:
                 activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))
@@ -360,8 +354,12 @@ struct Evaluator: Sendable {
 
             return .null
 
+        // An attempt answers nothing: what either way keeps it writes to an
+        // outer variable.
         case let .attempt(body, rescue, failure):
-            return try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
+            try await attempt(body, rescue: rescue, failure: failure, in: &activation, at: trace)
+
+            return .null
 
         // Nothing comes back, so this answers by not answering. What it carries
         // is worked out here, where the names it reads are still in scope.
@@ -617,14 +615,14 @@ struct Evaluator: Sendable {
     }
 
     private func attempt(
-        _ body: LoweredBody,
-        rescue: LoweredBody,
+        _ body: [Instruction],
+        rescue: [Instruction],
         failure: Int?,
         in activation: inout Activation,
         at trace: Trace
-    ) async throws -> Value {
+    ) async throws {
         do {
-            return try await run(body, in: &activation, at: trace)
+            try await perform(body, in: &activation, at: trace)
         } catch {
             guard !Task.isCancelled else { throw error }
 
@@ -651,7 +649,7 @@ struct Evaluator: Sendable {
                 error: error
             )
 
-            return try await run(rescue, in: &activation, at: trace)
+            try await perform(rescue, in: &activation, at: trace)
         }
     }
 

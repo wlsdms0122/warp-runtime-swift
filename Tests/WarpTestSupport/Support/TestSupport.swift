@@ -73,25 +73,28 @@ public func procedureValue() async throws -> Value {
     try await run(
         Procedure(
             signature: Signature(returns: .procedure(ProcedureType(returns: .null, failing: .these([])))),
-            body: [],
-            result: .closure(Procedure(body: [], result: .literal(.null)))
+            body: [returning(.closure(Procedure(body: [])))]
         )
     )
 }
 
 // What a body answers with, for the many tests that care about one value rather
-// than a result map. Unless a test says otherwise, the body may answer
-// anything and fail with anything.
+// than a map of several. The body returns `value` after its statements, and
+// unless a test says otherwise it may answer anything and fail with anything.
 public func answer(
     of body: Body,
-    result: Warp.Expression,
+    returning value: Warp.Expression,
     beside others: [Name: Procedure] = [:],
     arguments: [Name: Value] = [:],
     signature: Signature = Signature(returns: .any, failing: .anything),
     vocabulary: [Module] = Module.standard
 ) async throws -> Value? {
-    try await run(
-        Procedure(signature: signature, body: body, result: result),
+    var returned = body
+
+    returned.append(returning(value))
+
+    return try await run(
+        Procedure(signature: signature, body: returned),
         beside: others,
         arguments: arguments,
         vocabulary: vocabulary
@@ -141,6 +144,11 @@ public func map(_ entries: [Name: Warp.Expression]) -> Warp.Expression {
     )
 }
 
+// A statement leaving the procedure with what it answers.
+public func returning(_ value: Warp.Expression) -> Statement {
+    Statement(expression: .leave(.procedure(value)))
+}
+
 // MARK: - Conditions
 
 // Equality and the connectives are procedures, so a test writing one writes
@@ -177,7 +185,7 @@ private func chained(_ selector: Name, _ conditions: [Warp.Expression]) -> Warp.
                         .closure(
                             Procedure(
                                 signature: Signature(returns: .bool, constness: .const, isolation: .isolated),
-                                implementation: .body(Block(body: [], result: condition))
+                                body: [returning(condition)]
                             )
                         )
                     }

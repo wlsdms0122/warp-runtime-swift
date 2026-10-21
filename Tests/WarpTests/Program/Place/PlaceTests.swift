@@ -225,27 +225,28 @@ struct PlaceTests {
     @Test("every walk that reports a place steps through the same slots to reach one")
     func theWalksAgreeOnHowDeepASlotIs() async throws {
         // Given. One call, held under an attempt's rescue: a slot no walk
-        // reaches without stepping through the keys between. Four walks report
+        // reaches without stepping through the keys between. Five walks report
         // places and each destructures the language for itself, so what one of
         // them forgets to step into is a place that reads like another one.
         //
         // Each of them is made to speak about this call in the way only it can:
         // a name nothing declares for the walk that checks the document against
         // itself, a procedure nothing declares for the walk that resolves names, a
-        // claim the types already prove for the walk that reads them.
-        let reached = "procedures.entry.body.guarded[0].attempt.rescue.body.sent[0].call"
+        // claim the types already prove for the walk that reads them, a type
+        // nothing declares for the walk that holds what a body names.
+        let reached = "procedures.entry.body.guarded[0].attempt.rescue.sent[0].call"
 
         func module(sending selector: Name, with argument: Warp.Expression) throws -> Module {
             try Module(
                 procedures: [
                     entryName: Procedure(access: .public, body: [
                         Statement(binding: .constant("guarded"), expression: .attempt(
-                                Block(body: [mayFail()]),
-                                rescue: Block(body: [
+                                [mayFail()],
+                                rescue: [
                                     Statement(binding: .constant("sent"), expression: .call(
                                         Call(selector: selector, arguments: [argument])
                                     ))
-                                ])
+                                ]
                             )
                         )
                     ]),
@@ -277,16 +278,27 @@ struct PlaceTests {
             )
         }
 
+        let named = await #expect(throws: BuildError.self) {
+            try await Builder().build(
+                [module(
+                    sending: "helper",
+                    with: .cast(.literal(.int(1)), as: .named("App.Nowhere"), optional: false)
+                )] + Module.standard
+            )
+        }
+
         // Then. Each says something different about the call, from one place
         #expect(load?.place?.rendered?.hasPrefix(reached) == true)
         #expect(bound?.place?.rendered?.hasPrefix(reached) == true)
         #expect(typed?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(named?.place?.rendered?.hasPrefix(reached) == true)
+        #expect(named?.message.contains("names type 'App.Nowhere'") == true)
 
         // And the walk that only gathers puts it in the same place
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
-                .procedures[entryName]?.block?
-                .subexpressions(at: .procedure(entryName.spelling, in: .assembled))
+                .procedures[entryName]?.implementation.body?
+                .subexpressions(at: Place.procedure(entryName.spelling, in: .assembled).part(.body))
                 .first { _, expression in
                     guard case .call = expression else { return false }
 
@@ -522,7 +534,7 @@ struct PlaceTests {
         // them.
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
             try Module(
-                procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
+                procedures: [procedure: Procedure(body: [returning(.literal(.int(1)))])],
                 identity: identity
             )
         }
@@ -551,7 +563,7 @@ struct PlaceTests {
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the host nothing it can act on.
         let module = try Module(
-            procedures: ["Pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
+            procedures: ["Pricing.taxed": Procedure(body: [returning(.literal(.int(1)))])],
             identity: Identity([0x01])
         )
 
@@ -687,7 +699,7 @@ struct PlaceTests {
         // sentence names two documents that read as one, and the place renders
         // without a document at all. Where the host put them is what is left.
         func declaring() throws -> Module {
-            try Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
+            try Module(procedures: ["taxed": Procedure(body: [returning(.literal(.int(1)))])])
         }
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])

@@ -49,9 +49,9 @@ struct WriterTests {
                                 as: .array(.string),
                                 optional: true
                             )
-                        )
-                    ],
-                    result: .reference([.name("named"), .name("count")])
+                        ),
+                        returning(.reference([.name("named"), .name("count")]))
+                    ]
                 )
             ]
         ),
@@ -87,9 +87,9 @@ struct WriterTests {
                                     Call(selector: "Standard.Collection.count", arguments: [.reference([.name("procedure")])])
                                 )
                             ])
-                        )
-                    ],
-                    result: .reference([.name("held")])
+                        ),
+                        returning(.reference([.name("held")]))
+                    ]
                 )
             ]
         ),
@@ -105,9 +105,9 @@ struct WriterTests {
                             ])
                         ),
                         Statement(binding: .variable("count"), expression: .literal(.int(0))),
-                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1)))
-                    ],
-                    result: .reference([.name("payload")])
+                        Statement(binding: .assignment([.name("count")]), expression: .literal(.int(1))),
+                        returning(.reference([.name("payload")]))
+                    ]
                 )
             ]
         )
@@ -128,14 +128,14 @@ struct WriterTests {
             "Task": [
                 "struct": ["done": "Bool", "id": "String"],
                 "satisfies": ["Scalar"],
-                "procedures": ["label": ["parameters": [["name": "of", "type": "Task"]], "returns": "String", "result": ["ref": "of.id"]]]
+                "procedures": ["label": ["parameters": [["name": "of", "type": "Task"]], "returns": "String", "body": [["value": ["return": ["ref": "of.id"]]]]]]
             ]
         ],
         "contracts": ["Scalar": [:]],
         "extensions": [
             "Int": [
                 "satisfies": ["Scalar"],
-                "procedures": ["same": ["parameters": [["name": "of", "type": "Int"]], "returns": "Int", "result": ["ref": "of"]]]
+                "procedures": ["same": ["parameters": [["name": "of", "type": "Int"]], "returns": "Int", "body": [["value": ["return": ["ref": "of"]]]]]]
             ],
             "String": ["satisfies": ["Scalar"]]
         ],
@@ -206,24 +206,20 @@ struct WriterTests {
                         "let": "tried",
                         "value": ["attempt": [
                             "body": [["let": "risky", "value": 1]],
-                            "result": ["ref": "risky"],
-                            "rescue": [
-                                "body": [["let": "instead", "value": 0]],
-                                "result": ["ref": "instead"]
-                            ]
+                            "rescue": [["let": "instead", "value": 0]]
                         ]
                     ]],
                     [
                         "let": "called",
                         "value": ["call": [
                             "procedure": [
-                                "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
+                                "closure": ["parameters": [["name": "n", "type": "Int"]], "body": [["value": ["return": ["ref": "n"]]]]]
                             ],
                             "arguments": [1]
                         ]
-                    ]]
-                ],
-                "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                    ]],
+                    ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+                ]
             ],
             "typed": [
                 "parameters": [
@@ -235,7 +231,7 @@ struct WriterTests {
                     ["name": "shaped", "type": "Task"]
                 ],
                 "returns": "Never",
-                "result": ["ref": "of"]
+                "body": [["value": ["return": ["ref": "of"]]]]
             ]
         ]
     ]
@@ -262,13 +258,13 @@ struct WriterTests {
                         ["let": "pair", "value": ["struct": ["a": ["ref": "procedure"], "b": 2]]],
                         ["let": "tagged", "value": ["struct": ["ref": "literal-text"]]],
                         ["var": "count", "value": ["ref": "counted"]],
-                        ["set": "count", "value": 2]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "pair"]]]]
+                        ["set": "count", "value": 2],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "pair"]]]]]]
+                    ]
                 ]
             ]
         ],
-        // Branch, block and the condition spellings
+        // Branch and the condition spellings
         [
             "imports": ["Standard.Logic.and", "Standard.Logic.equal", "Standard.Logic.not"],
             "procedures": [
@@ -289,22 +285,22 @@ struct WriterTests {
                                             [
                                                 [
                                                     "closure": [
-                                                        "result": [
+                                                        "body": [["value": ["return": [
                                                             "call": [
                                                                 "procedure": "Standard.Logic.equal",
                                                                 "arguments": [["ref": "procedure"], "hey"]
                                                             ]
-                                                        ]
+                                                        ]]]]
                                                     ]
                                                 ],
                                                 [
                                                     "closure": [
-                                                        "result": [
+                                                        "body": [["value": ["return": [
                                                             "call": [
                                                                 "procedure": "Standard.Logic.not",
                                                                 "arguments": [["ref": "ready"]]
                                                             ]
-                                                        ]
+                                                        ]]]]
                                                     ]
                                                 ]
                                             ]
@@ -314,9 +310,9 @@ struct WriterTests {
                                 "then": [["set": "pick", "value": "yes"]],
                                 "else": [["set": "pick", "value": "no"]]
                             ]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+                    ]
                 ]
             ]
         ],
@@ -353,16 +349,15 @@ struct WriterTests {
                                 "body": [["let": "one", "value": ["ref": "names[mapped.index]"]]]
                             ]
                         ]],
+                        ["var": "tried"],
                         [
-                            "let": "tried",
                             "value": ["attempt": [
-                                "body": [["let": "risky", "value": ["fail": true]]],
-                                "result": ["ref": "risky"],
-                                "rescue": ["result": "recovered"]
+                                "body": [["let": "risky", "value": ["fail": true]], ["set": "tried", "value": ["ref": "risky"]]],
+                                "rescue": [["set": "tried", "value": "recovered"]]
                             ]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "tried"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "tried"]]]]]]
+                    ]
                 ]
             ]
         ],
@@ -405,9 +400,9 @@ struct WriterTests {
                                     ]]
                                 ]
                             ]
-                        ]]
-                    ],
-                    "result": "done"
+                        ]],
+                        ["value": ["return": "done"]]
+                    ]
                 ]
             ]
         ],
@@ -429,12 +424,12 @@ struct WriterTests {
                                         "closure": [
                                             "parameters": [["name": "item", "type": "String"]],
                                             "returns": "Bool",
-                                            "result": [
+                                            "body": [["value": ["return": [
                                                 "call": [
                                                     "procedure": "Standard.Logic.notEqual",
                                                     "arguments": [["ref": "item"], ""]
                                                 ]
-                                            ]
+                                            ]]]]
                                         ]
                                     ]
                                 ]
@@ -444,7 +439,7 @@ struct WriterTests {
                             "let": "called",
                             "value": ["call": [
                                 "procedure": [
-                                    "closure": ["parameters": [["name": "n", "type": "Int"]], "result": ["ref": "n"]]
+                                    "closure": ["parameters": [["name": "n", "type": "Int"]], "body": [["value": ["return": ["ref": "n"]]]]]
                                 ],
                                 "arguments": [1]
                             ]
@@ -452,14 +447,14 @@ struct WriterTests {
                         [
                             "let": "line",
                             "value": ["format": "${procedure}!", "with": ["procedure": ["ref": "procedure"]]]
-                        ]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "line"]]]]
+                        ],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "line"]]]]]]
+                    ]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
                     "returns": "String",
-                    "result": ["ref": "of"]
+                    "body": [["value": ["return": ["ref": "of"]]]]
                 ],
                 "typed": [
                     "parameters": [
@@ -468,7 +463,7 @@ struct WriterTests {
                         ["name": "parameter", "type": "some Element"]
                     ],
                     "returns": "Never",
-                    "result": ["ref": "anything"]
+                    "body": [["value": ["return": ["ref": "anything"]]]]
                 ]
             ]
         ]
@@ -520,7 +515,7 @@ struct WriterTests {
         // a value that is text cannot be written there
         let sut = try Module(
             procedures: [
-                "entry": Procedure(body: [], result: .apply(.literal(.string("App.f")), arguments: []))
+                "entry": Procedure(body: [returning(.apply(.literal(.string("App.f")), arguments: []))])
             ]
         )
 
@@ -690,9 +685,9 @@ struct WriterTests {
                                 "format": "${procedure}/${pick}",
                                 "with": ["procedure": ["ref": "procedure"], "pick": ["ref": "pick"]]
                             ]
-                        ]
-                    ],
-                    "result": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]
+                        ],
+                        ["value": ["return": ["dictionary": [["picked", ["ref": "pick"]], ["sizes", ["ref": "walked"]], ["line", ["ref": "line"]]]]]]
+                    ]
                 ]
             ]
         ]
@@ -776,10 +771,10 @@ struct WriterTests {
         // Then
         guard
             case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
-            case let .body(block) = read.procedures["entry"]?.implementation,
-            block.body.statements.count == 2,
-            case let .struct(payload) = block.body.statements[0].expression,
-            case let .struct(held) = block.body.statements[1].expression
+            case let .body(readBody) = read.procedures["entry"]?.implementation,
+            readBody.statements.count == 2,
+            case let .struct(payload) = readBody.statements[0].expression,
+            case let .struct(held) = readBody.statements[1].expression
         else {
             Issue.record("a struct written under `struct` reads back as a struct")
 
@@ -837,8 +832,7 @@ struct WriterTests {
                 entryName: Procedure(
                     access: .public,
                     signature: bounded,
-                    body: [],
-                    result: .literal(.bool(true))
+                    body: [returning(.literal(.bool(true)))]
                 )
             ]
         )

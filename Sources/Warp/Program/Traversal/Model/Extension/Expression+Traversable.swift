@@ -25,7 +25,7 @@ extension Expression: Traversable {
             break
 
         case let .closure(procedure):
-            procedure.block?.walk(at: here, stepping: stepping, into: &found)
+            procedure.implementation.body?.walk(at: stepping(here, .part(.body)), stepping: stepping, into: &found)
 
         case let .cast(value, _, optional):
             walk(value, as: .subject(optional: optional), from: here, stepping: stepping, into: &found)
@@ -77,7 +77,7 @@ extension Expression: Traversable {
             body.walk(at: stepped(here, to: .round, by: stepping), stepping: stepping, into: &found)
 
         case let .attempt(attempted, rescue):
-            attempted.walk(at: stepped(here, to: .held, by: stepping), stepping: stepping, into: &found)
+            attempted.walk(at: stepped(here, to: .attempted, by: stepping), stepping: stepping, into: &found)
             rescue.walk(at: stepped(here, to: .rescue, by: stepping), stepping: stepping, into: &found)
         }
     }

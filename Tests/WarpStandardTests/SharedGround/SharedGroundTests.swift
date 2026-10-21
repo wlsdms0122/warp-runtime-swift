@@ -92,11 +92,12 @@ struct SharedGroundTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .double),
-                        body: [],
-                        result: .call(Call(
-                            selector: "Standard.Numeric.dividedBy",
-                            arguments: [.literal(.int(left)), .literal(.int(right))]
-                        ))
+                        body: [
+                            returning(.call(Call(
+                                selector: "Standard.Numeric.dividedBy",
+                                arguments: [.literal(.int(left)), .literal(.int(right))]
+                            )))
+                        ]
                     )
                 ]
             )
@@ -139,13 +140,13 @@ struct SharedGroundTests {
                             selector: "Standard.Numeric.dividedBy",
                             arguments: [.literal(.int(7)), .literal(.int(2))]
                         ))
-                        )
-                    ],
-                    result: map([
-                        "product": reference("product"),
-                        "quotient": reference("quotient"),
-                        "sum": reference("sum")
-                    ])
+                        ),
+                        returning(map([
+                            "product": reference("product"),
+                            "quotient": reference("quotient"),
+                            "sum": reference("sum")
+                        ]))
+                    ]
                 )
             ]
         )
@@ -187,9 +188,9 @@ struct SharedGroundTests {
                                     )
                                 ]
                             )
-                        )
-                    ],
-                    result: reference("verdict")
+                        ),
+                        returning(reference("verdict"))
+                    ]
                 )
             ]
         )
@@ -210,7 +211,7 @@ struct SharedGroundTests {
 
         // When / Then
         await #expect {
-            try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], result: reference("probe"))
+            try await answer(of: [Statement(binding: .constant("probe"), expression: sut)], returning: reference("probe"))
         } throws: { error in
             error is BuildError && "\(error)".contains("no claim within reach says 'Array' answers")
         }
@@ -242,8 +243,7 @@ struct SharedGroundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any, failing: .anything),
-                    body: [],
-                    result: .call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)]))
+                    body: [returning(.call(Call(selector: procedure, arguments: [.literal(subject), .literal(operand)])))]
                 )
             ]
         )

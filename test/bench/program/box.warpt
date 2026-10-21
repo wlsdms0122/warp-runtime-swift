@@ -7,8 +7,8 @@
   (returns Int)
   (body
     (var held 0)
-    (set held (call Standard.Numeric.plus held value)))
-  (result held))
+    (set held (call Standard.Numeric.plus held value))
+    (return held)))
 
 (procedure entry
   (access public)
@@ -20,5 +20,5 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (set seen (call counted 1))))))
-  (result seen))
+          (set seen (call counted 1)))))
+    (return seen)))

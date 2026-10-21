@@ -17,7 +17,7 @@ import Foundation
 // of native procedures links like any other, and a document calling one is
 // doing what a document calling a written body does.
 public enum Implementation: Sendable {
-    case body(Block)
+    case body(Body)
 
     // Answers without running anything, so its declaration may say it is
     // const.
@@ -56,10 +56,11 @@ public enum Implementation: Sendable {
         native?.imports
     }
 
-    public var block: Block? {
-        guard case let .body(block) = self else { return nil }
+    // The statements a written procedure runs, and nil for native code.
+    public var body: Body? {
+        guard case let .body(body) = self else { return nil }
 
-        return block
+        return body
     }
 
     // MARK: - Initializer

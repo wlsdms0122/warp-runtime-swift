@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A host settles a value against a declaration the build holds")
 struct HostDoorTests {
@@ -167,7 +168,7 @@ struct HostDoorTests {
             try Module(
                 imports: [],
                 types: ["Bank.Account": .struct(["balance": .int])],
-                procedures: ["entry": Procedure(access: .public, implementation: .body(Block(body: [], result: .literal(.null))))]
+                procedures: ["entry": Procedure(access: .public, body: [])]
             )
         }
     }
@@ -243,8 +244,7 @@ struct HostDoorTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "x")], returns: .any),
-                    body: [],
-                    result: .reference([.name("x")])
+                    body: [returning(.reference([.name("x")]))]
                 )
             ]
         )
@@ -318,7 +318,7 @@ struct HostDoorTests {
     @Test("what a failure carries comes in through the door, a struct under an alias's name as its struct")
     func aFailuresPayloadComesInThroughTheDoor() async throws {
         // Given. `App.carry` fails carrying `App.Q { a: 1 }`, `App.Q` an alias
-        // of the struct `App.P`, and the rescue answers what it carried
+        // of the struct `App.P`, and the rescue keeps what it carried
         let image = try await Builder().build(try carrying(.struct(Struct(name: "App.Q", ["a": .int(1)]))))
 
         // When
@@ -358,18 +358,17 @@ struct HostDoorTests {
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
                         returns: .procedure(ProcedureType(parameters: [.parameter(name: "T")], returns: .parameter(name: "T"), failing: .anything))
                     ),
-                    body: [],
-                    result: .closure(Procedure(
-                        signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], returns: .parameter(name: "T")),
-                        body: [],
-                        result: .reference([.name("y")])
-                    ))
+                    body: [
+                        returning(.closure(Procedure(
+                            signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], returns: .parameter(name: "T")),
+                            body: [returning(.reference([.name("y")]))]
+                        )))
+                    ]
                 ),
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .procedure(ProcedureType(parameters: [.int], returns: .int, failing: .anything))),
-                    body: [],
-                    result: .call(Call(selector: "App.mk", arguments: [.literal(.int(5))]))
+                    body: [returning(.call(Call(selector: "App.mk", arguments: [.literal(.int(5))])))]
                 )
             ]
         )
@@ -500,15 +499,21 @@ struct HostDoorTests {
                     access: .public,
                     signature: Signature(returns: .any),
                     body: [
+                        Statement(binding: .variable("carried"), expression: .literal(.null)),
                         Statement(
                             binding: .constant("failed"),
                             expression: .attempt(
-                                Block(body: [Statement(expression: .call(Call(selector: "App.carry")))]),
-                                rescue: Block(body: [], result: .reference([.name("failed"), .name("details"), .index("held")]))
+                                [Statement(expression: .call(Call(selector: "App.carry")))],
+                                rescue: [
+                                    Statement(
+                                        binding: .assignment([.name("carried")]),
+                                        expression: .reference([.name("failed"), .name("details"), .index("held")])
+                                    )
+                                ]
                             )
-                        )
-                    ],
-                    result: .reference([.name("failed")])
+                        ),
+                        returning(.reference([.name("carried")]))
+                    ]
                 )
             ]
         )
@@ -532,8 +537,7 @@ struct HostDoorTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .double),
-                    body: [],
-                    result: .call(Call(selector: "App.answer"))
+                    body: [returning(.call(Call(selector: "App.answer")))]
                 )
             ]
         )
@@ -560,9 +564,9 @@ struct HostDoorTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .variable("n", declared: .int), expression: .literal(.int(1))),
-                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])])))
-                    ],
-                    result: .reference([.name("n")])
+                        Statement(expression: .call(Call(selector: "App.writing", arguments: [.reference([.name("n")])]))),
+                        returning(.reference([.name("n")]))
+                    ]
                 )
             ]
         )
@@ -588,17 +592,17 @@ struct HostDoorTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "App.handing",
-                        arguments: [
-                            .closure(Procedure(
-                                signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string, constness: .const),
-                                body: [],
-                                result: .reference([.name("x"), .name("id")])
-                            ))
-                        ]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "App.handing",
+                            arguments: [
+                                .closure(Procedure(
+                                    signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Ticket"))], returns: .string, constness: .const),
+                                    body: [returning(.reference([.name("x"), .name("id")]))]
+                                ))
+                            ]
+                        )))
+                    ]
                 )
             ]
         )
@@ -619,8 +623,7 @@ struct HostDoorTests {
                         constness: .const,
                         isolation: .isolated
                     ),
-                    body: [],
-                    result: .reference([.name("x")])
+                    body: [returning(.reference([.name("x")]))]
                 )
             ]
         )
@@ -638,8 +641,7 @@ struct HostDoorTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .double),
-                    body: [],
-                    result: .call(Call(selector: "App.sending"))
+                    body: [returning(.call(Call(selector: "App.sending")))]
                 )
             ]
         )

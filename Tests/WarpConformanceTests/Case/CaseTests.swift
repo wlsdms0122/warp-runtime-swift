@@ -29,7 +29,7 @@ struct CaseTests {
                 (test 1)
                 (name "broken")
                 (note "a document beside the program that does not read")
-                (program (warp 1) (procedure entry (access public) (result 1)))
+                (program (warp 1) (procedure entry (access public) (body (return 1))))
                 (expect (refuses build))
                 """)
         )
@@ -51,7 +51,7 @@ struct CaseTests {
             (name "broken")
             (note "a brought procedure naming a place no runner has")
             (vocabulary (procedure App.one (access public) (parameter it (type Int)) (returns Int) (answers 1)))
-            (program (warp 1) (import App.one) (procedure entry (access public) (result (call App.one 1))))
+            (program (warp 1) (import App.one) (procedure entry (access public) (body (return (call App.one 1)))))
             (expect (answers 1))
             """), in: "broken")
 
@@ -82,7 +82,7 @@ struct CaseTests {
                 (name "broken")
                 (note "a vocabulary writing a key it does not declare")
                 (vocabulary \(key))
-                (program (warp 1) (procedure entry (access public) (result 1)))
+                (program (warp 1) (procedure entry (access public) (body (return 1))))
                 (expect (answers 1))
                 """), in: "broken")
         } throws: { error in
@@ -134,7 +134,8 @@ struct CaseTests {
                 (access public)
                 (returns Double)
                 (failing (anything))
-                (result (call \(procedure) \(arguments)))))
+                (body
+                  (return (call \(procedure) \(arguments))))))
             (expect (refuses run))
             """), in: "escaping")
 

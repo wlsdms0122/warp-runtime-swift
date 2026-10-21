@@ -43,7 +43,8 @@ indirect enum Operation: Sendable {
     // The round's slot, where the statement bound one.
     case loop(while: Operation, body: [Instruction], round: Int?)
 
-    case attempt(LoweredBody, rescue: LoweredBody, failure: Int?)
+    // The failure's slot, where the statement bound one.
+    case attempt([Instruction], rescue: [Instruction], failure: Int?)
     case call(CallOperation)
 
     // A call through a contract: which row answers is the first argument's
@@ -93,7 +94,8 @@ indirect enum Operation: Sendable {
             return condition.walk(visit) && body.allSatisfy { instruction in instruction.walk(visit) }
 
         case let .attempt(body, rescue, _):
-            return body.walk(visit) && rescue.walk(visit)
+            return body.allSatisfy { instruction in instruction.walk(visit) }
+                && rescue.allSatisfy { instruction in instruction.walk(visit) }
 
         case let .call(call):
             return call.arguments.allSatisfy { argument in argument?.walk(visit) ?? true }
@@ -184,8 +186,8 @@ indirect enum Operation: Sendable {
 
         case let .attempt(body, rescue, failure):
             inside = .attempt(
-                try body.rewritten(operation: operation, type: type),
-                rescue: try rescue.rewritten(operation: operation, type: type),
+                try body.map { instruction in try instruction.rewritten(operation: operation, type: type) },
+                rescue: try rescue.map { instruction in try instruction.rewritten(operation: operation, type: type) },
                 failure: failure
             )
 

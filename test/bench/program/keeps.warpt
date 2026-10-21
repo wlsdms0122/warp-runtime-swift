@@ -16,5 +16,5 @@
             (when (call Standard.Logic.equal (path round (field index)) 1))
             (then
               (continue)))
-          (let kept seen)))))
-  (result rounds))
+          (let kept seen))))
+    (return rounds)))

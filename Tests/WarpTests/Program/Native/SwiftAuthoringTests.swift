@@ -47,9 +47,9 @@ struct SwiftAuthoringTests {
         let procedure = Procedure(
             signature: Signature(returns: .any),
             body: [
-                Statement(binding: .constant("greet"), expression: .literal(.string("hello, world")))
-            ],
-            result: map(["greeting": .reference([.name("greet")])])
+                Statement(binding: .constant("greet"), expression: .literal(.string("hello, world"))),
+                returning(map(["greeting": .reference([.name("greet")])]))
+            ]
         )
 
         // When
@@ -91,9 +91,9 @@ struct SwiftAuthoringTests {
                         ],
                         else: nil
                     )
-                )
-            ],
-            result: map(["verdict": .reference([.name("verdict")])])
+                ),
+                returning(map(["verdict": .reference([.name("verdict")])]))
+            ]
         )
 
         // When. Comparing is a procedure, so this builds with the bundle that
@@ -121,9 +121,9 @@ struct SwiftAuthoringTests {
             body: [
                 Statement(binding: .constant("shout"), expression: .call(
                     Call(selector: "App.shout", arguments: [.literal(.string("hey"))])
-                ))
-            ],
-            result: map(["shout": .reference([.name("shout")])])
+                )),
+                returning(map(["shout": .reference([.name("shout")])]))
+            ]
         )
 
         // When
@@ -153,13 +153,13 @@ struct SwiftAuthoringTests {
                 )),
                 Statement(binding: .constant("called"), expression: .call(
                     Call(selector: "echo", arguments: [.literal(.string("yo"))])
-                ))
-            ],
-            result: map([
-                "counted": .reference([.name("counted")]),
-                "shouted": .reference([.name("shouted")]),
-                "called": .reference([.name("called"), .name("said")])
-            ])
+                )),
+                returning(map([
+                    "counted": .reference([.name("counted")]),
+                    "shouted": .reference([.name("shouted")]),
+                    "called": .reference([.name("called"), .name("said")])
+                ]))
+            ]
         )
         // A second declaration, in the same module. A call names a symbol, and
         // which module declared it is the builder's business.
@@ -168,8 +168,7 @@ struct SwiftAuthoringTests {
                 parameters: [Parameter(name: "text", type: .string)],
                 returns: .named("App.Said")
             ),
-            body: [],
-            result: .struct(["said": .reference([.name("text")])])
+            body: [returning(.struct(["said": .reference([.name("text")])]))]
         )
 
         // When
@@ -198,10 +197,11 @@ struct SwiftAuthoringTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
-                    body: [],
-                    result: map([
-                        "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))
-                    ])
+                    body: [
+                        returning(map([
+                            "result": .call(Call(selector: "App.echo", arguments: [.literal(.int(20))]))
+                        ]))
+                    ]
                 ),
                 "App.echo": Procedure(
                     signature: Signature(of: EchoQuery.self, returns: .int),
@@ -236,9 +236,9 @@ struct SwiftAuthoringTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("loud"), expression: .reference([.name("of")]))
-                    ],
-                    result: .reference([.name("loud")])
+                        Statement(binding: .constant("loud"), expression: .reference([.name("of")])),
+                        returning(.reference([.name("loud")]))
+                    ]
                 )
             ]
         )

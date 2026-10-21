@@ -29,9 +29,9 @@ struct ReturnTypeTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
-                    ],
-                    result: .reference([.name("counted")])
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
                 )
             ]
         )
@@ -55,9 +55,9 @@ struct ReturnTypeTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
-                    ],
-                    result: .reference([.name("counted")])
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
                 )
             ]
         )
@@ -73,7 +73,7 @@ struct ReturnTypeTests {
 
     @Test("a return carrying something else is refused where it is written")
     func wrongReturnIsRefusedAtTheBuild() async throws {
-        // Given. The result fits; a `return` on one way through does not.
+        // Given. The last `return` fits; one on another way through does not.
         let sut = try Module(
             procedures: [
                 "entry": Procedure(
@@ -86,9 +86,9 @@ struct ReturnTypeTests {
                                 then: [Statement(expression: .leave(.procedure(.literal(.string("x")))))],
                                 else: nil
                             )
-                        )
-                    ],
-                    result: .literal(.int(0))
+                        ),
+                        returning(.literal(.int(0)))
+                    ]
                 )
             ]
         )
@@ -106,15 +106,14 @@ struct ReturnTypeTests {
     func aLiteralAnsweredTakesTheDeclaredName() async throws {
         // Given. The same list written straight into the answer, and held
         // first by a name that says nothing of the struct
-        func module(answering result: Warp.Expression, holding body: Body = []) throws -> Module {
+        func module(answering answer: Warp.Expression, holding body: Body = []) throws -> Module {
             try Module(
                 types: ["Task": .struct(["id": .string])],
                 procedures: [
                     "entry": Procedure(
                         access: .public,
                         signature: Signature(returns: .array(.named("Task"))),
-                        body: body,
-                        result: result
+                        body: Body(body.statements + [returning(answer)])
                     )
                 ]
             )

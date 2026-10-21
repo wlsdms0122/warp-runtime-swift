@@ -34,8 +34,7 @@ struct DeclaredSpellingTests {
                         parameters: [Parameter(name: "value", type: .named("Store.Task"))],
                         returns: .named("Store.Task")
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 )
             ]
         )
@@ -44,11 +43,12 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("Store.Task")),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Store.keep",
-                        arguments: [.struct(["id": .literal(.string("a"))])]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Store.keep",
+                            arguments: [.struct(["id": .literal(.string("a"))])]
+                        )))
+                    ]
                 )
             ]
         )
@@ -71,15 +71,14 @@ struct DeclaredSpellingTests {
             procedures: [
                 try Name("mine.\(entryName)"): Procedure(
                     signature: Signature(returns: .named("Mine.Limit")),
-                    body: [],
-                    result: .literal(.int(3))
+                    body: [returning(.literal(.int(3)))]
                 )
             ]
         )
         let theirs = try Module(
             types: ["Theirs.Limit": .alias(.string)],
             procedures: [
-                "Theirs.unrelated": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Theirs.unrelated": Procedure(signature: Signature(), body: [])
             ]
         )
 
@@ -96,13 +95,13 @@ struct DeclaredSpellingTests {
         let one = try Module(
             types: ["One.Limit": .alias(.int)],
             procedures: [
-                "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.a": Procedure(signature: Signature(), body: [])
             ]
         )
         let two = try Module(
             types: ["Two.Limit": .alias(.string)],
             procedures: [
-                "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Two.b": Procedure(signature: Signature(), body: [])
             ]
         )
         let sut = try Module(
@@ -110,8 +109,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("Limit")),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -131,13 +129,13 @@ struct DeclaredSpellingTests {
         let one = try Module(
             types: ["One.Limit": .alias(.int)],
             procedures: [
-                "One.a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.a": Procedure(signature: Signature(), body: [])
             ]
         )
         let two = try Module(
             types: ["Two.Limit": .alias(.string)],
             procedures: [
-                "Two.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "Two.b": Procedure(signature: Signature(), body: [])
             ]
         )
         let sut = try Module(
@@ -145,8 +143,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("One.Limit")),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -163,13 +160,13 @@ struct DeclaredSpellingTests {
         let one = try Module(
             types: ["Limit": .alias(.int)],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [])
             ]
         )
         let two = try Module(
             types: ["Limit": .alias(.string)],
             procedures: [
-                "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "b": Procedure(signature: Signature(), body: [])
             ]
         )
 
@@ -195,14 +192,12 @@ struct DeclaredSpellingTests {
                         returns: .parameter(name: "T"),
                         bounds: ["T": ["Standard.Comparable"]]
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [.literal(.int(3))]))
+                    body: [returning(.call(Call(selector: "keep", arguments: [.literal(.int(3))])))]
                 )
             ]
         )
@@ -221,13 +216,13 @@ struct DeclaredSpellingTests {
         let shared = try Module(
             types: ["Limit": .alias(.int)],
             procedures: [
-                "a": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "a": Procedure(signature: Signature(), body: [])
             ]
         )
         let dotted = try Module(
             types: ["One.Limit": .alias(.string)],
             procedures: [
-                "One.b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "One.b": Procedure(signature: Signature(), body: [])
             ]
         )
         let sut = try Module(
@@ -235,8 +230,7 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("Limit")),
-                    body: [],
-                    result: .literal(.int(3))
+                    body: [returning(.literal(.int(3)))]
                 )
             ]
         )
@@ -253,13 +247,13 @@ struct DeclaredSpellingTests {
         let contract = try Module(
             contracts: ["Limit": [Name: Signature]()],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(), body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, signature: Signature(), body: [])
             ]
         )
         let type = try Module(
             types: ["Limit": .alias(.int)],
             procedures: [
-                "b": Procedure(signature: Signature(), body: [], result: .literal(.null))
+                "b": Procedure(signature: Signature(), body: [])
             ]
         )
 
@@ -288,8 +282,7 @@ struct DeclaredSpellingTests {
                         returns: .parameter(name: "T"),
                         bounds: ["T": ["Numeric"]]
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -298,9 +291,9 @@ struct DeclaredSpellingTests {
                         Statement(binding: .constant("kept"), expression: .call(Call(
                             selector: "keep",
                             arguments: [.literal(.string("a"))]
-                        )))
-                    ],
-                    result: reference("kept")
+                        ))),
+                        returning(reference("kept"))
+                    ]
                 )
             ]
         )
@@ -321,11 +314,12 @@ struct DeclaredSpellingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Numeric.plus",
-                        arguments: [.literal(.string("a")), .literal(.string("b"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Numeric.plus",
+                            arguments: [.literal(.string("a")), .literal(.string("b"))]
+                        )))
+                    ]
                 )
             ]
         )

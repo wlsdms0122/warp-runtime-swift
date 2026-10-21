@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What an object says it was compiled against.
 //
@@ -40,7 +41,7 @@ struct ObjectDependencyTests {
         get throws {
             try Module(
                 procedures: [
-                    "A.foo": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "A.foo": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                 ]
             )
         }
@@ -50,7 +51,7 @@ struct ObjectDependencyTests {
         get throws {
             try Module(
                 procedures: [
-                    "B.bar": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                    "B.bar": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
                 ]
             )
         }
@@ -62,8 +63,7 @@ struct ObjectDependencyTests {
                 procedures: [
                     "App.main": Procedure(
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: "A.foo"))
+                        body: [returning(.call(Call(selector: "A.foo")))]
                     )
                 ]
             )
@@ -135,7 +135,7 @@ struct ObjectDependencyTests {
         // same thing either way.
         let lowered = try Module(
             procedures: [
-                "Box.peek": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+                "Box.peek": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(7)))])
             ]
         )
         let answered = try Module(
@@ -179,8 +179,7 @@ struct ObjectDependencyTests {
             procedures: [
                 "App.main": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: selector))
+                    body: [returning(.call(Call(selector: selector)))]
                 )
             ]
         )

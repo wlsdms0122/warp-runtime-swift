@@ -28,9 +28,7 @@ public struct Procedure: Sendable {
     // as well. `internal` where the declaration said nothing.
     public let access: Access
 
-    public var block: Block? { implementation.block }
-    public var body: Body { block?.body ?? [] }
-    public var result: Expression? { block?.result }
+    public var body: Body { implementation.body ?? [] }
 
     // MARK: - Initializer
     public init(
@@ -51,14 +49,13 @@ public struct Procedure: Sendable {
         description: String? = nil,
         access: Access = .internal,
         signature: Signature = Signature(),
-        body: Body,
-        result: Expression? = nil
+        body: Body
     ) {
         self.init(
             description: description,
             access: access,
             signature: signature,
-            implementation: .body(Block(body: body, result: result))
+            implementation: .body(body)
         )
     }
 

@@ -30,9 +30,9 @@ struct ConstnessTests {
             returns: .string
         ),
         body: [
-            Statement(binding: .constant("answered"), expression: .apply(reference("body"), arguments: []))
-        ],
-        result: reference("answered")
+            Statement(binding: .constant("answered"), expression: .apply(reference("body"), arguments: [])),
+            returning(reference("answered"))
+        ]
     )
 
     // What every closure handed to `asking` declares.
@@ -51,9 +51,9 @@ struct ConstnessTests {
                     .literal(.bool(true)),
                     then: [Statement(expression: .leave(.procedure(.literal(.string("taken")))))],
                     else: nil
-                ))
-            ],
-            result: .literal(.string("fell through"))
+                )),
+                returning(.literal(.string("fell through")))
+            ]
         )
 
         // When
@@ -75,9 +75,9 @@ struct ConstnessTests {
                     body: [
                         Statement(expression: .leave(.procedure(.literal(.string("counted")))))
                     ]
-                ))
-            ],
-            result: .literal(.string("never reached"))
+                )),
+                returning(.literal(.string("never reached")))
+            ]
         )
 
         // When
@@ -95,9 +95,9 @@ struct ConstnessTests {
             signature: answering,
             body: [
                 Statement(binding: .variable("held"), expression: .literal(.string("first"))),
-                Statement(binding: .assignment([.name("held")]), expression: .literal(.string("second")))
-            ],
-            result: reference("held")
+                Statement(binding: .assignment([.name("held")]), expression: .literal(.string("second"))),
+                returning(reference("held"))
+            ]
         )
 
         // When
@@ -111,7 +111,7 @@ struct ConstnessTests {
     func aBodyReadingAModuleVariableIsRefused() async throws {
         // Given. The same shape, reading a name the module holds rather than
         // one the body declared. What that answers is the run's, not the text's.
-        let reading = Procedure(signature: answering, body: [], result: reference("standing"))
+        let reading = Procedure(signature: answering, body: [returning(reference("standing"))])
         let handed = try Module(
             variables: ["standing": .literal(.string("held"))],
             procedures: [
@@ -119,8 +119,10 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [Statement(binding: .constant("given"), expression: .closure(reading))],
-                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
+                    body: [
+                        Statement(binding: .constant("given"), expression: .closure(reading)),
+                        returning(.call(Call(selector: "asking", arguments: [reference("given")])))
+                    ]
                 )
             ]
         )
@@ -139,8 +141,10 @@ struct ConstnessTests {
         // The box is outside the closure, so the write reaches the run's state.
         let writing = Procedure(
             signature: answering,
-            body: [Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))],
-            result: .literal(.string("written"))
+            body: [
+                Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1))),
+                returning(.literal(.string("written")))
+            ]
         )
         let handed = try Module(
             procedures: [
@@ -150,9 +154,9 @@ struct ConstnessTests {
                     signature: Signature(returns: .string),
                     body: [
                         Statement(binding: .variable("tally"), expression: .literal(.int(0))),
-                        Statement(binding: .constant("given"), expression: .closure(writing))
-                    ],
-                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
+                        Statement(binding: .constant("given"), expression: .closure(writing)),
+                        returning(.call(Call(selector: "asking", arguments: [reference("given")])))
+                    ]
                 )
             ]
         )
@@ -178,9 +182,9 @@ struct ConstnessTests {
             signature: answering,
             body: [
                 Statement(binding: .variable("own"), expression: .literal(.int(0))),
-                Statement(expression: .call(Call(selector: "bumping", arguments: [reference("own")])))
-            ],
-            result: .literal(.string("sent"))
+                Statement(expression: .call(Call(selector: "bumping", arguments: [reference("own")]))),
+                returning(.literal(.string("sent")))
+            ]
         )
         let handed = try Module(
             procedures: [
@@ -189,8 +193,10 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [Statement(binding: .constant("given"), expression: .closure(sending))],
-                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
+                    body: [
+                        Statement(binding: .constant("given"), expression: .closure(sending)),
+                        returning(.call(Call(selector: "asking", arguments: [reference("given")])))
+                    ]
                 )
             ]
         )
@@ -214,7 +220,7 @@ struct ConstnessTests {
         let handed = try Module(
             procedures: [
                 "bumping": bumping,
-                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, body: [])
             ]
         )
 
@@ -248,22 +254,23 @@ struct ConstnessTests {
                     body: [
                         Statement(
                             binding: .constant("answering"),
-                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
+                            expression: .closure(Procedure(signature: answering, body: [returning(.literal(.string("answered")))]))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
                                 Procedure(
                                     signature: answering,
-                                    body: [],
-                                    result: .call(
-                                        Call(selector: "asking", arguments: [reference("answering")])
-                                    )
+                                    body: [
+                                        returning(.call(
+                                            Call(selector: "asking", arguments: [reference("answering")])
+                                        ))
+                                    ]
                                 )
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
+                        ),
+                        returning(.call(Call(selector: "asking", arguments: [reference("relaying")])))
+                    ]
                 )
             ]
         )
@@ -292,16 +299,16 @@ struct ConstnessTests {
                                 "answering",
                                 declared: .procedure(ProcedureType(returns: .string, failing: .these([])), .const)
                             ),
-                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
+                            expression: .closure(Procedure(signature: answering, body: [returning(.literal(.string("answered")))]))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
-                                Procedure(signature: answering, body: [], result: .apply(reference("answering"), arguments: []))
+                                Procedure(signature: answering, body: [returning(.apply(reference("answering"), arguments: []))])
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
+                        ),
+                        returning(.call(Call(selector: "asking", arguments: [reference("relaying")])))
+                    ]
                 )
             ]
         )
@@ -326,16 +333,16 @@ struct ConstnessTests {
                     body: [
                         Statement(
                             binding: .variable("answering"),
-                            expression: .closure(Procedure(signature: answering, body: [], result: .literal(.string("answered"))))
+                            expression: .closure(Procedure(signature: answering, body: [returning(.literal(.string("answered")))]))
                         ),
                         Statement(
                             binding: .constant("relaying"),
                             expression: .closure(
-                                Procedure(signature: answering, body: [], result: .apply(reference("answering"), arguments: []))
+                                Procedure(signature: answering, body: [returning(.apply(reference("answering"), arguments: []))])
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "asking", arguments: [reference("relaying")]))
+                        ),
+                        returning(.call(Call(selector: "asking", arguments: [reference("relaying")])))
+                    ]
                 )
             ]
         )
@@ -359,13 +366,12 @@ struct ConstnessTests {
                 returns: .string,
                 constness: .const
             ),
-            body: [],
-            result: .apply(reference("body"), arguments: [])
+            body: [returning(.apply(reference("body"), arguments: []))]
         )
         let handed = try Module(
             procedures: [
                 "relaying": relaying,
-                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, body: [])
             ]
         )
 
@@ -428,8 +434,7 @@ struct ConstnessTests {
                 returns: .string,
                 constness: .const
             ),
-            body: [],
-            result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("of"), .literal(.string(""))]))
+            body: [returning(.call(Call(selector: "Standard.Text.joined", arguments: [reference("of"), .literal(.string(""))])))]
         )
         let sut = try Module(
             procedures: [
@@ -440,8 +445,7 @@ struct ConstnessTests {
                         parameters: [Parameter(name: "names", type: .array(.string))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .call(Call(selector: "label", arguments: [reference("names")]))
+                    body: [returning(.call(Call(selector: "label", arguments: [reference("names")])))]
                 )
             ]
         )
@@ -463,8 +467,10 @@ struct ConstnessTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [Statement(binding: .constant("given"), expression: .closure(body))],
-                    result: .call(Call(selector: "asking", arguments: [reference("given")]))
+                    body: [
+                        Statement(binding: .constant("given"), expression: .closure(body)),
+                        returning(.call(Call(selector: "asking", arguments: [reference("given")])))
+                    ]
                 )
             ]
         )

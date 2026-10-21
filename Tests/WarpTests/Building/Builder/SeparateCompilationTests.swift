@@ -37,8 +37,8 @@ struct SeparateCompilationTests {
         // Given. Two entries, neither reaching the other.
         let sut = try Module(
             procedures: [
-                "App.here": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "App.there": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.here": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
+                "App.there": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
             ]
         )
 
@@ -55,11 +55,10 @@ struct SeparateCompilationTests {
         // Given. A declaration nothing reaches, calling a procedure nobody declares.
         let sut = try Module(
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))]),
                 "App.stray": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Nobody.declares"))
+                    body: [returning(.call(Call(selector: "Nobody.declares")))]
                 )
             ]
         )
@@ -76,7 +75,7 @@ struct SeparateCompilationTests {
     func anUnknownEntryIsTheRunsRefusal() async throws {
         // Given
         let sut = try Module(
-            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])]
         )
 
         let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
@@ -96,14 +95,14 @@ struct SeparateCompilationTests {
         // table sorted by name alone would scatter both.
         let first = try Module(
             procedures: [
-                "A.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "C.three": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "A.one": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
+                "C.three": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(3)))])
             ]
         )
         let second = try Module(
             procedures: [
-                "B.two": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "D.four": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(4)))
+                "B.two": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))]),
+                "D.four": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(4)))])
             ]
         )
 
@@ -130,8 +129,7 @@ struct SeparateCompilationTests {
             procedures: [
                 "Low.read": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("lowCount")])
+                    body: [returning(.reference([.name("lowCount")]))]
                 )
             ]
         )
@@ -139,8 +137,7 @@ struct SeparateCompilationTests {
             procedures: [
                 "Mid.ask": Procedure(
                     signature: Signature(returns: .int, constness: .const),
-                    body: [],
-                    result: .call(Call(selector: "Low.read"))
+                    body: [returning(.call(Call(selector: "Low.read")))]
                 )
             ]
         )
@@ -161,8 +158,7 @@ struct SeparateCompilationTests {
             procedures: [
                 "A.answer": Procedure(
                     signature: Signature(returns: .int, constness: .const),
-                    body: [],
-                    result: .literal(.int(7))
+                    body: [returning(.literal(.int(7)))]
                 )
             ]
         )
@@ -172,8 +168,7 @@ struct SeparateCompilationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("held")])
+                    body: [returning(.reference([.name("held")]))]
                 )
             ]
         )
@@ -194,7 +189,7 @@ struct SeparateCompilationTests {
         let naming = try Module(
             types: ["Z.Wraps": .alias(.named("A.Held")), "Z.Also": .alias(.named("A.Held"))],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [returning(.literal(.int(1)))])
             ]
         )
         let held = try Module(types: ["A.Held": .alias(.int)])
@@ -289,11 +284,11 @@ struct SeparateCompilationTests {
         let holding = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
-            procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
+            procedures: ["App.ask": Procedure(body: [])]
         )
         let answering = try Module(
             members: ["Bank.Account": ["describe"]],
@@ -303,8 +298,7 @@ struct SeparateCompilationTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 )
             ]
         )
@@ -313,12 +307,13 @@ struct SeparateCompilationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("Bank.Account")),
-                    body: [],
-                    result: .cast(
-                        .struct(["balance": .literal(.int(7))]),
-                        as: .named("Bank.Account"),
-                        optional: false
-                    )
+                    body: [
+                        returning(.cast(
+                            .struct(["balance": .literal(.int(7))]),
+                            as: .named("Bank.Account"),
+                            optional: false
+                        ))
+                    ]
                 )
             ]
         )
@@ -373,7 +368,7 @@ struct SeparateCompilationTests {
         let sut = try calling()
         let ahead = try Module(
             procedures: [
-                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
             ]
         )
 
@@ -396,7 +391,7 @@ struct SeparateCompilationTests {
         let sut = try calling()
         let ahead = try Module(
             procedures: [
-                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
             ]
         )
 
@@ -440,7 +435,7 @@ struct SeparateCompilationTests {
         let ahead = try Module(
             types: ["Aaa.Ahead": .struct(["first": .int])],
             procedures: [
-                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0)))
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
             ]
         )
 
@@ -477,9 +472,9 @@ struct SeparateCompilationTests {
                                 as: .named("A.Held"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("held"), .name("count")])
+                        ),
+                        returning(.reference([.name("held"), .name("count")]))
+                    ]
                 )
             ]
         )
@@ -489,8 +484,7 @@ struct SeparateCompilationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("held")])
+                    body: [returning(.reference([.name("held")]))]
                 )
             ]
         )
@@ -538,8 +532,7 @@ struct SeparateCompilationTests {
                         parameters: [Parameter(name: "of", type: .double)],
                         returns: .int
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Math.rounded", arguments: [reference("of")]))
+                    body: [returning(.call(Call(selector: "Standard.Math.rounded", arguments: [reference("of")])))]
                 )
             ]
         )
@@ -567,7 +560,7 @@ struct SeparateCompilationTests {
         // before the last one is missing nothing.
         let contract = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
-            procedures: ["App.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["App.nothing": Procedure(body: [])]
         )
         let leaning = try Module(
             imports: ["App.Describable", "App.Describable.describe"],
@@ -577,17 +570,15 @@ struct SeparateCompilationTests {
             procedures: [
                 "Bank.Account.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 ),
                 "Bank.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
-                    body: [],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("of")]))
+                    body: [returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("of")])))]
                 )
             ]
         )
-        let after = try Module(procedures: ["After.one": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))])
+        let after = try Module(procedures: ["After.one": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])])
 
         // When / Then
         await #expect(throws: Never.self) {
@@ -611,8 +602,7 @@ struct SeparateCompilationTests {
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("of"), reference("of")]))
+                    body: [returning(.call(Call(selector: "Standard.Numeric.plus", arguments: [reference("of"), reference("of")])))]
                 )
             ]
         )
@@ -638,8 +628,7 @@ struct SeparateCompilationTests {
                 procedures: [
                     "Lib.twice": Procedure(
                         signature: Signature(parameters: parameters, returns: .int),
-                        body: [],
-                        result: reference("n")
+                        body: [returning(reference("n"))]
                     )
                 ]
             )
@@ -648,8 +637,7 @@ struct SeparateCompilationTests {
             procedures: [
                 "App.relay": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(2)), .literal(.int(3))]))
+                    body: [returning(.call(Call(selector: "Lib.twice", arguments: [.literal(.int(2)), .literal(.int(3))])))]
                 )
             ]
         )
@@ -719,7 +707,7 @@ struct SeparateCompilationTests {
         let library = try Module(types: ["Lib.B": .alias(.int)])
         let program = try Module(
             types: ["App.A": .alias(.int)],
-            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])]
         )
         let compiled = try await builder.compile([library, program] + Module.standard)
         let standard = Array(compiled[2...])
@@ -754,8 +742,7 @@ struct SeparateCompilationTests {
                 "Bank.Card.show": Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Card"))], returns: .string),
-                    body: [],
-                    result: .literal(.string("card"))
+                    body: [returning(.literal(.string("card")))]
                 )
             ]
         )
@@ -780,8 +767,7 @@ struct SeparateCompilationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "a", type: .named("Lib.B"))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -831,8 +817,7 @@ struct SeparateCompilationTests {
                             parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                             returns: .string
                         ),
-                        body: [],
-                        result: .literal(.string("an account"))
+                        body: [returning(.literal(.string("an account")))]
                     )
                 ]
             ),
@@ -847,16 +832,17 @@ struct SeparateCompilationTests {
                             returns: .string,
                             bounds: ["T": ["App.Describable"]]
                         ),
-                        body: [],
-                        result: .call(
-                            Call(selector: "App.Describable.describe", arguments: [reference("it")])
-                        )
+                        body: [
+                            returning(.call(
+                                Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                            ))
+                        ]
                     )
                 ]
             ),
             claims: try Module(
                 claims: ["Bank.Account": ["App.Describable"]],
-                procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
+                procedures: ["Glue.nothing": Procedure(body: [])]
             ),
             program: try Module(
                 procedures: [
@@ -871,9 +857,9 @@ struct SeparateCompilationTests {
                                     as: .named("Bank.Account"),
                                     optional: false
                                 )
-                            )
-                        ],
-                        result: .call(Call(selector: "App.tell", arguments: [reference("account")]))
+                            ),
+                            returning(.call(Call(selector: "App.tell", arguments: [reference("account")])))
+                        ]
                     )
                 ]
             )
@@ -930,9 +916,9 @@ struct SeparateCompilationTests {
         return body
     }
 
-    // The type the cast in a row's result stands on.
+    // The type the cast a row's last `return` carries stands on.
     private func cast(in body: LoweredBody) throws -> LoweredType {
-        guard case let .cast(_, type, _)? = body.result else {
+        guard case let .leave(.procedure, _, .cast(_, type, _)?)? = body.instructions.last?.code else {
             throw Unheld(description: "the entry holds no cast")
         }
 
@@ -948,21 +934,22 @@ struct SeparateCompilationTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .named("Bank.Account"), failing: .these(["cast_refused"])),
-                        body: [],
-                        result: .cast(
-                            .struct(["balance": .literal(.int(7))]),
-                            as: .named("Bank.Account"),
-                            optional: false
-                        )
+                        body: [
+                            returning(.cast(
+                                .struct(["balance": .literal(.int(7))]),
+                                as: .named("Bank.Account"),
+                                optional: false
+                            ))
+                        ]
                     )
                 ]
             )
         ]
     }
 
-    // The call through a contract a row's result holds.
+    // The call through a contract a row's last `return` carries.
     private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
-        guard case let .dispatch(dispatch)? = body.result else {
+        guard case let .leave(.procedure, _, .dispatch(dispatch)?)? = body.instructions.last?.code else {
             throw Unheld(description: "'App.tell' holds no call through a contract")
         }
 
@@ -985,10 +972,11 @@ struct SeparateCompilationTests {
                             returns: .string,
                             bounds: ["T": ["App.Describable"]]
                         ),
-                        body: [],
-                        result: .call(
-                            Call(selector: "App.Describable.describe", arguments: [reference("it")])
-                        )
+                        body: [
+                            returning(.call(
+                                Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                            ))
+                        ]
                     )
                 ]
             ),
@@ -1025,43 +1013,45 @@ struct SeparateCompilationTests {
                                     as: .named("Bank.Card"),
                                     optional: false
                                 )
-                            )
-                        ],
-                        result: .array([
-                            .call(Call(selector: "App.tell", arguments: [reference("account")])),
-                            .call(Call(selector: "App.tell", arguments: [reference("card")]))
-                        ])
+                            ),
+                            returning(.array([
+                                .call(Call(selector: "App.tell", arguments: [reference("account")])),
+                                .call(Call(selector: "App.tell", arguments: [reference("card")]))
+                            ]))
+                        ]
                     ),
                     "Bank.Account.describe": Procedure(
                         signature: Signature(
                             parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                             returns: .string
                         ),
-                        body: [],
-                        result: interpolated(
-                            literal("balance "),
-                            spelling(.reference([.name("of"), .name("balance")]))
-                        )
+                        body: [
+                            returning(interpolated(
+                                literal("balance "),
+                                spelling(.reference([.name("of"), .name("balance")]))
+                            ))
+                        ]
                     ),
                     "Bank.Card.describe": Procedure(
                         signature: Signature(
                             parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                             returns: .string
                         ),
-                        body: [],
-                        result: interpolated(
-                            literal("card "),
-                            spelling(.reference([.name("of"), .name("last")]))
-                        )
+                        body: [
+                            returning(interpolated(
+                                literal("card "),
+                                spelling(.reference([.name("of"), .name("last")]))
+                            ))
+                        ]
                     )
                 ]
             )
         ]
     }
 
-    // The number the call in a row's result carries.
+    // The number the call a row's last `return` carries holds.
     private func called(in body: LoweredBody) throws -> Int {
-        guard case let .call(call)? = body.result else {
+        guard case let .leave(.procedure, _, .call(call)?)? = body.instructions.last?.code else {
             throw Unheld(description: "'B.asks' holds no call")
         }
 
@@ -1073,17 +1063,16 @@ struct SeparateCompilationTests {
         [
             try Module(
                 procedures: [
-                    "A.aaa": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(0))),
-                    "A.answers": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "A.aaa": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))]),
+                    "A.answers": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                 ]
             ),
             try Module(
                 procedures: [
-                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "B.asks"))),
+                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.call(Call(selector: "B.asks")))]),
                     "B.asks": Procedure(
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: "A.answers"))
+                        body: [returning(.call(Call(selector: "A.answers")))]
                     )
                 ]
             )

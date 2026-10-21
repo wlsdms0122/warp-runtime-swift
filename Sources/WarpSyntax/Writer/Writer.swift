@@ -154,7 +154,7 @@ public struct Writer: Sendable {
         // A body is what a document declares. A procedure backed by native code has
         // nothing a document could carry, and writing its name alone would make
         // a document that loads into something else.
-        guard case let .body(block) = procedure.implementation else {
+        guard case let .body(body) = procedure.implementation else {
             throw WritingError(
                 "a procedure implemented in native code has no document."
                     + " What the host brings is declared in a module it assembles into the link"
@@ -173,7 +173,7 @@ public struct Writer: Sendable {
         }
 
         written.merge(try fields(of: procedure.signature)) { one, _ in one }
-        written.merge(try fields(of: block, in: nil)) { one, _ in one }
+        written.merge(try fields(of: body)) { one, _ in one }
 
         return .dictionary(written)
     }
@@ -330,25 +330,12 @@ public struct Writer: Sendable {
 
         return spelling
     }
-    // The keys a block writes, with whoever reads it asked whether an empty
-    // `body` is written or dropped. A rescue and a procedure are read by their
-    // own readers, which take `body` as a key that may be absent, and say
-    // `nil`.
-    private func fields(
-        of block: Block,
-        in form: (any ConstructForm.Type)?
-    ) throws -> [Name: Value] {
-        var written: [Name: Value] = [:]
+    // The key a procedure's body writes. A procedure reads `body` as a key
+    // that may be absent, so an empty one is dropped.
+    private func fields(of body: Body) throws -> [Name: Value] {
+        guard !body.statements.isEmpty else { return [:] }
 
-        if form?.requiresBody == true || !block.body.statements.isEmpty {
-            written[BlockReader.CodingKeys.body.name] = .array(try block.body.statements.map(value(of:)))
-        }
-
-        if let result = block.result {
-            written[BlockReader.CodingKeys.result.name] = try value(of: result)
-        }
-
-        return written
+        return [ProcedureReader.CodingKeys.body.name: .array(try body.statements.map(value(of:)))]
     }
 
     // A parameter, its type written as a slot's, where a bound stands beside
@@ -481,9 +468,10 @@ public struct Writer: Sendable {
             }
 
         case let .attempt(attempted, rescue):
-            var written = try fields(of: attempted, in: AttemptForm.self)
-
-            written[AttemptForm.CodingKeys.rescue.name] = .dictionary(try fields(of: rescue, in: nil))
+            let written: [Name: Value] = [
+                AttemptForm.CodingKeys.body.name: .array(try attempted.statements.map(value(of:))),
+                AttemptForm.CodingKeys.rescue.name: .array(try rescue.statements.map(value(of:)))
+            ]
 
             return (try spelling(AttemptForm.self), .dictionary(written))
 

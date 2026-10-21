@@ -33,9 +33,9 @@ struct NamelessTests {
                     "returns": "Int",
                     "body": [
                         ["value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]]],
-                        ["let": "kept", "value": 5]
-                    ],
-                    "result": ["ref": "kept"]
+                        ["let": "kept", "value": 5],
+                        ["value": ["return": ["ref": "kept"]]]
+                    ]
                 ]
             ]
         ])
@@ -54,9 +54,9 @@ struct NamelessTests {
                 "procedures": [
                     "entry": [
                         "body": [
-                            ["value": 1]
-                        ],
-                        "result": ["ref": "_"]
+                            ["value": 1],
+                            ["value": ["return": ["ref": "_"]]]
+                        ]
                     ]
                 ]
             ])
@@ -151,23 +151,23 @@ struct NamelessTests {
         // Given / When. A loop and an attempt with no naming key
         let module = try loader.loadProcedure(["body": [
             ["value": ["loop": ["while": false, "body": [["let": "x", "value": 1]]]]] as Value,
-            ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": ["result": 0]]]]
+            ["value": ["attempt": ["body": [["let": "x", "value": 1]], "rescue": [["value": 0]]]]]
         ]])
 
         // Then. Each reads under a statement introducing no name, so there is
         // no round and no failure to bind
-        guard case let .body(block) = module.procedures[entryName]?.implementation else {
+        guard case let .body(body) = module.procedures[entryName]?.implementation else {
             Issue.record("expected a body")
             return
         }
 
-        guard case .loop = block.body.statements[0].expression,
-              case .attempt = block.body.statements[1].expression else {
+        guard case .loop = body.statements[0].expression,
+              case .attempt = body.statements[1].expression else {
             Issue.record("expected a loop and an attempt")
             return
         }
 
-        #expect(block.body.statements.allSatisfy { statement in statement.binding == nil })
+        #expect(body.statements.allSatisfy { statement in statement.binding == nil })
     }
 
     @Test("a naming key holding null is a broken name, not a nameless statement")
@@ -191,9 +191,9 @@ struct NamelessTests {
                     "returns": "Int",
                     "body": [
                         ["value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]]],
-                        ["let": "kept", "value": 5]
-                    ],
-                    "result": ["ref": "kept"]
+                        ["let": "kept", "value": 5],
+                        ["value": ["return": ["ref": "kept"]]]
+                    ]
                 ]
             ]
         ]

@@ -132,7 +132,7 @@ struct TypeNotationTests {
         let sut = try loader.loadProcedure([
             "parameters": [["name": "of", "type": "some T: Comparable"], ["name": "value", "type": "some T"]],
             "returns": "some T",
-            "result": ["ref": "of"]
+            "body": [["value": ["return": ["ref": "of"]]]]
         ], importing: ["Comparable"])
 
         // Then. The signature holds the bound, and every slot names the
@@ -151,7 +151,7 @@ struct TypeNotationTests {
         #expect(throws: ValidationError.self) {
             try loader.loadProcedure([
                 "parameters": [["name": "of", "type": "some T: Array<Int>"]],
-                "result": ["ref": "of"]
+                "body": [["value": ["return": ["ref": "of"]]]]
             ])
         }
     }
@@ -166,7 +166,7 @@ struct TypeNotationTests {
                 ["name": "by", "type": "(some Element: Comparable) -> Bool"],
                 ["name": "of", "type": "Array<some Element>"]
             ],
-            "result": ["ref": "of"]
+            "body": [["value": ["return": ["ref": "of"]]]]
         ], importing: ["Comparable"])
 
         // Then
@@ -294,8 +294,7 @@ struct TypeNotationTests {
                 "entry": [
                     "returns": "Any",
                     "parameters": [["name": "tasks", "type": "Array<Task>"]],
-                    "body": [["let": "seen", "value": ["ref": "tasks"]]],
-                    "result": ["dictionary": [["result", ["ref": "seen"]]]]
+                    "body": [["let": "seen", "value": ["ref": "tasks"]], ["value": ["return": ["dictionary": [["result", ["ref": "seen"]]]]]]]
                 ]
             ]
         ])

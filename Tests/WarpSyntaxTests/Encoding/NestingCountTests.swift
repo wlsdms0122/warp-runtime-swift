@@ -71,8 +71,8 @@ struct NestingCountTests {
 
     @Test("a text walks each shape a tree nests by to the bound, both ways", arguments: [
         ("(warp 1) (const x ", 126, "(array ", "1", ")", ")", 128),
-        ("(warp 1) (procedure f (result ", 41, "(call f ", "1", ")", "))", 126),
-        ("(warp 1) (procedure f (result ", 62, "(closure (result ", "1", "))", "))", 127),
+        ("(warp 1) (procedure f (body (return ", 40, "(call f ", "1", ")", ")))", 126),
+        ("(warp 1) (procedure f (body (return ", 24, "(closure (body (return ", "1", ")))", ")))", 126),
         ("(warp 1) (procedure f (body ", 30, "(conditional (when true) (then ", "1", "))", "))", 125),
         ("(test 1) (expect (answers ", 126, "(dictionary (entry 1 ", "1", "))", "))", 128),
         ("(warp 1) (type T ", 127, "(array ", "Int", ")", ")", 2),

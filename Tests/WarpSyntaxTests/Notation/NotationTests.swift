@@ -77,9 +77,9 @@ struct NotationTests {
                                 "then": [["set": "pick", "value": "matched"]],
                                 "else": [["set": "pick", "value": "missed"]]
                             ]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+                    ]
                 ]
             ]
         ], from: .canonical)
@@ -111,8 +111,8 @@ struct NotationTests {
 
         // Then
         guard
-            case let .body(block) = sut.procedures[entryName]?.implementation,
-            case let .conditional(condition, _, _) = block.body.statements.first?.expression
+            case let .body(body) = sut.procedures[entryName]?.implementation,
+            case let .conditional(condition, _, _) = body.statements.first?.expression
         else {
             Issue.record("a conditional reads a condition")
 
@@ -142,8 +142,8 @@ struct NotationTests {
         guard
             case let .array(body)? = written.map?["procedures"]?.map?["entry"]?.map?["body"],
             let condition = body.first?.map?["value"]?.map?["conditional"]?.map?["when"],
-            case let .body(block) = read.procedures[entryName]?.implementation,
-            case let .conditional(.struct(fields), _, _) = block.body.statements.first?.expression
+            case let .body(body) = read.procedures[entryName]?.implementation,
+            case let .conditional(.struct(fields), _, _) = body.statements.first?.expression
         else {
             Issue.record("a struct written for a notation reads back as a struct there")
 
@@ -184,8 +184,8 @@ struct NotationTests {
 
         // Then. The same struct arrived, rather than a call
         guard
-            case let .body(block) = read.procedures[entryName]?.implementation,
-            case let .conditional(condition, _, _) = block.body.statements.first?.expression,
+            case let .body(body) = read.procedures[entryName]?.implementation,
+            case let .conditional(condition, _, _) = body.statements.first?.expression,
             case let .struct(fields) = condition
         else {
             Issue.record("a struct written in a condition slot reads back as a struct")
@@ -235,8 +235,8 @@ struct NotationTests {
 
         // Then
         guard
-            case let .body(block) = sut.procedures[entryName]?.implementation,
-            case let .call(call) = block.body.statements.first?.expression
+            case let .body(body) = sut.procedures[entryName]?.implementation,
+            case let .call(call) = body.statements.first?.expression
         else {
             Issue.record("a template is the procedures that put text together")
 
@@ -268,9 +268,9 @@ struct NotationTests {
         // When / Then. Both readers arrive at the cast
         for notation in [Notation.canonical, .testing] {
             guard
-                case let .body(block) = try sut.loadProcedure(written, from: notation)
+                case let .body(body) = try sut.loadProcedure(written, from: notation)
                     .procedures[entryName]?.implementation,
-                case let .conditional(condition, _, _) = block.body.statements.first?.expression,
+                case let .conditional(condition, _, _) = body.statements.first?.expression,
                 case .cast = condition
             else {
                 Issue.record("`as` is a cast in every notation")
@@ -294,9 +294,9 @@ struct NotationTests {
                     "entry": [
                         "parameters": [["name": "word", "type": "String"]],
                         "body": [
-                            ["let": "asked", "value": asked]
-                        ],
-                        "result": ["ref": "asked"]
+                            ["let": "asked", "value": asked],
+                            ["value": ["return": ["ref": "asked"]]]
+                        ]
                     ]
                 ]
             ]
@@ -313,8 +313,8 @@ struct NotationTests {
             "\(error)".contains("a mapping where a value is wanted is one of")
         }
         guard
-            case let .body(block) = module.procedures[entryName]?.implementation,
-            case let .struct(fields) = block.body.statements.first?.expression
+            case let .body(body) = module.procedures[entryName]?.implementation,
+            case let .struct(fields) = body.statements.first?.expression
         else {
             Issue.record("a document read with no notation reads a struct as a struct")
 

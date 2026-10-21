@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // One walk over everything an expression holds.
 //
@@ -29,8 +30,10 @@ struct TraversableTests {
             .leave(.procedure(marker("leave value"))),
             .struct(["field": marker("struct field")]),
             .closure(Procedure(
-                body: [Statement(binding: .constant("inside"), expression: marker("closure body"))],
-                result: marker("closure result")
+                body: [
+                Statement(binding: .constant("inside"), expression: marker("closure body")),
+                returning(marker("closure result"))
+            ]
             )),
             .apply(marker("apply callee"), arguments: [marker("apply argument")]),
             .call(Call(selector: "procedure", arguments: [marker("call first argument"), marker("call second argument")])),
@@ -44,8 +47,8 @@ struct TraversableTests {
                 body: [Statement(expression: marker("loop body"))]
             ),
             .attempt(
-                Block(body: [Statement(expression: marker("attempt body"))]),
-                rescue: Block(body: [Statement(expression: marker("attempt rescue"))])
+                [Statement(expression: marker("attempt body"))],
+                rescue: [Statement(expression: marker("attempt rescue"))]
             )
         ])
 
@@ -78,39 +81,36 @@ struct TraversableTests {
         let call = Statement(expression: .apply(name("bump"), arguments: [name("count")]))
 
         func closure() -> Warp.Expression {
-            .closure(Procedure(signature: Signature(failing: .anything), body: [call], result: .literal(.null)))
+            .closure(Procedure(signature: Signature(failing: .anything), body: [call]))
         }
 
-        let sut = Block(
-            body: [
-                Statement(binding: .variable("count"), expression: .literal(.int(0))),
-                Statement(binding: .variable("going"), expression: .literal(.bool(true))),
-                Statement(
-                    binding: .constant("bump"),
-                    expression: .closure(
-                        Procedure(
-                            signature: Signature(parameters: [Parameter(name: "held", type: .inout(.int))], failing: .anything),
-                            body: [],
-                            result: .literal(.null)
-                        )
+        let sut: Body = [
+            Statement(binding: .variable("count"), expression: .literal(.int(0))),
+            Statement(binding: .variable("going"), expression: .literal(.bool(true))),
+            Statement(
+                binding: .constant("bump"),
+                expression: .closure(
+                    Procedure(
+                        signature: Signature(parameters: [Parameter(name: "held", type: .inout(.int))], failing: .anything),
+                        body: []
                     )
-                ),
-                call,
-                Statement(expression: .conditional(name("going"), then: [call], else: [call])),
-                Statement(
-                    expression: .loop(
-                        while: name("going"),
-                        body: [call, Statement(expression: .leave(.construct(nil)))]
-                    )
-                ),
-                Statement(expression: .attempt(Block(body: [call]), rescue: Block(body: [call]))),
-                Statement(binding: .constant("listed"), expression: .array([closure()])),
-                Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .struct(["held": closure()])),
-                Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
-                Statement(expression: .apply(name("bump"), arguments: [name("count")]))
-            ],
-            result: closure()
-        )
+                )
+            ),
+            call,
+            Statement(expression: .conditional(name("going"), then: [call], else: [call])),
+            Statement(
+                expression: .loop(
+                    while: name("going"),
+                    body: [call, Statement(expression: .leave(.construct(nil)))]
+                )
+            ),
+            Statement(expression: .attempt([call], rescue: [call])),
+            Statement(binding: .constant("listed"), expression: .array([closure()])),
+            Statement(binding: .constant("fielded", declared: .named("App.Held")), expression: .struct(["held": closure()])),
+            Statement(binding: .constant("cast"), expression: .cast(closure(), as: .procedure(nil), optional: false)),
+            Statement(expression: .apply(name("bump"), arguments: [name("count")])),
+            returning(closure())
+        ]
         let place = Place.procedure("entry", in: .assembled)
         let context = TypingContext(
             types: try TypeTable(types: ["App.Held": .struct(["held": .procedure(nil)])]),
@@ -135,7 +135,7 @@ struct TraversableTests {
         // Then. The table holds one entry for each call of a value the walk
         // reaches, inside a closure literal or not, under the place the walk
         // reaches it at, and of the kind that stands there
-        let found = sut.subexpressions(at: place)
+        let found = sut.subexpressions(at: place.part(.body))
         let calls = found.filter { _, expression in
             if case .apply = expression { return true }
 
@@ -162,32 +162,29 @@ struct TraversableTests {
         // Given. The location a report quotes. A closure literal and the body
         // it carries answer under one name, so a refusal says which closure
         // without having to say it twice.
-        let sut = Block(
-            body: [Statement(binding: .constant("held"), expression: .closure(Procedure(
-                    body: [],
-                    result: .cast(.literal(.int(1)), as: .int, optional: false)
+        let sut: Body = [
+            Statement(binding: .constant("held"), expression: .closure(Procedure(
+                    body: [returning(.cast(.literal(.int(1)), as: .int, optional: false))]
                 ))
-            )],
-            result: .attempt(
-                Block(body: []),
-                rescue: Block(
-                    body: [Statement(expression: .cast(.literal(.int(2)), as: .string, optional: false))]
-                )
-            )
-        )
+            ),
+            Statement(expression: .attempt(
+                [],
+                rescue: [Statement(expression: .cast(.literal(.int(2)), as: .string, optional: false))]
+            ))
+        ]
 
         // When
-        let casts = sut.subexpressions(at: .given("entry")).compactMap { place, expression -> String? in
+        let casts = sut.subexpressions(at: Place.given("entry").part(.body)).compactMap { place, expression -> String? in
             guard case .cast = expression else { return nil }
 
             return place.rendered
         }
 
         // Then
-        #expect(casts == ["entry.body.held[0].closure.closure.result", "entry.result.rescue.body[0].cast"])
+        #expect(casts == ["entry.body.held[0].closure.closure.body[0].leave", "entry.body[1].attempt.rescue[0].cast"])
 
         // And the closure literal is found at the place its body is
-        let closures = sut.subexpressions(at: .given("entry")).compactMap { place, expression -> String? in
+        let closures = sut.subexpressions(at: Place.given("entry").part(.body)).compactMap { place, expression -> String? in
             guard case .closure = expression else { return nil }
 
             return place.rendered

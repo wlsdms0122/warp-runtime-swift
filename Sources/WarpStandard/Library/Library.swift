@@ -48,8 +48,8 @@ enum Library {
                         (when (call Standard.Logic.equal (path array (index (path walk (field index)))) element))
                         (then
                           (set found true)
-                          (break)))))))
-              (result found))
+                          (break))))))
+                (return found)))
             
             (procedure Standard.Collection.dropFirst
               (description "The elements after the first.")
@@ -63,8 +63,8 @@ enum Library {
                   (loop
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
                     (body
-                      (set places (call Standard.Collection.appending places (call Standard.Numeric.plus (path walk (field index)) 1)))))))
-              (result (call Standard.Collection.gathering array places)))
+                      (set places (call Standard.Collection.appending places (call Standard.Numeric.plus (path walk (field index)) 1))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.dropLast
               (description "The elements before the last.")
@@ -78,8 +78,8 @@ enum Library {
                   (loop
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
                     (body
-                      (set places (call Standard.Collection.appending places (path walk (field index))))))))
-              (result (call Standard.Collection.gathering array places)))
+                      (set places (call Standard.Collection.appending places (path walk (field index)))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.filter
               (description "The elements a procedure answers true for.")
@@ -98,8 +98,8 @@ enum Library {
                       (conditional
                         (when kept)
                         (then
-                          (set places (call Standard.Collection.appending places (path walk (field index))))))))))
-              (result (call Standard.Collection.gathering array places)))
+                          (set places (call Standard.Collection.appending places (path walk (field index)))))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.first
               (description "The first element.")
@@ -107,7 +107,8 @@ enum Library {
               (isolated)
               (parameter array (type (array (some Element))))
               (returns (some Element))
-              (result (path array (index 0))))
+              (body
+                (return (path array (index 0)))))
             
             (procedure Standard.Collection.last
               (description "The last element.")
@@ -116,8 +117,8 @@ enum Library {
               (parameter array (type (array (some Element))))
               (returns (some Element))
               (body
-                (let at (call Standard.Numeric.minus (call Standard.Collection.count array) 1)))
-              (result (path array (index at))))
+                (let at (call Standard.Numeric.minus (call Standard.Collection.count array) 1))
+                (return (path array (index at)))))
             
             (procedure Standard.Collection.map
               (description "Each element answered by a procedure, in order.")
@@ -133,8 +134,8 @@ enum Library {
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
                     (body
                       (let answered (apply transform (path array (index (path walk (field index))))))
-                      (set answers (call Standard.Collection.appending answers answered))))))
-              (result answers))
+                      (set answers (call Standard.Collection.appending answers answered)))))
+                (return answers)))
             
             (procedure Standard.Collection.prepending
               (description "The elements with one more at the front.")
@@ -145,8 +146,8 @@ enum Library {
               (returns (array (some Element)))
               (body
                 (let back (call Standard.Collection.reversed array))
-                (let grown (call Standard.Collection.appending back element)))
-              (result (call Standard.Collection.reversed grown)))
+                (let grown (call Standard.Collection.appending back element))
+                (return (call Standard.Collection.reversed grown))))
             
             (procedure Standard.Collection.reduce
               (description "The elements folded into one, starting from a value.")
@@ -163,8 +164,8 @@ enum Library {
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
                     (body
                       (let answered (apply nextPartialResult carried (path array (index (path walk (field index))))))
-                      (set carried answered)))))
-              (result carried))
+                      (set carried answered))))
+                (return carried)))
             
             (procedure Standard.Collection.reversed
               (description "The elements back to front.")
@@ -178,8 +179,8 @@ enum Library {
                   (loop
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
                     (body
-                      (set places (call Standard.Collection.appending places (call Standard.Numeric.minus (call Standard.Collection.count array) (call Standard.Numeric.plus (path walk (field index)) 1))))))))
-              (result (call Standard.Collection.gathering array places)))
+                      (set places (call Standard.Collection.appending places (call Standard.Numeric.minus (call Standard.Collection.count array) (call Standard.Numeric.plus (path walk (field index)) 1)))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.sorted
               (description "The elements in the order lessThan puts them in, for any type that orders.")
@@ -238,8 +239,8 @@ enum Library {
                             (conditional
                               (when same)
                               (then
-                                (set places (call Standard.Collection.appending places (path scan (field index)))))))))))))
-              (result (call Standard.Collection.gathering array places)))
+                                (set places (call Standard.Collection.appending places (path scan (field index))))))))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.tryFilter
               (description "The elements a procedure that may fail answers true for.")
@@ -259,8 +260,8 @@ enum Library {
                       (conditional
                         (when kept)
                         (then
-                          (set places (call Standard.Collection.appending places (path walk (field index))))))))))
-              (result (call Standard.Collection.gathering array places)))
+                          (set places (call Standard.Collection.appending places (path walk (field index)))))))))
+                (return (call Standard.Collection.gathering array places))))
             
             (procedure Standard.Collection.tryMap
               (description "Each element answered by a procedure that may fail, in order.")
@@ -277,8 +278,8 @@ enum Library {
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
                     (body
                       (let answered (apply transform (path array (index (path walk (field index))))))
-                      (set answers (call Standard.Collection.appending answers answered))))))
-              (result answers))
+                      (set answers (call Standard.Collection.appending answers answered)))))
+                (return answers)))
             
             (procedure Standard.Collection.tryReduce
               (description "The elements folded into one by a procedure that may fail, starting from a value.")
@@ -296,8 +297,8 @@ enum Library {
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count array)))
                     (body
                       (let answered (apply nextPartialResult carried (path array (index (path walk (field index))))))
-                      (set carried answered)))))
-              (result carried))
+                      (set carried answered))))
+                (return carried)))
             
             (procedure Standard.Collection.values
               (description "What a map holds, by its keys in the key order.")
@@ -313,8 +314,8 @@ enum Library {
                     (while (call Standard.Comparable.lessThan (path walk (field index)) (call Standard.Collection.count keys)))
                     (body
                       (let key (path keys (index (path walk (field index)))))
-                      (set held (call Standard.Collection.appending held (path dictionary (index key))))))))
-              (result held))
+                      (set held (call Standard.Collection.appending held (path dictionary (index key)))))))
+                (return held)))
             """,
         "concurrent": """
             (warp 1)
@@ -345,10 +346,10 @@ enum Library {
                           (returns (some Answer))
                           (failing (anything))
                           (body
-                            (let answered (apply transform item index)))
-                          (result answered)))
-                      (set pieces (call Standard.Collection.appending pieces piece))))))
-              (result (call Standard.Concurrent.all pieces)))
+                            (let answered (apply transform item index))
+                            (return answered))))
+                      (set pieces (call Standard.Collection.appending pieces piece)))))
+                (return (call Standard.Concurrent.all pieces))))
             """,
         "logic": """
             (warp 1)
@@ -373,8 +374,8 @@ enum Library {
                       (conditional
                         (when (call Standard.Logic.not answered))
                         (then
-                          (return false)))))))
-              (result true))
+                          (return false))))))
+                (return true)))
             
             (procedure Standard.Logic.not
               (description "The opposite of a truth.")
@@ -382,7 +383,8 @@ enum Library {
               (isolated)
               (parameter value (type Bool))
               (returns Bool)
-              (result (call Standard.Logic.equal value false)))
+              (body
+                (return (call Standard.Logic.equal value false))))
             
             (procedure Standard.Logic.notEqual
               (description "Whether two values differ.")
@@ -391,7 +393,8 @@ enum Library {
               (parameter lhs)
               (parameter rhs)
               (returns Bool)
-              (result (call Standard.Logic.equal (call Standard.Logic.equal lhs rhs) false)))
+              (body
+                (return (call Standard.Logic.equal (call Standard.Logic.equal lhs rhs) false))))
             
             (procedure Standard.Logic.or
               (description "Whether one answers true, asked until one does.")
@@ -409,8 +412,8 @@ enum Library {
                       (conditional
                         (when answered)
                         (then
-                          (return true)))))))
-              (result false))
+                          (return true))))))
+                (return false)))
             
             (procedure Standard.Logic.select
               (description "The value one of two sides answers, chosen by a truth.")
@@ -426,8 +429,8 @@ enum Library {
                   (then
                     (let taken (apply then))
                     (return taken)))
-                (let left (apply else)))
-              (result left))
+                (let left (apply else))
+                (return left)))
             
             (procedure Standard.Logic.tryAnd
               (description "Whether every side, each of which may fail, answers true, asked until one does not.")
@@ -446,8 +449,8 @@ enum Library {
                       (conditional
                         (when (call Standard.Logic.not answered))
                         (then
-                          (return false)))))))
-              (result true))
+                          (return false))))))
+                (return true)))
             
             (procedure Standard.Logic.tryOr
               (description "Whether one side, each of which may fail, answers true, asked until one does.")
@@ -466,8 +469,8 @@ enum Library {
                       (conditional
                         (when answered)
                         (then
-                          (return true)))))))
-              (result false))
+                          (return true))))))
+                (return false)))
             
             (procedure Standard.Logic.trySelect
               (description "The value one of two sides, each of which may fail, answers, chosen by a truth.")
@@ -484,8 +487,8 @@ enum Library {
                   (then
                     (let taken (apply then))
                     (return taken)))
-                (let left (apply else)))
-              (result left))
+                (let left (apply else))
+                (return left)))
             """,
         "math": """
             (warp 1)
@@ -506,8 +509,8 @@ enum Library {
                 (conditional
                   (when (call Standard.Comparable.lessThan zero number))
                   (then
-                    (return number))))
-              (result (call Standard.Numeric.minus zero number)))
+                    (return number)))
+                (return (call Standard.Numeric.minus zero number))))
             
             (procedure Standard.Math.greaterThan
               (description "Whether the first is larger, by the one order.")
@@ -516,7 +519,8 @@ enum Library {
               (parameter lhs (type (some T Standard.Comparable)))
               (parameter rhs (type (some T)))
               (returns Bool)
-              (result (call Standard.Comparable.lessThan rhs lhs)))
+              (body
+                (return (call Standard.Comparable.lessThan rhs lhs))))
             
             (procedure Standard.Math.max
               (description "The larger of two of one type, by the one order.")
@@ -529,8 +533,8 @@ enum Library {
                 (conditional
                   (when (call Standard.Comparable.lessThan rhs lhs))
                   (then
-                    (return lhs))))
-              (result rhs))
+                    (return lhs)))
+                (return rhs)))
             
             (procedure Standard.Math.min
               (description "The smaller of two of one type, by the one order.")
@@ -543,8 +547,8 @@ enum Library {
                 (conditional
                   (when (call Standard.Comparable.lessThan rhs lhs))
                   (then
-                    (return rhs))))
-              (result lhs))
+                    (return rhs)))
+                (return lhs)))
             """,
         "text": """
             (warp 1)
@@ -588,8 +592,8 @@ enum Library {
                       (conditional
                         (when same)
                         (then
-                          (return true)))))))
-              (result false))
+                          (return true))))))
+                (return false)))
             
             (procedure Standard.Text.replacing
               (description "Every occurrence of a piece swapped for another.")
@@ -604,8 +608,8 @@ enum Library {
                 (conditional
                   (when (call Standard.Logic.equal target ""))
                   (then
-                    (call Standard.Control.abort "replacing asks an empty piece"))))
-              (result (call Standard.Text.joined (call Standard.Text.split text target) replacement)))
+                    (call Standard.Control.abort "replacing asks an empty piece")))
+                (return (call Standard.Text.joined (call Standard.Text.split text target) replacement))))
             
             (procedure Standard.Text.split
               (description "The text cut on a separator.")
@@ -653,8 +657,8 @@ enum Library {
                           (set at (call Standard.Numeric.plus at wantedCount)))
                         (else
                           (set current (call Standard.Collection.appending current (path held (index at))))
-                          (set at (call Standard.Numeric.plus at 1))))))))
-              (result (call Standard.Collection.appending pieces (call Standard.Text.joined current ""))))
+                          (set at (call Standard.Numeric.plus at 1)))))))
+                (return (call Standard.Collection.appending pieces (call Standard.Text.joined current "")))))
             
             (procedure Standard.Text.startsWith
               (description "Whether a string begins with another.")
@@ -677,8 +681,8 @@ enum Library {
                       (conditional
                         (when (call Standard.Logic.not (call Standard.Logic.equal (path held (index (path walk (field index)))) (path wanted (index (path walk (field index)))))))
                         (then
-                          (return false)))))))
-              (result true))
+                          (return false))))))
+                (return true)))
             """
     ]
 }

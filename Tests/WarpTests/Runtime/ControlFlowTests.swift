@@ -39,14 +39,14 @@ struct ControlFlowTests {
                 Statement(binding: .variable("kept"), expression: .literal(.string(""))),
                 Statement(expression: sut(true))
             ],
-            result: reference("kept")
+            returning: reference("kept")
         )
         let untaken = try await answer(
             of: [
                 Statement(binding: .variable("kept"), expression: .literal(.string(""))),
                 Statement(expression: sut(false))
             ],
-            result: reference("kept")
+            returning: reference("kept")
         )
 
         // Then
@@ -72,7 +72,7 @@ struct ControlFlowTests {
                 Statement(binding: .variable("kept"), expression: .literal(.null)),
                 Statement(expression: sut)
             ],
-            result: reference("kept")
+            returning: reference("kept")
         )
 
         // Then
@@ -93,7 +93,7 @@ struct ControlFlowTests {
                 Statement(binding: .variable("seen"), expression: .literal(.int(-1))),
                 Statement(binding: .constant("probe"), expression: sut)
             ],
-            result: reference("seen")
+            returning: reference("seen")
         )
 
         // Then. The last round to run was the one the index read 2 in
@@ -138,7 +138,7 @@ struct ControlFlowTests {
         await #expect(throws: Aborted.self) {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: .literal(.null)
+                returning: .literal(.null)
             )
         }
     }
@@ -164,7 +164,7 @@ struct ControlFlowTests {
                 Statement(binding: .variable("sum"), expression: .literal(.int(0))),
                 Statement(binding: .constant("walk"), expression: sut)
             ],
-            result: reference("sum"),
+            returning: reference("sum"),
             arguments: ["counts": .array([.int(1), .int(2), .int(3)])],
             signature: Signature(parameters: [Parameter(name: "counts", type: .array(.int))], returns: .int)
         )
@@ -178,19 +178,22 @@ struct ControlFlowTests {
         // Given. Recovery is for a world that did not cooperate, not for a
         // procedure that is wrong
         let sut = Warp.Expression.attempt(
-            Block(body: [
+            [
                 Statement(binding: .constant("boom"), expression: .call(
                     Call(selector: "App.fail", arguments: [.literal(.bool(false))])
                 ))
-            ]),
-            rescue: Block(body: [], result: .literal(.string("recovered")))
+            ],
+            rescue: [Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))]
         )
 
         // When / Then
         await #expect(throws: TestFatalError.self) {
             try await answer(
-                of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: reference("probe"),
+                of: [
+                    Statement(binding: .variable("kept"), expression: .literal(.null)),
+                    Statement(binding: .constant("probe"), expression: sut)
+                ],
+                returning: reference("kept"),
                 vocabulary: Module.standard + [.failing]
             )
         }
@@ -212,19 +215,21 @@ struct ControlFlowTests {
                     equals(reference("item"), .literal(.int(2))),
                     then: [Statement(expression: .leave(.procedure(.literal(.bool(true)))))],
                     else: nil
-                ))
-            ],
-            result: .literal(.bool(false))
+                )),
+                returning(.literal(.bool(false)))
+            ]
         )
         let asking = Procedure(
             signature: Signature(returns: .array(.int)),
-            body: [Statement(binding: .constant("judging"), expression: .closure(judging))],
-            result: .call(
-                Call(
-                    selector: "Standard.Collection.filter",
-                    arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
-                )
-            )
+            body: [
+                Statement(binding: .constant("judging"), expression: .closure(judging)),
+                returning(.call(
+                    Call(
+                        selector: "Standard.Collection.filter",
+                        arguments: [.array([.literal(.int(1)), .literal(.int(2)), .literal(.int(3))]), reference("judging")]
+                    )
+                ))
+            ]
         )
 
         // When

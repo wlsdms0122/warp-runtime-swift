@@ -59,7 +59,7 @@ struct BuilderTests {
         func module(closure: Name, reading constant: Name) throws -> Module {
             try Module(
                 constants: [
-                    closure: .closure(Procedure(signature: Signature(returns: .int, failing: .anything), body: [], result: reference(constant))),
+                    closure: .closure(Procedure(signature: Signature(returns: .int, failing: .anything), body: [returning(reference(constant))])),
                     constant: .literal(.int(3))
                 ],
                 procedures: [
@@ -67,9 +67,9 @@ struct BuilderTests {
                         access: .public,
                         signature: Signature(returns: .int, failing: .anything),
                         body: [
-                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: []))
-                        ],
-                        result: reference("got")
+                            Statement(binding: .constant("got"), expression: .apply(reference(closure), arguments: [])),
+                            returning(reference("got"))
+                        ]
                     )
                 ]
             )
@@ -100,9 +100,9 @@ struct BuilderTests {
                             .literal(.bool(true)),
                             then: [Statement(binding: .assignment([.name("got")]), expression: reference("zebra"))],
                             else: nil
-                        ))
-                    ],
-                    result: reference("got")
+                        )),
+                        returning(reference("got"))
+                    ]
                 )),
                 "zebra": .literal(.int(7))
             ],
@@ -111,9 +111,9 @@ struct BuilderTests {
                     access: .public,
                     signature: Signature(returns: .int, failing: .anything),
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: []))
-                    ],
-                    result: reference("got")
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply"), arguments: [])),
+                        returning(reference("got"))
+                    ]
                 )
             ]
         )
@@ -137,8 +137,7 @@ struct BuilderTests {
                     .struct([
                         "run": .closure(Procedure(
                             signature: Signature(returns: .int),
-                            body: [],
-                            result: reference("zebra")
+                            body: [returning(reference("zebra"))]
                         ))
                     ]),
                     as: .named("App.Runner"),
@@ -151,9 +150,9 @@ struct BuilderTests {
                     access: .public,
                     signature: Signature(returns: .int, failing: .anything),
                     body: [
-                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: []))
-                    ],
-                    result: reference("got")
+                        Statement(binding: .constant("got"), expression: .apply(reference("apply", "run"), arguments: [])),
+                        returning(reference("got"))
+                    ]
                 )
             ]
         )
@@ -185,7 +184,7 @@ struct BuilderTests {
                     )
                 )
             ],
-            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .string), body: [], result: reference("url"))]
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .string), body: [returning(reference("url"))])]
         )
 
         // When
@@ -237,10 +236,10 @@ struct BuilderTests {
                     access: .public,
                     body: [
                         Statement(binding: .constant("attempt"), expression: .attempt(
-                                Block(body: [mayFail()]),
-                                rescue: Block(body: [
+                                [mayFail()],
+                                rescue: [
                                     Statement(binding: .constant("recover"), expression: .call(Call(selector: "missing")))
-                                ])
+                                ]
                             )
                         )
                     ]
@@ -360,9 +359,9 @@ struct BuilderTests {
                     body: [
                         Statement(binding: .constant("got"), expression: .call(
                             Call(selector: "plus", arguments: [.literal(.int(1)), .literal(.int(2))])
-                        ))
-                    ],
-                    result: .reference([.name("got"), .name("field")])
+                        )),
+                        returning(.reference([.name("got"), .name("field")]))
+                    ]
                 )
             ]
         )
@@ -391,7 +390,7 @@ struct BuilderTests {
                                     selector: "Standard.Concurrent.all",
                                     arguments: [
                                         .array([
-                                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1))))
+                                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(1)))]))
                                         ])
                                     ]
                                 )
@@ -417,27 +416,23 @@ struct BuilderTests {
                     parameters: [Parameter(name: "of", type: .string)],
                     returns: .int
                 ),
-                body: [],
-                result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("of")]))
+                body: [returning(.call(Call(selector: "Standard.Collection.count", arguments: [reference("of")])))]
             ),
             "helper": Procedure(
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "shout", arguments: [reference("greeting")]))
+                body: [returning(.call(Call(selector: "shout", arguments: [reference("greeting")])))]
             ),
             "loud": Procedure(
                 signature: Signature(
                     parameters: [Parameter(name: "of", type: .int)],
                     returns: .int
                 ),
-                body: [],
-                result: .call(Call(selector: "helper"))
+                body: [returning(.call(Call(selector: "helper")))]
             ),
             entryName: Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "helper"))
+                body: [returning(.call(Call(selector: "helper")))]
             )
         ]
 
@@ -469,19 +464,19 @@ struct BuilderTests {
             constants: [
                 "f": .closure(Procedure(
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Text.uppercased",
-                        arguments: [.literal(.string("a")), .literal(.bool(true))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Text.uppercased",
+                            arguments: [.literal(.string("a")), .literal(.bool(true))]
+                        )))
+                    ]
                 ))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
-                    body: [],
-                    result: .reference([.name("f")])
+                    body: [returning(.reference([.name("f")]))]
                 )
             ]
         )
@@ -505,17 +500,17 @@ struct BuilderTests {
                         parameters: [Parameter(name: "of", type: .string)],
                         returns: .string
                     ),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Text.uppercased",
-                        arguments: [.reference([.name("of")]), .literal(.bool(true))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Text.uppercased",
+                            arguments: [.reference([.name("of")]), .literal(.bool(true))]
+                        )))
+                    ]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )

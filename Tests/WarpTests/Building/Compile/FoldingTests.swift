@@ -136,7 +136,7 @@ struct FoldingTests {
     private func read(_ expression: Warp.Expression) async throws -> Value? {
         try await answer(
             of: [],
-            result: expression,
+            returning: expression,
             arguments: bindings,
             signature: Signature(parameters: bindings.keys.sorted().map { name in Parameter(name: name, type: .any) }, returns: .any)
         )

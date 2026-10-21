@@ -35,11 +35,12 @@ struct IndexReferenceJudgementTests {
                         ],
                         returns: .string
                     ),
-                    body: [],
-                    result: .reference([
-                        .name("items"),
-                        .indexRef([.name("names"), .indexRef([.name("C")])])
-                    ])
+                    body: [
+                        returning(.reference([
+                            .name("items"),
+                            .indexRef([.name("names"), .indexRef([.name("C")])])
+                        ]))
+                    ]
                 )
             ]
         )
@@ -71,12 +72,13 @@ struct IndexReferenceJudgementTests {
                             Parameter(name: "items", type: .array(.named("App.Item")))
                         ]
                     ),
-                    body: [],
-                    result: .reference([
-                        .name("items"),
-                        .indexRef([.name("i")]),
-                        .name("nope")
-                    ])
+                    body: [
+                        returning(.reference([
+                            .name("items"),
+                            .indexRef([.name("i")]),
+                            .name("nope")
+                        ]))
+                    ]
                 )
             ]
         )
@@ -103,8 +105,7 @@ struct IndexReferenceJudgementTests {
                             Parameter(name: "name", type: .string)
                         ]
                     ),
-                    body: [],
-                    result: .reference([.name("items"), .indexRef([.name("name")])])
+                    body: [returning(.reference([.name("items"), .indexRef([.name("name")])]))]
                 )
             ]
         )
@@ -130,8 +131,7 @@ struct IndexReferenceJudgementTests {
                             Parameter(name: "text", type: .string)
                         ]
                     ),
-                    body: [],
-                    result: .reference([.name("text"), .indexRef([.name("i")])])
+                    body: [returning(.reference([.name("text"), .indexRef([.name("i")])]))]
                 )
             ]
         )

@@ -63,9 +63,9 @@ struct ObservationTests {
                     signature: Signature(returns: .int),
                     body: [
                         Statement(binding: .constant("first"), expression: .literal(.int(1))),
-                        Statement(binding: .constant("second"), expression: .literal(.int(2)))
-                    ],
-                    result: reference("second")
+                        Statement(binding: .constant("second"), expression: .literal(.int(2))),
+                        returning(reference("second"))
+                    ]
                 )
             ]
         )
@@ -80,7 +80,8 @@ struct ObservationTests {
             .started("first"),
             .completed("first", .int(1)),
             .started("second"),
-            .completed("second", .int(2))
+            .completed("second", .int(2)),
+            .started("[2]")
         ])
     }
 
@@ -101,9 +102,9 @@ struct ObservationTests {
                                     Statement(expression: .leave(.construct(nil)))
                                 ]
                             )
-                        )
-                    ],
-                    result: .literal(.int(1))
+                        ),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )
@@ -183,9 +184,9 @@ struct ObservationTests {
                                                     isolation: .isolated
                                                 ),
                                                 body: [
-                                                    Statement(binding: .constant("step"), expression: reference("item"))
-                                                ],
-                                                result: reference("step")
+                                                    Statement(binding: .constant("step"), expression: reference("item")),
+                                                    returning(reference("step"))
+                                                ]
                                             )
                                         )
                                     ]
@@ -225,9 +226,9 @@ struct ObservationTests {
                 "helper": Procedure(
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .constant("inner"), expression: .literal(.int(7)))
-                    ],
-                    result: reference("inner")
+                        Statement(binding: .constant("inner"), expression: .literal(.int(7))),
+                        returning(reference("inner"))
+                    ]
                 )
             ]
         )
@@ -294,7 +295,7 @@ struct ObservationTests {
                     body: [
                         Statement(
                             binding: .constant("first"),
-                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]))
                         ),
                         Statement(
                             binding: .constant("second", declared: .procedure(ProcedureType(returns: .int, failing: .these(["aborted"])))),
@@ -372,9 +373,9 @@ struct ObservationTests {
                                     Statement(expression: .leave(.construct(nil)))
                                 ]
                             )
-                        )
-                    ],
-                    result: .literal(.int(1))
+                        ),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )
@@ -390,7 +391,8 @@ struct ObservationTests {
         #expect(events == [
             .started("walk"),
             .started("walk[0].[0]"),
-            .completed("walk", .null)
+            .completed("walk", .null),
+            .started("[1]")
         ])
     }
 
@@ -404,19 +406,20 @@ struct ObservationTests {
                     access: .public,
                     signature: Signature(returns: .nullable(.string)),
                     body: [
+                        Statement(binding: .variable("kept"), expression: .literal(.null)),
                         Statement(binding: .constant("fragile"), expression: .attempt(
-                                Block(
-                                    body: [
-                                        Statement(binding: .constant("doomed"), expression: .call(
-                                            Call(selector: "App.fail", arguments: [.literal(.bool(true))])
-                                        ))
-                                    ]
-                                ),
-                                rescue: Block(body: [], result: .literal(.string("caught")))
+                                [
+                                    Statement(binding: .constant("doomed"), expression: .call(
+                                        Call(selector: "App.fail", arguments: [.literal(.bool(true))])
+                                    ))
+                                ],
+                                rescue: [
+                                    Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("caught")))
+                                ]
                             )
-                        )
-                    ],
-                    result: reference("fragile")
+                        ),
+                        returning(reference("kept"))
+                    ]
                 )
             ]
         )
@@ -436,7 +439,7 @@ struct ObservationTests {
         events.contains { event in
             guard case let .completed(place, answered) = event else { return false }
 
-            return place.hasPrefix("both.Standard.Concurrent.map[\(piece)].")
+            return place.hasPrefix("both.Standard.Concurrent.map.[2][\(piece)].")
                 && place.hasSuffix(".entry.closure[0].step")
                 && answered == value
         }

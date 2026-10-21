@@ -55,8 +55,8 @@ public extension Place {
         case .returns: [.key(SignatureFieldsReader.CodingKeys.returns.stringValue)]
         case .bounds: [.key(SignatureFieldsReader.CodingKeys.bounds.stringValue)]
         case .sameTypes: [.key(SignatureFieldsReader.CodingKeys.sameTypes.stringValue)]
-        case .body: [.key(BlockReader.CodingKeys.body.stringValue)]
-        case .result: [.key(BlockReader.CodingKeys.result.stringValue)]
+        case .body: [.key(ProcedureReader.CodingKeys.body.stringValue)]
+
 
         // A cast's subject stands inside the cast's own mapping, under the tag
         // that says how the cast reads a mismatch.

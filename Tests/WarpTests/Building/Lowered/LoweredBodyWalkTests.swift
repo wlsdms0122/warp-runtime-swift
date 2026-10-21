@@ -53,8 +53,7 @@ struct LoweredBodyWalkTests {
 
         // MARK: - Public
         func operations(holding leaf: Warp.Operation) throws -> [Warp.Operation] {
-            let body = LoweredBody(instructions: [Instruction(binding: nil, code: leaf, label: "leaf")], result: nil)
-            let empty = LoweredBody(instructions: [], result: nil)
+            let held = [Instruction(binding: nil, code: leaf, label: "leaf")]
 
             switch self {
             case .literal, .local, .closure:
@@ -81,11 +80,11 @@ struct LoweredBodyWalkTests {
             case .loop:
                 return [
                     .loop(while: leaf, body: [], round: 0),
-                    .loop(while: .literal(.bool(true)), body: [Instruction(binding: nil, code: leaf, label: "leaf")], round: 0)
+                    .loop(while: .literal(.bool(true)), body: held, round: 0)
                 ]
 
             case .attempt:
-                return [.attempt(body, rescue: empty, failure: 0)]
+                return [.attempt(held, rescue: [], failure: 0), .attempt([], rescue: held, failure: 0)]
 
             case .call:
                 return [.call(CallOperation(procedure: 1, arguments: [leaf, nil], handed: []))]
@@ -219,8 +218,7 @@ struct LoweredBodyWalkTests {
     func anInstructionIsANode() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .assign(address), code: leaf, label: "write")],
-            result: nil
+            instructions: [Instruction(binding: .assign(address), code: leaf, label: "write")]
         )
         var instructions = 0
 
@@ -250,7 +248,7 @@ struct LoweredBodyWalkTests {
             return true
         }
 
-        let standing = LoweredBody(instructions: [], result: sut).standing
+        let standing = LoweredBody(instructions: [Instruction(binding: nil, code: .leave(.procedure, target: nil, sut), label: "return")]).standing
 
         // Then. The place is not walked as an operation, and the standing
         // counts it.
@@ -295,8 +293,7 @@ struct LoweredBodyWalkTests {
     func aRewriteHandsTypesOver() {
         // Given
         let sut = LoweredBody(
-            instructions: [Instruction(binding: .bind(0), code: .cast(leaf, as: .string, optional: false), label: "cast")],
-            result: nil
+            instructions: [Instruction(binding: .bind(0), code: .cast(leaf, as: .string, optional: false), label: "cast")]
         )
         var types: [LoweredType] = []
 

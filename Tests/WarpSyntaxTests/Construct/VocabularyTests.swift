@@ -116,9 +116,9 @@ struct VocabularyTests {
                         "when": ["of": ["ref": "head"], "longerThan": 3],
                         "then": [["set": "verdict", "value": "long"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "verdict"]], ["head", ["ref": "head"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]], ["head", ["ref": "head"]]]]]]
+            ]
         ], importing: ["Extra.longerThan", "Standard.Collection.first"])
 
         // When

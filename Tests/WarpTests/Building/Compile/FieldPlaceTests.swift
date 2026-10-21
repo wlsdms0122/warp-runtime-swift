@@ -38,12 +38,11 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
+            body: [returning(.reference([.name("point"), .name("y")]))]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then. `y` follows `x` in the layout's order.
         #expect(steps == [.field(1, "y", optional: false)])
@@ -59,13 +58,13 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .constant("held", declared: .named("App.Pair")),
                     expression: .struct(["b": .literal(.int(2)), "a": .literal(.int(1))])
-                )
-            ],
-            result: .reference([.name("held"), .name("b")])
+                ),
+                returning(.reference([.name("held"), .name("b")]))
+            ]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then
         #expect(steps == [.field(1, "b", optional: false)])
@@ -79,12 +78,11 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("entries"), .index("a")])
+            body: [returning(.reference([.name("entries"), .index("a")]))]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then
         #expect(steps == [.index("a", optional: false)])
@@ -98,12 +96,11 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "outer", type: .named("App.Outer"))],
                 returns: .string
             ),
-            body: [],
-            result: .reference([.name("outer"), .name("inner"), .name("deep")])
+            body: [returning(.reference([.name("outer"), .name("inner"), .name("deep")]))]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
 
         // Then. `inner` follows `head`, and `deep` follows `beside`
         #expect(steps == [.field(1, "inner", optional: false), .field(1, "deep", optional: false)])
@@ -119,8 +116,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
+            body: [returning(.reference([.name("point"), .name("y")]))]
         )
 
         // When
@@ -149,13 +145,13 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .assignment([PathSegment.name("point")]),
                     expression: .cast(.reference([.name("given")]), as: .named("App.Point"), optional: false)
-                )
-            ],
-            result: .reference([.name("point"), .name("y")])
+                ),
+                returning(.reference([.name("point"), .name("y")]))
+            ]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: [
@@ -179,13 +175,13 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .assignment([PathSegment.name("held")]),
                     expression: .reference([.name("given")])
-                )
-            ],
-            result: .reference([.name("held"), .index("y")])
+                ),
+                returning(.reference([.name("held"), .index("y")]))
+            ]
         )
 
         // When
-        let steps = try await resultSteps(of: sut)
+        let steps = try await answerSteps(of: sut)
         let answer = try await run(
             sut,
             arguments: ["given": .dictionary(["a": .int(0), "y": .int(2)])]
@@ -200,7 +196,7 @@ struct FieldPlaceTests {
     // MARK: - Private
     // The steps of the path a body answers with, which is where these tests
     // read what the build lowered.
-    private func resultSteps(of procedure: Procedure) async throws -> [Step] {
+    private func answerSteps(of procedure: Procedure) async throws -> [Step] {
         let image = try await builder.build(
             [try Module(types: Self.types, procedures: [entryName: procedure.with(access: .public)])] + Module.standard
         )
@@ -219,7 +215,7 @@ struct FieldPlaceTests {
     private func steps(of image: Image) throws -> [Step] {
         guard
             case let .body(body, _) = image[entryName]!.implementation,
-            case let .local(address)? = body.result
+            case let .leave(.procedure, _, .local(address)?)? = body.instructions.last?.code
         else {
             Issue.record("the entry does not answer with a path")
 

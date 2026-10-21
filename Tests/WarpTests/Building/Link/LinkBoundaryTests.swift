@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 import WarpStandard
+import WarpTestSupport
 
 // A procedure value carries its row, and a row is numbered by the link that
 // made it. The two facts together are why a run holds one to the link it came
@@ -67,21 +68,20 @@ struct LinkBoundaryTests {
                 procedures: [
                     "App.hand": Procedure(
                         signature: Signature(returns: .any),
-                        body: [],
-                        result: .closure(Procedure(
-                            signature: Signature(
-                                parameters: [Parameter(name: "it", type: .named("App.Thing"))],
-                                returns: .any
-                            ),
-                            body: [],
-                            result: .reference([.name("it")])
-                        ))
+                        body: [
+                            returning(.closure(Procedure(
+                                signature: Signature(
+                                    parameters: [Parameter(name: "it", type: .named("App.Thing"))],
+                                    returns: .any
+                                ),
+                                body: [returning(.reference([.name("it")]))]
+                            )))
+                        ]
                     ),
                     "entry": Procedure(
                         access: .public,
                         signature: Signature(returns: .any),
-                        body: [],
-                        result: .call(Call(selector: "App.hand"))
+                        body: [returning(.call(Call(selector: "App.hand")))]
                     )
                 ]
             ))

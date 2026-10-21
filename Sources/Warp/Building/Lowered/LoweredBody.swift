@@ -107,7 +107,6 @@ struct LoweredBody: Sendable {
 
     // MARK: - Property
     let instructions: [Instruction]
-    let result: Operation?
 
     var standing: Standing {
         var standing = Standing()
@@ -122,9 +121,8 @@ struct LoweredBody: Sendable {
     }
 
     // MARK: - Initializer
-    init(instructions: [Instruction], result: Operation?) {
+    init(instructions: [Instruction]) {
         self.instructions = instructions
-        self.result = result
     }
 
     // MARK: - Public
@@ -139,7 +137,6 @@ struct LoweredBody: Sendable {
     @discardableResult
     func walk(_ visit: (Node) -> Bool) -> Bool {
         instructions.allSatisfy { instruction in instruction.walk(visit) }
-            && (result?.walk(visit) ?? true)
     }
 
     // Whether any node answers, stopping at the first that does.
@@ -158,8 +155,7 @@ struct LoweredBody: Sendable {
         LoweredBody(
             instructions: try instructions.map { instruction in
                 try instruction.rewritten(operation: operation, type: type)
-            },
-            result: try result.map { result in try result.rewritten(operation: operation, type: type) }
+            }
         )
     }
 

@@ -32,8 +32,7 @@ struct ModuleGraphTests {
                         parameters: [Parameter(name: "of", type: .int)],
                         returns: .int
                     ),
-                    body: [],
-                    result: .literal(.int(2))
+                    body: [returning(.literal(.int(2)))]
                 )
             ]
         )
@@ -41,8 +40,7 @@ struct ModuleGraphTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    body: [],
-                    result: .call(Call(selector: "Lib.twice", arguments: [.literal(.int(1))]))
+                    body: [returning(.call(Call(selector: "Lib.twice", arguments: [.literal(.int(1))])))]
                 )
             ]
         )
@@ -65,8 +63,7 @@ struct ModuleGraphTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .named("Age")),
-                    body: [],
-                    result: .literal(.int(7))
+                    body: [returning(.literal(.int(7)))]
                 )
             ]
         )
@@ -85,8 +82,7 @@ struct ModuleGraphTests {
             procedures: [
                 "One.here": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Two.there"))
+                    body: [returning(.call(Call(selector: "Two.there")))]
                 )
             ]
         )
@@ -94,8 +90,7 @@ struct ModuleGraphTests {
             procedures: [
                 "Two.there": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "One.here"))
+                    body: [returning(.call(Call(selector: "One.here")))]
                 )
             ]
         )
@@ -116,13 +111,11 @@ struct ModuleGraphTests {
             procedures: [
                 "Solo.here": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Solo.there"))
+                    body: [returning(.call(Call(selector: "Solo.there")))]
                 ),
                 "Solo.there": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -138,8 +131,7 @@ struct ModuleGraphTests {
             procedures: [
                 entryName: Procedure(
                     access: .public,
-                    body: [],
-                    result: .call(Call(selector: "Nobody.declares"))
+                    body: [returning(.call(Call(selector: "Nobody.declares")))]
                 )
             ]
         )

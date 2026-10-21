@@ -131,9 +131,9 @@ struct Fanout {
                         as: .named(try type(number)),
                         optional: false
                     )
-                )
-            ],
-            result: held
+                ),
+                Statement(expression: .leave(.procedure(held)))
+            ]
         )
     }
 }

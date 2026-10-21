@@ -9,6 +9,7 @@ import Foundation
 import Testing
 import Warp
 import WarpSyntax
+import WarpTestSupport
 
 // What a cache may key an object by.
 //
@@ -55,8 +56,7 @@ struct FingerprintTests {
         procedures: [
             "App.main": Procedure(
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "A.foo", arguments: [.literal(.null)]))
+                body: [returning(.call(Call(selector: "A.foo", arguments: [.literal(.null)])))]
             )
         ]
     )
@@ -92,8 +92,7 @@ struct FingerprintTests {
             procedures: [
                 "App.main": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .literal(.int(3))
+                    body: [returning(.literal(.int(3)))]
                 )
             ]
         )
@@ -149,8 +148,7 @@ struct FingerprintTests {
             procedures: [
                 "A.foo": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .any)], returns: .int),
-                    body: [],
-                    result: .literal(value)
+                    body: [returning(.literal(value))]
                 )
             ]
         )

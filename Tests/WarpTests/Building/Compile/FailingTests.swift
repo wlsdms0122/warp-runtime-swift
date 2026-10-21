@@ -29,10 +29,11 @@ struct FailingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(
-                        Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
-                    )
+                    body: [
+                        returning(.call(
+                            Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(1)), .literal(.int(2))])
+                        ))
+                    ]
                 )
             ]
         )
@@ -79,8 +80,7 @@ struct FailingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "it", type: .any)], failing: .these(["aborted"])),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Control.abort", arguments: [reference("it")]))
+                    body: [returning(.call(Call(selector: "Standard.Control.abort", arguments: [reference("it")])))]
                 )
             ]
         )
@@ -103,8 +103,7 @@ struct FailingTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "it", type: .any)], returns: .int, failing: failing),
-                        body: [],
-                        result: .cast(reference("it"), as: .int, optional: false)
+                        body: [returning(.cast(reference("it"), as: .int, optional: false))]
                     )
                 ]
             )
@@ -135,20 +134,21 @@ struct FailingTests {
                         failing: .these(["cast_refused"])
                     ),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .call(
-                                    Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
-                                )),
-                                rescue: Block(
-                                    body: [],
-                                    result: .cast(reference("it"), as: .int, optional: false)
-                                )
+                                [
+                                    Statement(expression: .call(
+                                        Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
+                                    ))
+                                ],
+                                rescue: [
+                                    Statement(binding: .assignment([.name("tried")]), expression: .cast(reference("it"), as: .int, optional: false))
+                                ]
                             )
-                        )
-                    ],
-                    result: reference("tried")
+                        ),
+                        returning(reference("tried"))
+                    ]
                 )
             ]
         )
@@ -169,15 +169,15 @@ struct FailingTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .literal(.int(1))),
-                                rescue: Block(body: [], result: .literal(.int(2)))
+                                [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(1)))],
+                                rescue: [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(2)))]
                             )
-                        )
-                    ],
-                    result: reference("tried")
+                        ),
+                        returning(reference("tried"))
+                    ]
                 )
             ]
         )
@@ -202,15 +202,15 @@ struct FailingTests {
                         returns: .int
                     ),
                     body: [
+                        Statement(binding: .variable("tried"), expression: .literal(.null)),
                         Statement(
-                            binding: .constant("tried"),
                             expression: .attempt(
-                                Block(body: [], result: .apply(reference("piece"), arguments: [])),
-                                rescue: Block(body: [], result: .literal(.int(2)))
+                                [Statement(binding: .assignment([.name("tried")]), expression: .apply(reference("piece"), arguments: []))],
+                                rescue: [Statement(binding: .assignment([.name("tried")]), expression: .literal(.int(2)))]
                             )
-                        )
-                    ],
-                    result: reference("tried")
+                        ),
+                        returning(reference("tried"))
+                    ]
                 )
             ]
         )
@@ -233,15 +233,15 @@ struct FailingTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .never, failing: failing),
-                    body: [],
-                    result: .call(Call(selector: "App.reach"))
+                    body: [returning(.call(Call(selector: "App.reach")))]
                 ),
                 "App.reach": Procedure(
                     signature: Signature(returns: .never, failing: .these(["aborted"])),
-                    body: [],
-                    result: .call(
-                        Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
-                    )
+                    body: [
+                        returning(.call(
+                            Call(selector: "Standard.Control.abort", arguments: [.literal(.string("no"))])
+                        ))
+                    ]
                 )
             ]
         )

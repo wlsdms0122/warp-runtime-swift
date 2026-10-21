@@ -20,10 +20,6 @@ public struct LoopForm: ConstructForm {
     // MARK: - Property
     public static let key: Name = "loop"
 
-    // The body is decoded as a key that must be there, so a loop with nothing
-    // in it is still written with an empty one.
-    public static let requiresBody = true
-
     private let condition: Warp.Expression
     private let body: Body
 

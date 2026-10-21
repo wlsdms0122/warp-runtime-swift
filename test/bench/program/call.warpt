@@ -11,10 +11,11 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (set seen (call identity 1))))))
-  (result seen))
+          (set seen (call identity 1)))))
+    (return seen)))
 
 (procedure identity
   (parameter value (type Int))
   (returns Int)
-  (result value))
+  (body
+    (return value)))

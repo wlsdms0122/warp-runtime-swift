@@ -22,8 +22,7 @@ struct CollectionTests {
         // constructs. Nothing in the grammar knows they exist
         let doubling = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .int, constness: .const, isolation: .isolated),
-            body: [],
-            result: .call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))]))
+            body: [returning(.call(Call(selector: "Standard.Numeric.times", arguments: [reference("item"), .literal(.int(2))])))]
         )
         let odd = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .int)], returns: .bool, constness: .const, isolation: .isolated),
@@ -32,9 +31,9 @@ struct CollectionTests {
                     selector: "Standard.Numeric.remainder",
                     arguments: [reference("item"), .literal(.int(2))]
                 ))
-                )
-            ],
-            result: equals(reference("left"), .literal(.int(1)))
+                ),
+                returning(equals(reference("left"), .literal(.int(1))))
+            ]
         )
         let adding = Procedure(
             signature: Signature(
@@ -46,8 +45,7 @@ struct CollectionTests {
                 constness: .const,
                 isolation: .isolated
             ),
-            body: [],
-            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")]))
+            body: [returning(.call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), reference("item")])))]
         )
 
         let sut = try Module(
@@ -70,13 +68,13 @@ struct CollectionTests {
                             selector: "Standard.Collection.reduce",
                             arguments: [reference("ns"), .literal(.int(0)), .closure(adding)]
                         ))
-                        )
-                    ],
-                    result: map([
-                        "doubled": reference("doubled"),
-                        "kept": reference("kept"),
-                        "total": reference("total")
-                    ])
+                        ),
+                        returning(map([
+                            "doubled": reference("doubled"),
+                            "kept": reference("kept"),
+                            "total": reference("total")
+                        ]))
+                    ]
                 )
             ]
         )
@@ -109,19 +107,19 @@ struct CollectionTests {
                 constness: .const,
                 isolation: .isolated
             ),
-            body: [],
-            result: .call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))]))
+            body: [returning(.call(Call(selector: "Standard.Numeric.plus", arguments: [reference("carried"), .literal(.int(1))])))]
         )
         let sut = try Module(
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "ns", type: .array(.int))], returns: .int),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Collection.reduce",
-                        arguments: [reference("ns"), .literal(.int(0)), .closure(counting)]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Collection.reduce",
+                            arguments: [reference("ns"), .literal(.int(0)), .closure(counting)]
+                        )))
+                    ]
                 )
             ]
         )
@@ -142,8 +140,7 @@ struct CollectionTests {
         // body that shouts is refused at the build
         let loud = Procedure(
             signature: Signature(parameters: [Parameter(name: "item", type: .string)], returns: .string),
-            body: [],
-            result: .call(Call(selector: "App.shout", arguments: [reference("item")]))
+            body: [returning(.call(Call(selector: "App.shout", arguments: [reference("item")])))]
         )
         let sut = try Module(
             procedures: [
@@ -154,8 +151,7 @@ struct CollectionTests {
                         returns: .array(.string),
                         failing: .anything
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Collection.map", arguments: [reference("names"), .closure(loud)]))
+                    body: [returning(.call(Call(selector: "Standard.Collection.map", arguments: [reference("names"), .closure(loud)])))]
                 )
             ]
         )
@@ -183,8 +179,7 @@ struct CollectionTests {
                                 constness: .const,
                                 isolation: .isolated
                             ),
-                            body: [],
-                            result: reference("item")
+                            body: [returning(reference("item"))]
                         )
                     )
                 ]
@@ -194,7 +189,7 @@ struct CollectionTests {
         // When
         let answer = try await answer(
             of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
+            returning: reference("probe")
         )
 
         // Then
@@ -238,12 +233,12 @@ struct CollectionTests {
                             selector: "Standard.Collection.dropLast",
                             arguments: [reference("grown")]
                         ))
-                        )
-                    ],
-                    result: map([
-                        "grown": reference("grown"),
-                        "moved": reference("moved")
-                    ])
+                        ),
+                        returning(map([
+                            "grown": reference("grown"),
+                            "moved": reference("moved")
+                        ]))
+                    ]
                 )
             ]
         )
@@ -290,13 +285,13 @@ struct CollectionTests {
                             selector: "Standard.Collection.setting",
                             arguments: [reference("counts"), .literal(.string("b")), .literal(.int(9))]
                         ))
-                        )
-                    ],
-                    result: map([
-                        "changed": reference("changed"),
-                        "held": reference("held"),
-                        "named": reference("named")
-                    ])
+                        ),
+                        returning(map([
+                            "changed": reference("changed"),
+                            "held": reference("held"),
+                            "named": reference("named")
+                        ]))
+                    ]
                 )
             ]
         )
@@ -350,8 +345,7 @@ struct CollectionTests {
                             parameters: [Parameter(name: "data", type: .array(.int))],
                             returns: .any
                         ),
-                        body: [],
-                        result: expression
+                        body: [returning(expression)]
                     )
                 ]
             )

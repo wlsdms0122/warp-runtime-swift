@@ -51,8 +51,8 @@ struct Lowering {
         // MARK: - Private
     }
 
-    // The names visible at one point of a body, by slot. A value, so a block
-    // takes a copy and what it introduces dies with it.
+    // The names visible at one point of a body, by slot. A value, so a nested
+    // body takes a copy and what it introduces dies with it.
     private struct SlotScope {
         // MARK: - Property
         var slots: [Name: Int] = [:]
@@ -175,7 +175,7 @@ struct Lowering {
                 Instruction(binding: .bind(slot), code: .literal(value), label: names[slot].spelling)
             }
 
-            return LoweredBody(instructions: bindings + body.instructions, result: body.result)
+            return LoweredBody(instructions: bindings + body.instructions)
         }
 
         // MARK: - Private
@@ -373,7 +373,7 @@ struct Lowering {
 
     // Lowers a declaration's body into its row. `judgements` is what the type
     // check judged at each place in it.
-    mutating func lower(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
+    mutating func lower(_ row: Int, body written: Body, judgements: JudgementTable, at place: Place) throws {
         let declared = table[row]
         let slots = SlotAllocator(
             origin: declared.origin,
@@ -387,7 +387,7 @@ struct Lowering {
         }
 
         let body = try lower(
-            block,
+            written,
             in: scope,
             on: Context(slots: slots, writer: .procedure(declared.label), judgements: judgements),
             at: place
@@ -502,18 +502,14 @@ struct Lowering {
 
     // MARK: - Private
     private mutating func lower(
-        _ block: Block,
+        _ body: Body,
         in scope: SlotScope,
         on context: Context,
         at place: Place
     ) throws -> LoweredBody {
         var inner = scope
-        let instructions = try lower(block.body, in: &inner, on: context, at: place.child(.body))
-        let result = try block.result.map { result in
-            try lower(result, naming: nil, in: inner, on: context, at: place.child(.result))
-        }
 
-        return LoweredBody(instructions: instructions, result: result)
+        return LoweredBody(instructions: try lower(body, in: &inner, on: context, at: place.part(.body)))
     }
 
     // Statements in order: a statement's expression is lowered before the
@@ -619,8 +615,8 @@ struct Lowering {
         case let .loop(condition, body):
             return try lower(loop: condition, body: body, round: name, in: scope, on: context, at: place)
 
-        case let .attempt(block, rescue):
-            return try lower(attempt: block, rescue: rescue, failure: name, in: scope, on: context, at: place)
+        case let .attempt(body, rescue):
+            return try lower(attempt: body, rescue: rescue, failure: name, in: scope, on: context, at: place)
 
         case let .call(call):
             // A selector naming a contract's procedure names no row. Which row
@@ -672,7 +668,7 @@ struct Lowering {
         at place: Place
     ) throws -> Operation {
         // The Validator refuses a closure literal that is not a body.
-        guard case let .body(block) = procedure.implementation else {
+        guard case let .body(closureBody) = procedure.implementation else {
             throw BuildError.unjudged("a closure literal", at: place)
         }
 
@@ -691,7 +687,7 @@ struct Lowering {
             innerScope.slots[name] = inner.allocateParameter(name)
         }
 
-        let body = try lower(block, in: innerScope, on: context.with(slots: inner), at: place.child(.closure))
+        let body = try lower(closureBody, in: innerScope, on: context.with(slots: inner), at: place.child(.closure))
 
         // Taken before the body is lowered would number a closure before
         // the ones it holds; taken after numbers the innermost first. The
@@ -826,24 +822,25 @@ struct Lowering {
     }
 
     private mutating func lower(
-        attempt block: Block,
-        rescue: Block,
+        attempt body: Body,
+        rescue: Body,
         failure: Name?,
         in scope: SlotScope,
         on context: Context,
         at place: Place
     ) throws -> Operation {
-        let attempted = try lower(block, in: scope, on: context, at: place.child(.held))
-        var inner = scope
+        var attemptedScope = scope
+        let attempted = try lower(body, in: &attemptedScope, on: context, at: place.child(.attempted))
+        var rescueScope = scope
         let slot = failure.map { failure in context.slots.allocate(failure) }
 
         if let failure, let slot {
-            inner.slots[failure] = slot
+            rescueScope.slots[failure] = slot
         }
 
         return .attempt(
             attempted,
-            rescue: try lower(rescue, in: inner, on: context, at: place.child(.rescue)),
+            rescue: try lower(rescue, in: &rescueScope, on: context, at: place.child(.rescue)),
             failure: slot
         )
     }

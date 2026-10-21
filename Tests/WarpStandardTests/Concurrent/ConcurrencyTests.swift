@@ -70,8 +70,8 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.allKeyed",
                     arguments: [
                         map([
-                            "left": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
-                            "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2))))
+                            "left": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(1)))])),
+                            "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(2)))]))
                         ])
                     ]
                 )
@@ -79,7 +79,7 @@ struct ConcurrencyTests {
         )
 
         // When
-        let answer = try await answer(of: [sut], result: reference("both"))
+        let answer = try await answer(of: [sut], returning: reference("both"))
 
         // Then
         #expect(answer == .dictionary(["left": .int(1), "right": .int(2)]))
@@ -93,9 +93,9 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
-                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
-                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2)))),
-                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(3))))
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(1)))])),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(2)))])),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(3)))]))
                         ])
                     ]
                 )
@@ -103,7 +103,7 @@ struct ConcurrencyTests {
         )
 
         // When
-        let answer = try await answer(of: [sut], result: reference("all"))
+        let answer = try await answer(of: [sut], returning: reference("all"))
 
         // Then. Arrival order decided nothing
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
@@ -127,8 +127,7 @@ struct ConcurrencyTests {
                                     returns: .any,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("item")
+                                body: [returning(reference("item"))]
                             )
                         )
                     ]
@@ -137,7 +136,7 @@ struct ConcurrencyTests {
         )
 
         // When
-        let answer = try await answer(of: [sut], result: reference("kept"))
+        let answer = try await answer(of: [sut], returning: reference("kept"))
 
         // Then
         #expect(answer == .array([.int(1), .int(2), .int(3)]))
@@ -160,8 +159,7 @@ struct ConcurrencyTests {
                                     returns: .any,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("index")
+                                body: [returning(reference("index"))]
                             )
                         )
                     ]
@@ -171,7 +169,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect {
-            try await answer(of: [sut], result: reference("placed"))
+            try await answer(of: [sut], returning: reference("placed"))
         } throws: { error in
             error is BuildError
                 && "\(error)".contains("holds isolated (Any) -> Any where isolated (")
@@ -198,8 +196,7 @@ struct ConcurrencyTests {
                                     returns: .any,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("item")
+                                body: [returning(reference("item"))]
                             )
                         )
                     ]
@@ -208,7 +205,7 @@ struct ConcurrencyTests {
         )
 
         // When
-        let answer = try await answer(of: [sut], result: reference("kept"))
+        let answer = try await answer(of: [sut], returning: reference("kept"))
 
         // Then
         #expect(answer == .array([.int(1), .null, .int(3)]))
@@ -229,8 +226,7 @@ struct ConcurrencyTests {
                                     returns: .any,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("item")
+                                body: [returning(reference("item"))]
                             )
                         )
                     ]
@@ -239,7 +235,7 @@ struct ConcurrencyTests {
         )
 
         // When
-        let answer = try await answer(of: [sut], result: reference("none"))
+        let answer = try await answer(of: [sut], returning: reference("none"))
 
         // Then
         #expect(answer == .array([]))
@@ -260,7 +256,7 @@ struct ConcurrencyTests {
                                     body: [Statement(expression: aborting(literal("doomed")))]
                                 )
                             ),
-                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [], result: .literal(.string("answered"))))
+                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [returning(.literal(.string("answered")))]))
                         ])
                     ]
                 )
@@ -270,7 +266,7 @@ struct ConcurrencyTests {
         // When
         let answer = try await answer(
             of: [sut],
-            result: reference("either")
+            returning: reference("either")
         )
 
         // Then
@@ -288,15 +284,15 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.first",
                     arguments: [
                         .array([
-                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [], result: .literal(.string("answered")))),
+                            .closure(Procedure(signature: Signature(returns: .any, isolation: .isolated), body: [returning(.literal(.string("answered")))])),
                             .closure(
                                 Procedure(
                                     signature: Signature(returns: .any, isolation: .isolated),
                                     body: [
                                         Statement(binding: .constant("slow"), expression: .call(Call(selector: "App.wait"))
-                                        )
-                                    ],
-                                    result: reference("slow")
+                                        ),
+                                        returning(reference("slow"))
+                                    ]
                                 )
                             )
                         ])
@@ -308,7 +304,7 @@ struct ConcurrencyTests {
         // When
         let answer = try await answer(
             of: [sut],
-            result: reference("either"),
+            returning: reference("either"),
             vocabulary: Module.standard + [
                 try Module(
                     procedures: [
@@ -353,7 +349,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect(throws: ConcurrentFailed.self) {
-            try await answer(of: [sut], result: reference("either"))
+            try await answer(of: [sut], returning: reference("either"))
         }
     }
 
@@ -374,7 +370,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect {
-            try await answer(of: [sut], result: reference("both"))
+            try await answer(of: [sut], returning: reference("both"))
         } throws: { error in
             guard let failed = error as? ConcurrentFailed else { return false }
 
@@ -390,7 +386,7 @@ struct ConcurrencyTests {
                     selector: "Standard.Concurrent.all",
                     arguments: [
                         .array([
-                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(1)))),
+                            .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(1)))])),
                             .literal(.int(2))
                         ])
                     ]
@@ -400,7 +396,7 @@ struct ConcurrencyTests {
 
         // When / Then
         await #expect {
-            try await answer(of: [sut], result: reference("both"))
+            try await answer(of: [sut], returning: reference("both"))
         } throws: { error in
             "\(error)".contains("with pieces, which holds [isolated () -> Int, Int] where Array<isolated () throws -> Any> is declared")
         }
@@ -422,8 +418,7 @@ struct ConcurrencyTests {
                                     returns: .any,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("item")
+                                body: [returning(reference("item"))]
                             )
                         )
                     ]
@@ -435,7 +430,7 @@ struct ConcurrencyTests {
         await #expect {
             try await answer(
                 of: [sut],
-                result: reference("walked"),
+                returning: reference("walked"),
                 arguments: ["subject": .string("not a collection")],
                 signature: Signature(parameters: [Parameter(name: "subject", type: .any)], returns: .any, failing: .anything)
             )
@@ -457,25 +452,25 @@ struct ConcurrencyTests {
                         returns: .array(.int),
                         failing: .these(["concurrent_failed"])
                     ),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Concurrent.map",
-                        arguments: [
-                            .call(Call(selector: "Standard.Collection.reversed", arguments: [reference("items")])),
-                            .closure(Procedure(
-                                signature: Signature(
-                                    parameters: [
-                                        Parameter(name: "item", type: .int),
-                                        Parameter(name: "index", type: .int)
-                                    ],
-                                    returns: .int,
-                                    isolation: .isolated
-                                ),
-                                body: [],
-                                result: reference("item")
-                            ))
-                        ]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Concurrent.map",
+                            arguments: [
+                                .call(Call(selector: "Standard.Collection.reversed", arguments: [reference("items")])),
+                                .closure(Procedure(
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "item", type: .int),
+                                            Parameter(name: "index", type: .int)
+                                        ],
+                                        returns: .int,
+                                        isolation: .isolated
+                                    ),
+                                    body: [returning(reference("item"))]
+                                ))
+                            ]
+                        )))
+                    ]
                 )
             ]
         )

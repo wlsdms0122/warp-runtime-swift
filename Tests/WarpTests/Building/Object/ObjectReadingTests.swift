@@ -123,7 +123,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             types: ["App.One": .struct(["x": .int]), "App.Two": .struct(["y": .int])],
             procedures: [
-                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
             ]
         )
 
@@ -223,8 +223,7 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [Statement(binding: .constant("n"), expression: .literal(.int(1)))],
-                    result: reference("n")
+                    body: [Statement(binding: .constant("n"), expression: .literal(.int(1))), returning(reference("n"))]
                 )
             ]
         )
@@ -282,15 +281,14 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("App.Pair")),
-                    body: [],
-                    result: .struct(["a": .literal(.int(1)), "b": .literal(.string("s"))])
+                    body: [returning(.struct(["a": .literal(.int(1)), "b": .literal(.string("s"))]))]
                 )
             ]
         )
 
         var parts = try await parts(of: sut)
 
-        guard let number = result(of: parts),
+        guard let number = returned(of: parts),
             case var .array(operations) = parts["operationTable"],
             case var .array(operation) = operations[number],
             case var .array(built) = operation[1],
@@ -385,7 +383,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             types: ["App.One": .struct(["x": .int]), "App.Two": .struct(["y": .int])],
             procedures: [
-                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
             ]
         )
 
@@ -428,15 +426,14 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("App.Pair")),
-                    body: [],
-                    result: reference("pair")
+                    body: [returning(reference("pair"))]
                 )
             ]
         )
 
         var parts = try await parts(of: sut)
 
-        guard let number = result(of: parts),
+        guard let number = returned(of: parts),
             case let .array(operations) = parts["operationTable"],
             case let .array(literal) = operations[number],
             case let .int(held) = literal[1],
@@ -478,22 +475,20 @@ struct ObjectReadingTests {
             claims: ["App.Box": ["App.One", "App.Two"]],
             members: ["App.Box": ["one", "two"]],
             procedures: [
-                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
                 "App.Box.one": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("App.Box"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 "App.Box.two": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("App.Box"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .literal(.int(2))
+                    body: [returning(.literal(.int(2)))]
                 )
             ]
         )
@@ -534,17 +529,17 @@ struct ObjectReadingTests {
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]))
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 ),
                 "App.other": Procedure(
                     signature: Signature(returns: .int),
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))))
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                        expression: .closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))]))
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 )
             ]
         )
@@ -582,17 +577,18 @@ struct ObjectReadingTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Numeric.minus",
-                        arguments: [
-                            .call(Call(
-                                selector: "Standard.Numeric.plus",
-                                arguments: [.literal(.int(1)), .literal(.int(2))]
-                            )),
-                            .literal(.int(3))
-                        ]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Numeric.minus",
+                            arguments: [
+                                .call(Call(
+                                    selector: "Standard.Numeric.plus",
+                                    arguments: [.literal(.int(1)), .literal(.int(2))]
+                                )),
+                                .literal(.int(3))
+                            ]
+                        )))
+                    ]
                 )
             ]
         )
@@ -633,12 +629,12 @@ struct ObjectReadingTests {
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                         expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                            Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                         )
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 ),
-                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
             ]
         )
 
@@ -678,10 +674,10 @@ struct ObjectReadingTests {
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                         expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                            Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                         )
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 )
             ]
         )
@@ -722,12 +718,12 @@ struct ObjectReadingTests {
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                         expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                            Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                         )
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 ),
-                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
             ]
         )
 
@@ -760,7 +756,7 @@ struct ObjectReadingTests {
         let sut = try Module(
             try Module(
                 procedures: [
-                    "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                    "App.entry": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                 ]
             ).draft,
             identity: Identity([0x01, 0x02, 0x03])
@@ -838,12 +834,12 @@ struct ObjectReadingTests {
                     body: [Statement(
                         binding: .constant("made", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
                         expression: .closure(
-                            Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                            Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
                         )
-                    )],
-                    result: .apply(reference("made"), arguments: [])
+                    ),
+                    returning(.apply(reference("made"), arguments: []))]
                 ),
-                "App.other": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.other": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
             ]
         )
 
@@ -908,15 +904,20 @@ struct ObjectReadingTests {
         }
     }
 
-    // The number of the operation the first row's body answers with, which
-    // stands in the operation table.
-    private func result(of parts: Value.Dictionary) -> Int? {
+    // The number of the operation the first row's body answers with: what
+    // the `return` its body ends with carries, in the operation table.
+    private func returned(of parts: Value.Dictionary) -> Int? {
         guard case let .array(rows) = parts["rows"],
             case let .array(row) = rows.first,
             case let .array(implementation) = row[3],
             case let .array(body) = implementation[1],
-            case let .array(result) = body[1],
-            case let .int(number) = result.first
+            case let .array(last)? = body.last,
+            case let .int(leave) = last[1],
+            case let .array(operations) = parts["operationTable"],
+            operations.indices.contains(leave),
+            case let .array(entry) = operations[leave],
+            case let .array(carried)? = entry.last,
+            case let .int(number) = carried.first
         else {
             return nil
         }
@@ -937,8 +938,7 @@ struct ObjectReadingTests {
                         returns: .named("App.Point"),
                         failing: .these(["cast_refused"])
                     ),
-                    body: [],
-                    result: .cast(reference("p"), as: .named("App.Point"), optional: false)
+                    body: [returning(.cast(reference("p"), as: .named("App.Point"), optional: false))]
                 )
             ]
         ))

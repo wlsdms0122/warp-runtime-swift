@@ -651,10 +651,7 @@ struct ObjectWriter {
     }
 
     private func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
-        .array([
-            try instructions(body.instructions),
-            try ObjectWriter.maybe(body.result, operation)
-        ])
+        try instructions(body.instructions)
     }
 
     private func instructions(_ instructions: [Instruction]) throws(ObjectUnwritable) -> Value {
@@ -794,14 +791,14 @@ struct ObjectWriter {
     }
 
     private func attemptOperation(
-        _ body: LoweredBody,
-        rescue: LoweredBody,
+        _ body: [Instruction],
+        rescue: [Instruction],
         failure: Int?
     ) throws(ObjectUnwritable) -> Value {
         tagged(
             ObjectLayout.OperationTag.attempt,
-            try self.body(body),
-            try self.body(rescue),
+            try instructions(body),
+            try instructions(rescue),
             ObjectWriter.maybe(failure) { failure in .int(failure) }
         )
     }

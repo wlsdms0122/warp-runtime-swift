@@ -25,7 +25,8 @@ struct TextEncodingTests {
       (access public)
       (parameter n (type Int))
       (returns Int)
-      (result (call Standard.Numeric.plus n 1)))
+      (body
+        (return (call Standard.Numeric.plus n 1))))
 
     """
 
@@ -48,7 +49,8 @@ struct TextEncodingTests {
       (procedure area
         (parameter self (type Self))
         (returns Int)
-        (result 1)))
+        (body
+          (return 1))))
     (type App.Id Int)
 
     (contract App.Named
@@ -65,7 +67,8 @@ struct TextEncodingTests {
       (procedure name
         (parameter self (type Self))
         (returns String)
-        (result "array")))
+        (body
+          (return "array"))))
 
     (procedure App.g
       (description "Everything a procedure holds.")
@@ -99,18 +102,16 @@ struct TextEncodingTests {
           (attempt
             (body
               (apply (apply f) `null`))
-            (result 1)
             (rescue
-              (body
-                (break))
-              (result 2))))
+              (break))))
         (return (array 1 "a" x"6a" null -2.5))
         (struct (field x 1))
         (dictionary (entry "k" (struct App.Point (field x 1))))
         (closure
           (returns Int)
-          (result 1)))
-      (result x))
+          (body
+            (return 1)))
+        (return x)))
 
     """
 
@@ -156,7 +157,7 @@ struct TextEncodingTests {
     func anyLayoutReadsToOneTree() throws {
         // Given
         let laid = """
-        (warp 1) (procedure entry (result (call Standard.Numeric.plus n 1))
+        (warp 1) (procedure entry (body (return (call Standard.Numeric.plus n 1)))
            (returns Int) (parameter n (type Int)) (access public))
               (import Standard.Numeric.plus)
         """
@@ -298,7 +299,8 @@ struct TextEncodingTests {
           (warp 1)
           (procedure entry
             (access public)
-            (result 1)))
+            (body
+              (return 1))))
         (arguments (argument c false))
         (expect (answers (dictionary (entry "a" (array 1)) (entry x"00" (struct App.Point (field x 1))))))
 

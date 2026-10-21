@@ -26,9 +26,9 @@ struct DeclaredNameTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("held", declared: .int), expression: .literal(.string("no")))
-                    ],
-                    result: reference("held")
+                        Statement(binding: .constant("held", declared: .int), expression: .literal(.string("no"))),
+                        returning(reference("held"))
+                    ]
                 )
             ]
         )
@@ -52,9 +52,9 @@ struct DeclaredNameTests {
                         Statement(
                             binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
-                        )
-                    ],
-                    result: reference("held")
+                        ),
+                        returning(reference("held"))
+                    ]
                 )
             ]
         )
@@ -75,7 +75,7 @@ struct DeclaredNameTests {
         let sut = try Module(
             imports: ["App.Missing", "Standard.Control.abort"],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))]),
                 "stray": Procedure(
                     body: [
                         Statement(
@@ -86,9 +86,9 @@ struct DeclaredNameTests {
                         Statement(
                             binding: .constant("held", declared: .named("App.Missing")),
                             expression: .literal(.int(1))
-                        )
-                    ],
-                    result: .literal(.int(1))
+                        ),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )
@@ -110,9 +110,9 @@ struct DeclaredNameTests {
                     access: .public,
                     body: [
                         Statement(binding: .variable("held", declared: .int), expression: .literal(.int(1))),
-                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("no")))
-                    ],
-                    result: reference("held")
+                        Statement(binding: .assignment([.name("held")]), expression: .literal(.string("no"))),
+                        returning(reference("held"))
+                    ]
                 )
             ]
         )
@@ -145,9 +145,9 @@ struct DeclaredNameTests {
                         Statement(
                             binding: .assignment([.name("w"), .name("p")]),
                             expression: .struct(["k": .literal(.string("y"))])
-                        )
-                    ],
-                    result: reference("w")
+                        ),
+                        returning(reference("w"))
+                    ]
                 )
             ]
         )
@@ -171,9 +171,9 @@ struct DeclaredNameTests {
                     access: .public,
                     signature: Signature(returns: .double),
                     body: [
-                        Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1)))
-                    ],
-                    result: reference("held")
+                        Statement(binding: .constant("held", declared: .double), expression: .literal(.int(1))),
+                        returning(reference("held"))
+                    ]
                 )
             ]
         )
@@ -196,13 +196,13 @@ struct DeclaredNameTests {
                             Statement(
                                 binding: .constant("inner", declared: .named("App.Missing")),
                                 expression: .literal(.int(1))
-                            )
-                        ],
-                        result: .literal(.int(1))
+                            ),
+                            returning(.literal(.int(1)))
+                        ]
                     )
                 )
             ],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+            procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
         )
 
         // When / Then
@@ -225,22 +225,22 @@ struct DeclaredNameTests {
                     body: [
                         Statement(
                             binding: .variable("step", declared: .procedure(takes.procedureType)),
-                            expression: .closure(Procedure(signature: takes, body: [], result: reference("x")))
+                            expression: .closure(Procedure(signature: takes, body: [returning(reference("x"))]))
                         ),
                         Statement(
                             expression: .call(
                                 Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
-                        )
-                    ],
-                    result: .apply(reference("step"), arguments: [.literal(.int(2))])
+                        ),
+                        returning(.apply(reference("step"), arguments: [.literal(.int(2))]))
+                    ]
                 ),
                 "swap": Procedure(
                     signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.procedureType)))]),
                     body: [
                         Statement(
                             binding: .assignment([.name("step")]),
-                            expression: .closure(Procedure(signature: takes, body: [], result: .literal(.int(9))))
+                            expression: .closure(Procedure(signature: takes, body: [returning(.literal(.int(9)))]))
                         )
                     ]
                 )
@@ -274,17 +274,16 @@ struct DeclaredNameTests {
                                     constness: .const,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: reference("x")
+                                body: [returning(reference("x"))]
                             ))
                         ),
                         Statement(
                             expression: .call(
                                 Call(selector: "swap", arguments: [.reference([.name("step")])])
                             )
-                        )
-                    ],
-                    result: .apply(reference("step"), arguments: [.literal(.int(2))])
+                        ),
+                        returning(.apply(reference("step"), arguments: [.literal(.int(2))]))
+                    ]
                 ),
                 "swap": Procedure(
                     signature: Signature(parameters: [Parameter(name: "step", type: .inout(.procedure(takes.procedureType)))]),
@@ -318,12 +317,11 @@ struct DeclaredNameTests {
                                         Parameter(name: "it", type: .named("Nope"))
                                     ]
                                 ),
-                                body: [],
-                                result: reference("it")
+                                body: [returning(reference("it"))]
                             ))
-                        )
-                    ],
-                    result: .literal(.int(1))
+                        ),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )

@@ -527,17 +527,17 @@ struct Validator: Sendable {
         try reads(procedure, at: place)
         try sends(procedure, at: place)
 
-        guard let block = procedure.block else { return }
+        guard let body = procedure.implementation.body else { return }
 
         // A parameter handed in place is a variable in the body: the box is
         // the caller's, and writing it is what the parameter is for.
         try validate(
-            block,
+            body,
             taking: parameters,
             visible: constants.union(variables).union(parameters),
             variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
             scope: .procedure(typeParameters: procedure.signature.parameterNames),
-            at: place
+            at: place.part(.body)
         )
     }
 
@@ -580,12 +580,11 @@ struct Validator: Sendable {
         }
     }
 
-    // What the body leaves behind for what follows it: the names it made
-    // visible, and which of them are variables. A result written after the body
-    // sees both. The parameters a body takes are names it introduced before its
-    // first statement. A body inside another may introduce any name it sees,
-    // and inside it the name is the new one.
-    @discardableResult
+    // A body in order: a statement sees the names the statements before it
+    // made visible, and which of them are variables. The parameters a body
+    // takes are names it introduced before its first statement. A body inside
+    // another may introduce any name it sees, and inside it the name is the
+    // new one.
     private func validate(
         _ body: Body,
         taking parameters: Set<Name> = [],
@@ -593,7 +592,7 @@ struct Validator: Sendable {
         variables startVariables: Set<Name>,
         scope: Scope,
         at place: Place
-    ) throws -> (visible: Set<Name>, variables: Set<Name>) {
+    ) throws {
         var visible = startVisible
         var variables = startVariables
         var declared = parameters
@@ -618,17 +617,18 @@ struct Validator: Sendable {
                     )
                 }
 
-                if case .loop = statement.expression, case .variable = binding {
+                if statement.expression.namesItsOwn, case .variable = binding {
                     throw ValidationError(
-                        "a loop's name is its round, which nothing writes, so it is introduced with 'let'",
+                        "this construct binds the name, a loop's round or an attempt's failure,"
+                            + " which nothing writes, so it is introduced with 'let'",
                         at: here
                     )
                 }
 
-                if case .loop = statement.expression, case .assignment = binding {
+                if statement.expression.answersNothing, case .assignment = binding {
                     throw ValidationError(
-                        "a loop answers nothing, so there is nothing to write."
-                            + " What a round keeps is written to an outer variable with 'set'",
+                        "this construct answers nothing, so there is nothing to write."
+                            + " What its body keeps is written to an outer variable with 'set'",
                         at: here
                     )
                 }
@@ -716,8 +716,6 @@ struct Validator: Sendable {
                 break
             }
         }
-
-        return (visible, variables)
     }
 
     // `name` is the statement's `nameInside`.
@@ -792,9 +790,9 @@ struct Validator: Sendable {
                 at: place
             )
 
-        case let .attempt(block, rescue):
+        case let .attempt(body, rescue):
             try validate(
-                attempt: block,
+                attempt: body,
                 rescue: rescue,
                 failure: name,
                 visible: visible,
@@ -810,7 +808,7 @@ struct Validator: Sendable {
 
     // A construct runs a body, so it stands as a statement's value and nowhere
     // a value is wanted: an operand, an element, a field, what a cast reads,
-    // what `return` carries, a block's result, a constant and a variable's
+    // what `return` carries, a constant and a variable's
     // start. Each of those is asked of itself, so one inside a value is
     // refused where it is written.
     private func validate(
@@ -962,7 +960,7 @@ struct Validator: Sendable {
         scope: Scope,
         at place: Place
     ) throws {
-        guard let block = procedure.block else {
+        guard let body = procedure.implementation.body else {
             throw ValidationError("a closure is a body, and this one is the host's code", at: place)
         }
 
@@ -992,12 +990,12 @@ struct Validator: Sendable {
         // A parameter it takes in place is a variable in its body, the way
         // a declaration's is.
         try validate(
-            block,
+            body,
             taking: parameters,
             visible: visible.union(parameters),
             variables: variables.union(parameters).subtracting(procedure.signature.ownedParameters),
             scope: scope.enclosed(),
-            at: inside
+            at: inside.part(.body)
         )
     }
 
@@ -1071,19 +1069,19 @@ struct Validator: Sendable {
     // While the rescue runs, the failure is a value under the declared name,
     // a fixed one whatever its spelling named outside.
     private func validate(
-        attempt block: Block,
-        rescue: Block,
+        attempt body: Body,
+        rescue: Body,
         failure: Name?,
         visible: Set<Name>,
         variables: Set<Name>,
         scope: Scope,
         at place: Place
     ) throws {
-        try validate(block, visible: visible, variables: variables, scope: scope, at: place.child(.held))
+        try validate(body, visible: visible, variables: variables, scope: scope, at: place.child(.attempted))
 
-        guard !rescue.body.statements.isEmpty || rescue.result != nil else {
-            // A rescue answers for the failure it caught, and an empty
-            // one answers nothing.
+        // A rescue is what runs for the failure it caught, and one with no
+        // statement in it drops the failure without a trace.
+        guard !rescue.statements.isEmpty else {
             throw ValidationError("must not be empty", at: place.child(.rescue))
         }
 
@@ -1096,40 +1094,6 @@ struct Validator: Sendable {
             scope: scope,
             at: place.child(.rescue)
         )
-    }
-
-    private func validate(
-        _ block: Block,
-        taking parameters: Set<Name> = [],
-        visible: Set<Name>,
-        variables: Set<Name>,
-        scope: Scope,
-        at place: Place
-    ) throws {
-        let inner = try validate(
-            block.body,
-            taking: parameters,
-            visible: visible,
-            variables: variables,
-            scope: scope,
-            at: place.child(.body)
-        )
-
-        if let result = block.result {
-            // The result runs after the body, so it is "after" the same way a
-            // trailing statement is. A body that left never reaches it.
-            if block.body.alwaysLeaves {
-                throw ValidationError(Expression.resultAfterWhatNeverFinishes, at: place.child(.result))
-            }
-
-            try validate(
-                value: result,
-                visible: inner.visible,
-                variables: inner.variables,
-                scope: scope,
-                at: place.child(.result)
-            )
-        }
     }
 
     // What a leave may say, and where it may say it.

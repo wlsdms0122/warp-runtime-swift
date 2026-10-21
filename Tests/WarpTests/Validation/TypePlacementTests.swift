@@ -28,14 +28,12 @@ struct TypePlacementTests {
                         signature: Signature(
                             parameters: [Parameter(name: "value", type: .named("Weird"))]
                         ),
-                        body: [],
-                        result: reference("value")
+                        body: [returning(reference("value"))]
                     ),
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     )
                 ]
             )
@@ -61,8 +59,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     )
                 ]
             )
@@ -80,9 +77,9 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         body: [
-                            Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1)))
-                        ],
-                        result: reference("held")
+                            Statement(binding: .constant("held", declared: .parameter(name: "T")), expression: .literal(.int(1))),
+                            returning(reference("held"))
+                        ]
                     )
                 ]
             )
@@ -98,7 +95,7 @@ struct TypePlacementTests {
             try Module(
                 imports: [],
                 types: ["Box": .struct(["held": .inout(.int)])],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+                procedures: [entryName: Procedure(access: .public, body: [])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("only a parameter is handed a variable in place")
@@ -115,8 +112,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "count", type: .variable(.int))]),
-                        body: [],
-                        result: .literal(.null)
+                        body: []
                     )
                 ]
             )
@@ -139,8 +135,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
+                        body: []
                     )
                 ]
             )
@@ -165,8 +160,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
+                        body: []
                     )
                 ]
             )
@@ -204,8 +198,7 @@ struct TypePlacementTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(parameters: [Parameter(name: "x", type: type)]),
-                        body: [],
-                        result: .literal(.null)
+                        body: []
                     )
                 ]
             )

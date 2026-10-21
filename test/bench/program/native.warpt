@@ -12,5 +12,5 @@
       (loop
         (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
         (body
-          (let sum (call Standard.Numeric.plus one 1))))))
-  (result one))
+          (let sum (call Standard.Numeric.plus one 1)))))
+    (return one)))

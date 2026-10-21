@@ -116,9 +116,9 @@ struct BakedTests {
                             expression: .call(
                                 Call(selector: "App.add1", arguments: [.reference([.name("value")])])
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.add1", arguments: [reference("once")]))
+                        ),
+                        returning(.call(Call(selector: "App.add1", arguments: [reference("once")])))
+                    ]
                 )
             ]
         )
@@ -145,8 +145,7 @@ struct BakedTests {
             procedures: [
                 "App.main": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.missing"))
+                    body: [returning(.call(Call(selector: "App.missing")))]
                 )
             ]
         )
@@ -180,8 +179,7 @@ struct BakedTests {
                 "Bank.Account.describe": Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
-                    body: [],
-                    result: .literal(.string("a"))
+                    body: [returning(.literal(.string("a")))]
                 )
             ]
         )
@@ -198,9 +196,9 @@ struct BakedTests {
                         Statement(
                             binding: .constant("said"),
                             expression: .call(Call(selector: "App.Describable.describe", arguments: [reference("account")]))
-                        )
-                    ],
-                    result: .call(Call(selector: "App.add1", arguments: [.literal(.int(1))]))
+                        ),
+                        returning(.call(Call(selector: "App.add1", arguments: [.literal(.int(1))])))
+                    ]
                 )
             ]
         )
@@ -434,8 +432,7 @@ struct BakedTests {
             procedures: [
                 "App.main": Procedure(
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: reference("two")
+                    body: [returning(reference("two"))]
                 )
             ]
         )
@@ -490,8 +487,7 @@ struct BakedTests {
                 "App.main": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: name, arguments: [.literal(.int(1))]))
+                    body: [returning(.call(Call(selector: name, arguments: [.literal(.int(1))])))]
                 )
             ]
         )
@@ -505,13 +501,14 @@ struct BakedTests {
                 name: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "value", type: .int)], returns: .int),
-                    body: [],
-                    result: .call(
-                        Call(
-                            selector: "Standard.Numeric.plus",
-                            arguments: [.reference([.name("value")]), .literal(.int(number))]
-                        )
-                    )
+                    body: [
+                        returning(.call(
+                            Call(
+                                selector: "Standard.Numeric.plus",
+                                arguments: [.reference([.name("value")]), .literal(.int(number))]
+                            )
+                        ))
+                    ]
                 )
             ]
         )

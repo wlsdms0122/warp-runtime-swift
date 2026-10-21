@@ -56,10 +56,10 @@ struct DeclarationChecker {
                 // does, and unreached code still has to compile, so what the
                 // top level is held to, a signature written inline is held to
                 // in the same pass, wherever a body buries it.
-                if case let .body(block) = procedure.implementation {
+                if case let .body(body) = procedure.implementation {
                     try judge(
-                        subexpressions: block,
-                        at: .procedure(name.spelling, in: .of(module)),
+                        subexpressions: body,
+                        at: .procedure(name.spelling, in: .of(module)).part(.body),
                         bounds: procedure.signature.bounds,
                         sameTypes: procedure.signature.sameTypes,
                         in: table

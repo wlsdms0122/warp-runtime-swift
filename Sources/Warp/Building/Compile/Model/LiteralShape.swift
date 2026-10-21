@@ -9,19 +9,16 @@ import Foundation
 
 // What a list or map literal holds where it is written into a slot, part by
 // part. A part that is no literal holds what it reads as, a struct literal
-// the declared struct it was read as. An attempt writes what one of its two
-// ways answers, each written on its own.
+// the declared struct it was read as.
 enum LiteralShape: Sendable {
     case list([LiteralShape])
     case map([(key: LiteralShape, value: LiteralShape)])
     case part(LoweredType)
-    indirect case either(LiteralShape, LiteralShape)
 
     // MARK: - Property
     // The literal as one type, for a slot that judges it whole and for a
     // call filling a type parameter from it. An empty list holds no element,
-    // so it is a list of `Never`, and the parts beside each other join. An
-    // attempt's two ways meet as ways do.
+    // so it is a list of `Never`, and the parts beside each other join.
     var folded: LoweredType {
         switch self {
         case let .list(items):
@@ -35,9 +32,6 @@ enum LiteralShape: Sendable {
 
         case let .part(reading):
             return reading
-
-        case let .either(attempted, rescued):
-            return attempted.folded.meeting(rescued.folded)
         }
     }
 
@@ -66,8 +60,8 @@ enum LiteralShape: Sendable {
 
     // Whether every part of it, along the structure it shares with the slot,
     // `holds` what the slot asks of it there: a list by its elements, a map
-    // by its keys and its values, what may be null by what it is besides,
-    // and each way of an attempt on its own. A slot handed in place that
+    // by its keys and its values, and what may be null by what it is
+    // besides. A slot handed in place that
     // names a type parameter is told so, for `holds` to judge there what
     // `takesInPlace` takes.
     func everyPart(
@@ -79,16 +73,8 @@ enum LiteralShape: Sendable {
         let slot = inPlace ? slot.slotUnwrapped : slot
         let inPlaceAtParameter = inPlace && slot.namesParameter
 
-        switch self {
-        case .part:
+        if case .part = self {
             return holds(slot, self, inPlaceAtParameter)
-
-        case let .either(attempted, rescued):
-            return attempted.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
-                && rescued.everyPart(along: slot, inPlace: inPlace, in: table, holds: holds)
-
-        case .list, .map:
-            break
         }
 
         switch slot {
@@ -140,9 +126,6 @@ enum LiteralShape: Sendable {
             return .map(entries.map { entry in
                 (key: entry.key.written(into: key, in: table), value: entry.value.written(into: value, in: table))
             })
-
-        case let .either(attempted, rescued):
-            return .either(attempted.written(into: place, in: table), rescued.written(into: place, in: table))
         }
     }
 
@@ -163,9 +146,6 @@ enum LiteralShape: Sendable {
 
         case let .part(reading):
             return reading.rendered(in: table)
-
-        case let .either(attempted, rescued):
-            return attempted.rendered(in: table) + " or " + rescued.rendered(in: table)
         }
     }
 

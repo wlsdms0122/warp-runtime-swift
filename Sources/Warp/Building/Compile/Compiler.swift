@@ -112,7 +112,7 @@ struct Compiler {
 
             var answer = (procedure: declaration, judgements: JudgementTable())
 
-            if let block = declaration.block {
+            if let body = declaration.implementation.body {
                 let folding = Folding(
                     constants: constants,
                     origin: origin,
@@ -126,7 +126,7 @@ struct Compiler {
                 // parameters, so a constant-headed path is judged against the
                 // type of the value it will fold to.
                 let (rewritten, judgements) = try await TypeChecker().resolvedSites(
-                    in: block,
+                    in: body,
                     at: symbol.place,
                     in: opening(declaration.signature),
                     declaring: symbol.declared,
@@ -139,7 +139,7 @@ struct Compiler {
                 // every callee read by its own declaration, so a body is
                 // judged alone.
                 if let refusal = EffectChecker(context()).refusal(
-                    of: block,
+                    of: body,
                     declared: declaration.signature,
                     in: opening(declaration.signature)
                 ) {
@@ -160,7 +160,7 @@ struct Compiler {
 
             // Lowered once every call in it passed the gate, so nothing
             // the gate refuses reaches the lowering.
-            if let rewritten = answer.procedure.block {
+            if let rewritten = answer.procedure.implementation.body {
                 try compiling.lower(row, body: rewritten, judgements: answer.judgements, at: symbol.place)
             }
 

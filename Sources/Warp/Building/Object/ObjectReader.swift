@@ -926,15 +926,7 @@ struct ObjectReader {
     }
 
     private func body(_ value: Value) throws -> LoweredBody {
-        var cursor = try FieldCursor(value, of: "body")
-        let read = LoweredBody(
-            instructions: try instructions(cursor.next(), of: "body"),
-            result: try cursor.field().maybe(operation)
-        )
-
-        try cursor.end()
-
-        return read
+        LoweredBody(instructions: try instructions(value, of: "body"))
     }
 
     // The instructions a list holds, in its order.
@@ -1141,8 +1133,8 @@ struct ObjectReader {
 
     private func attemptOperation(_ cursor: inout FieldCursor) throws -> Operation {
         .attempt(
-            try body(cursor.next()),
-            rescue: try body(cursor.next()),
+            try instructions(cursor.next(), of: "body"),
+            rescue: try instructions(cursor.next(), of: "rescue"),
             failure: try cursor.field().maybe(counted)
         )
     }

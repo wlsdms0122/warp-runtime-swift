@@ -21,7 +21,7 @@ import Warp
 //                                      failing ["a", "b"], failing "anything"
 //   (bound C.Item A B)                 bounds { "C.Item" "A & B" }
 //   (sameType C.Item T)                sameTypes { "C.Item" "T" }
-//   (body …)  (result e)               body [ … ], result e
+//   (body …)                           body [ … ]
 //   (answers v)                        answers v, read as data
 struct ProcedureNode {
     // MARK: - Property
@@ -34,8 +34,7 @@ struct ProcedureNode {
     private static let failing = SignatureFieldsReader.CodingKeys.failing.name.spelling
     private static let bounds = SignatureFieldsReader.CodingKeys.bounds.name.spelling
     private static let sameTypes = SignatureFieldsReader.CodingKeys.sameTypes.name.spelling
-    private static let body = BlockReader.CodingKeys.body.name.spelling
-    private static let result = BlockReader.CodingKeys.result.name.spelling
+    private static let body = ProcedureReader.CodingKeys.body.name.spelling
     private static let answers = "answers"
 
     private static let name = ParameterReader.CodingKeys.name.name.spelling
@@ -92,9 +91,6 @@ struct ProcedureNode {
 
             case Self.body:
                 try keyed.write(try StatementNode().value(of: part.operands[...]), under: part.word, at: part.offset)
-
-            case Self.result:
-                try keyed.write(try ExpressionNode().value(of: part.one()), under: part.word, at: part.offset)
 
             default:
                 throw TextRefused("a procedure holds no `\(part.word)`", at: part.offset)
@@ -165,10 +161,6 @@ struct ProcedureNode {
 
         if let body = fields.take(Self.body) {
             parts.append(.block(Self.body, try StatementNode().data(of: body, as: "a procedure's body")))
-        }
-
-        if let result = fields.take(Self.result) {
-            parts.append(.node(Self.result, [try ExpressionNode().datum(of: result)]))
         }
 
         if let answers = fields.take(Self.answers) {

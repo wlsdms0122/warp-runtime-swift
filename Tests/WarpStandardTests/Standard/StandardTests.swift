@@ -121,11 +121,12 @@ struct StandardTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.int)),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Collection.sorted",
-                        arguments: [.literal(.array([.int(2), .int(1)]))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Collection.sorted",
+                            arguments: [.literal(.array([.int(2), .int(1)]))]
+                        )))
+                    ]
                 )
             ]
         )

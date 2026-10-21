@@ -21,7 +21,7 @@ struct ControlTests {
         // Given
         let sut = aborting(interpolated(literal("no: "), spelling(reference("reason"))))
 
-        // When / Then. Nameless and last, with no result: nothing may be
+        // When / Then. Nameless and last: nothing may be
         // written after what never finishes, so the procedure ends with it
         await #expect {
             try await run(
@@ -41,14 +41,17 @@ struct ControlTests {
         // Given. `RecoverableFailure` is what separates a failure from the
         // author being wrong, and an abort is the first kind
         let sut = Warp.Expression.attempt(
-            Block(body: [Statement(expression: aborting(literal("stopped")))]),
-            rescue: Block(body: [], result: .literal(.string("caught")))
+            [Statement(expression: aborting(literal("stopped")))],
+            rescue: [Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("caught")))]
         )
 
         // When
         let answered = try await answer(
-            of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
+            of: [
+                Statement(binding: .variable("kept"), expression: .literal(.null)),
+                Statement(binding: .constant("probe"), expression: sut)
+            ],
+            returning: reference("kept")
         )
 
         // Then
