@@ -32,7 +32,7 @@ struct ConformanceTests {
             case let .answers(expected):
                 let answered = try await run(program)
 
-                #expect(answered.matchesStrictly(expected), "\(sut.name): \(sut.note)")
+                #expect(answered.matchesStrictly(expected, text: .value), "\(sut.name): \(sut.note)")
 
             case let .refuses(stage):
                 let reached = try await reached(program)
@@ -42,7 +42,7 @@ struct ConformanceTests {
             case let .builds(expected):
                 let built = try await built(program)
 
-                #expect(built.matchesStrictly(expected), "\(sut.name): \(sut.note)")
+                #expect(built.matchesStrictly(expected, text: .scalars), "\(sut.name): \(sut.note)")
             }
 
         case let .object(object):
@@ -50,7 +50,7 @@ struct ConformanceTests {
             case let .answers(expected):
                 let answered = try await run(object)
 
-                #expect(answered.matchesStrictly(expected), "\(sut.name): \(sut.note)")
+                #expect(answered.matchesStrictly(expected, text: .value), "\(sut.name): \(sut.note)")
 
             case let .refuses(stage):
                 let reached = try await reached(object)
@@ -61,10 +61,10 @@ struct ConformanceTests {
         case let .encoded(encoded, reading):
             switch reading {
             case let .reads(expected):
-                #expect(try encoded.read().matchesStrictly(expected), "\(sut.name): \(sut.note)")
+                #expect(try encoded.read().matchesStrictly(expected, text: .scalars), "\(sut.name): \(sut.note)")
 
             case let .spells(expected):
-                #expect(try encoded.read().matchesStrictly(expected), "\(sut.name): \(sut.note)")
+                #expect(try encoded.read().matchesStrictly(expected, text: .scalars), "\(sut.name): \(sut.note)")
                 #expect(try encoded.written(expected) == encoded.data, "\(sut.name): \(sut.note)")
 
             case .refuses:
