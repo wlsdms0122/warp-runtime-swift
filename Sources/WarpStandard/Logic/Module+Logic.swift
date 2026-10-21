@@ -13,10 +13,8 @@ public extension Module {
 
     private static let nativeLogic = Module(
         unchecked: Draft(
-            description: "Equality.",
             procedures: [
                 "Standard.Logic.equal": Procedure(
-                    description: "Whether two values are the same.",
                     signature: Signature(
                         of: EqualQuery.self,
                         returns: .bool,

@@ -12,7 +12,6 @@ import Warp
 // or not any node imports, so a tree with no `imports` has no nodes.
 //
 //   (warp 1)                           warp 1
-//   (description "…")                  description "…"
 //   (import Standard.Numeric.plus)     imports += "Standard.Numeric.plus"
 //   (import App.Point Hashable)        imports += "App.Point: Hashable"
 //   (const seven e)                    const { seven e }
@@ -26,7 +25,6 @@ import Warp
 struct DocumentNode {
     // MARK: - Property
     private static let warp = Module.versionKey.spelling
-    private static let description = ModuleReader.CodingKeys.description.name.spelling
     private static let imports = ModuleReader.CodingKeys.imports.name.spelling
     private static let constants = ModuleReader.CodingKeys.const.name.spelling
     private static let variables = ModuleReader.CodingKeys.variables.name.spelling
@@ -49,7 +47,7 @@ struct DocumentNode {
             let node = try Node(datum)
 
             switch node.word {
-            case Self.warp, Self.description:
+            case Self.warp:
                 try keyed.write(try DataNode().value(of: node.one()), under: node.word, at: node.offset)
 
             case "import":
@@ -106,10 +104,6 @@ struct DocumentNode {
 
         if let version = fields.take(Self.warp) {
             nodes.append(.node(Self.warp, [try DataNode().datum(of: version)]))
-        }
-
-        if let description = fields.take(Self.description) {
-            nodes.append(.node(Self.description, [try DataNode().datum(of: description)]))
         }
 
         if !(try Subtree(imports, as: "a document's imports").list()).isEmpty {

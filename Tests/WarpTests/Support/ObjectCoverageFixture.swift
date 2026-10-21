@@ -105,11 +105,7 @@ enum ObjectCoverageFixture {
         ]
     )
 
-    static let parameter = Parameter(
-        name: "p",
-        type: .double,
-        description: "what it takes"
-    )
+    static let parameter = Parameter(name: "p", type: .double)
 
     // Every case of `TypeExpression`, each holding something no other holds,
     // as the fields of a declared struct.

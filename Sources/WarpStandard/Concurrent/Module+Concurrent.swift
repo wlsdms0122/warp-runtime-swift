@@ -16,7 +16,6 @@ public extension Module {
 
     private static let nativeConcurrent = Module(
         unchecked: Draft(
-            description: "Running closures at once.",
             procedures: [
                 // `Standard.Collection.first` and `Standard.Concurrent.first` are two names
                 // in one link, so concurrency shows at the call site.
@@ -25,8 +24,6 @@ public extension Module {
                 // name of its own, so what comes back is said in the type:
                 // the answers in order, or under the pieces' keys.
                 "Standard.Concurrent.all": Procedure(
-                    description: "Runs every closure, and answers every answer in the closures' order."
-                        + " A failure fails the whole procedure, with every piece's failure reported.",
                     signature: Signature(
                         parameters: [pieces(in: TypeExpression.array)],
                         returns: .array(answer),
@@ -36,8 +33,6 @@ public extension Module {
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.all"))
                 ),
                 "Standard.Concurrent.allKeyed": Procedure(
-                    description: "Runs every closure, and answers every answer under the closure's key."
-                        + " A failure fails the whole procedure, with every piece's failure reported.",
                     signature: Signature(
                         parameters: [pieces(in: keyed)],
                         returns: keyed(answer),
@@ -48,9 +43,6 @@ public extension Module {
                     implementation: .effect(AllEffect(answering: "Standard.Concurrent.allKeyed"))
                 ),
                 "Standard.Concurrent.first": Procedure(
-                    description: "Runs every closure, answers the first success and"
-                        + " asks the rest to stop. Which one wins is the one fact"
-                        + " here timing decides.",
                     signature: Signature(
                         parameters: [pieces(in: TypeExpression.array)],
                         returns: answer,
@@ -60,9 +52,6 @@ public extension Module {
                     implementation: .effect(FirstEffect(answering: "Standard.Concurrent.first"))
                 ),
                 "Standard.Concurrent.firstKeyed": Procedure(
-                    description: "Runs every closure under a key, answers the first success and"
-                        + " asks the rest to stop. Which one wins is the one fact"
-                        + " here timing decides.",
                     signature: Signature(
                         parameters: [pieces(in: keyed)],
                         returns: answer,

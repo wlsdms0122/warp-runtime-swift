@@ -13,7 +13,6 @@ import Warp
 public struct ModuleReader: Decodable {
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case imports
-        case description
         case types
         case contracts
         case extensions
@@ -140,7 +139,6 @@ public struct ModuleReader: Decodable {
         let imports = try Self.imports(in: container)
 
         self.draft = Draft(
-            description: try container.decodeIfPresent(String.self, forKey: .description),
             imports: imports?.names ?? nil,
             importedClaims: imports?.claims ?? [],
             types: types.mapValues(\.declared),

@@ -123,7 +123,6 @@ struct WriterTests {
     private static let canonical: Value = [
         "warp": 1,
         "imports": ["Standard.Collection.count", "Standard.Comparable.lessThan", "Standard.Logic.notEqual", "Standard.Numeric.plus"],
-        "description": "one of every type",
         "types": [
             "Task": [
                 "struct": ["done": "Bool", "id": "String"],
@@ -142,11 +141,10 @@ struct WriterTests {
         "const": ["limit": 10],
         "procedures": [
             "entry": [
-                "description": "every construct, once",
                 "parameters": [
                     ["name": "kind", "type": "String"],
                     ["name": "names", "type": "Array<String>"],
-                    ["name": "procedure", "type": "String", "description": "what to match"]
+                    ["name": "procedure", "type": "String"]
                 ],
                 "returns": "Dictionary<String, Any>",
                 "body": [
@@ -242,13 +240,12 @@ struct WriterTests {
     static let corpus: [Value] = [
         // Literals, references, structs, arrays and a field named like a tag
         [
-            "description": "the types that need no name",
             "types": ["Task": ["struct": ["id": "String", "done": "Bool"]]],
             "const": ["limit": 10],
             "procedures": [
                 "entry": [
                     "parameters": [
-                        ["name": "counted", "type": "Int", "description": "how many"],
+                        ["name": "counted", "type": "Int"],
                         ["name": "kind", "type": "String"],
                         ["name": "procedure", "type": "String"]
                     ],

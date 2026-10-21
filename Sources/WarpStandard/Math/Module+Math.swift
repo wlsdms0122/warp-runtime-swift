@@ -13,10 +13,8 @@ public extension Module {
 
     private static let nativeMath = Module(
         unchecked: Draft(
-            description: "Rounding fractions to whole numbers.",
             procedures: [
                 "Standard.Math.floored": Procedure(
-                    description: "The whole number at or below a fraction.",
                     signature: Signature(
                         of: FlooredQuery.self,
                         returns: .int,
@@ -26,7 +24,6 @@ public extension Module {
                     implementation: .query(FlooredQuery())
                 ),
                 "Standard.Math.rounded": Procedure(
-                    description: "The nearest whole number.",
                     signature: Signature(
                         of: RoundedQuery.self,
                         returns: .int,

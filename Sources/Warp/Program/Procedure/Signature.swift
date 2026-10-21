@@ -239,11 +239,7 @@ public struct Signature: Sendable, Equatable {
     func replacingSelf(with type: TypeExpression) -> Signature {
         Signature(
             parameters: parameters.map { parameter in
-                Parameter(
-                    name: parameter.name,
-                    type: parameter.type.replacingSelf(with: type),
-                    description: parameter.description
-                )
+                Parameter(name: parameter.name, type: parameter.type.replacingSelf(with: type))
             },
             returns: returns.replacingSelf(with: type),
             failing: failing,

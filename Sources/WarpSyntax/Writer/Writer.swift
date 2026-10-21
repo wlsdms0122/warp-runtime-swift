@@ -62,10 +62,6 @@ public struct Writer: Sendable {
             written[ModuleReader.CodingKeys.procedures.name] = .dictionary(try procedures.mapValues(value(of:)))
         }
 
-        if let description = draft.description {
-            written[ModuleReader.CodingKeys.description.name] = .string(description)
-        }
-
         // What the document gives a type stands in the struct's declaration
         // where the document declares the struct, and in an extension of the
         // type otherwise.
@@ -162,10 +158,6 @@ public struct Writer: Sendable {
         }
 
         var written: [Name: Value] = [:]
-
-        if let description = procedure.description {
-            written[ProcedureReader.CodingKeys.description.name] = .string(description)
-        }
 
         // Written where it says something a reader would not fill in.
         if procedure.access != .internal {
@@ -346,10 +338,6 @@ public struct Writer: Sendable {
         if parameter.type != .any {
             written[ParameterFieldsReader.CodingKeys.type.name] = try TypeWriter(readBy: readBy)
                 .value(of: parameter.type, introducing: introducing)
-        }
-
-        if let description = parameter.description {
-            written[ParameterFieldsReader.CodingKeys.description.name] = .string(description)
         }
 
         // A struct holding nothing but the name is one pair, which a notation

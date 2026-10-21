@@ -11,11 +11,9 @@ import Warp
 // A procedure's parts, as a declaration, a closure, a contract's procedure
 // and a vocabulary's procedure each hold them, and the mapping they write.
 //
-//   (description "…")                  description "…"
 //   (access public)                    access "public"
 //   (const)  (isolated)                const true, isolated true
-//   (parameter f (type T) (description "…"))
-//                                      parameters += { name "f", type "T", description "…" }
+//   (parameter f (type T))             parameters += { name "f", type "T" }
 //   (returns T)                        returns "T"
 //   (failing a b)  (failing (anything))
 //                                      failing ["a", "b"], failing "anything"
@@ -25,7 +23,6 @@ import Warp
 //   (answers v)                        answers v, read as data
 struct ProcedureNode {
     // MARK: - Property
-    private static let description = ProcedureReader.CodingKeys.description.name.spelling
     private static let access = ProcedureReader.CodingKeys.access.name.spelling
     private static let const = SignatureFieldsReader.CodingKeys.const.name.spelling
     private static let isolated = SignatureFieldsReader.CodingKeys.isolated.name.spelling
@@ -49,7 +46,7 @@ struct ProcedureNode {
             let part = try Node(operand)
 
             switch part.word {
-            case Self.description, Self.answers:
+            case Self.answers:
                 try keyed.write(try DataNode().value(of: part.one()), under: part.word, at: part.offset)
 
             case Self.access:
@@ -103,10 +100,6 @@ struct ProcedureNode {
     func parts(of value: Value) throws -> [Datum] {
         var fields = try Fields(value, as: "a procedure")
         var parts: [Datum] = []
-
-        if let description = fields.take(Self.description) {
-            parts.append(.node(Self.description, [try DataNode().datum(of: description)]))
-        }
 
         if let access = fields.take(Self.access) {
             parts.append(.node(Self.access, [.name(try Subtree(access, as: "an access").text())]))
@@ -186,9 +179,6 @@ struct ProcedureNode {
             case Self.type:
                 try keyed.write(.string(try TypeNode().text(of: part.one())), under: part.word, at: part.offset)
 
-            case Self.description:
-                try keyed.write(try DataNode().value(of: part.one()), under: part.word, at: part.offset)
-
             default:
                 throw TextRefused("a parameter holds no `\(part.word)`", at: part.offset)
             }
@@ -208,10 +198,6 @@ struct ProcedureNode {
 
         if let type = fields.take(Self.type) {
             parts.append(.node(Self.type, [try TypeNode().datum(of: try Subtree(type, as: "a parameter's type").text())]))
-        }
-
-        if let description = fields.take(Self.description) {
-            parts.append(.node(Self.description, [try DataNode().datum(of: description)]))
         }
 
         try fields.finish()

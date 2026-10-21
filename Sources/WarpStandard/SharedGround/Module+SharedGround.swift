@@ -48,7 +48,6 @@ public extension Module {
     static let sharedGround: [Module] = [
         Module(
             unchecked: Draft(
-                description: "The shared ground: what counts as a number, what orders, and what has a count.",
                 contracts: [
                     // What arithmetic is asked of: two of one type, answered in
                     // that type, and a quotient that is a fraction whatever the
@@ -110,29 +109,19 @@ public extension Module {
     private static func arithmetic(of name: Name, as type: TypeExpression) -> [Witness] {
         [
             Witness(name, answering: ContractSpelling.numeric, "plus") { spelling in
-                .witness(PlusQuery(answering: spelling), taking: type, returns: type, description: "The sum.")
+                .witness(PlusQuery(answering: spelling), taking: type, returns: type)
             },
             Witness(name, answering: ContractSpelling.numeric, "minus") { spelling in
-                .witness(MinusQuery(answering: spelling), taking: type, returns: type, description: "The difference.")
+                .witness(MinusQuery(answering: spelling), taking: type, returns: type)
             },
             Witness(name, answering: ContractSpelling.numeric, "times") { spelling in
-                .witness(TimesQuery(answering: spelling), taking: type, returns: type, description: "The product.")
+                .witness(TimesQuery(answering: spelling), taking: type, returns: type)
             },
             Witness(name, answering: ContractSpelling.numeric, "remainder") { spelling in
-                .witness(
-                    RemainderQuery(answering: spelling),
-                    taking: type,
-                    returns: type,
-                    description: "What is left of a division truncated toward zero."
-                )
+                .witness(RemainderQuery(answering: spelling), taking: type, returns: type)
             },
             Witness(name, answering: ContractSpelling.numeric, "dividedBy") { spelling in
-                .witness(
-                    DividedByQuery(answering: spelling),
-                    taking: type,
-                    returns: .double,
-                    description: "The quotient, which is not generally whole."
-                )
+                .witness(DividedByQuery(answering: spelling), taking: type, returns: .double)
             }
         ]
     }
@@ -140,12 +129,7 @@ public extension Module {
     // What `Standard.Comparable` asks, answered for one type that orders.
     private static func ordering(of name: Name, as type: TypeExpression) -> Witness {
         Witness(name, answering: ContractSpelling.comparable, "lessThan") { spelling in
-            .witness(
-                LessThanQuery(answering: spelling),
-                taking: type,
-                returns: .bool,
-                description: "Whether one orders before the other."
-            )
+            .witness(LessThanQuery(answering: spelling), taking: type, returns: .bool)
         }
     }
 
@@ -154,7 +138,7 @@ public extension Module {
     // and the characters of text as a person reads them.
     private static func counting(of name: Name, as type: TypeExpression, bounds: [Name: Set<Name>]) -> Witness {
         Witness(name, answering: ContractSpelling.collection, "count") { spelling in
-            .witness(CountQuery(answering: spelling), taking: type, returns: .int, bounds: bounds, description: "How many.")
+            .witness(CountQuery(answering: spelling), taking: type, returns: .int, bounds: bounds)
         }
     }
 }

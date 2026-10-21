@@ -32,7 +32,6 @@ struct TextEncodingTests {
 
     private static let everyNode = """
     (warp 1)
-    (description "Every node.")
     (import App.Point Hashable)
     (import Standard.Numeric.plus)
     (const seven 7)
@@ -71,11 +70,10 @@ struct TextEncodingTests {
           (return "array"))))
 
     (procedure App.g
-      (description "Everything a procedure holds.")
       (access public)
       (const)
       (isolated)
-      (parameter c (type (some C App.Container)) (description "a container"))
+      (parameter c (type (some C App.Container)))
       (parameter f (type (procedure (const) (parameters) (failing (anything)) (returns Int))))
       (parameter any)
       (returns (nullable Int))
@@ -170,7 +168,7 @@ struct TextEncodingTests {
     func writtenTwiceIsRefused() {
         // Given
         for text in [
-            "(warp 1) (description \"a\") (description \"b\")",
+            "(warp 1) (warp 1)",
             "(warp 1) (procedure f) (procedure f)",
             "(warp 1) (procedure f (const) (const))",
             "(warp 1) (procedure f (bound C.Item `A & B`))",

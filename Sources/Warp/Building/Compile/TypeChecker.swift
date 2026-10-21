@@ -1813,7 +1813,6 @@ struct TypeChecker {
 
                 rewritten = .closure(
                     Procedure(
-                        description: procedure.description,
                         signature: procedure.signature,
                         implementation: .body(body)
                     )
