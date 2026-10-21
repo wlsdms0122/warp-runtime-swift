@@ -42,7 +42,7 @@ struct ContractTests {
                     )
                 )
             ],
-            result: .array([
+            returning: .array([
                 .call(Call(selector: "App.tell", arguments: [reference("account")])),
                 .call(Call(selector: "App.tell", arguments: [reference("card")]))
             ])
@@ -67,14 +67,14 @@ struct ContractTests {
                     )
                 )
             ],
-            result: .call(Call(selector: "App.tell", arguments: [reference("plain")]))
+            returning: .call(Call(selector: "App.tell", arguments: [reference("plain")]))
         )
 
         // When / Then
         await #expect {
             try await Builder().build([sut] + Module.standard)
         } throws: { error in
-            "\(error)".contains("procedures.entry.result")
+            "\(error)".contains("procedures.entry.body[1].leave")
                 && "\(error)".contains("no claim within reach says 'Bank.Plain' answers")
         }
     }
@@ -90,12 +90,11 @@ struct ContractTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("declared"))
+                    body: [returning(.literal(.string("declared")))]
                 )
             ],
             body: [],
-            result: .literal(.string("x"))
+            returning: .literal(.string("x"))
         )
 
         // When / Then
@@ -122,7 +121,7 @@ struct ContractTests {
                     )
                 )
             ],
-            result: .call(
+            returning: .call(
                 Call(
                     selector: "App.Describable.describe",
                     arguments: [reference("account"), .literal(.string("short"))]
@@ -151,8 +150,7 @@ struct ContractTests {
                 procedures: [
                     Name(stringLiteral: "Bank.Account.\(procedure.spelling)"): Procedure(
                         signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account")), Parameter(name: "n", type: parameter)], returns: .int),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     ),
                     entryName: Procedure(
                         access: .public,
@@ -161,14 +159,14 @@ struct ContractTests {
                             Statement(
                                 binding: .constant("account"),
                                 expression: .cast(.struct(["balance": .literal(.int(7))]), as: .named("Bank.Account"), optional: false)
-                            )
-                        ],
-                        result: .call(
-                            Call(
-                                selector: Name(stringLiteral: "\(contract.spelling).\(procedure.spelling)"),
-                                arguments: [reference("account"), argument]
-                            )
-                        )
+                            ),
+                            returning(.call(
+                                Call(
+                                    selector: Name(stringLiteral: "\(contract.spelling).\(procedure.spelling)"),
+                                    arguments: [reference("account"), argument]
+                                )
+                            ))
+                        ]
                     )
                 ]
             )
@@ -184,9 +182,9 @@ struct ContractTests {
 
         // Then. Each refused where the argument is written, for what the author wrote
         #expect(mistyped?.message == "sending 'App.Sized.size' with n, which holds String where Int is declared")
-        #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
+        #expect(mistyped?.place?.rendered == "procedures.\(entryName.spelling).body[1].leave.arguments[1]")
         #expect(inPlace?.message.hasPrefix("hands this argument in place") == true)
-        #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).result.arguments[1]")
+        #expect(inPlace?.place?.rendered == "procedures.\(entryName.spelling).body[1].leave.arguments[1]")
     }
 
     @Test("a declaration named for a type and a procedure is held to the contract")
@@ -204,8 +202,7 @@ struct ContractTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]) { _, added in added }
         )
@@ -228,21 +225,20 @@ struct ContractTests {
         let held = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: []),
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
         let asking = try Module(
             contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
             procedures: [
-                "App.ask": Procedure(body: [], result: .literal(.null))
+                "App.ask": Procedure(body: [])
             ]
         )
 
@@ -288,14 +284,13 @@ struct ContractTests {
                         returns: .int,
                         bounds: ["T": ["Chart.Plottable"]]
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Chart.Plottable.height", arguments: [reference("it")]))
+                    body: [returning(.call(Call(selector: "Chart.Plottable.height", arguments: [reference("it")])))]
                 )
             ]
         )
         let banking = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         let adapting = try Module(
             claims: ["Bank.Account": ["Chart.Plottable"]],
@@ -306,8 +301,7 @@ struct ContractTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .reference([.name("of"), .name("balance")])
+                    body: [returning(.reference([.name("of"), .name("balance")]))]
                 )
             ]
         )
@@ -325,9 +319,9 @@ struct ContractTests {
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "Chart.draw", arguments: [reference("account")]))
+                        ),
+                        returning(.call(Call(selector: "Chart.draw", arguments: [reference("account")])))
+                    ]
                 )
             ]
         )
@@ -347,20 +341,19 @@ struct ContractTests {
             claims: ["Bank.Account": ["App.Describable"]],
             members: ["Bank.Account": ["describe"]],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: []),
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("x"))
+                    body: [returning(.literal(.string("x")))]
                 )
             ]
         )
         let again = try Module(
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["App.ask": Procedure(body: [], result: .literal(.null))]
+            procedures: ["App.ask": Procedure(body: [])]
         )
 
         // When / Then. A claim holds nothing but the pair, so the second says
@@ -376,7 +369,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["Bank.Account": .struct(["balance": .int]), "App.Scalar": .alias(.int)],
             claims: ["Bank.Account": ["App.Scalar"]],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [])]
         )
 
         // When / Then
@@ -402,14 +395,12 @@ struct ContractTests {
                         returns: .int,
                         bounds: ["T": ["Standard.Comparable"]]
                     ),
-                    body: [],
-                    result: .literal(.int(0))
+                    body: [returning(.literal(.int(0)))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.Sortable.sort", arguments: [.array([.literal(.int(1))])]))
+                    body: [returning(.call(Call(selector: "App.Sortable.sort", arguments: [.array([.literal(.int(1))])])))]
                 )
             ]
         )
@@ -432,14 +423,12 @@ struct ContractTests {
                 procedures: [
                     "App.take": Procedure(
                         signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Marked"))], returns: .int),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     ),
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: "App.take", arguments: [handed]))
+                        body: [returning(.call(Call(selector: "App.take", arguments: [handed])))]
                     )
                 ]
             )
@@ -464,7 +453,7 @@ struct ContractTests {
         let sut = try Module(
             types: ["App.Thing": .alias(.int)],
             contracts: ["App.Thing": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
-            procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.null))]
+            procedures: [entryName: Procedure(access: .public, body: [])]
         )
 
         // When / Then
@@ -525,8 +514,7 @@ struct ContractTests {
                         returns: .string,
                         constness: constness
                     ),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 ),
                 "App.tell": Procedure(
                     signature: Signature(
@@ -536,17 +524,18 @@ struct ContractTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(
-                        Call(
-                            selector: "Standard.Text.uppercased",
-                            arguments: [
-                                .call(
-                                    Call(selector: "App.Describable.describe", arguments: [reference("it")])
-                                )
-                            ]
-                        )
-                    )
+                    body: [
+                        returning(.call(
+                            Call(
+                                selector: "Standard.Text.uppercased",
+                                arguments: [
+                                    .call(
+                                        Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                                    )
+                                ]
+                            )
+                        ))
+                    ]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -559,9 +548,9 @@ struct ContractTests {
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.tell", arguments: [reference("held")]))
+                        ),
+                        returning(.call(Call(selector: "App.tell", arguments: [reference("held")])))
+                    ]
                 )
             ]
         )
@@ -581,8 +570,7 @@ struct ContractTests {
                     returns: .string,
                     bounds: ["T": ["App.Describable"]]
                 ),
-                body: [],
-                result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
+                body: [returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("it")])))]
             ),
             entryName: Procedure(
                 access: .public,
@@ -591,9 +579,9 @@ struct ContractTests {
                     Statement(
                         binding: .constant("held"),
                         expression: .cast(.struct(fields), as: .named(type), optional: false)
-                    )
-                ],
-                result: .call(Call(selector: "App.tell", arguments: [reference("held")]))
+                    ),
+                    returning(.call(Call(selector: "App.tell", arguments: [reference("held")])))
+                ]
             )
         ]
     }
@@ -604,7 +592,7 @@ struct ContractTests {
         types extra: [Name: TypeDeclaration] = [:],
         procedures added: [Name: Procedure] = [:],
         body: Body,
-        result: Warp.Expression
+        returning value: Warp.Expression
     ) throws -> Module {
         try Module(
             types: [
@@ -621,7 +609,7 @@ struct ContractTests {
                 "Bank.Card": ["describe"]
             ],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(returns: .any, failing: .these(["cast_refused"])), body: body, result: result),
+                entryName: Procedure(access: .public, signature: Signature(returns: .any, failing: .these(["cast_refused"])), body: Body(body.statements + [returning(value)])),
                 "App.tell": Procedure(
                     signature: Signature(
                         parameters: [
@@ -630,32 +618,35 @@ struct ContractTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(
-                        Call(selector: "App.Describable.describe", arguments: [reference("it")])
-                    )
+                    body: [
+                        returning(.call(
+                            Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                        ))
+                    ]
                 ),
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: interpolated(
-                        literal("balance "),
-                        spelling(.reference([.name("of"), .name("balance")]))
-                    )
+                    body: [
+                        returning(interpolated(
+                            literal("balance "),
+                            spelling(.reference([.name("of"), .name("balance")]))
+                        ))
+                    ]
                 ),
                 "Bank.Card.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: interpolated(
-                        literal("card "),
-                        spelling(.reference([.name("of"), .name("last")]))
-                    )
+                    body: [
+                        returning(interpolated(
+                            literal("card "),
+                            spelling(.reference([.name("of"), .name("last")]))
+                        ))
+                    ]
                 )
             ].merging(added) { _, given in given }
         )

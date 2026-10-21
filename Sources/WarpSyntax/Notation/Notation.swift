@@ -60,6 +60,11 @@ public struct Notation: Sendable {
     // for the mapping with the name inside. A document writes the mapping.
     public let pairedParameter: Bool
 
+    // The key a procedure and a closure may end with, holding what the body
+    // answers, read as a `return` of it after the body's last statement, and
+    // nothing where the notation offers none. A document writes the `return`.
+    public let answerKey: Name?
+
     // What a declared name the text writes stands for, where the text writes
     // one short: a type's name in a slot, a cast, a field, a bound or a
     // claim, and a procedure's name in a call. Nothing for a name the
@@ -86,11 +91,13 @@ public struct Notation: Sendable {
     public init(
         spelling: (any ExpressionSpelling)? = nil,
         interpolation: Interpolation? = nil,
-        pairedParameter: Bool = false
+        pairedParameter: Bool = false,
+        answerKey: Name? = nil
     ) {
         self.spelling = spelling
         self.interpolation = interpolation
         self.pairedParameter = pairedParameter
+        self.answerKey = answerKey
     }
 
     // MARK: - Public

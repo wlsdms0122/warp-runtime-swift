@@ -34,9 +34,9 @@ struct VariableNotationTests {
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]]]]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -59,9 +59,9 @@ struct VariableNotationTests {
                         "when": ["of": ["ref": "kind"], "equal": "a"],
                         "then": [["set": "verdict", "value": "touched"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]]]]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -83,9 +83,9 @@ struct VariableNotationTests {
                         "when": ["of": ["ref": "seed"], "notEqual": .null],
                         "then": [["var": "inner", "value": 1]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "inner"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "inner"]]]]]]
+            ]
         ]
 
         // When / Then
@@ -107,9 +107,9 @@ struct VariableNotationTests {
                         "when": ["of": ["ref": "verdict"], "notEqual": .null],
                         "then": [["var": "verdict", "value": "inner"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]]]]]]
+            ]
         ], importing: ["Standard.Logic.notEqual"])
 
         // When
@@ -124,8 +124,7 @@ struct VariableNotationTests {
         // Given. `id` means the name is fixed, and the refusal says which of
         // the two mistakes this is
         let fixture: Value = [
-            "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"]],
-            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
+            "body": [["let": "verdict", "value": "first"], ["set": "verdict", "value": "second"], ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]]]]]]]
         ]
 
         // When / Then
@@ -138,8 +137,7 @@ struct VariableNotationTests {
     func assigningUndeclaredRejected() throws {
         // Given
         let fixture: Value = [
-            "body": [["set": "verdict", "value": "second"]],
-            "result": ["dictionary": [["result", ["ref": "verdict"]]]]
+            "body": [["set": "verdict", "value": "second"], ["value": ["return": ["dictionary": [["result", ["ref": "verdict"]]]]]]]
         ]
 
         // When / Then
@@ -159,13 +157,12 @@ struct VariableNotationTests {
                     "let": "later",
                     "value": [
                         "closure": [
-                            "body": [["set": "tally", "value": 1]],
-                            "result": ["ref": "tally"]
+                            "body": [["set": "tally", "value": 1], ["value": ["return": ["ref": "tally"]]]]
                         ]
                     ]
-                ]
-            ],
-            "result": ["dictionary": [["result", ["ref": "tally"]]]]
+                ],
+                ["value": ["return": ["dictionary": [["result", ["ref": "tally"]]]]]]
+            ]
         ]
 
         // When / Then
@@ -192,16 +189,16 @@ struct VariableNotationTests {
                                         "isolated": true,
                                         "body": [
                                             ["var": "tally", "value": 0],
-                                            ["set": "tally", "value": 1]
-                                        ],
-                                        "result": ["ref": "tally"]
+                                            ["set": "tally", "value": 1],
+                                            ["value": ["return": ["ref": "tally"]]]
+                                        ]
                                     ]
-                                ]], ["right", ["closure": ["returns": "Int", "isolated": true, "result": 2]]]]]
+                                ]], ["right", ["closure": ["returns": "Int", "isolated": true, "body": [["value": ["return": 2]]]]]]]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "both[\"left\"]"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "both[\"left\"]"]]]]]]
+            ]
         ], importing: ["Standard.Concurrent.allKeyed"])
 
         // When

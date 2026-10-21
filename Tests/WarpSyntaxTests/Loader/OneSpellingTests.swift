@@ -23,7 +23,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["access": "internal", "result": 1]]
+            "procedures": ["entry": ["access": "internal", "body": [["value": ["return": 1]]]]]
         ]
 
         // When / Then
@@ -43,7 +43,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["parameters": [["name": "x", "type": "Any"]], "result": 1]]
+            "procedures": ["entry": ["parameters": [["name": "x", "type": "Any"]], "body": [["value": ["return": 1]]]]]
         ]
 
         // When / Then
@@ -62,12 +62,12 @@ struct OneSpellingTests {
             "imports": ["Standard.Text.text", "Standard.Logic.not"],
             "procedures": [
                 "entry": [
-                    "result": [
+                    "body": [["value": ["return": [
                         "call": [
                             "arguments": [["call": ["arguments": [true], "procedure": "Standard.Logic.not"]]],
                             "procedure": "Standard.Text.text"
                         ]
-                    ]
+                    ]]]]
                 ]
             ]
         ]
@@ -87,7 +87,7 @@ struct OneSpellingTests {
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["result": ["struct": point]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["struct": point]]]]]]
         ]
 
         // When / Then
@@ -145,7 +145,7 @@ struct OneSpellingTests {
             "warp": 1,
             "imports": [],
             "types": ["App.Outer": ["struct": ["inner": ["id": "String"]]]],
-            "procedures": ["entry": ["result": 1]]
+            "procedures": ["entry": ["body": [["value": ["return": 1]]]]]
         ]
 
         // When / Then
@@ -158,15 +158,15 @@ struct OneSpellingTests {
     }
 
     @Test("a refusal inside a struct or a cast is placed under the tag the text wrote", arguments: [
-        (written: Value.dictionary(["struct": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.result.struct.a"),
-        (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "Int"])]), place: "procedures.entry.result.as?.of")
+        (written: Value.dictionary(["struct": .dictionary(["a": .dictionary(["ref": "missing"])])]), place: "procedures.entry.body[0].return.struct.a"),
+        (written: Value.dictionary(["as?": .dictionary(["of": .dictionary(["ref": "missing"]), "type": "Int"])]), place: "procedures.entry.body[0].return.as?.of")
     ])
     func aRefusalInsideATagIsPlacedUnderIt(written: Value, place: String) {
         // Given
         let document: Value = [
             "warp": 1,
             "imports": [],
-            "procedures": ["entry": ["result": written]]
+            "procedures": ["entry": ["body": [["value": ["return": written]]]]]
         ]
 
         // When / Then

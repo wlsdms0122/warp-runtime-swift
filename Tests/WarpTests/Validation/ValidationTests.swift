@@ -113,9 +113,9 @@ struct ValidationTests {
                                 then: [Statement(binding: .constant("limit"), expression: .literal(.int(9)))],
                                 else: nil
                             )
-                        )
-                    ],
-                    result: reference("limit")
+                        ),
+                        returning(reference("limit"))
+                    ]
                 )
             ]
         )
@@ -157,8 +157,10 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        body: [Statement(binding: .constant("limit"), expression: expression)],
-                        result: reference("limit")
+                        body: [
+                            Statement(binding: .constant("limit"), expression: expression),
+                            returning(reference("limit"))
+                        ]
                     )
                 ]
             )
@@ -188,13 +190,11 @@ struct ValidationTests {
         // When / Then. The two ways a closure introduces a name of its own
         try Validator().validate(module(Procedure(
             signature: Signature(parameters: [Parameter(name: "limit", type: .int)], returns: .int),
-            body: [],
-            result: reference("limit")
+            body: [returning(reference("limit"))]
         )))
         try Validator().validate(module(Procedure(
             signature: Signature(returns: .int),
-            body: [Statement(binding: .constant("count"), expression: .literal(.int(9)))],
-            result: reference("count")
+            body: [Statement(binding: .constant("count"), expression: .literal(.int(9))), returning(reference("count"))]
         )))
     }
 
@@ -257,7 +257,7 @@ struct ValidationTests {
         // Given. Whether a value call answers without running is said by the
         // type written for the value, which the load does not read
         let called = Warp.Expression.apply(reference("f"), arguments: [])
-        let read = Statement(binding: .constant("f"), expression: .closure(Procedure(body: [], result: .literal(.int(1)))))
+        let read = Statement(binding: .constant("f"), expression: .closure(Procedure(body: [returning(.literal(.int(1)))])))
 
         // When / Then. A call's operand, a condition, and a value call held
         // inside a list an operand holds
@@ -283,7 +283,7 @@ struct ValidationTests {
         #expect {
             try Module(
                 procedures: [
-                    entryName: Procedure(access: .public, body: [statement], result: .literal(.int(1)))
+                    entryName: Procedure(access: .public, body: [statement, returning(.literal(.int(1)))])
                 ]
             )
         } throws: { error in
@@ -387,8 +387,7 @@ struct ValidationTests {
         // reads two ways
         let twice = Procedure(
             signature: Signature(parameters: [Parameter(name: "x", type: .int), Parameter(name: "x", type: .string)]),
-            body: [],
-            result: .literal(.int(1))
+            body: [returning(.literal(.int(1)))]
         )
 
         // When / Then
@@ -421,7 +420,7 @@ struct ValidationTests {
         #expect {
             try Module(
                 constants: ["App.k": .literal(.int(1))],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("constants.App.k: 'App.k' is no name a path reads")
@@ -443,8 +442,7 @@ struct ValidationTests {
                                 Parameter(name: "items", type: .array(.string))
                             ]
                         ),
-                        body: [],
-                        result: .reference([.name("items", optional: true), .index(0)])
+                        body: [returning(.reference([.name("items", optional: true), .index(0)]))]
                     )
                 ]
             )
@@ -463,8 +461,7 @@ struct ValidationTests {
         let read = Procedure(
             access: .public,
             signature: Signature(parameters: [Parameter(name: "d", type: .dictionary(key: .named("Hashable"), value: .int))]),
-            body: [],
-            result: .reference([.name("d"), .index(index)])
+            body: [returning(.reference([.name("d"), .index(index)]))]
         )
 
         // When / Then
@@ -608,7 +605,7 @@ struct ValidationTests {
                         Statement(binding: .constant("charged"), expression: .call(Call(selector: "Wallet.fee")))
                     ]
                 ),
-                "Wallet.fee": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "Wallet.fee": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
             ]
         )
 
@@ -630,7 +627,7 @@ struct ValidationTests {
                 imports: [],
                 contracts: ["App.Described": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
                 claims: ["Any": ["App.Described"]],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError
@@ -651,7 +648,7 @@ struct ValidationTests {
                 imports: [],
                 claims: claims,
                 members: members,
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains(place)
@@ -670,10 +667,9 @@ struct ValidationTests {
             procedures: [
                 "Int.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .string),
-                    body: [],
-                    result: .literal(.string("Int"))
+                    body: [returning(.literal(.string("Int")))]
                 ),
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])
             ]
         )
 
@@ -702,10 +698,9 @@ struct ValidationTests {
                 procedures: [
                     "App.keep": Procedure(
                         signature: Signature(parameters: [Parameter(name: "value", type: parameter)], bounds: bounds),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     ),
-                    entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))
+                    entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])
                 ]
             )
         } throws: { error in
@@ -721,7 +716,7 @@ struct ValidationTests {
         #expect {
             try Module(
                 types: ["App.Held": .struct(["a.b": .int])],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".hasPrefix("types.App.Held.fields")
@@ -734,7 +729,7 @@ struct ValidationTests {
                 contracts: [
                     "App.Shown": ["show": Signature(parameters: [Parameter(name: "o.f", type: .selfType)], returns: .string)]
                 ],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".hasPrefix("contracts.App.Shown.procedures.show.parameters[0]")
@@ -750,8 +745,7 @@ struct ValidationTests {
                 procedures: [
                     entryName: Procedure(
                         access: .public,
-                        body: [],
-                        result: .literal(.array([.dictionary(["a": .int(1)])]))
+                        body: [returning(.literal(.array([.dictionary(["a": .int(1)])])))]
                     )
                 ]
             )
@@ -792,7 +786,7 @@ struct ValidationTests {
         // When / Then
         #expect {
             try Module(
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(carried))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("a literal holds a struct")
@@ -808,7 +802,7 @@ struct ValidationTests {
         // When / Then
         #expect {
             try Module(
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(carried))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(carried))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".contains("a literal holds a fraction with no finite value")
@@ -820,13 +814,12 @@ struct ValidationTests {
         // Given
         let closure = Procedure(
             signature: Signature(parameters: [Parameter(name: "y", type: .parameter(name: "T"))], bounds: ["T": ["Standard.Comparable"]]),
-            body: [],
-            result: .literal(.int(1))
+            body: [returning(.literal(.int(1)))]
         )
 
         // When / Then
         #expect {
-            try Module(procedures: [entryName: Procedure(body: [], result: .closure(closure))])
+            try Module(procedures: [entryName: Procedure(body: [returning(.closure(closure))])])
         } throws: { error in
             error is ValidationError && "\(error)".contains("a closure writes no bounds")
         }
@@ -838,8 +831,7 @@ struct ValidationTests {
         // writes `Int`
         let procedure = Procedure(
             signature: Signature(parameters: [Parameter(name: "of", type: .int)], bounds: ["T": ["Standard.Comparable"]]),
-            body: [],
-            result: .literal(.int(1))
+            body: [returning(.literal(.int(1)))]
         )
 
         // When / Then
@@ -864,7 +856,7 @@ struct ValidationTests {
                         )
                     ]
                 ],
-                procedures: [entryName: Procedure(access: .public, body: [], result: .literal(.int(1)))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))])]
             )
         } throws: { error in
             error is ValidationError && "\(error)".hasPrefix("contracts.App.Kept.procedures.keep.parameters[1]: ")
@@ -914,8 +906,10 @@ struct ValidationTests {
     func resultsSeeTheWholeBody() throws {
         // Given
         let sut = Procedure(
-            body: [Statement(binding: .constant("made"), expression: .literal(.int(1)))],
-            result: map(["ok": reference("made"), "bad": reference("never")])
+            body: [
+            Statement(binding: .constant("made"), expression: .literal(.int(1))),
+            returning(map(["ok": reference("made"), "bad": reference("never")]))
+        ]
         )
 
         // When / Then
@@ -1016,40 +1010,21 @@ struct ValidationTests {
         ]))
     }
 
-    @Test("a result after a leaving statement is refused at the load")
-    func aResultAfterLeavingIsRefused() {
-        // Given. The syntactic half of the same rule, held where leaves are
-        let sut = Procedure(
-            body: [
-                Statement(expression: .leave(.procedure(.literal(.int(1)))))
-            ],
-            result: .literal(.int(2))
-        )
-
-        // When / Then
-        #expect {
-            try Module(procedures: [entryName: sut])
-        } throws: { error in
-            "\(error)".contains("never be reached")
-        }
-    }
-
     @Test("a closure body is validated where it is written")
     func closureBodyIsValidatedAtItsSite() {
         // Given. The body may read what surrounds the literal and what the
         // literal declares, and nothing else
         let readsEnclosing = Warp.Expression.closure(
-            Procedure(body: [], result: reference("outer"))
+            Procedure(body: [returning(reference("outer"))])
         )
         let readsItsOwn = Warp.Expression.closure(
             Procedure(
                 signature: Signature(parameters: [Parameter(name: "mine", type: .int)]),
-                body: [],
-                result: reference("mine")
+                body: [returning(reference("mine"))]
             )
         )
         let readsNothingReal = Warp.Expression.closure(
-            Procedure(body: [], result: reference("nowhere"))
+            Procedure(body: [returning(reference("nowhere"))])
         )
 
         // When / Then
@@ -1069,9 +1044,9 @@ struct ValidationTests {
                     Statement(
                         binding: .constant("f"),
                         expression: .closure(Procedure(implementation: .query(OneQuery())))
-                    )
-                ],
-                result: .apply(.reference([.name("f")]), arguments: [])
+                    ),
+                    returning(.apply(.reference([.name("f")]), arguments: []))
+                ]
             )])
         }
 
@@ -1112,12 +1087,11 @@ struct ValidationTests {
                         signature: Signature(
                             parameters: [Parameter(name: "greeting", type: .string)]
                         ),
-                        body: [],
-                        result: .reference([.name("greeting")])
+                        body: [returning(.reference([.name("greeting")]))]
                     ))
-                )
-            ],
-            result: .literal(.int(1))
+                ),
+                returning(.literal(.int(1)))
+            ]
         )
 
         // When / Then
@@ -1146,8 +1120,7 @@ struct ValidationTests {
                         entryName: Procedure(
                             access: .public,
                             signature: Signature(),
-                            body: [],
-                            result: .literal(.int(1))
+                            body: [returning(.literal(.int(1)))]
                         )
                     ]
                 )
@@ -1164,8 +1137,7 @@ struct ValidationTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     )
                 ]
             )
@@ -1180,7 +1152,7 @@ struct ValidationTests {
                 imports: [],
                 constants: ["limit": .literal(.int(1))],
                 variables: ["limit": .literal(.int(2))],
-                procedures: [entryName: Procedure(access: .public, body: [], result: reference("limit"))]
+                procedures: [entryName: Procedure(access: .public, body: [returning(reference("limit"))])]
             )
         } throws: { error in
             "\(error)".contains("one name holds one thing")

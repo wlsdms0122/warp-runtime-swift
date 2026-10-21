@@ -52,9 +52,9 @@ struct SpellingTests {
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -124,8 +124,7 @@ struct SpellingTests {
                         "value": ["conditional": [
                             "when": ["of": ["ref": "kind"], "equal": "a"],
                             "then": [
-                                "body": [["let": "chosen", "value": "took-then"]],
-                                "result": ["value": ["ref": "chosen"]]
+                                "body": [["let": "chosen", "value": "took-then"], ["value": ["return": ["value": ["ref": "chosen"]]]]]
                             ]
                         ]
                     ]]

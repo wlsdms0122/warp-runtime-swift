@@ -38,8 +38,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
+            body: [returning(.reference([.name("point"), .name("y")]))]
         )
 
         // When
@@ -59,9 +58,9 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .constant("held", declared: .named("App.Pair")),
                     expression: .struct(["b": .literal(.int(2)), "a": .literal(.int(1))])
-                )
-            ],
-            result: .reference([.name("held"), .name("b")])
+                ),
+                returning(.reference([.name("held"), .name("b")]))
+            ]
         )
 
         // When
@@ -79,8 +78,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "entries", type: .dictionary(key: .string, value: .int))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("entries"), .index("a")])
+            body: [returning(.reference([.name("entries"), .index("a")]))]
         )
 
         // When
@@ -98,8 +96,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "outer", type: .named("App.Outer"))],
                 returns: .string
             ),
-            body: [],
-            result: .reference([.name("outer"), .name("inner"), .name("deep")])
+            body: [returning(.reference([.name("outer"), .name("inner"), .name("deep")]))]
         )
 
         // When
@@ -119,8 +116,7 @@ struct FieldPlaceTests {
                 parameters: [Parameter(name: "point", type: .named("App.Point"))],
                 returns: .int
             ),
-            body: [],
-            result: .reference([.name("point"), .name("y")])
+            body: [returning(.reference([.name("point"), .name("y")]))]
         )
 
         // When
@@ -149,9 +145,9 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .assignment([PathSegment.name("point")]),
                     expression: .cast(.reference([.name("given")]), as: .named("App.Point"), optional: false)
-                )
-            ],
-            result: .reference([.name("point"), .name("y")])
+                ),
+                returning(.reference([.name("point"), .name("y")]))
+            ]
         )
 
         // When
@@ -179,9 +175,9 @@ struct FieldPlaceTests {
                 Statement(
                     binding: .assignment([PathSegment.name("held")]),
                     expression: .reference([.name("given")])
-                )
-            ],
-            result: .reference([.name("held"), .index("y")])
+                ),
+                returning(.reference([.name("held"), .index("y")]))
+            ]
         )
 
         // When
@@ -219,7 +215,7 @@ struct FieldPlaceTests {
     private func steps(of image: Image) throws -> [Step] {
         guard
             case let .body(body, _) = image[entryName]!.implementation,
-            case let .local(address)? = body.result
+            case let .leave(.procedure, _, .local(address)?)? = body.instructions.last?.code
         else {
             Issue.record("the entry does not answer with a path")
 

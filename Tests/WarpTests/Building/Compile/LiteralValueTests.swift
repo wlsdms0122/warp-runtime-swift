@@ -31,8 +31,7 @@ struct LiteralValueTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Collection.count", arguments: [.literal(try Self.mixed())]))
+                    body: [returning(.call(Call(selector: "Standard.Collection.count", arguments: [.literal(try Self.mixed())])))]
                 )
             ]
         )
@@ -58,9 +57,9 @@ struct LiteralValueTests {
                         Statement(
                             binding: .constant("held", declared: .dictionary(key: .named("Hashable"), value: .int)),
                             expression: .literal(try Self.mixed())
-                        )
-                    ],
-                    result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("held")]))
+                        ),
+                        returning(.call(Call(selector: "Standard.Collection.count", arguments: [reference("held")])))
+                    ]
                 )
             ]
         )
@@ -80,8 +79,7 @@ struct LiteralValueTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.double)),
-                    body: [],
-                    result: .literal(.array([.int(1), .double(2.5)]))
+                    body: [returning(.literal(.array([.int(1), .double(2.5)])))]
                 )
             ]
         )

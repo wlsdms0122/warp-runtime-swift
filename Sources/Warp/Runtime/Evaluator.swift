@@ -143,8 +143,12 @@ struct Evaluator: Sendable {
     ) async throws -> Value {
         let returned: Value
 
+        // A body answers through `return`, so one that reaches its end
+        // answers nothing.
         do {
-            returned = try await run(body, in: &activation, at: trace)
+            try await perform(body.instructions, in: &activation, at: trace)
+
+            returned = .null
         } catch let leaving as Leaving where leaving.reach == .procedure {
             // A closure is a procedure, so this is also what stops a `return`
             // written inside one from answering for the procedure around it.
@@ -164,16 +168,6 @@ struct Evaluator: Sendable {
         }
 
         return returned
-    }
-
-    // A body answers what it says it answers, and a body that says nothing
-    // answers nothing.
-    private func run(_ body: LoweredBody, in activation: inout Activation, at trace: Trace) async throws -> Value {
-        try await perform(body.instructions, in: &activation, at: trace)
-
-        guard let result = body.result else { return .null }
-
-        return try await evaluate(result, in: &activation, at: trace)
     }
 
     // Instructions in order, each landing its answer in the slot it binds.

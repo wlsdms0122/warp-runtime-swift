@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A folded constant is held to the contract it was handed to")
 struct FoldedContractTests {
@@ -26,8 +27,7 @@ struct FoldedContractTests {
             procedures: [
                 "Null.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .null)], returns: .string),
-                    body: [],
-                    result: .literal(.string("none"))
+                    body: [returning(.literal(.string("none")))]
                 )
             ]
         )
@@ -93,24 +93,21 @@ struct FoldedContractTests {
                         constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 "App.giveEarly": Procedure(
                     signature: Signature(returns: .any, failing: .these(["cast_refused"]), constness: .const),
-                    body: [],
-                    result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false)
+                    body: [returning(.cast(.struct(["note": .literal(.string("x"))]), as: .named("Zed.Plain"), optional: false))]
                 ),
                 "App.giveLate": Procedure(
                     signature: Signature(returns: .any, failing: .these(["cast_refused"]), constness: .const),
-                    body: [],
-                    result: .cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false)
+                    body: [returning(.cast(.struct(["note": .literal(.string("x"))]), as: .named("Bank.Plain"), optional: false))]
                 )
             ]
         )
         let typed = try Module(
             types: ["Bank.Plain": .struct(["note": .string]), "Zed.Plain": .struct(["note": .string])],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         // `aaa` settles first and `zzz` last, so the pair refused is
         // `Zed.Plain`, which `aaa` handed.
@@ -123,8 +120,7 @@ struct FoldedContractTests {
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("zzz")])
+                    body: [returning(.reference([.name("zzz")]))]
                 )
             ]
         )
@@ -145,7 +141,7 @@ struct FoldedContractTests {
         // about what arrives, so only the fold meets the value.
         let typed = try Module(
             types: ["Bank.Plain": .struct(["note": .string])],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         let modules = try documents(
             returning: .any,
@@ -190,13 +186,11 @@ struct FoldedContractTests {
                         constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 "App.give": Procedure(
                     signature: Signature(returns: type, failing: .these(["cast_refused"]), constness: .const),
-                    body: [],
-                    result: giving
+                    body: [returning(giving)]
                 )
             ]
         )
@@ -214,8 +208,7 @@ struct FoldedContractTests {
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("counted")])
+                    body: [returning(.reference([.name("counted")]))]
                 )
             ]
         )

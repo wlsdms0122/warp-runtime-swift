@@ -285,8 +285,8 @@ struct PlaceTests {
         // And the walk that only gathers puts it in the same place
         let gathered = try #require(
             module(sending: "helper", with: .literal(.int(1)))
-                .procedures[entryName]?.block?
-                .subexpressions(at: .procedure(entryName.spelling, in: .assembled))
+                .procedures[entryName]?.implementation.body?
+                .subexpressions(at: Place.procedure(entryName.spelling, in: .assembled).part(.body))
                 .first { _, expression in
                     guard case .call = expression else { return false }
 
@@ -522,7 +522,7 @@ struct PlaceTests {
         // them.
         func declaring(_ procedure: Name, as identity: Identity) throws -> Module {
             try Module(
-                procedures: [procedure: Procedure(body: [], result: .literal(.int(1)))],
+                procedures: [procedure: Procedure(body: [returning(.literal(.int(1)))])],
                 identity: identity
             )
         }
@@ -551,7 +551,7 @@ struct PlaceTests {
         // collision between two declarations, the sentence names the same
         // document on both sides and tells the host nothing it can act on.
         let module = try Module(
-            procedures: ["Pricing.taxed": Procedure(body: [], result: .literal(.int(1)))],
+            procedures: ["Pricing.taxed": Procedure(body: [returning(.literal(.int(1)))])],
             identity: Identity([0x01])
         )
 
@@ -687,7 +687,7 @@ struct PlaceTests {
         // sentence names two documents that read as one, and the place renders
         // without a document at all. Where the host put them is what is left.
         func declaring() throws -> Module {
-            try Module(procedures: ["taxed": Procedure(body: [], result: .literal(.int(1)))])
+            try Module(procedures: ["taxed": Procedure(body: [returning(.literal(.int(1)))])])
         }
 
         let caller = try Module(procedures: [entryName: Procedure(access: .public, body: [])])

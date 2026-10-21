@@ -41,8 +41,7 @@ struct ConditionTests {
                                 returns: .bool,
                                 failing: .anything
                             ),
-                            body: [],
-                            result: condition
+                            body: [returning(condition)]
                         )
                     ])
                 ] + Module.standard

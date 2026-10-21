@@ -25,7 +25,7 @@ struct VariableTests {
         ]
 
         // When
-        let answer = try await answer(of: sut, result: reference("tally"))
+        let answer = try await answer(of: sut, returning: reference("tally"))
 
         // Then
         #expect(answer == .int(3))
@@ -41,7 +41,7 @@ struct VariableTests {
         ]
 
         // When
-        let answer = try await answer(of: sut, result: reference("text"))
+        let answer = try await answer(of: sut, returning: reference("text"))
 
         // Then
         #expect(answer == .string("<a>"))
@@ -61,12 +61,12 @@ struct VariableTests {
                                         signature: Signature(returns: .int, isolation: .isolated),
                                         body: [
                                             Statement(binding: .variable("tally"), expression: .literal(.int(0))),
-                                            Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1)))
-                                        ],
-                                        result: reference("tally")
+                                            Statement(binding: .assignment([.name("tally")]), expression: .literal(.int(1))),
+                                            returning(reference("tally"))
+                                        ]
                                     )
                                 ),
-                                "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [], result: .literal(.int(2))))
+                                "right": .closure(Procedure(signature: Signature(returns: .int, isolation: .isolated), body: [returning(.literal(.int(2)))]))
                             ])
                         ]
                     )
@@ -75,7 +75,7 @@ struct VariableTests {
         ]
 
         // When. The pieces' answers are read as the map they are
-        let answer = try await answer(of: sut, result: .reference([.name("both"), .index("left")]))
+        let answer = try await answer(of: sut, returning: .reference([.name("both"), .index("left")]))
 
         // Then
         #expect(answer == .int(1))
@@ -98,7 +98,7 @@ struct VariableTests {
         ]
 
         // When
-        let answer = try await answer(of: sut, result: reference("latest"))
+        let answer = try await answer(of: sut, returning: reference("latest"))
 
         // Then. Rounds 0/1/2 ran, and only `latest` came out
         #expect(answer == .int(2))

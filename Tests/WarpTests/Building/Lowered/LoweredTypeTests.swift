@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // What the build leaves the run to read types by: rows for names, one judge
 // over types, and a document's type reaching it through a door.
@@ -174,11 +175,12 @@ struct LoweredTypeTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Math.max",
-                        arguments: [.literal(.int(1)), .literal(.int(2))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Math.max",
+                            arguments: [.literal(.int(1)), .literal(.int(2))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -209,8 +211,7 @@ struct LoweredTypeTests {
                 "App.entry": Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "k", type: .named("App.Kinds"))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -239,8 +240,7 @@ struct LoweredTypeTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                    body: [],
-                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
+                    body: [returning(.closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])))]
                 )
             ]
         )
@@ -253,8 +253,7 @@ struct LoweredTypeTests {
                         returns: .int,
                         failing: .anything
                     ),
-                    body: [],
-                    result: .apply(.reference([.name("held")]), arguments: [])
+                    body: [returning(.apply(.reference([.name("held")]), arguments: []))]
                 )
             ]
         )
@@ -278,8 +277,7 @@ struct LoweredTypeTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                    body: [],
-                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
+                    body: [returning(.closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])))]
                 )
             ]
         )
@@ -292,8 +290,7 @@ struct LoweredTypeTests {
                         returns: .int,
                         failing: .anything
                     ),
-                    body: [],
-                    result: .apply(.reference([.name("held")]), arguments: [])
+                    body: [returning(.apply(.reference([.name("held")]), arguments: []))]
                 )
             ]
         )
@@ -316,8 +313,7 @@ struct LoweredTypeTests {
                 "entry": Procedure(
                     access: .public,
                     signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                    body: [],
-                    result: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))))
+                    body: [returning(.closure(Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])))]
                 )
             ]
         )

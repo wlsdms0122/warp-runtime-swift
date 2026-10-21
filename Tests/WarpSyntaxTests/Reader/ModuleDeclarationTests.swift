@@ -29,13 +29,11 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "First.entry": [
                     "returns": "Any",
-                    "body": [["let": "said", "value": ["call": ["procedure": "First.helper"]]]],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                    "body": [["let": "said", "value": ["call": ["procedure": "First.helper"]]], ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]]
                 ],
                 "First.helper": [
                     "returns": "Any",
-                    "body": [["let": "done", "value": "from first"]],
-                    "result": ["dictionary": [["said", ["ref": "done"]]]]
+                    "body": [["let": "done", "value": "from first"], ["value": ["return": ["dictionary": [["said", ["ref": "done"]]]]]]]
                 ]
             ]
         ])
@@ -43,8 +41,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "Second.helper": [
                     "returns": "Any",
-                    "body": [["let": "done", "value": "from second"]],
-                    "result": ["dictionary": [["said", ["ref": "done"]]]]
+                    "body": [["let": "done", "value": "from second"], ["value": ["return": ["dictionary": [["said", ["ref": "done"]]]]]]]
                 ]
             ]
         ])
@@ -63,16 +60,14 @@ struct ModuleDeclarationTests {
             "imports": ["greet"],
             "procedures": [
                 "Caller.entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]], ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]]
                 ]
             ]
         ])
         let library = try loader.loadDocument([
             "procedures": [
                 "Greeting.greet": [
-                    "body": [["let": "done", "value": "hello"]],
-                    "result": ["dictionary": [["said", ["ref": "done"]]]]
+                    "body": [["let": "done", "value": "hello"], ["value": ["return": ["dictionary": [["said", ["ref": "done"]]]]]]]
                 ]
             ]
         ])
@@ -93,13 +88,11 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "First.entry": [
                     "returns": "Any",
-                    "body": [["let": "said", "value": ["call": ["procedure": "Second.helper"]]]],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                    "body": [["let": "said", "value": ["call": ["procedure": "Second.helper"]]], ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]]
                 ],
                 "First.helper": [
                     "returns": "Any",
-                    "body": [["let": "done", "value": "from first"]],
-                    "result": ["dictionary": [["said", ["ref": "done"]]]]
+                    "body": [["let": "done", "value": "from first"], ["value": ["return": ["dictionary": [["said", ["ref": "done"]]]]]]]
                 ]
             ]
         ])
@@ -107,8 +100,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "Second.helper": [
                     "returns": "Any",
-                    "body": [["let": "done", "value": "from second"]],
-                    "result": ["dictionary": [["said", ["ref": "done"]]]]
+                    "body": [["let": "done", "value": "from second"], ["value": ["return": ["dictionary": [["said", ["ref": "done"]]]]]]]
                 ]
             ]
         ])
@@ -128,8 +120,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "returns": "Any",
-                    "body": [["let": "said", "value": ["ref": "greeting"]]],
-                    "result": ["dictionary": [["result", ["ref": "said"]], ["cap", ["ref": "limit"]]]]
+                    "body": [["let": "said", "value": ["ref": "greeting"]], ["value": ["return": ["dictionary": [["result", ["ref": "said"]], ["cap", ["ref": "limit"]]]]]]]
                 ]
             ]
         ])
@@ -154,8 +145,7 @@ struct ModuleDeclarationTests {
             "procedures": [
                 "entry": [
                     "returns": "Any",
-                    "body": [["let": "seen", "value": ["ref": "url"]]],
-                    "result": ["dictionary": [["result", ["ref": "seen"]]]]
+                    "body": [["let": "seen", "value": ["ref": "url"]], ["value": ["return": ["dictionary": [["result", ["ref": "seen"]]]]]]]
                 ]
             ]
         ])
@@ -199,7 +189,7 @@ struct ModuleDeclarationTests {
                         "describe": [
                             "parameters": [["name": "of", "type": "Bank.Account"]],
                             "returns": "String",
-                            "result": "an account"
+                            "body": [["value": ["return": "an account"]]]
                         ]
                     ]
                 ],
@@ -210,7 +200,7 @@ struct ModuleDeclarationTests {
                         "describe": [
                             "parameters": [["name": "of", "type": "Bank.Card"]],
                             "returns": "String",
-                            "result": "a card"
+                            "body": [["value": ["return": "a card"]]]
                         ]
                     ]
                 ]
@@ -230,14 +220,14 @@ struct ModuleDeclarationTests {
                         [
                             "let": "card",
                             "value": ["as": ["of": ["struct": ["last": "42"]], "type": "Bank.Card"]]
-                        ]
-                    ],
-                    "result": ["dictionary": [["result", ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]]
+                        ],
+                        ["value": ["return": ["dictionary": [["result", ["call": ["procedure": "App.tell", "arguments": [["ref": "card"]]]]]]]]]
+                    ]
                 ],
                 "App.tell": [
                     "parameters": [["name": "it", "type": "some T: App.Describable"]],
                     "returns": "String",
-                    "result": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]
+                    "body": [["value": ["return": ["call": ["procedure": "App.Describable.describe", "arguments": [["ref": "it"]]]]]]]
                 ]
             ]
         ])

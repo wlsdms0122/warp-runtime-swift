@@ -31,11 +31,11 @@ struct ExecutorTests {
                     ),
                     body: [
                         Statement(binding: .constant("greeting"), expression: interpolated(literal("hello, "), spelling(reference("who")))),
-                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!")))
-                    ],
-                    result: map([
-                            "result": .reference([.name("loud")])
-                        ])
+                        Statement(binding: .constant("loud"), expression: interpolated(spelling(reference("greeting")), literal("!"))),
+                        returning(map([
+                                "result": .reference([.name("loud")])
+                            ]))
+                    ]
                 )
             ]
         )
@@ -65,11 +65,11 @@ struct ExecutorTests {
                                     ], rescue: [
                                         Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
                                     ])
-                        )
-                    ],
-                    result: map([
-                            "result": .reference([.name("kept")])
-                        ])
+                        ),
+                        returning(map([
+                                "result": .reference([.name("kept")])
+                            ]))
+                    ]
                 )
             ]
         )
@@ -104,12 +104,12 @@ struct ExecutorTests {
                                             )
                                         )
                                     ])
-                        )
-                    ],
-                    result: map([
-                            "reason": .reference([.name("reason")]),
-                            "after": .reference([.name("fragile")])
-                        ])
+                        ),
+                        returning(map([
+                                "reason": .reference([.name("reason")]),
+                                "after": .reference([.name("fragile")])
+                            ]))
+                    ]
                 )
             ]
         )
@@ -208,11 +208,11 @@ struct ExecutorTests {
                                     ], rescue: [
                                         Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
                                     ])
-                        )
-                    ],
-                    result: map([
-                            "result": .reference([.name("kept")])
-                        ])
+                        ),
+                        returning(map([
+                                "result": .reference([.name("kept")])
+                            ]))
+                    ]
                 )
             ]
         )
@@ -238,8 +238,7 @@ struct ExecutorTests {
                         ],
                         returns: .any
                     ),
-                    body: [],
-                    result: .reference([.name("data"), .index("missing")])
+                    body: [returning(.reference([.name("data"), .index("missing")]))]
                 )
             ]
         )
@@ -286,11 +285,11 @@ struct ExecutorTests {
                                     ], rescue: [
                                         Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
                                     ])
-                        )
-                    ],
-                    result: map([
-                            "result": .reference([.name("kept")])
-                        ])
+                        ),
+                        returning(map([
+                                "result": .reference([.name("kept")])
+                            ]))
+                    ]
                 )
             ]
         )
@@ -354,11 +353,11 @@ struct ExecutorTests {
                                     ], rescue: [
                                         Statement(binding: .assignment([.name("kept")]), expression: .literal(.string("recovered")))
                                     ])
-                        )
-                    ],
-                    result: map([
-                            "result": .reference([.name("kept")])
-                        ])
+                        ),
+                        returning(map([
+                                "result": .reference([.name("kept")])
+                            ]))
+                    ]
                 )
             ]
         )

@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 @Suite("A claim is held where it is written")
 struct UnheldClaimTests {
@@ -30,19 +31,18 @@ struct UnheldClaimTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])]))
+                    body: [returning(.call(Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])))]
                 )
             ]
         )
         let typed = try Module(
             types: ["Bank.Account": .struct(["balance": .int])],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         // Claims the pair and declares no witness at all.
         let broken = try Module(
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["Other.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Other.nothing": Procedure(body: [])]
         )
         // Names both, and asks neither: it never hands an Account to tell.
         let program = try Module(
@@ -53,8 +53,7 @@ struct UnheldClaimTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("it")])]))
+                    body: [returning(.call(Call(selector: "App.tell", arguments: [.reference([.name("it")])])))]
                 ),
                 main: Procedure(
                     access: .public,
@@ -67,9 +66,9 @@ struct UnheldClaimTests {
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("account"), .name("balance")])
+                        ),
+                        returning(.reference([.name("account"), .name("balance")]))
+                    ]
                 )
             ]
         )
@@ -100,10 +99,11 @@ struct UnheldClaimTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(
-                        Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
-                    )
+                    body: [
+                        returning(.call(
+                            Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
+                        ))
+                    ]
                 )
             ]
         )
@@ -112,7 +112,7 @@ struct UnheldClaimTests {
                 "Bank.Account": .struct(["balance": .int]),
                 "Bank.Plain": .struct(["note": .string])
             ],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         let adapting = try Module(
             claims: [
@@ -126,8 +126,7 @@ struct UnheldClaimTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 )
             ]
         )
@@ -144,9 +143,9 @@ struct UnheldClaimTests {
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("account")])]))
+                        ),
+                        returning(.call(Call(selector: "App.tell", arguments: [.reference([.name("account")])])))
+                    ]
                 )
             ]
         )
@@ -176,20 +175,21 @@ struct UnheldClaimTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(
-                        Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
-                    )
+                    body: [
+                        returning(.call(
+                            Call(selector: "App.Describable.describe", arguments: [.reference([.name("it")])])
+                        ))
+                    ]
                 )
             ]
         )
         let typed = try Module(
             types: ["Bank.Plain": .struct(["note": .string])],
-            procedures: ["Bank.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Bank.nothing": Procedure(body: [])]
         )
         let claims = try Module(
             claims: ["Bank.Plain": ["App.Describable"]],
-            procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Glue.nothing": Procedure(body: [])]
         )
         let program = try Module(
             importedClaims: [ClaimPair("Bank.Plain", "App.Describable")],
@@ -205,9 +205,9 @@ struct UnheldClaimTests {
                                 as: .named("Bank.Plain"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.tell", arguments: [.reference([.name("plain")])]))
+                        ),
+                        returning(.call(Call(selector: "App.tell", arguments: [.reference([.name("plain")])])))
+                    ]
                 )
             ]
         )
@@ -239,8 +239,7 @@ struct UnheldClaimTests {
                         constness: .const,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -253,14 +252,13 @@ struct UnheldClaimTests {
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 )
             ]
         )
         let claims = try Module(
             claims: ["Bank.Account": ["App.Describable"]],
-            procedures: ["Glue.nothing": Procedure(body: [], result: .literal(.null))]
+            procedures: ["Glue.nothing": Procedure(body: [])]
         )
         let program = try Module(
             importedClaims: [ClaimPair("Bank.Account", "App.Describable")],
@@ -282,8 +280,7 @@ struct UnheldClaimTests {
                 main: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .reference([.name("counted")])
+                    body: [returning(.reference([.name("counted")]))]
                 )
             ]
         )

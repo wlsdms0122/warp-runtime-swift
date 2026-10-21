@@ -127,8 +127,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .array(.int))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .reference([.name("data"), .index(1)])
+                    body: [returning(.reference([.name("data"), .index(1)]))]
                 )
             ]
         )
@@ -156,8 +155,7 @@ struct BytesTests {
                         parameters: [Parameter(name: "data", type: .array(.string))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Text.joined", arguments: [reference("data"), .literal(.string(""))]))
+                    body: [returning(.call(Call(selector: "Standard.Text.joined", arguments: [reference("data"), .literal(.string(""))])))]
                 )
             ]
         )
@@ -198,9 +196,9 @@ struct BytesTests {
                                     )))
                                 ]
                             )
-                        )
-                    ],
-                    result: reference("sum")
+                        ),
+                        returning(reference("sum"))
+                    ]
                 )
             ]
         )
@@ -220,22 +218,22 @@ struct BytesTests {
                         parameters: [Parameter(name: "value", type: .array(.array(.int)))],
                         returns: .array(.array(.int))
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.array(.int))),
-                    body: [],
-                    result: .call(Call(
-                        selector: "keep",
-                        arguments: [
-                            .literal(.array([
-                                .bytes([104, 105]),
-                                .array([.int(1), .int(2)])
-                            ]))
-                        ]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "keep",
+                            arguments: [
+                                .literal(.array([
+                                    .bytes([104, 105]),
+                                    .array([.int(1), .int(2)])
+                                ]))
+                            ]
+                        )))
+                    ]
                 )
             ]
         )
@@ -293,14 +291,12 @@ struct BytesTests {
                         parameters: [Parameter(name: "value", type: .array(.int))],
                         returns: .array(.int)
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.int)),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [.literal(.bytes([104, 105]))]))
+                    body: [returning(.call(Call(selector: "keep", arguments: [.literal(.bytes([104, 105]))])))]
                 )
             ]
         )

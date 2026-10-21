@@ -121,7 +121,6 @@ public struct Place: Sendable, Hashable {
         case bounds
         case sameTypes
         case body
-        case result
 
         // What a cast reads, and whether the cast reads a mismatch as null,
         // which a document writes under a key of its own.
@@ -171,7 +170,6 @@ public struct Place: Sendable, Hashable {
             case .bounds: "bounds"
             case .sameTypes: "sameTypes"
             case .body: "body"
-            case .result: "result"
             case .subject: "subject"
             case .fields: "fields"
             case .typeParameters: "typeParameters"
@@ -383,8 +381,6 @@ public struct Place: Sendable, Hashable {
     // Where a child of an expression standing here stands.
     public func child(_ child: Expression.Child) -> Place { appending(child.steps) }
 
-    // Where a block standing here holds its body or its result.
-    public func child(_ child: Block.Child) -> Place { appending(child.steps) }
 
     public func index(_ position: Int) -> Place { appending(.index(position)) }
 

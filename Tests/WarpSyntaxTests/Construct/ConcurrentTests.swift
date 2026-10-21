@@ -58,14 +58,14 @@ struct ConcurrentTests {
                         "procedure": "Standard.Concurrent.allKeyed",
                         "arguments": [
                             ["dictionary": [
-                                ["left", ["closure": ["returns": "Int", "isolated": true, "result": 1]]],
-                                ["right", ["closure": ["returns": "Int", "isolated": true, "result": 2]]]
+                                ["left", ["closure": ["returns": "Int", "isolated": true, "body": [["value": ["return": 1]]]]]],
+                                ["right", ["closure": ["returns": "Int", "isolated": true, "body": [["value": ["return": 2]]]]]]
                             ]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "par"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "par"]]]]]]
+            ]
         ], importing: ["Standard.Concurrent.allKeyed"])
         let boundary = IsolationBoundaryProbe()
 
@@ -93,13 +93,12 @@ struct ConcurrentTests {
                                 "value": ["call": [
                                     "procedure": "Standard.Concurrent.allKeyed",
                                     "arguments": [
-                                        ["dictionary": [["fine", ["closure": ["returns": "String", "isolated": true, "result": "ok"]]], ["fragile", [
+                                        ["dictionary": [["fine", ["closure": ["returns": "String", "isolated": true, "body": [["value": ["return": "ok"]]]]]], ["fragile", [
                                                 "closure": [
                                                     "returns": "Any",
                                                     "failing": ["test"],
                                                     "isolated": true,
-                                                    "body": [["let": "boom", "value": ["fail": true]]],
-                                                    "result": ["ref": "boom"]
+                                                    "body": [["let": "boom", "value": ["fail": true]], ["value": ["return": ["ref": "boom"]]]]
                                                 ]
                                             ]]]]
                                     ]
@@ -108,9 +107,9 @@ struct ConcurrentTests {
                         ],
                         "rescue": [["set": "kept", "value": "recovered"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "kept"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "kept"]]]]]]
+            ]
         ], importing: ["Standard.Concurrent.allKeyed", "Test.fail"])
 
         // When
@@ -139,16 +138,14 @@ struct ConcurrentTests {
                                                     "returns": "Any",
                                                     "failing": ["test"],
                                                     "isolated": true,
-                                                    "body": [["let": "boom", "value": ["fail": true]]],
-                                                    "result": ["ref": "boom"]
+                                                    "body": [["let": "boom", "value": ["fail": true]], ["value": ["return": ["ref": "boom"]]]]
                                                 ]
                                             ]], ["broken", [
                                                 "closure": [
                                                     "returns": "Any",
                                                     "failing": ["test"],
                                                     "isolated": true,
-                                                    "body": [["let": "boom", "value": ["fail": false]]],
-                                                    "result": ["ref": "boom"]
+                                                    "body": [["let": "boom", "value": ["fail": false]], ["value": ["return": ["ref": "boom"]]]]
                                                 ]
                                             ]]]]
                                     ]
@@ -194,16 +191,16 @@ struct ConcurrentTests {
                                                 "format": "hello, ${who}",
                                                 "with": ["who": ["ref": "item"]]
                                             ]
-                                        ]
-                                    ],
-                                    "result": ["ref": "line"]
+                                        ],
+                                        ["value": ["return": ["ref": "line"]]]
+                                    ]
                                 ]
                             ]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "greeted"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "greeted"]]]]]]
+            ]
         ], importing: ["Standard.Text.joined", "Standard.Concurrent.map", "Standard.Text.text"])
 
         // When
@@ -234,17 +231,16 @@ struct ConcurrentTests {
                                         "returns": "Any",
                                         "failing": ["test"],
                                         "isolated": true,
-                                        "body": [["let": "boom", "value": ["fail": true]]],
-                                        "result": ["ref": "boom"]
+                                        "body": [["let": "boom", "value": ["fail": true]], ["value": ["return": ["ref": "boom"]]]]
                                     ]
                                 ],
-                                ["closure": ["returns": "String", "isolated": true, "result": "answered"]]
+                                ["closure": ["returns": "String", "isolated": true, "body": [["value": ["return": "answered"]]]]]
                             ]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "either"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "either"]]]]]]
+            ]
         ], importing: ["Test.fail", "Standard.Concurrent.first"])
 
         // When

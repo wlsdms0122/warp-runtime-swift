@@ -30,9 +30,9 @@ struct NeverTests {
                     access: .public,
                     body: [
                         Statement(expression: aborting(literal("done"))),
-                        Statement(binding: .constant("after"), expression: .literal(.int(1)))
-                    ],
-                    result: .reference([.name("after")])
+                        Statement(binding: .constant("after"), expression: .literal(.int(1))),
+                        returning(.reference([.name("after")]))
+                    ]
                 )
             ]
         )
@@ -54,9 +54,9 @@ struct NeverTests {
                 entryName: Procedure(
                     access: .public,
                     body: [
-                        Statement(binding: .constant("gone"), expression: aborting(literal("done")))
-                    ],
-                    result: .literal(.int(1))
+                        Statement(binding: .constant("gone"), expression: aborting(literal("done"))),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )
@@ -135,38 +135,13 @@ struct NeverTests {
             signature: Signature(returns: .string, failing: .these(["aborted"])),
             body: [
                 Statement(binding: .constant("kept"), expression: loop),
-                Statement(binding: .constant("after"), expression: .literal(.string("done")))
-            ],
-            result: reference("after")
-        )
-
-        // When / Then
-        #expect(try await run(sut) == .string("done"))
-    }
-
-    @Test("a result after a statement that never finishes is refused at the build")
-    func aResultAfterNeverIsRefused() async throws {
-        // Given. The result runs after the body, so it is "after" the same way
-        // a trailing statement is; the type reading already knows it (a block
-        // ending in never types never), and the refusal must know it too
-        let sut = try Module(
-            procedures: [
-                entryName: Procedure(
-                    access: .public,
-                    body: [
-                        Statement(expression: aborting(literal("done")))
-                    ],
-                    result: .literal(.int(1))
-                )
+                Statement(binding: .constant("after"), expression: .literal(.string("done"))),
+                returning(reference("after"))
             ]
         )
 
         // When / Then
-        await #expect {
-            try await builder.build([sut] + Module.standard)
-        } throws: { error in
-            "\(error)".contains("follows a body that never finishes")
-        }
+        #expect(try await run(sut) == .string("done"))
     }
 
     // MARK: - Public

@@ -29,9 +29,9 @@ struct ReturnTypeTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
-                    ],
-                    result: .reference([.name("counted")])
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
                 )
             ]
         )
@@ -55,9 +55,9 @@ struct ReturnTypeTests {
                         returns: .string
                     ),
                     body: [
-                        Statement(binding: .constant("counted"), expression: .literal(.int(3)))
-                    ],
-                    result: .reference([.name("counted")])
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
                 )
             ]
         )
@@ -86,9 +86,9 @@ struct ReturnTypeTests {
                                 then: [Statement(expression: .leave(.procedure(.literal(.string("x")))))],
                                 else: nil
                             )
-                        )
-                    ],
-                    result: .literal(.int(0))
+                        ),
+                        returning(.literal(.int(0)))
+                    ]
                 )
             ]
         )
@@ -113,8 +113,7 @@ struct ReturnTypeTests {
                     "entry": Procedure(
                         access: .public,
                         signature: Signature(returns: .array(.named("Task"))),
-                        body: body,
-                        result: result
+                        body: Body(body.statements + [returning(result)])
                     )
                 ]
             )

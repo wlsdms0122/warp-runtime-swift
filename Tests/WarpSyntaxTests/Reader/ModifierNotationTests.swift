@@ -9,6 +9,7 @@ import Foundation
 import Testing
 @testable import Warp
 @testable import WarpSyntax
+import WarpTestSupport
 
 @Suite("The keywords a slot writes about itself")
 struct ModifierNotationTests {
@@ -59,7 +60,7 @@ struct ModifierNotationTests {
             let read = try Loader().load([
                 "warp": 1,
                 "imports": [],
-                "procedures": ["entry": ["result": 1]],
+                "procedures": ["entry": ["body": [["value": ["return": 1]]]]],
                 "types": ["Box": ["struct": ["f": writtenForm]]]
             ])
 
@@ -98,7 +99,7 @@ struct ModifierNotationTests {
             try Loader().load([
                 "warp": 1,
                 "imports": [],
-                "procedures": ["entry": ["result": 1]],
+                "procedures": ["entry": ["body": [["value": ["return": 1]]]]],
                 "types": ["Box": ["struct": ["f": .string("\(mark.word) \(inside.word) Int")]]]
             ])
         }
@@ -138,7 +139,7 @@ struct ModifierNotationTests {
         // Given. A struct is declared under `struct`, so its field names are
         // never keys the reading takes as a form or a mark
         let declared = TypeDeclaration.struct([try Name(spelling): .int])
-        let module = try Module(types: ["App.T": declared], procedures: ["entry": Procedure(body: [], result: .literal(.int(1)))])
+        let module = try Module(types: ["App.T": declared], procedures: ["entry": Procedure(body: [returning(.literal(.int(1)))])])
 
         // When
         let written = try Writer().value(of: module)
@@ -233,8 +234,10 @@ struct ModifierNotationTests {
             procedures: [
                 "entry": Procedure(
                     access: .public,
-                    body: [Statement(binding: .constant("x"), expression: .struct(["loop": .literal(.int(1))]))],
-                    result: .reference([.name("x")])
+                    body: [
+                        Statement(binding: .constant("x"), expression: .struct(["loop": .literal(.int(1))])),
+                        returning(.reference([.name("x")]))
+                    ]
                 )
             ]
         )
@@ -271,9 +274,9 @@ struct ModifierNotationTests {
                     "body": [
                         ["var": "p", "value": ["struct": ["x": 1]]],
                         ["set": "p.x", "value": 2],
-                        ["set": "total", "value": ["ref": "p.x"]]
-                    ],
-                    "result": ["ref": "total"]
+                        ["set": "total", "value": ["ref": "p.x"]],
+                        ["value": ["return": ["ref": "total"]]]
+                    ]
                 ]
             ]
         ]

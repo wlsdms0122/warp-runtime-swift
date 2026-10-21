@@ -36,9 +36,9 @@ struct CallTests {
                         [
                             "let": "call",
                             "value": ["call": ["procedure": "callee", "arguments": [41, .null]]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "call.pair"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "call.pair"]]]]]]
+                    ]
                 ],
                 "callee": [
                     "parameters": [["name": "base", "type": "Int"], ["name": "bump", "type": "Int?"]],
@@ -47,9 +47,9 @@ struct CallTests {
                             "let": "echo",
                             "type": "App.Pair",
                             "value": ["struct": ["base": ["ref": "base"], "bump": ["ref": "bump"]]]
-                        ]
+                        ],
+                        ["value": ["return": ["struct": ["pair": ["ref": "echo"]]]]]
                     ],
-                    "result": ["struct": ["pair": ["ref": "echo"]]],
                     "returns": "App.Echo"
                 ]
             ]
@@ -98,8 +98,7 @@ struct CallTests {
             "procedures": [
                 "caller": [
                     "returns": "Any",
-                    "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]]],
-                    "result": ["dictionary": [["result", ["ref": "call.said"]]]]
+                    "body": [["let": "call", "value": ["call": ["procedure": "some-other-file.greet"]]], ["value": ["return": ["dictionary": [["result", ["ref": "call.said"]]]]]]]
                 ]
             ]
         ])
@@ -107,8 +106,7 @@ struct CallTests {
             "types": ["App.Said": ["struct": ["said": "String"]]],
             "procedures": [
                 "some-other-file.greet": [
-                    "body": [["let": "word", "value": "hello"]],
-                    "result": ["struct": ["said": ["ref": "word"]]],
+                    "body": [["let": "word", "value": "hello"], ["value": ["return": ["struct": ["said": ["ref": "word"]]]]]],
                     "returns": "App.Said"
                 ]
             ]
@@ -136,15 +134,14 @@ struct CallTests {
                         [
                             "let": "said",
                             "value": ["call": ["procedure": "shout", "arguments": [["ref": "word"]]]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]
+                    ]
                 ],
                 "shout": [
                     "parameters": [["name": "of", "type": "String"]],
                     "returns": "String",
-                    "body": [],
-                    "result": ["format": "${of}!", "with": ["of": ["ref": "of"]]]
+                    "body": [["value": ["return": ["format": "${of}!", "with": ["of": ["ref": "of"]]]]]]
                 ]
             ]
         ])

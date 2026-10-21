@@ -34,8 +34,7 @@ struct MathTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: procedure, arguments: [.literal(subject)]))
+                        body: [returning(.call(Call(selector: procedure, arguments: [.literal(subject)])))]
                     )
                 ]
             )
@@ -58,11 +57,12 @@ struct MathTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Math.min",
-                        arguments: [.literal(.string("b")), .literal(.string("a"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Math.min",
+                            arguments: [.literal(.string("b")), .literal(.string("a"))]
+                        )))
+                    ]
                 )
             ]
         )

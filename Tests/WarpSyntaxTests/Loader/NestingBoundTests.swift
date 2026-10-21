@@ -29,20 +29,21 @@ struct NestingBoundTests {
         // How many containers a level of this construct opens. A level of a
         // call opens three, the last its list of arguments, where the next
         // level and the other argument both stand; a level of a closure opens
-        // five, and one of an array one.
+        // eight, its body, statement and `return` among them, and one of an
+        // array one.
         var opened: Int {
             switch self {
             case .call: 3
-            case .closure: 5
+            case .closure: 8
             case .array: 1
             }
         }
 
         // How many levels of this construct fit under the bound. Around them
-        // the document opens three containers and the reference at the bottom
-        // one.
+        // the document opens six containers, the entry's body, statement and
+        // `return` among them, and the reference at the bottom one.
         var levels: Int {
-            (Value.nestingBound - 4) / opened
+            (Value.nestingBound - 7) / opened
         }
 
         // MARK: - Initializer
@@ -50,7 +51,7 @@ struct NestingBoundTests {
         // How many containers stand around the path at the bottom of `deep`
         // levels.
         func foot(deep: Int) -> Int {
-            4 + opened * deep
+            7 + opened * deep
         }
 
         // The whole document, `deep` levels of the construct around a reference
@@ -66,7 +67,7 @@ struct NestingBoundTests {
                 expression = (0 ..< deep).reduce(["ref": .string(read)]) { inner, _ in
                     ["call": ["procedure": "Standard.Numeric.plus", "arguments": [inner, ["ref": "one"]]]]
                 }
-                entry = ["access": "public", "returns": "Int", "result": expression]
+                entry = ["access": "public", "returns": "Int", "body": [["value": ["return": expression]]]]
 
             case .closure:
                 imports = ["Standard.Logic.select"]
@@ -76,18 +77,18 @@ struct NestingBoundTests {
                             "procedure": "Standard.Logic.select",
                             "arguments": [
                                 ["ref": "yes"],
-                                ["closure": ["returns": "Int", "const": true, "isolated": true, "result": inner]],
-                                ["closure": ["returns": "Int", "const": true, "isolated": true, "result": ["ref": "zero"]]]
+                                ["closure": ["returns": "Int", "const": true, "isolated": true, "body": [["value": ["return": inner]]]]],
+                                ["closure": ["returns": "Int", "const": true, "isolated": true, "body": [["value": ["return": ["ref": "zero"]]]]]]
                             ]
                         ]
                     ]
                 }
-                entry = ["access": "public", "returns": "Int", "result": expression]
+                entry = ["access": "public", "returns": "Int", "body": [["value": ["return": expression]]]]
 
             case .array:
                 imports = []
                 expression = (0 ..< deep).reduce(["ref": .string(read)]) { inner, _ in [inner] }
-                entry = ["access": "public", "returns": "Any", "result": expression]
+                entry = ["access": "public", "returns": "Any", "body": [["value": ["return": expression]]]]
             }
 
             return [
@@ -120,10 +121,11 @@ struct NestingBoundTests {
 
         // MARK: - Property
         // How many containers stand around the spelling's string: the
-        // document, `procedures` and the procedure, and then the reference,
-        // or the list of parameters and the parameter.
+        // document, `procedures` and the procedure, and then the body, the
+        // statement, the `return` and the reference, or the list of
+        // parameters and the parameter.
         var place: Int {
-            self == .path ? 4 : 5
+            self == .path ? 7 : 5
         }
 
         // MARK: - Initializer
@@ -151,7 +153,7 @@ struct NestingBoundTests {
                     "warp": .int(1),
                     "imports": [],
                     "const": ["a": [.int(0)], "zero": .int(0)],
-                    "procedures": ["entry": ["access": "public", "returns": "Int", "result": ["ref": written]]]
+                    "procedures": ["entry": ["access": "public", "returns": "Int", "body": [["value": ["return": ["ref": written]]]]]]
                 ]
             }
 
@@ -160,8 +162,8 @@ struct NestingBoundTests {
                 "imports": [],
                 "types": ["App.Box": ["struct": ["held": "some T"], "typeParameters": ["T"]]],
                 "procedures": [
-                    "entry": ["access": "public", "returns": "Int", "result": .int(0)],
-                    "App.take": ["parameters": [["name": "taken", "type": written]], "returns": "Int", "result": .int(0)]
+                    "entry": ["access": "public", "returns": "Int", "body": [["value": ["return": .int(0)]]]],
+                    "App.take": ["parameters": [["name": "taken", "type": written]], "returns": "Int", "body": [["value": ["return": .int(0)]]]]
                 ]
             ]
         }
@@ -279,7 +281,7 @@ struct NestingBoundTests {
                         "parameters": [["name": "p"]],
                         "returns": "Any",
                         "failing": ["cast_refused"],
-                        "result": ["as": ["of": ["ref": "p"], "type": .string("App.A\(aliases)")]]
+                        "body": [["value": ["return": ["as": ["of": ["ref": "p"], "type": .string("App.A\(aliases)")]]]]]
                     ]
                 ]
             ]

@@ -59,14 +59,13 @@ struct WriterRoundTripTests {
             claims: ["Bank.Account": ["App.Describable"]],
             members: ["Bank.Account": ["describe"]],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: []),
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("an account"))
+                    body: [returning(.literal(.string("an account")))]
                 )
             ]
         )

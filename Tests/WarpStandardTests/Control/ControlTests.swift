@@ -21,7 +21,7 @@ struct ControlTests {
         // Given
         let sut = aborting(interpolated(literal("no: "), spelling(reference("reason"))))
 
-        // When / Then. Nameless and last, with no result: nothing may be
+        // When / Then. Nameless and last: nothing may be
         // written after what never finishes, so the procedure ends with it
         await #expect {
             try await run(
@@ -51,7 +51,7 @@ struct ControlTests {
                 Statement(binding: .variable("kept"), expression: .literal(.null)),
                 Statement(binding: .constant("probe"), expression: sut)
             ],
-            result: reference("kept")
+            returning: reference("kept")
         )
 
         // Then

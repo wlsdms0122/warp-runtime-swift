@@ -23,12 +23,11 @@ struct DeclaredNameNotationTests {
     func aDeclarationIsRead() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["let": "held", "type": "Double", "value": 1]],
-            "result": ["ref": "held"]
+            "body": [["let": "held", "type": "Double", "value": 1], ["value": ["return": ["ref": "held"]]]]
         ])
 
         // When
-        let binding = sut.procedures[entryName]?.block?.body.statements.first?.binding
+        let binding = sut.procedures[entryName]?.body.statements.first?.binding
 
         // Then
         #expect(binding == .constant("held", declared: .double))
@@ -38,12 +37,11 @@ struct DeclaredNameNotationTests {
     func aBareVariableKeepsItsDeclaration() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["var": "held", "type": "Int?"]],
-            "result": ["ref": "held"]
+            "body": [["var": "held", "type": "Int?"], ["value": ["return": ["ref": "held"]]]]
         ])
 
         // When
-        let binding = sut.procedures[entryName]?.block?.body.statements.first?.binding
+        let binding = sut.procedures[entryName]?.body.statements.first?.binding
 
         // Then
         #expect(binding == .variable("held", declared: .nullable(.int)))
@@ -53,8 +51,7 @@ struct DeclaredNameNotationTests {
     func aDeclarationRoundTrips() throws {
         // Given
         let sut = try loader.loadProcedure([
-            "body": [["var": "held", "type": "() -> Int", "value": ["closure": ["result": 1]]]],
-            "result": ["ref": "held"]
+            "body": [["var": "held", "type": "() -> Int", "value": ["closure": ["body": [["value": ["return": 1]]]]]], ["value": ["return": ["ref": "held"]]]]
         ])
 
         // When
@@ -62,8 +59,8 @@ struct DeclaredNameNotationTests {
 
         // Then
         #expect(
-            again.procedures[entryName]?.block?.body.statements.first?.binding
-                == sut.procedures[entryName]?.block?.body.statements.first?.binding
+            again.procedures[entryName]?.body.statements.first?.binding
+                == sut.procedures[entryName]?.body.statements.first?.binding
         )
     }
 
@@ -74,9 +71,9 @@ struct DeclaredNameNotationTests {
             try loader.loadProcedure([
                 "body": [
                     ["var": "held", "value": 1],
-                    ["set": "held", "type": "Int", "value": 2]
-                ],
-                "result": ["ref": "held"]
+                    ["set": "held", "type": "Int", "value": 2],
+                    ["value": ["return": ["ref": "held"]]]
+                ]
             ])
         } throws: { error in
             "\(error)".contains("writes 'type', which says what a name holds")
@@ -88,8 +85,7 @@ struct DeclaredNameNotationTests {
         // When / Then
         #expect {
             try loader.loadProcedure([
-                "body": [["type": "Int", "value": 1]],
-                "result": 1
+                "body": [["type": "Int", "value": 1], ["value": ["return": 1]]]
             ])
         } throws: { error in
             "\(error)".contains("writes 'type', which says what a name holds")

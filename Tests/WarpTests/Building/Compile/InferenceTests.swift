@@ -109,8 +109,7 @@ struct InferenceTests {
                 constness: .const,
                 isolation: .isolated
             ),
-            body: [],
-            result: .call(Call(selector: "Standard.Collection.count", arguments: [reference("item")]))
+            body: [returning(.call(Call(selector: "Standard.Collection.count", arguments: [reference("item")])))]
         )
         let wants = Procedure(
             signature: Signature(parameters: [Parameter(name: "ns", type: .array(.string))]),
@@ -158,9 +157,9 @@ struct InferenceTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
-                    ],
-                    result: .reference([.name("done")])
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))),
+                        returning(.reference([.name("done")]))
+                    ]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -351,9 +350,9 @@ struct InferenceTests {
                         returns: .int
                     ),
                     body: [
-                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
-                    ],
-                    result: .reference([.name("done")])
+                        Statement(binding: .constant("done"), expression: .literal(.int(1))),
+                        returning(.reference([.name("done")]))
+                    ]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -414,8 +413,7 @@ struct InferenceTests {
                                                     returns: .int,
                                                     isolation: .isolated
                                                 ),
-                                                body: [],
-                                                result: reference("item")
+                                                body: [returning(reference("item"))]
                                             )
                                         )
                                     ]
@@ -623,12 +621,13 @@ struct InferenceTests {
                             Parameter(name: "payload", type: .any)
                         ]
                     ),
-                    body: [],
-                    result: .cast(
-                        .reference([.name("payload")]),
-                        as: .named("Preson"),
-                        optional: true
-                    )
+                    body: [
+                        returning(.cast(
+                            .reference([.name("payload")]),
+                            as: .named("Preson"),
+                            optional: true
+                        ))
+                    ]
                 )
             ]
         )
@@ -697,9 +696,9 @@ struct InferenceTests {
                                 as: .named("App.Reasons"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("reason"), .name("failures")])
+                        ),
+                        returning(.reference([.name("reason"), .name("failures")]))
+                    ]
                 )
             ]
         )
@@ -733,9 +732,9 @@ struct InferenceTests {
                                 as: .named("Tree"),
                                 optional: true
                             )
-                        )
-                    ],
-                    result: .reference([.name("tree"), .name("value")])
+                        ),
+                        returning(.reference([.name("tree"), .name("value")]))
+                    ]
                 )
             ]
         )
@@ -763,8 +762,7 @@ struct InferenceTests {
                             Parameter(name: "rows", type: .array(.any))
                         ]
                     ),
-                    body: [],
-                    result: .cast(.reference([.name("rows")]), as: .string, optional: true)
+                    body: [returning(.cast(.reference([.name("rows")]), as: .string, optional: true))]
                 )
             ]
         )
@@ -803,9 +801,9 @@ struct InferenceTests {
                                 as: .int,
                                 optional: true
                             )
-                        )
-                    ],
-                    result: .reference([.name("twice")])
+                        ),
+                        returning(.reference([.name("twice")]))
+                    ]
                 )
             ]
         )
@@ -825,19 +823,20 @@ struct InferenceTests {
         // never` slipping through here would answer null forever
         let sut = try Module(
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(0))),
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(0)))]),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .any)
                         ]
                     ),
-                    body: [],
-                    result: .cast(
-                        .reference([.name("payload")]),
-                        as: .never,
-                        optional: true
-                    )
+                    body: [
+                        returning(.cast(
+                            .reference([.name("payload")]),
+                            as: .never,
+                            optional: true
+                        ))
+                    ]
                 )
             ]
         )
@@ -876,9 +875,9 @@ struct InferenceTests {
                                 as: .named("Maybe"),
                                 optional: true
                             )
-                        )
-                    ],
-                    result: .reference([.name("twice")])
+                        ),
+                        returning(.reference([.name("twice")]))
+                    ]
                 )
             ]
         )
@@ -898,19 +897,20 @@ struct InferenceTests {
         // held to its names; so is a cast
         let sut = try Module(
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.int(0))),
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(0)))]),
                 "stranded": Procedure(
                     signature: Signature(
                         parameters: [
                             Parameter(name: "payload", type: .any)
                         ]
                     ),
-                    body: [],
-                    result: .cast(
-                        .reference([.name("payload")]),
-                        as: .named("Preson"),
-                        optional: true
-                    )
+                    body: [
+                        returning(.cast(
+                            .reference([.name("payload")]),
+                            as: .named("Preson"),
+                            optional: true
+                        ))
+                    ]
                 )
             ]
         )
@@ -936,8 +936,7 @@ struct InferenceTests {
                             Parameter(name: "count", type: .int)
                         ]
                     ),
-                    body: [],
-                    result: .cast(.reference([.name("count")]), as: .double, optional: false)
+                    body: [returning(.cast(.reference([.name("count")]), as: .double, optional: false))]
                 )
             ]
         )
@@ -963,8 +962,7 @@ struct InferenceTests {
                             Parameter(name: "count", type: .nullable(.int))
                         ]
                     ),
-                    body: [],
-                    result: .cast(.reference([.name("count")]), as: .null, optional: true)
+                    body: [returning(.cast(.reference([.name("count")]), as: .null, optional: true))]
                 )
             ]
         )
@@ -986,12 +984,13 @@ struct InferenceTests {
                         ],
                         returns: .nullable(.string)
                     ),
-                    body: [],
-                    result: .cast(
-                        .reference([.name("count")]),
-                        as: .nullable(.string),
-                        optional: true
-                    )
+                    body: [
+                        returning(.cast(
+                            .reference([.name("count")]),
+                            as: .nullable(.string),
+                            optional: true
+                        ))
+                    ]
                 )
             ]
         )
@@ -1030,9 +1029,9 @@ struct InferenceTests {
                                 as: .named("Person"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("again"), .name("name")])
+                        ),
+                        returning(.reference([.name("again"), .name("name")]))
+                    ]
                 )
             ]
         )
@@ -1059,8 +1058,7 @@ struct InferenceTests {
                             Parameter(name: "text", type: .string)
                         ]
                     ),
-                    body: [],
-                    result: .cast(.reference([.name("text")]), as: .int, optional: true)
+                    body: [returning(.cast(.reference([.name("text")]), as: .int, optional: true))]
                 )
             ]
         )
@@ -1091,8 +1089,7 @@ struct InferenceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .nullable(.int)),
-                    body: [],
-                    result: .reference([.name("counted")])
+                    body: [returning(.reference([.name("counted")]))]
                 )
             ]
         )
@@ -1124,9 +1121,9 @@ struct InferenceTests {
                                 as: .array(.any),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("rows"), .index(0)])
+                        ),
+                        returning(.reference([.name("rows"), .index(0)]))
+                    ]
                 )
             ]
         )
@@ -1159,9 +1156,9 @@ struct InferenceTests {
                                 as: .named("App.Named"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("read"), .name("name")])
+                        ),
+                        returning(.reference([.name("read"), .name("name")]))
+                    ]
                 )
             ]
         )
@@ -1193,9 +1190,9 @@ struct InferenceTests {
                                 as: .named("Person"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .reference([.name("read"), .name("name")])
+                        ),
+                        returning(.reference([.name("read"), .name("name")]))
+                    ]
                 )
             ]
         )
@@ -1788,9 +1785,9 @@ struct InferenceTests {
                         Statement(
                             binding: .constant("task", declared: .named("App.Task")),
                             expression: .struct(["id": .literal(.string("a"))])
-                        )
-                    ],
-                    result: .reference([.name("task"), .name("absolute")])
+                        ),
+                        returning(.reference([.name("task"), .name("absolute")]))
+                    ]
                 )
             ]
         )
@@ -1815,9 +1812,9 @@ struct InferenceTests {
                     access: .public,
                     signature: Signature(),
                     body: [
-                        Statement(binding: .constant("task"), expression: .literal(.string("a")))
-                    ],
-                    result: .reference([.name("task"), .name("count")])
+                        Statement(binding: .constant("task"), expression: .literal(.string("a"))),
+                        returning(.reference([.name("task"), .name("count")]))
+                    ]
                 )
             ]
         )

@@ -46,9 +46,9 @@ struct CanonicalTests {
                         "then": [["set": "pick", "value": "one"]],
                         "else": [["set": "pick", "value": "more"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -86,9 +86,9 @@ struct CanonicalTests {
                             ]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "seen"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "seen"]]]]]]
+            ]
         ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When
@@ -115,9 +115,9 @@ struct CanonicalTests {
                             "then": [["set": "pick", "value": "matched"]],
                             "else": [["set": "pick", "value": "missed"]]
                         ]
-                    ]]
-                ],
-                "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                    ]],
+                    ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+                ]
             ], importing: ["Standard.Logic.equal"])
         }
 
@@ -162,9 +162,9 @@ struct CanonicalTests {
                         "then": [["set": "pick", "value": "go"]],
                         "else": [["set": "pick", "value": "wait"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+            ]
         ])
 
         // When
@@ -183,7 +183,7 @@ struct CanonicalTests {
         // answer away exactly where it is wanted.
         let unsound: Value = [
             "imports": [],
-            "procedures": ["entry": ["result": ["ref": "missing"]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["ref": "missing"]]]]]]
         ]
 
         // When

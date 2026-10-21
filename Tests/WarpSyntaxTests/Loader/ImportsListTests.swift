@@ -36,7 +36,7 @@ struct ImportsListTests {
         #expect {
             try loader.load([
                 "warp": .int(ModuleReader.version + 1),
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         } throws: { error in
             "\(error)".contains("written for warp")
@@ -47,7 +47,7 @@ struct ImportsListTests {
             try loader.load([
                 "warp": .int(ModuleReader.version),
                 "imports": [],
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         }
     }
@@ -60,7 +60,7 @@ struct ImportsListTests {
         // hand; a front end computes it, so a document without one did not come
         // from a front end.
         #expect {
-            try loader.load(["procedures": ["entry": ["result": "hello"]]])
+            try loader.load(["procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]])
         } throws: { error in
             "\(error)".contains("not a warp document")
         }
@@ -80,7 +80,7 @@ struct ImportsListTests {
                 "name": "a-case",
                 "note": "why it exists",
                 "expect": ["answers": 1],
-                "program": ["warp": 1, "procedures": ["entry": ["result": "hello"]]]
+                "program": ["warp": 1, "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]]
             ])
         } throws: { error in
             "\(error)".contains("not a warp document")
@@ -101,9 +101,9 @@ struct ImportsListTests {
                         [
                             "let": "many",
                             "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
-                        ]]
-                    ],
-                    "result": ["ref": "many"]
+                        ]],
+                        ["value": ["return": ["ref": "many"]]]
+                    ]
                 ]
             ]
         ])
@@ -125,7 +125,7 @@ struct ImportsListTests {
         #expect {
             try loader.load([
                 "warp": .int(ModuleReader.version),
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         } throws: { error in
             "\(error)".contains("says what it imports")
@@ -137,7 +137,7 @@ struct ImportsListTests {
             try loader.load([
                 "warp": .int(ModuleReader.version),
                 "imports": [],
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         }
     }
@@ -172,9 +172,9 @@ struct ImportsListTests {
                             [
                                 "let": "sum",
                                 "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
-                            ]]
-                        ],
-                        "result": ["ref": "sum"]
+                            ]],
+                            ["value": ["return": ["ref": "sum"]]]
+                        ]
                     ]
                 ]
             ])
@@ -197,9 +197,9 @@ struct ImportsListTests {
                             [
                                 "let": "sum",
                                 "value": ["call": ["procedure": "Standard.Numeric.plus", "arguments": [1, 2]]
-                            ]]
-                        ],
-                        "result": ["ref": "sum"]
+                            ]],
+                            ["value": ["return": ["ref": "sum"]]]
+                        ]
                     ]
                 ]
             ])
@@ -222,7 +222,7 @@ struct ImportsListTests {
         let module = try loader.loadDocument([
             "imports": ["Standard.Numeric.plus"],
             "const": ["limit": constant],
-            "procedures": ["entry": ["result": ["ref": "limit"]]]
+            "procedures": ["entry": ["body": [["value": ["return": ["ref": "limit"]]]]]]
         ])
 
         // Then
@@ -233,7 +233,7 @@ struct ImportsListTests {
             try loader.loadDocument([
                 "imports": [],
                 "const": ["limit": constant],
-                "procedures": ["entry": ["result": ["ref": "limit"]]]
+                "procedures": ["entry": ["body": [["value": ["return": ["ref": "limit"]]]]]]
             ])
         } throws: { error in
             "\(error)".contains("uses [\"Standard.Numeric.plus\"]")
@@ -245,7 +245,7 @@ struct ImportsListTests {
         // When / Then. The range is closed at both ends. Below it, a document
         // claims a language that never was.
         #expect(throws: ReadingError.self) {
-            try loader.load(["warp": 0, "procedures": ["entry": ["result": "hello"]]])
+            try loader.load(["warp": 0, "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]])
         }
     }
 
@@ -258,7 +258,7 @@ struct ImportsListTests {
             try loader.load([
                 "warp": .int(ModuleReader.version + 1),
                 "somethingALaterVersionAdded": "…",
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         } throws: { error in
             "\(error)".contains("written for warp")
@@ -273,7 +273,7 @@ struct ImportsListTests {
             try loader.load([
                 "imports": [],
                 "warp": .int(ModuleReader.version - 1),
-                "procedures": ["entry": ["result": "hello"]]
+                "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
             ])
         } throws: { error in
             "\(error)".contains("Write it again")
@@ -286,10 +286,9 @@ struct ImportsListTests {
         let module = try loader.loadDocument([
             "procedures": [
                 "entry": [
-                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]]],
-                    "result": ["ref": "said"]
+                    "body": [["let": "said", "value": ["call": ["procedure": "greet"]]], ["value": ["return": ["ref": "said"]]]]
                 ],
-                "greet": ["result": "hello"]
+                "greet": ["body": [["value": ["return": "hello"]]]]
             ]
         ])
 
@@ -308,8 +307,7 @@ struct ImportsListTests {
             "procedures": [
                 "entry": [
                     "parameters": [["name": "names", "type": "Array<String>"]],
-                    "body": [["let": "many", "value": ["ref": "names.count"]]],
-                    "result": ["ref": "many"]
+                    "body": [["let": "many", "value": ["ref": "names.count"]], ["value": ["return": ["ref": "many"]]]]
                 ]
             ]
         ])
@@ -336,7 +334,7 @@ struct ImportsListTests {
                         [
                             "let": "held",
                             "value": [
-                                "closure": ["result": ["call": ["procedure": "inClosure"]]]
+                                "closure": ["body": [["value": ["return": ["call": ["procedure": "inClosure"]]]]]]
                             ]
                         ],
                         [
@@ -356,9 +354,9 @@ struct ImportsListTests {
                         [
                             "let": "deep",
                             "value": ["struct": ["a": [["call": ["procedure": "inNestedData"]]]]]
-                        ]
-                    ],
-                    "result": ["ref": "deep"]
+                        ],
+                        ["value": ["return": ["ref": "deep"]]]
+                    ]
                 ]
             ]
         ])

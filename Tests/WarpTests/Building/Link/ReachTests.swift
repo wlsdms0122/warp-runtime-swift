@@ -83,9 +83,9 @@ struct ReachTests {
                                 as: .named("Bank.Account"),
                                 optional: false
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.tell", arguments: [reference("account")]))
+                        ),
+                        returning(.call(Call(selector: "App.tell", arguments: [reference("account")])))
+                    ]
                 ),
                 "App.tell": Procedure(
                     signature: Signature(
@@ -93,26 +93,23 @@ struct ReachTests {
                         returns: .string,
                         bounds: ["T": ["App.Describable"]]
                     ),
-                    body: [],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("it")]))
+                    body: [returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("it")])))]
                 ),
                 "Bank.Account.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("account"))
+                    body: [returning(.literal(.string("account")))]
                 ),
                 "Bank.Card.describe": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
                         returns: .string
                     ),
-                    body: [],
-                    result: .literal(.string("card"))
+                    body: [returning(.literal(.string("card")))]
                 ),
-                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1)))
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
             ]
         )
 
@@ -130,7 +127,7 @@ struct ReachTests {
         // module constant; each calls a procedure nothing else names
         let sut = try Module(
             constants: [
-                "folded": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
+                "folded": .closure(Procedure(signature: Signature(returns: .int), body: [returning(.call(Call(selector: "App.deep")))]))
             ],
             procedures: [
                 entryName: Procedure(
@@ -139,16 +136,16 @@ struct ReachTests {
                     body: [
                         Statement(
                             binding: .constant("written", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.leaf"))))
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [returning(.call(Call(selector: "App.leaf")))]))
                         ),
                         Statement(binding: .constant("first"), expression: .apply(reference("written"), arguments: [])),
-                        Statement(binding: .constant("second"), expression: .apply(reference("folded"), arguments: []))
-                    ],
-                    result: reference("second")
+                        Statement(binding: .constant("second"), expression: .apply(reference("folded"), arguments: [])),
+                        returning(reference("second"))
+                    ]
                 ),
-                "App.leaf": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
-                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "App.leaf": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))]),
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(3)))])
             ]
         )
 
@@ -166,17 +163,16 @@ struct ReachTests {
         // writes it; the entry applies what it reads out of the variable
         let sut = try Module(
             variables: [
-                "held": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(signature: Signature(returns: .int), body: [returning(.call(Call(selector: "App.deep")))]))
             ],
             procedures: [
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int, failing: .anything),
-                    body: [],
-                    result: .apply(reference("held"), arguments: [])
+                    body: [returning(.apply(reference("held"), arguments: []))]
                 ),
-                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2))),
-                "App.aside": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(3)))
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))]),
+                "App.aside": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(3)))])
             ]
         )
 
@@ -193,16 +189,15 @@ struct ReachTests {
         // Given. `App.aside` alone reads the variable, and nothing reaches it
         let sut = try Module(
             variables: [
-                "held": .closure(Procedure(signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.deep"))))
+                "held": .closure(Procedure(signature: Signature(returns: .int), body: [returning(.call(Call(selector: "App.deep")))]))
             ],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .literal(.int(1))),
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
                 "App.aside": Procedure(
                     signature: Signature(returns: .int, failing: .anything),
-                    body: [],
-                    result: .apply(reference("held"), arguments: [])
+                    body: [returning(.apply(reference("held"), arguments: []))]
                 ),
-                "App.deep": Procedure(signature: Signature(returns: .int), body: [], result: .literal(.int(2)))
+                "App.deep": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
             ]
         )
 
@@ -221,8 +216,7 @@ struct ReachTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
+                    body: [returning(.call(Call(selector: "App.twice", arguments: [.literal(.int(2))])))]
                 )
             ]
         )

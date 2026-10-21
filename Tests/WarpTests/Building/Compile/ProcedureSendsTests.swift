@@ -472,8 +472,7 @@ struct ProcedureSendsTests {
                     constness: .const,
                     isolation: .isolated
                 ),
-                body: [],
-                result: .literal(.string("an account"))
+                body: [returning(.literal(.string("an account")))]
             )
         ]
     )
@@ -517,8 +516,7 @@ struct ProcedureSendsTests {
                     parameters: [Parameter(name: "a", type: .int), Parameter(name: "z", type: .int)],
                     returns: .int
                 ),
-                body: [],
-                result: .reference([.name("z")])
+                body: [returning(.reference([.name("z")]))]
             )
         ]
     )
@@ -527,8 +525,7 @@ struct ProcedureSendsTests {
         procedures: [
             "App.pick": Procedure(
                 signature: Signature(parameters: [Parameter(name: "a", type: .inout(.int))], returns: .int),
-                body: [],
-                result: .reference([.name("a")])
+                body: [returning(.reference([.name("a")]))]
             )
         ]
     )
@@ -576,8 +573,7 @@ struct ProcedureSendsTests {
                     parameters: [Parameter(name: "said", type: .string)],
                     returns: .string
                 ),
-                body: [],
-                result: .reference([.name("said")])
+                body: [returning(.reference([.name("said")]))]
             )
         ]
     )
@@ -618,8 +614,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "App.twice", arguments: [.literal(.int(2))]))
+                body: [returning(.call(Call(selector: "App.twice", arguments: [.literal(.int(2))])))]
             )])] + [Self.sending, .shouting] + Module.standard
         )
 
@@ -637,8 +632,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .string),
-                body: [],
-                result: .call(Call(selector: "App.announce", arguments: [.literal(.string("hi"))]))
+                body: [returning(.call(Call(selector: "App.announce", arguments: [.literal(.string("hi"))])))]
             )])] + [Self.sending, .shouting] + Module.standard
         )
 
@@ -718,8 +712,8 @@ struct ProcedureSendsTests {
         // Given. A document declares `App.hidden` privately, and a procedure the
         // host brings declares it sends that spelling.
         let document = try Module(procedures: [
-            "App.hidden": Procedure(access: .private, body: [], result: .literal(.int(7))),
-            "entry": Procedure(access: .public, body: [], result: .call(Call(selector: "App.reach")))
+            "App.hidden": Procedure(access: .private, body: [returning(.literal(.int(7)))]),
+            "entry": Procedure(access: .public, body: [returning(.call(Call(selector: "App.reach")))])
         ])
 
         // When / Then
@@ -811,8 +805,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "App.counted"))
+                body: [returning(.call(Call(selector: "App.counted")))]
             )])] + [Self.counting, .ticketing]
         )
 
@@ -856,8 +849,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "App.picking"))
+                body: [returning(.call(Call(selector: "App.picking")))]
             )])] + [Self.picking, Self.picked]
         )
 
@@ -916,8 +908,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .int),
-                body: [],
-                result: .call(Call(selector: "App.overhanding"))
+                body: [returning(.call(Call(selector: "App.overhanding")))]
             )])] + [Self.overhanding, Self.picked]
         )
 
@@ -937,8 +928,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .string),
-                body: [],
-                result: .call(Call(selector: "App.mistyping"))
+                body: [returning(.call(Call(selector: "App.mistyping")))]
             )])] + [Self.mistyping, Self.spoken]
         )
 
@@ -957,8 +947,7 @@ struct ProcedureSendsTests {
             [try Module(procedures: ["entry": Procedure(
                 access: .public,
                 signature: Signature(returns: .string),
-                body: [],
-                result: .call(Call(selector: "App.nullingToAParameter"))
+                body: [returning(.call(Call(selector: "App.nullingToAParameter")))]
             )])] + [Self.nullingToAParameter, Self.reporting]
         )
 

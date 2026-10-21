@@ -38,9 +38,9 @@ struct LeaveTests {
                         "when": ["of": ["ref": "word"], "equal": "stop"],
                         "then": [["value": ["return": "left early"]]]
                     ]
-                ]]
-            ],
-            "result": ["ref": "early"]
+                ]],
+                ["value": ["return": ["ref": "early"]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -80,9 +80,9 @@ struct LeaveTests {
                             ]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["ref": "seen"]
+                ]],
+                ["value": ["return": ["ref": "seen"]]]
+            ]
         ], importing: ["Standard.Logic.equal", "Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When / Then
@@ -125,9 +125,9 @@ struct LeaveTests {
                             ]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["ref": "seen"]
+                ]],
+                ["value": ["return": ["ref": "seen"]]]
+            ]
         ], importing: [
             "Standard.Collection.count",
             "Standard.Logic.equal",
@@ -178,9 +178,9 @@ struct LeaveTests {
                             ]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["ref": "count"]
+                ]],
+                ["value": ["return": ["ref": "count"]]]
+            ]
         ], importing: ["Standard.Logic.notEqual", "Standard.Numeric.plus"])
 
         // When / Then. One round of each, because the break left both
@@ -204,9 +204,9 @@ struct LeaveTests {
                         ],
                         "rescue": [["set": "said", "value": "the rescue ran"]]
                     ]
-                ]]
-            ],
-            "result": ["ref": "said"]
+                ]],
+                ["value": ["return": ["ref": "said"]]]
+            ]
         ])
 
         // When / Then
@@ -301,19 +301,17 @@ struct LeaveTests {
                                 "procedure": [
                                     "closure": [
                                         "returns": "String",
-                                        "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the closure"]]]]]]],
-                                        "result": "not reached"
+                                        "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the closure"]]]]]], ["value": ["return": "not reached"]]]
                                     ]
                                 ]
                             ]
-                        ]]
-                    ],
-                    "result": "the outer answer"
+                        ]],
+                        ["value": ["return": "the outer answer"]]
+                    ]
                 ],
                 "helper": [
                     "returns": "String",
-                    "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the procedure"]]]]]]],
-                    "result": "not reached"
+                    "body": [["value": ["conditional": ["when": true, "then": [["value": ["return": "from the procedure"]]]]]], ["value": ["return": "not reached"]]]
                 ]
             ]
         ])
@@ -355,29 +353,13 @@ struct LeaveTests {
                             ]]
                         ]
                     ]
-                ]]
-            ],
-            "result": ["ref": "seen"]
+                ]],
+                ["value": ["return": ["ref": "seen"]]]
+            ]
         ], importing: ["Standard.Numeric.plus"])
 
         // When / Then
         #expect(try await answer(sut) == .int(1))
-    }
-
-    @Test("a result under a body that always leaves is refused on the result")
-    func aResultUnderALeavingBodyIsRefused() {
-        // When / Then. The result runs after the body, so it is "after" the
-        // same way a trailing statement is
-        #expect {
-            try loader.loadProcedure([
-                "returns": "Int",
-                "body": [["value": ["return": 1]]],
-                "result": 3
-            ])
-        } throws: { error in
-            error is ValidationError
-                && "\(error)".contains("result: follows a body that never finishes")
-        }
     }
 
     @Test("nothing may be written after leaving")

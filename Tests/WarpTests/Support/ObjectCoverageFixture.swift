@@ -225,9 +225,9 @@ enum ObjectCoverageFixture {
                 code: .leave(.construct, target: "away", .literal(.int(9))),
                 label: "leave"
             ),
-            Instruction(binding: nil, code: .leave(.round, target: nil, nil), label: "leave bare")
-        ],
-        result: .local(Address(slot: 11, steps: []))
+            Instruction(binding: nil, code: .leave(.round, target: nil, nil), label: "leave bare"),
+            Instruction(binding: nil, code: .leave(.procedure, target: nil, .local(Address(slot: 11, steps: []))), label: "return")
+        ]
     )
 
     static let everyStep: [Step] = [
@@ -270,7 +270,7 @@ enum ObjectCoverageFixture {
             signature: Signature(returns: .parameter(name: "T"), failing: .anything, bounds: ["T": ["a.five", "a.four"]]),
             access: .internal,
             judging: .body(
-                LoweredBody(instructions: [], result: .literal(.int(0))),
+                LoweredBody(instructions: [Instruction(binding: nil, code: .leave(.procedure, target: nil, .literal(.int(0))), label: "return")]),
                 Frame(size: 2, parameters: [], variables: [], captures: [0, 1], names: ["c0", "c1"])
             )
         )

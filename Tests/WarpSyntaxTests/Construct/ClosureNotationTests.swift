@@ -38,24 +38,23 @@ struct ClosureNotationTests {
                                     [
                                         "closure": [
                                             "returns": "String",
-                                            "body": [["let": "said", "value": "hi"]],
-                                            "result": ["ref": "said"]
+                                            "body": [["let": "said", "value": "hi"], ["value": ["return": ["ref": "said"]]]]
                                         ]
                                     ]
                                 ]
                             ]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "ran"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "ran"]]]]]]
+                    ]
                 ],
                 "twice": [
                     "returns": "Any",
                     "parameters": [["name": "body", "type": "() -> String"]],
                     "body": [
                         ["let": "first", "value": ["call": ["procedure": ["ref": "body"]]]],
-                        ["let": "second", "value": ["call": ["procedure": ["ref": "body"]]]]
-                    ],
-                    "result": ["dictionary": [["said", [["ref": "first"], ["ref": "second"]]]]]
+                        ["let": "second", "value": ["call": ["procedure": ["ref": "body"]]]],
+                        ["value": ["return": ["dictionary": [["said", [["ref": "first"], ["ref": "second"]]]]]]]
+                    ]
                 ]
             ]
         ])
@@ -83,26 +82,25 @@ struct ClosureNotationTests {
                             "value": [
                                 "closure": [
                                     "returns": "String",
-                                    "body": [["let": "seen", "value": ["ref": "outer"]]],
-                                    "result": ["ref": "seen"]
+                                    "body": [["let": "seen", "value": ["ref": "outer"]], ["value": ["return": ["ref": "seen"]]]]
                                 ]
                             ]
                         ],
                         [
                             "let": "said",
                             "value": ["call": ["procedure": "runner", "arguments": [["ref": "made"]]]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]
+                    ]
                 ],
                 "runner": [
                     "returns": "Any",
                     "parameters": [["name": "body", "type": "() -> String"]],
                     "body": [
                         ["let": "outer", "value": "called"],
-                        ["let": "ran", "value": ["call": ["procedure": ["ref": "body"]]]]
-                    ],
-                    "result": ["dictionary": [["said", ["ref": "ran"]]]]
+                        ["let": "ran", "value": ["call": ["procedure": ["ref": "body"]]]],
+                        ["value": ["return": ["dictionary": [["said", ["ref": "ran"]]]]]]
+                    ]
                 ]
             ]
         ])
@@ -137,18 +135,18 @@ struct ClosureNotationTests {
                                                 "format": "n=${n}",
                                                 "with": ["n": ["ref": "n"]]
                                             ]
-                                        ]
-                                    ],
-                                    "result": ["ref": "out"]
+                                        ],
+                                        ["value": ["return": ["ref": "out"]]]
+                                    ]
                                 ]
                             ]
                         ],
                         [
                             "let": "said",
                             "value": ["call": ["procedure": ["ref": "doubler"], "arguments": [3]]
-                        ]]
-                    ],
-                    "result": ["dictionary": [["result", ["ref": "said"]]]]
+                        ]],
+                        ["value": ["return": ["dictionary": [["result", ["ref": "said"]]]]]]
+                    ]
                 ]
             ]
         ])
@@ -238,8 +236,7 @@ struct ClosureNotationTests {
                                     [
                                         "closure": [
                                             "returns": "String",
-                                            "body": [["let": "said", "value": "hi"]],
-                                            "result": ["ref": "said"]
+                                            "body": [["let": "said", "value": "hi"], ["value": ["return": ["ref": "said"]]]]
                                         ]
                                     ]
                                 ]

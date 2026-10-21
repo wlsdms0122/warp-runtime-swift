@@ -271,9 +271,9 @@ public struct Draft: Sendable {
         for (name, procedure) in procedures {
             named.formUnion(procedure.signature.mentions)
 
-            guard let block = procedure.block else { continue }
+            guard let body = procedure.implementation.body else { continue }
 
-            fold(.procedure(name), block)
+            fold(.procedure(name), body)
         }
 
         for (name, expression) in constants {

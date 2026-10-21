@@ -33,9 +33,9 @@ struct ConditionalTests {
                         "then": [["set": "pick", "value": "took-then"]],
                         "else": [["set": "pick", "value": "took-else"]]
                     ]
-                ]]
-            ],
-            "result": ["dictionary": [["result", ["ref": "pick"]]]]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "pick"]]]]]]
+            ]
         ], importing: ["Standard.Logic.equal"])
 
         // When
@@ -75,9 +75,9 @@ struct ConditionalTests {
         let spec = try loader.loadProcedure([
             "returns": "Any",
             "body": [
-                ["var": "kept"]
-            ],
-            "result": ["dictionary": [["result", ["ref": "kept"]]]]
+                ["var": "kept"],
+                ["value": ["return": ["dictionary": [["result", ["ref": "kept"]]]]]]
+            ]
         ])
 
         // When

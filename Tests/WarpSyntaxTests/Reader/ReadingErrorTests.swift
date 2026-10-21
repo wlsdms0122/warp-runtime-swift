@@ -145,7 +145,7 @@ struct ReadingErrorTests {
         // walk and the document alone is the whole address
         let fixture: Value = [
             "warp": 1,
-            "procedures": ["entry": ["result": "hello"]]
+            "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
         ]
 
         // When
@@ -185,7 +185,7 @@ struct ReadingErrorTests {
         // is written there to look at.
         let fixture: Value = [
             "warp": 99,
-            "procedures": ["entry": ["result": "hello"]]
+            "procedures": ["entry": ["body": [["value": ["return": "hello"]]]]]
         ]
 
         // When
@@ -374,8 +374,8 @@ struct ReadingErrorTests {
         (["access": "open"], "procedures.entry.access"),
         (["parameters": [["name": "x", "type": "some T: "]]], "procedures.entry.parameters[0].type"),
         (["bounds": ["T.Item": ""], "parameters": [["name": "x", "type": "some T"]]], "procedures.entry.bounds.T.Item"),
-        (["result": ["ref": 5]], "procedures.entry.result.ref"),
-        (["result": ["ref": "a[0"]], "procedures.entry.result.ref")
+        (["body": [["value": ["return": ["ref": 5]]]]], "procedures.entry.body[0].value.return.ref"),
+        (["body": [["value": ["return": ["ref": "a[0"]]]]], "procedures.entry.body[0].value.return.ref")
     ] as [(Value, String)])
     func aRefusalStandsOnItsKey(procedure: Value, place: String) {
         // Given

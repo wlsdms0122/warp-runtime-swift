@@ -177,8 +177,8 @@ struct Compiling {
 
     // A body lowered into its row. Noted as well as written, because what
     // folding runs is a table of its own and this is what is copied into it.
-    mutating func lower(_ row: Int, body block: Block, judgements: JudgementTable, at place: Place) throws {
-        try lowering.lower(row, body: block, judgements: judgements, at: place)
+    mutating func lower(_ row: Int, body: Body, judgements: JudgementTable, at place: Place) throws {
+        try lowering.lower(row, body: body, judgements: judgements, at: place)
 
         loweredRows.append(row)
     }

@@ -74,8 +74,7 @@ struct DictionaryProcedureTests {
                 returns: .any,
                 failing: .anything
             ),
-            body: [],
-            result: result
+            body: [returning(result)]
         )
     }
 }

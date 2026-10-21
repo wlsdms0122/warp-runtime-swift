@@ -36,9 +36,9 @@ struct LogicTests {
                                     .literal(.int(0))
                                 )
                             )
-                        )
-                    ],
-                    result: reference("verdict")
+                        ),
+                        returning(reference("verdict"))
+                    ]
                 )
             ]
         )
@@ -63,7 +63,7 @@ struct LogicTests {
         // When
         let answer = try await answer(
             of: [Statement(binding: .constant("probe"), expression: sut)],
-            result: reference("probe")
+            returning: reference("probe")
         )
 
         // Then

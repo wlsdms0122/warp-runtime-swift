@@ -133,41 +133,33 @@ struct TypeChecker {
     // MARK: - Property
     // MARK: - Initializer
     // MARK: - Public
-    // A block with every dot judged and every call it writes judged against
-    // the signature its selector names, before what the block answers is: a
+    // A body with every dot judged and every call it writes judged against
+    // the signature its selector names, before what the body answers is: a
     // call whose types fail to fill is refused for itself, not for the answer
     // it leaves. Statements are read in order because that is what a body
     // means. A name holds what the statement before it bound.
     func resolvedSites(
-        in block: Block,
+        in body: Body,
         at place: Place,
         in environment: [Name: Binding],
         declaring selector: Name,
         answering returns: TypeExpression,
         with context: TypingContext,
         folding: Folding?
-    ) async throws -> (block: Block, judgements: JudgementTable) {
+    ) async throws -> (body: Body, judgements: JudgementTable) {
         let promised = returns.lowered(in: context.loweredTypes, bounds: context.bounds, sameTypes: context.sameTypes)
         let inner = try await inspected(
-            block: block,
-            into: promised,
-            at: place,
+            body,
+            at: place.part(.body),
             in: environment,
             with: context,
             ask: .judging(folding: folding, answering: promised)
         )
 
         try checked(inner.calls, in: context)
-        try refuseAnswers(
-            written: LiteralShape(inner.literalShape, reading: inner.reading),
-            answered: inner.flow.answered,
-            to: promised,
-            result: inner.block.result,
-            at: place,
-            in: context.loweredTypes
-        )
+        try refuseAnswers(of: inner, to: promised, at: place.part(.body), in: context.loweredTypes)
 
-        return (promised.written(inner.block, in: context.loweredTypes), inner.judgements)
+        return (inner.body, inner.judgements)
     }
 
     // The expression form, with what it was judged to hold. A constant's body
@@ -937,22 +929,22 @@ struct TypeChecker {
         return .reads(current, placed: placed)
     }
 
-    // What a body answers, held to the `returns` written beside it: what the
-    // result and every `return` that carried something out hold written into
-    // the answer, each at its own place. A declaration and a closure literal
-    // each write both in one document, so each asks here rather than working
-    // the question out again further on.
+    // What a body answers, held to the `returns` written beside it: what
+    // every `return` carried out held written into the answer, each at its
+    // own place, and a body whose declaration promises an answer leaving on
+    // every way through it, since a way that reaches the end answers
+    // nothing. A declaration and a closure literal each write both in one
+    // document, so each asks here rather than working the question out again
+    // further on.
     //
     // What opens to `Any` stands only where `Any` is declared.
     private func refuseAnswers(
-        written answer: LiteralShape,
-        answered: [Flow.Answer],
+        of walk: BodyWalk,
         to promised: LoweredType,
-        result: Expression?,
         at place: Place,
         in table: LoweredTypeTable
     ) throws {
-        for one in answered {
+        for one in walk.flow.answered {
             try refuseAnswer(
                 LiteralShape(one.literalShape, reading: one.reading),
                 to: promised,
@@ -961,11 +953,12 @@ struct TypeChecker {
             )
         }
 
-        try refuseAnswer(
-            answer,
-            to: promised,
-            at: place.part(result != nil ? .result : .returns),
-            in: table
+        guard promised != .null, walk.reading != .never else { return }
+
+        throw BuildError(
+            "reaches its end on a way that returns nothing, and its"
+                + " declaration promises \(promised.rendered(in: table))",
+            at: place
         )
     }
 
@@ -1710,7 +1703,7 @@ struct TypeChecker {
         // is held to its signature the way a declaration's body is.
         case let .closure(written):
             // The Validator refuses a closure literal that is not a body.
-            guard case let .body(block) = written.implementation else {
+            guard case let .body(writtenBody) = written.implementation else {
                 assertionFailure("a closure literal reached the type check without a body")
 
                 return Inspection(rewritten: expression, reading: .any)
@@ -1724,7 +1717,7 @@ struct TypeChecker {
             )
             var rewritten = expression
             var judgements = JudgementTable()
-            var body = block
+            var body = writtenBody
 
             // What the closure takes from where it was written: every name
             // there but the ones it declares, which are its own whatever a
@@ -1749,9 +1742,8 @@ struct TypeChecker {
                 _, own in own
             }
             let inner = try await inspected(
-                block: block,
-                into: promised,
-                at: place.child(.closure),
+                writtenBody,
+                at: place.child(.closure).part(.body),
                 in: opening,
                 with: context,
                 ask: ask.answering(promised)
@@ -1803,22 +1795,20 @@ struct TypeChecker {
 
                 try checked(inner.calls, in: context)
                 try refuseAnswers(
-                    written: LiteralShape(inner.literalShape, reading: inner.reading),
-                    answered: inner.flow.answered,
+                    of: inner,
                     to: promised,
-                    result: inner.block.result,
-                    at: place.child(.closure),
+                    at: place.child(.closure).part(.body),
                     in: context.loweredTypes
                 )
 
-                body = promised.written(inner.block, in: context.loweredTypes)
+                body = inner.body
                 judgements = inner.judgements
 
                 // Held as it was written, as a declaration's body is, from
                 // the names its body was read in: a name it captured carries
                 // what the slot it came from said about it.
                 if let refusal = EffectChecker(context).refusal(
-                    of: block,
+                    of: writtenBody,
                     declared: procedure.signature,
                     in: opening
                 ) {
@@ -2480,82 +2470,6 @@ struct TypeChecker {
                 flow: flow
             )
         }
-    }
-
-    // A block: its body, then the result in the environment the body left
-    // visible, written into `declared`. A result after a statement no run
-    // comes back from is judging's to refuse. The probing ask answers `Never`
-    // and moves on.
-    private func inspected(
-        block: Block,
-        into declared: LoweredType?,
-        at place: Place,
-        in environment: [Name: Binding],
-        with context: TypingContext,
-        ask: Ask
-    ) async throws -> (
-        block: Block,
-        calls: [CallSite],
-        judgements: JudgementTable,
-        reading: LoweredType,
-        literalShape: LiteralShape?,
-        flow: Flow
-    ) {
-        let body = try await inspected(
-            block.body,
-            at: place.child(.body),
-            in: environment,
-            with: context,
-            ask: ask
-        )
-
-        // Where the result reads, or why it does not. A block's result sits
-        // after its statements. It reads in the environment the body left, and
-        // a body no run comes back from leaves it nothing to run, refused.
-        let tail: Inspection?
-        let reading: LoweredType
-        let flow: Flow
-
-        if body.reading == .never {
-            if block.result != nil {
-                try refuse(Expression.resultAfterWhatNeverFinishes, at: place.child(.result), when: ask)
-            }
-
-            tail = nil
-            reading = .never
-            flow = body.flow
-        } else if let result = block.result {
-            let read = try await inspected(
-                result,
-                naming: nil,
-                into: declared,
-                at: place.child(.result),
-                in: body.environment,
-                with: context,
-                ask: ask
-            )
-
-            tail = read
-            reading = read.reading
-            flow = body.flow.followed(by: read.flow.outside(body.locals))
-        } else {
-            tail = nil
-            reading = .null
-            flow = body.flow
-        }
-
-        // One assembly for every way through, so no way out can drop what
-        // judging rewrote.
-        return (
-            ask.rewrites
-                ? Block(body: body.body, result: tail?.rewritten ?? block.result)
-                : block,
-            body.calls + (tail?.calls ?? []),
-            body.judgements.absorbing(tail?.judgements),
-            reading,
-            tail?.literalShape,
-            flow
-        )
     }
 
     // A body read in order: the environment its statements leave behind,

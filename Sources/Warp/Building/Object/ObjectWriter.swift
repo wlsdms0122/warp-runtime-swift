@@ -651,10 +651,7 @@ struct ObjectWriter {
     }
 
     private func body(_ body: LoweredBody) throws(ObjectUnwritable) -> Value {
-        .array([
-            try instructions(body.instructions),
-            try ObjectWriter.maybe(body.result, operation)
-        ])
+        try instructions(body.instructions)
     }
 
     private func instructions(_ instructions: [Instruction]) throws(ObjectUnwritable) -> Value {

@@ -28,8 +28,7 @@ struct IsolationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string, isolation: .isolated),
-                    body: [],
-                    result: .call(Call(selector: "App.shout", arguments: [.literal(.string("hi"))]))
+                    body: [returning(.call(Call(selector: "App.shout", arguments: [.literal(.string("hi"))])))]
                 )
             ]
         )
@@ -50,13 +49,11 @@ struct IsolationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.reach"))
+                    body: [returning(.call(Call(selector: "App.reach")))]
                 ),
                 "App.reach": Procedure(
                     signature: Signature(returns: .int, isolation: .isolated),
-                    body: [],
-                    result: .call(Call(selector: "App.ticket"))
+                    body: [returning(.call(Call(selector: "App.ticket")))]
                 )
             ]
         )
@@ -79,20 +76,21 @@ struct IsolationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any, failing: .anything),
-                    body: [],
-                    result: .call(
-                        Call(
-                            selector: "Standard.Concurrent.allKeyed",
-                            arguments: [
-                                map([
-                                    "left": .closure(Procedure(signature: piece, body: [], result: .literal(.int(1)))),
-                                    "right": .closure(
-                                        Procedure(signature: piece, body: [], result: .call(Call(selector: "App.ticket")))
-                                    )
-                                ])
-                            ]
-                        )
-                    )
+                    body: [
+                        returning(.call(
+                            Call(
+                                selector: "Standard.Concurrent.allKeyed",
+                                arguments: [
+                                    map([
+                                        "left": .closure(Procedure(signature: piece, body: [returning(.literal(.int(1)))])),
+                                        "right": .closure(
+                                            Procedure(signature: piece, body: [returning(.call(Call(selector: "App.ticket")))])
+                                        )
+                                    ])
+                                ]
+                            )
+                        ))
+                    ]
                 )
             ]
         )
@@ -114,8 +112,7 @@ struct IsolationTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int, constness: .const),
-                    body: [],
-                    result: .call(Call(selector: "App.ticket"))
+                    body: [returning(.call(Call(selector: "App.ticket")))]
                 )
             ]
         )

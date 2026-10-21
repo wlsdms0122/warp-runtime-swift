@@ -24,8 +24,7 @@ struct CallTests {
         // Given
         let echo = Procedure(
             signature: Signature(parameters: [Parameter(name: "text", type: .string)], returns: .dictionary(key: .string, value: .string)),
-            body: [],
-            result: map(["said": reference("text")])
+            body: [returning(map(["said": reference("text")]))]
         )
         let sut: Body = [
             Statement(binding: .constant("counted"), expression: .call(
@@ -43,12 +42,11 @@ struct CallTests {
         let outputs = try await run(
             Procedure(
                 signature: Signature(returns: .any),
-                body: sut,
-                result: map([
+                body: Body(sut.statements + [returning(map([
                     "counted": reference("counted"),
                     "shouted": reference("shouted"),
                     "echoed": .reference([.name("echoed"), .index("said")])
-                ])
+                ]))])
             ),
             beside: ["echo": echo],
             vocabulary: Module.standard + [.shouting]
@@ -71,7 +69,7 @@ struct CallTests {
         await #expect {
             try await answer(
                 of: [Statement(binding: .constant("probe"), expression: sut)],
-                result: reference("probe")
+                returning: reference("probe")
             )
         } throws: { error in
             error is BuildError && "\(error)".contains("no claim within reach says 'Int' answers")
@@ -185,10 +183,10 @@ struct CallTests {
     func aCallToAPrivateDeclarationIsRefusedAsPrivate() async throws {
         // Given. `lib` declares `Lib.hidden` privately, and `app` calls it
         let lib = try Module(procedures: [
-            "Lib.hidden": Procedure(access: .private, signature: Signature(returns: .int), body: [], result: .literal(.int(7)))
+            "Lib.hidden": Procedure(access: .private, signature: Signature(returns: .int), body: [returning(.literal(.int(7)))])
         ])
         let app = try Module(procedures: [
-            "entry": Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "Lib.hidden")))
+            "entry": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.call(Call(selector: "Lib.hidden")))])
         ])
 
         // When
@@ -198,7 +196,7 @@ struct CallTests {
 
         // Then
         #expect(refusal?.message == BuildError.concealed("Lib.hidden", at: Place(in: Place.Document(identity: nil))).message)
-        #expect(refusal?.place?.rendered == "procedures.entry.result")
+        #expect(refusal?.place?.rendered == "procedures.entry.body[0].leave")
     }
 
     @Test("a typo in an arm today's arguments never take is still refused")
@@ -243,18 +241,18 @@ struct CallTests {
                         ],
                         else: nil
                     )
-                )
-            ],
-            result: .literal(.bool(true))
+                ),
+                returning(.literal(.bool(true)))
+            ]
         )
         let sut = Procedure(
             signature: Signature(returns: .bool),
             body: [
                 Statement(binding: .constant("run"), expression: .call(
                     Call(selector: "countdown", arguments: [.literal(.int(1))])
-                ))
-            ],
-            result: reference("run")
+                )),
+                returning(reference("run"))
+            ]
         )
 
         // When
@@ -384,11 +382,12 @@ struct CallTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Math.absolute",
-                        arguments: [.literal(.int(1)), .literal(.string("x"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Math.absolute",
+                            arguments: [.literal(.int(1)), .literal(.string("x"))]
+                        )))
+                    ]
                 )
             ]
         )

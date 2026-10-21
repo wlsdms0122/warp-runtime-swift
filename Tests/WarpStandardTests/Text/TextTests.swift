@@ -25,17 +25,18 @@ struct TextTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Text.text",
-                        arguments: [
-                            .literal(.array([
-                                .int(1),
-                                .int(Int.max),
-                                .string("9223372036854775807")
-                            ]))
-                        ]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Text.text",
+                            arguments: [
+                                .literal(.array([
+                                    .int(1),
+                                    .int(Int.max),
+                                    .string("9223372036854775807")
+                                ]))
+                            ]
+                        )))
+                    ]
                 )
             ]
         )
@@ -70,9 +71,9 @@ struct TextTests {
                             selector: "Standard.Text.replacing",
                             arguments: [reference("rejoined"), .literal(.string("b")), .literal(.string("B"))]
                         ))
-                        )
-                    ],
-                    result: reference("fixed")
+                        ),
+                        returning(reference("fixed"))
+                    ]
                 )
             ]
         )
@@ -98,8 +99,7 @@ struct TextTests {
                     returns: .any,
                     failing: .anything
                 ),
-                body: [],
-                result: .call(Call(selector: selector, arguments: [reference("subject"), reference("encoding")]))
+                body: [returning(.call(Call(selector: selector, arguments: [reference("subject"), reference("encoding")])))]
             )
         }
 
@@ -133,8 +133,7 @@ struct TextTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .any, failing: .anything),
-                        body: [],
-                        result: .call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))]))
+                        body: [returning(.call(Call(selector: selector, arguments: [.literal(subject), .literal(.string("utf8"))])))]
                     )
                 ]
             )
@@ -162,11 +161,12 @@ struct TextTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Text.decoded",
-                        arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Text.decoded",
+                            arguments: [.literal(.bytes([104])), .literal(.string("utf16"))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -190,11 +190,13 @@ struct TextTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.int)),
-                    body: [Statement(binding: .variable("named"), expression: .literal(.string("utf16")))],
-                    result: .call(Call(
-                        selector: "Standard.Text.encoded",
-                        arguments: [.literal(.string("hi")), .reference([.name("named")])]
-                    ))
+                    body: [
+                        Statement(binding: .variable("named"), expression: .literal(.string("utf16"))),
+                        returning(.call(Call(
+                            selector: "Standard.Text.encoded",
+                            arguments: [.literal(.string("hi")), .reference([.name("named")])]
+                        )))
+                    ]
                 )
             ]
         )
@@ -219,11 +221,12 @@ struct TextTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .string),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Text.decoded",
-                        arguments: [.array([.literal(.int(104)), .literal(.int(300))]), .literal(.string("utf8"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Text.decoded",
+                            arguments: [.array([.literal(.int(104)), .literal(.int(300))]), .literal(.string("utf8"))]
+                        )))
+                    ]
                 )
             ]
         )

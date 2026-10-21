@@ -171,8 +171,7 @@ struct TypeTests {
         // do
         let counts = Procedure(
             signature: Signature(returns: .int, constness: .const),
-            body: [],
-            result: .literal(.int(1))
+            body: [returning(.literal(.int(1)))]
         )
         let wants = Procedure(
             signature: Signature(parameters: [Parameter(name: "text", type: .string)]),
@@ -279,8 +278,7 @@ struct TypeTests {
                         parameters: [Parameter(name: "node", type: .named("Node"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .reference([.name("node"), .name("value")])
+                    body: [returning(.reference([.name("node"), .name("value")]))]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -288,8 +286,7 @@ struct TypeTests {
                         parameters: [Parameter(name: "node", type: .named("Node"))],
                         returns: .int
                     ),
-                    body: [],
-                    result: .call(Call(selector: "read", arguments: [reference("node")]))
+                    body: [returning(.call(Call(selector: "read", arguments: [reference("node")])))]
                 )
             ]
         )
@@ -328,7 +325,11 @@ struct TypeTests {
                 signature: Signature(returns: .any, failing: .anything),
                 access: .internal,
                 implementation: .body(
-                    LoweredBody(instructions: [], result: result.map(Operation.literal)),
+                    LoweredBody(
+                        instructions: result.map { result in
+                            [Instruction(binding: nil, code: .leave(.procedure, target: nil, .literal(result)), label: "return")]
+                        } ?? []
+                    ),
                     Frame(size: 0, parameters: [], variables: [], captures: [], names: [])
                 ),
                 foldable: true,

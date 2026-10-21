@@ -83,9 +83,9 @@ struct InPlaceTests {
                             expression: .call(
                                 Call(selector: "Standard.Numeric.plus", arguments: [reference("total"), .literal(.int(1))])
                             )
-                        )
-                    ],
-                    result: reference("total")
+                        ),
+                        returning(reference("total"))
+                    ]
                 )
             ]
         )
@@ -122,9 +122,9 @@ struct InPlaceTests {
                                     arguments: [reference("seen"), .literal(.string("a")), .literal(.int(1))]
                                 )
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "Standard.Collection.keys", arguments: [reference("seen")]))
+                        ),
+                        returning(.call(Call(selector: "Standard.Collection.keys", arguments: [reference("seen")])))
+                    ]
                 )
             ]
         )
@@ -144,7 +144,7 @@ struct InPlaceTests {
         let sut = try Module(
             variables: ["seen": .array([])],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null))
+                entryName: Procedure(access: .public, body: [])
             ]
         )
 
@@ -168,9 +168,9 @@ struct InPlaceTests {
                     access: .public,
                     signature: Signature(returns: .dictionary(key: .string, value: .int)),
                     body: [
-                        Statement(binding: .assignment([.name("seen")]), expression: .literal(.string("not a dictionary")))
-                    ],
-                    result: reference("seen")
+                        Statement(binding: .assignment([.name("seen")]), expression: .literal(.string("not a dictionary"))),
+                        returning(reference("seen"))
+                    ]
                 )
             ]
         )
@@ -189,7 +189,7 @@ struct InPlaceTests {
         let sut = try Module(
             variables: ["total": ModuleVariable(.literal(.string("many")), declared: .int)],
             procedures: [
-                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: reference("total"))
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(reference("total"))])
             ]
         )
 
@@ -225,9 +225,9 @@ struct InPlaceTests {
                                 ],
                                 rescue: [Statement(binding: .constant("seen"), expression: .literal(.int(1)))]
                             )
-                        )
-                    ],
-                    result: reference("xs")
+                        ),
+                        returning(reference("xs"))
+                    ]
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "count", type: .inout(.int))], returns: .never, failing: .these(["aborted"])),
@@ -261,13 +261,14 @@ struct InPlaceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.int)),
-                    body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(0)])]))
+                    body: [returning(.call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(0)])])))]
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))], returns: .array(.int)),
-                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.int(9)))],
-                    result: reference("items")
+                    body: [
+                        Statement(binding: .assignment([.name("first")]), expression: .literal(.int(9))),
+                        returning(reference("items"))
+                    ]
                 )
             ]
         )
@@ -287,13 +288,14 @@ struct InPlaceTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(1)])]))
+                    body: [returning(.call(Call(selector: "poke", arguments: [.reference([.name("items"), .index(1)])])))]
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "second", type: .inout(.int))], returns: .int),
-                    body: [Statement(binding: .assignment([.name("items")]), expression: .array([.literal(.int(7))]))],
-                    result: reference("second")
+                    body: [
+                        Statement(binding: .assignment([.name("items")]), expression: .array([.literal(.int(7))])),
+                        returning(reference("second"))
+                    ]
                 )
             ]
         )
@@ -323,14 +325,13 @@ struct InPlaceTests {
                         ),
                         Statement(
                             expression: .call(Call(selector: "fill", arguments: [.reference([.name("table"), .index("k")])]))
-                        )
-                    ],
-                    result: .reference([.name("table"), .index("k")])
+                        ),
+                        returning(.reference([.name("table"), .index("k")]))
+                    ]
                 ),
                 "fill": Procedure(
                     signature: Signature(parameters: [Parameter(name: "slot", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.name("slot")]), expression: .literal(.int(3)))],
-                    result: .literal(.null)
+                    body: [Statement(binding: .assignment([.name("slot")]), expression: .literal(.int(3)))]
                 )
             ]
         )
@@ -352,13 +353,11 @@ struct InPlaceTests {
                         Statement(
                             expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
-                    ],
-                    result: .literal(.null)
+                    ]
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.int))]),
-                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
-                    result: .literal(.null)
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))]
                 )
             ]
         )
@@ -384,13 +383,11 @@ struct InPlaceTests {
                         Statement(
                             expression: .call(Call(selector: "poke", arguments: [.reference([.name("xs"), .index(0)])]))
                         )
-                    ],
-                    result: .literal(.null)
+                    ]
                 ),
                 "poke": Procedure(
                     signature: Signature(parameters: [Parameter(name: "first", type: .inout(.string))]),
-                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))],
-                    result: .literal(.null)
+                    body: [Statement(binding: .assignment([.name("first")]), expression: .literal(.string("text")))]
                 )
             ]
         )
@@ -418,8 +415,7 @@ struct InPlaceTests {
                         Statement(
                             expression: .call(Call(selector: "Other.grow", arguments: [reference("all", "items")]))
                         )
-                    ],
-                    result: .literal(.null)
+                    ]
                 )
             ]
         )
@@ -428,8 +424,7 @@ struct InPlaceTests {
             procedures: [
                 "Other.grow": Procedure(
                     signature: Signature(parameters: [Parameter(name: "list", type: .inout(.array(.int)))]),
-                    body: [],
-                    result: .literal(.null)
+                    body: []
                 )
             ]
         )
@@ -462,14 +457,12 @@ struct InPlaceTests {
                                             Parameter(name: "second", type: .int)
                                         ]
                                     ),
-                                    body: [],
-                                    result: .literal(.null)
+                                    body: []
                                 )
                             )
                         ),
                         Statement(expression: .apply(reference("pair"), arguments: [reference("n"), reference("m")]))
-                    ],
-                    result: .literal(.null)
+                    ]
                 )
             ]
         )
@@ -520,13 +513,12 @@ struct InPlaceTests {
                                         parameters: [Parameter(name: "count", type: .inout(.int))],
                                         returns: .int
                                     ),
-                                    body: [],
-                                    result: reference("count")
+                                    body: [returning(reference("count"))]
                                 )
                             )
-                        )
-                    ],
-                    result: .call(Call(selector: "App.calling", arguments: [reference("reading")]))
+                        ),
+                        returning(.call(Call(selector: "App.calling", arguments: [reference("reading")])))
+                    ]
                 )
             ]
         )
@@ -608,9 +600,9 @@ struct InPlaceTests {
                         Statement(
                             binding: .assignment([.name("xs")]),
                             expression: .array([.reference([.name("x")]), .reference([.name("junk")])])
-                        )
-                    ],
-                    result: .literal(.int(0))
+                        ),
+                        returning(.literal(.int(0)))
+                    ]
                 )
             ]
         )
@@ -631,9 +623,9 @@ struct InPlaceTests {
                                 map(["k": .array([])]),
                                 map(["k": .array([.reference([.name("junk")])])])
                             ])
-                        )
-                    ],
-                    result: .literal(.int(0))
+                        ),
+                        returning(.literal(.int(0)))
+                    ]
                 )
             ]
         )

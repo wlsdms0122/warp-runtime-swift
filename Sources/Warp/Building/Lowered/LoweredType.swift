@@ -1646,11 +1646,6 @@ indirect enum LoweredType: Sendable, Hashable {
         }
     }
 
-    // A block whose answer stands where this is declared.
-    func written(_ block: Block, in table: LoweredTypeTable) -> Block {
-        Block(body: block.body, result: block.result.map { result in written(result, in: table) })
-    }
-
     // This type as a declaration writes it: lowering run backwards. A
     // declared name goes back to its label, so what it stands for, a mark
     // lowering dropped included, is read again where the spelling is

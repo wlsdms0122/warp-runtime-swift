@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Warp
+import WarpTestSupport
 
 // The types of a link are read the same whatever order the host handed its
 // documents over in. What stands behind what is the graph's to say, and the
@@ -26,8 +27,7 @@ struct TypeNamespaceTests {
                 "A.make": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("A.T")),
-                    body: [],
-                    result: .struct(["x": .literal(.int(3))])
+                    body: [returning(.struct(["x": .literal(.int(3))]))]
                 )
             ],
             identity: Identity([0x0a])
@@ -38,8 +38,7 @@ struct TypeNamespaceTests {
                 "B.use": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("B.U")),
-                    body: [],
-                    result: .array([.call(Call(selector: "A.make"))])
+                    body: [returning(.array([.call(Call(selector: "A.make"))]))]
                 )
             ],
             identity: Identity([0x0b])
@@ -50,8 +49,7 @@ struct TypeNamespaceTests {
                 "C.go": Procedure(
                     access: .public,
                     signature: Signature(returns: .named("C.V")),
-                    body: [],
-                    result: .struct(["u": .call(Call(selector: "B.use"))])
+                    body: [returning(.struct(["u": .call(Call(selector: "B.use"))]))]
                 )
             ],
             identity: Identity([0x0c])

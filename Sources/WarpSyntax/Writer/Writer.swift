@@ -154,7 +154,7 @@ public struct Writer: Sendable {
         // A body is what a document declares. A procedure backed by native code has
         // nothing a document could carry, and writing its name alone would make
         // a document that loads into something else.
-        guard case let .body(block) = procedure.implementation else {
+        guard case let .body(body) = procedure.implementation else {
             throw WritingError(
                 "a procedure implemented in native code has no document."
                     + " What the host brings is declared in a module it assembles into the link"
@@ -173,7 +173,7 @@ public struct Writer: Sendable {
         }
 
         written.merge(try fields(of: procedure.signature)) { one, _ in one }
-        written.merge(try fields(of: block)) { one, _ in one }
+        written.merge(try fields(of: body)) { one, _ in one }
 
         return .dictionary(written)
     }
@@ -330,20 +330,12 @@ public struct Writer: Sendable {
 
         return spelling
     }
-    // The keys a procedure's block writes. A procedure reads `body` as a key
+    // The key a procedure's body writes. A procedure reads `body` as a key
     // that may be absent, so an empty one is dropped.
-    private func fields(of block: Block) throws -> [Name: Value] {
-        var written: [Name: Value] = [:]
+    private func fields(of body: Body) throws -> [Name: Value] {
+        guard !body.statements.isEmpty else { return [:] }
 
-        if !block.body.statements.isEmpty {
-            written[BlockReader.CodingKeys.body.name] = .array(try block.body.statements.map(value(of:)))
-        }
-
-        if let result = block.result {
-            written[BlockReader.CodingKeys.result.name] = try value(of: result)
-        }
-
-        return written
+        return [ProcedureReader.CodingKeys.body.name: .array(try body.statements.map(value(of:)))]
     }
 
     // A parameter, its type written as a slot's, where a bound stands beside

@@ -243,7 +243,6 @@ public indirect enum Expression: Sendable {
     // the build, which sees a call answering `Never`.
     static let nameOnWhatNeverFinishes = "never finishes, so it binds nothing and takes no name"
     static let afterWhatNeverFinishes = "never finishes, and what follows it here would never run"
-    static let resultAfterWhatNeverFinishes = "follows a body that never finishes, and would never be reached"
     static let declarationOnABoundName =
         "this construct binds the name, a loop's round or"
             + " an attempt's failure, so what it holds is not declared here"
@@ -321,8 +320,8 @@ public indirect enum Expression: Sendable {
             }
 
         case let .closure(procedure):
-            if let block = procedure.block {
-                Self.gather(block, into: &free, outside: introduced.union(procedure.signature.names))
+            if let body = procedure.implementation.body {
+                Self.gather(body, into: &free, outside: introduced.union(procedure.signature.names))
             }
 
         case let .apply(callee, arguments):
@@ -337,19 +336,19 @@ public indirect enum Expression: Sendable {
 
         case let .conditional(condition, then, otherwise):
             condition.gather(into: &free, naming: nil, outside: introduced)
-            Self.gather(Block(body: then), into: &free, outside: introduced)
+            Self.gather(then, into: &free, outside: introduced)
 
             if let otherwise {
-                Self.gather(Block(body: otherwise), into: &free, outside: introduced)
+                Self.gather(otherwise, into: &free, outside: introduced)
             }
 
         case let .loop(condition, body):
             condition.gather(into: &free, naming: nil, outside: named)
-            Self.gather(Block(body: body), into: &free, outside: named)
+            Self.gather(body, into: &free, outside: named)
 
         case let .attempt(body, rescue):
-            Self.gather(Block(body: body), into: &free, outside: introduced)
-            Self.gather(Block(body: rescue), into: &free, outside: named)
+            Self.gather(body, into: &free, outside: introduced)
+            Self.gather(rescue, into: &free, outside: named)
 
         case let .call(call):
             for argument in call.arguments {
@@ -361,12 +360,12 @@ public indirect enum Expression: Sendable {
         }
     }
 
-    // A block in order: a name a statement introduces is the body's own from
+    // A body in order: a name a statement introduces is the body's own from
     // the statement after it.
-    private static func gather(_ block: Block, into free: inout Set<Name>, outside introduced: Set<Name>) {
+    private static func gather(_ body: Body, into free: inout Set<Name>, outside introduced: Set<Name>) {
         var introduced = introduced
 
-        for statement in block.body.statements {
+        for statement in body.statements {
             if case let .assignment(path)? = statement.binding {
                 gather(path, into: &free, outside: introduced)
             }
@@ -381,8 +380,6 @@ public indirect enum Expression: Sendable {
                 introduced.insert(name)
             }
         }
-
-        block.result?.gather(into: &free, naming: nil, outside: introduced)
     }
 
     private static func gather(_ path: Path, into free: inout Set<Name>, outside introduced: Set<Name>) {

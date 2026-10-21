@@ -81,9 +81,9 @@ struct Chain {
                         as: .named(try type(number)),
                         optional: false
                     )
-                )
-            ],
-            result: ahead.map { name in .call(Call(selector: name, arguments: [held])) } ?? held
+                ),
+                Statement(expression: .leave(.procedure(ahead.map { name in .call(Call(selector: name, arguments: [held])) } ?? held)))
+            ]
         )
     }
 }

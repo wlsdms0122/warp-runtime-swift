@@ -61,9 +61,9 @@ struct LoweringTests {
                                 Statement(binding: .assignment([.name("inner")]), expression: .reference([.name("x")]))
                             ],
                             else: nil
-                        ))
-                    ],
-                    result: .array([.reference([.name("x")]), .reference([.name("inner")])])
+                        )),
+                        returning(.array([.reference([.name("x")]), .reference([.name("inner")])]))
+                    ]
                 )
             ]
         )
@@ -96,13 +96,15 @@ struct LoweringTests {
                         Statement(binding: .constant("held", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))), expression: .closure(
                             Procedure(
                                 signature: Signature(returns: .int),
-                                body: [Statement(binding: .constant("x"), expression: .literal(.int(2)))],
-                                result: .reference([.name("x")])
+                                body: [
+                                    Statement(binding: .constant("x"), expression: .literal(.int(2))),
+                                    returning(.reference([.name("x")]))
+                                ]
                             )
                         )),
-                        Statement(binding: .constant("got"), expression: .apply(.reference([.name("held")]), arguments: []))
-                    ],
-                    result: .array([.reference([.name("x")]), .reference([.name("got")])])
+                        Statement(binding: .constant("got"), expression: .apply(.reference([.name("held")]), arguments: [])),
+                        returning(.array([.reference([.name("x")]), .reference([.name("got")])]))
+                    ]
                 )
             ]
         )
@@ -128,10 +130,10 @@ struct LoweringTests {
                         Statement(binding: .constant("c"), expression: .literal(.int(3))),
                         Statement(
                             binding: .constant("held", declared: .procedure(ProcedureType(returns: .int, failing: .these([])))),
-                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [], result: .reference([.name("b")])))
-                        )
-                    ],
-                    result: .apply(.reference([.name("held")]), arguments: [])
+                            expression: .closure(Procedure(signature: Signature(returns: .int), body: [returning(.reference([.name("b")]))]))
+                        ),
+                        returning(.apply(.reference([.name("held")]), arguments: []))
+                    ]
                 )
             ]
         )
@@ -167,8 +169,10 @@ struct LoweringTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(parameters: [Parameter(name: "key", type: .string)], returns: .int),
-                    body: [Statement(binding: .constant("found"), expression: .reference([.name("digits"), .indexRef([.name("key")])]))],
-                    result: .reference([.name("found")])
+                    body: [
+                        Statement(binding: .constant("found"), expression: .reference([.name("digits"), .indexRef([.name("key")])])),
+                        returning(.reference([.name("found")]))
+                    ]
                 )
             ]
         )
@@ -203,11 +207,12 @@ struct LoweringTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .array(.int)),
-                    body: [],
-                    result: .call(Call(
-                        selector: "pair",
-                        arguments: [.literal(.int(2)), .literal(.int(1)), .literal(.int(3))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "pair",
+                            arguments: [.literal(.int(2)), .literal(.int(1)), .literal(.int(3))]
+                        )))
+                    ]
                 ),
                 "pair": Procedure(
                     signature: Signature(
@@ -218,12 +223,13 @@ struct LoweringTests {
                         ],
                         returns: .array(.int)
                     ),
-                    body: [],
-                    result: .array([
-                        .reference([.name("of")]),
-                        .reference([.name("first")]),
-                        .reference([.name("second")])
-                    ])
+                    body: [
+                        returning(.array([
+                            .reference([.name("of")]),
+                            .reference([.name("first")]),
+                            .reference([.name("second")])
+                        ]))
+                    ]
                 )
             ]
         )
@@ -234,7 +240,7 @@ struct LoweringTests {
         // Then
         guard
             case let .body(body, _) = image[entryName]!.implementation,
-            case let .call(call)? = body.result
+            case let .leave(.procedure, _, .call(call)?)? = body.instructions.last?.code
         else {
             Issue.record("the call was not lowered")
 
@@ -253,11 +259,10 @@ struct LoweringTests {
         let module = try Module(
             variables: ["count": .literal(.int(0))],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: []),
                 "App.tally": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int, constness: .const),
-                    body: [],
-                    result: .reference([.name("count")])
+                    body: [returning(.reference([.name("count")]))]
                 )
             ]
         )
@@ -279,16 +284,17 @@ struct LoweringTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [Statement(binding: .variable("n"), expression: .literal(.int(1)))],
-                    result: .call(Call(selector: "App.bump", arguments: [.reference([.name("n")])]))
+                    body: [
+                        Statement(binding: .variable("n"), expression: .literal(.int(1))),
+                        returning(.call(Call(selector: "App.bump", arguments: [.reference([.name("n")])])))
+                    ]
                 ),
                 "App.bump": Procedure(
                     signature: Signature(
                         parameters: [Parameter(name: "of", type: .inout(.named("Count")))],
                         returns: .named("Count")
                     ),
-                    body: [],
-                    result: .reference([.name("of")])
+                    body: [returning(.reference([.name("of")]))]
                 )
             ]
         )
@@ -317,12 +323,11 @@ struct LoweringTests {
                                     constness: .const,
                                     isolation: .isolated
                                 ),
-                                body: [],
-                                result: .literal(.null)
+                                body: []
                             )
-                        ))
-                    ],
-                    result: .call(Call(selector: "App.take", arguments: [.reference([.name("body")])]))
+                        )),
+                        returning(.call(Call(selector: "App.take", arguments: [.reference([.name("body")])])))
+                    ]
                 ),
                 "App.take": Procedure(
                     signature: Signature(
@@ -335,8 +340,7 @@ struct LoweringTests {
                         ],
                         returns: .null
                     ),
-                    body: [],
-                    result: .literal(.null)
+                    body: []
                 )
             ]
         )
@@ -361,14 +365,16 @@ struct LoweringTests {
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .bool, failing: .these(["cast_refused"])),
-                        body: [Statement(binding: .variable("held"), expression: held)],
-                        result: .call(Call(
-                            selector: "Standard.Logic.equal",
-                            arguments: [
-                                .call(Call(selector: "App.tag", arguments: [.reference([.name("held")])])),
-                                .cast(.struct(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
-                            ]
-                        ))
+                        body: [
+                            Statement(binding: .variable("held"), expression: held),
+                            returning(.call(Call(
+                                selector: "Standard.Logic.equal",
+                                arguments: [
+                                    .call(Call(selector: "App.tag", arguments: [.reference([.name("held")])])),
+                                    .cast(.struct(["a": .literal(.int(1))]), as: .named("Tag"), optional: false)
+                                ]
+                            )))
+                        ]
                     ),
                     "App.tag": Procedure(
                         signature: Signature(
@@ -376,8 +382,7 @@ struct LoweringTests {
                             returns: .named("Tag"),
                             constness: .const
                         ),
-                        body: [],
-                        result: .reference([.name("of")])
+                        body: [returning(.reference([.name("of")]))]
                     )
                 ]
             )
@@ -413,11 +418,10 @@ struct LoweringTests {
                 "J": .call(Call(selector: "App.alpha", arguments: [reference("K")]))
             ],
             procedures: [
-                entryName: Procedure(access: .public, body: [], result: .literal(.null)),
+                entryName: Procedure(access: .public, body: []),
                 "App.alpha": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .int)], returns: .int, constness: .const),
-                    body: [],
-                    result: .reference([.name("of")])
+                    body: [returning(.reference([.name("of")]))]
                 )
             ]
         )
@@ -440,9 +444,9 @@ struct LoweringTests {
                     access: .public,
                     signature: Signature(returns: .int),
                     body: [
-                        Statement(binding: .variable("held"), expression: .literal(.int(5)))
-                    ],
-                    result: .call(Call(selector: "App.echo", arguments: [.reference([.name("held")])]))
+                        Statement(binding: .variable("held"), expression: .literal(.int(5))),
+                        returning(.call(Call(selector: "App.echo", arguments: [.reference([.name("held")])])))
+                    ]
                 ),
                 "App.echo": Procedure(
                     signature: Signature(of: EchoEffect.self, returns: .int),

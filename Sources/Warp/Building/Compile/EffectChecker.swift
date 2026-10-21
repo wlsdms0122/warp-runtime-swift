@@ -61,7 +61,7 @@ struct EffectChecker {
     // declared isolated touches what another body could touch at once, or
     // one may fail with more than its declaration names. `environment` is
     // what each name in scope is bound as, before the first statement.
-    func refusal(of block: Block, declared signature: Signature, in environment: [Name: Binding]) -> String? {
+    func refusal(of body: Body, declared signature: Signature, in environment: [Name: Binding]) -> String? {
         let declared = environment.compactMapValues(\.declaredType)
 
         // A body reading a module variable answers by the run's state, and so
@@ -82,19 +82,19 @@ struct EffectChecker {
 
         if
             signature.constness == .const,
-            let reached = breaking(block, const, declaring: signature.ownedParameters, bound: declared)
+            let reached = breaking(body, const, declaring: signature.ownedParameters, bound: declared)
         {
             return "is declared const, and \(reached)"
         }
 
         if
             signature.isolation == .isolated,
-            let touched = breaking(block, isolated, declaring: Set(signature.names), bound: declared)
+            let touched = breaking(body, isolated, declaring: Set(signature.names), bound: declared)
         {
             return "is declared isolated, and \(touched)"
         }
 
-        let failing = self.failing(block, bound: declared)
+        let failing = self.failing(body, bound: declared)
 
         guard failing.fails(within: signature.failing) else {
             return "may fail with \(failing.rendered), and its declaration says \(signature.failing.rendered)"
@@ -169,23 +169,20 @@ struct EffectChecker {
     }
 
     // MARK: - Private
-    // What may come out of a block: everything its statements and its result
-    // may fail with. `bound` is the type written for what each name in scope
-    // holds, which a call of a value is judged on; a name a statement binds
-    // holds it for the rest of the block, by the rule `declaredType` reads.
-    private func failing(_ block: Block, bound declaredTypes: [Name: LoweredType]) -> Failing {
+    // What may come out of a body: everything its statements may fail with.
+    // `bound` is the type written for what each name in scope holds, which a
+    // call of a value is judged on; a name a statement binds holds it for the
+    // rest of the body, by the rule `declaredType` reads.
+    private func failing(_ body: Body, bound declaredTypes: [Name: LoweredType]) -> Failing {
         var declaredTypes = declaredTypes
         var carried = Failing.these([])
 
-        for statement in block.body.statements {
+        for statement in body.statements {
             carried = carried.joined(self.failing(statement.expression, bound: declaredTypes))
             declaring(statement, into: &declaredTypes)
         }
 
-        return carried.joined(
-            block.result.map { result in self.failing(result, bound: declaredTypes) }
-                ?? .these([])
-        )
+        return carried
     }
 
     private func failing(_ expression: Expression, bound declared: [Name: LoweredType]) -> Failing {
@@ -193,8 +190,8 @@ struct EffectChecker {
             self.failing(inner, bound: declared)
         }
 
-        func read(_ block: Block) -> Failing {
-            self.failing(block, bound: declared)
+        func read(_ body: Body) -> Failing {
+            self.failing(body, bound: declared)
         }
 
         let here = failingHere(expression, bound: { name in declared[name] })
@@ -223,28 +220,28 @@ struct EffectChecker {
 
         case let .conditional(condition, then, otherwise):
             return read(condition)
-                .joined(read(Block(body: then)))
-                .joined(otherwise.map { arm in read(Block(body: arm)) } ?? .these([]))
+                .joined(read(then))
+                .joined(otherwise.map { arm in read(arm) } ?? .these([]))
 
         case let .loop(condition, body):
-            return read(condition).joined(read(Block(body: body)))
+            return read(condition).joined(read(body))
 
         // The rescue is what the body's failures become: they are caught here,
         // and what is left is whatever the rescue itself may fail with.
         case let .attempt(_, rescue):
-            return read(Block(body: rescue))
+            return read(rescue)
 
         case let .leave(leave):
             return leave.value.map(read) ?? .these([])
         }
     }
 
-    // A block in order. Each statement is judged against what was declared
+    // A body in order. Each statement is judged against what was declared
     // before it, and a variable it introduces is declared for the rest. The
-    // names a block binds are its own and leave with it, so introducing one
+    // names a body binds are its own and leave with it, so introducing one
     // reaches nothing.
     private func breaking(
-        _ block: Block,
+        _ body: Body,
         _ fact: Fact,
         declaring names: Set<Name>,
         bound declaredTypes: [Name: LoweredType]
@@ -253,7 +250,7 @@ struct EffectChecker {
         var declared = names
         var declaredTypes = declaredTypes
 
-        for statement in block.body.statements {
+        for statement in body.statements {
             if case let .assignment(path)? = statement.binding {
                 if let head = path.head, !declared.contains(head) {
                     return "it writes '\(head)', which it does not declare"
@@ -267,8 +264,8 @@ struct EffectChecker {
 
             let naming = fact.introducing(statement.nameInside)
             let broken: String? = if case let .attempt(body, rescue) = statement.expression {
-                breaking(Block(body: body), fact, declaring: declared, bound: declaredTypes)
-                    ?? breaking(Block(body: rescue), naming, declaring: declared, bound: declaredTypes)
+                breaking(body, fact, declaring: declared, bound: declaredTypes)
+                    ?? breaking(rescue, naming, declaring: declared, bound: declaredTypes)
             } else {
                 breaking(statement.expression, naming, declaring: declared, bound: declaredTypes)
             }
@@ -285,9 +282,7 @@ struct EffectChecker {
             declaring(statement, into: &declaredTypes)
         }
 
-        return block.result.flatMap { result in
-            breaking(result, fact, declaring: declared, bound: declaredTypes)
-        }
+        return nil
     }
 
     private func breaking(
@@ -300,12 +295,8 @@ struct EffectChecker {
             self.breaking(inner, fact, declaring: names, bound: declared)
         }
 
-        func breaking(_ block: Block) -> String? {
-            self.breaking(block, fact, declaring: names, bound: declared)
-        }
-
         func breaking(_ body: Body) -> String? {
-            breaking(Block(body: body))
+            self.breaking(body, fact, declaring: names, bound: declared)
         }
 
         func first(_ parts: [Expression]) -> String? {
@@ -383,7 +374,7 @@ struct EffectChecker {
         }
     }
 
-    // The type a name a statement binds holds for the rest of its block. A
+    // The type a name a statement binds holds for the rest of its body. A
     // later name of the same spelling is a different name, so the table is
     // read forward.
     private func declaring(_ statement: Statement, into declaredTypes: inout [Name: LoweredType]) {

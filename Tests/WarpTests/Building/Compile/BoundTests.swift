@@ -30,11 +30,12 @@ struct BoundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .bool),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Comparable.lessThan",
-                        arguments: [.literal(.bool(true)), .literal(.bool(false))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Comparable.lessThan",
+                            arguments: [.literal(.bool(true)), .literal(.bool(false))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -56,11 +57,12 @@ struct BoundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Numeric.plus",
-                        arguments: [.literal(.string("a")), .literal(.string("b"))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Numeric.plus",
+                            arguments: [.literal(.string("a")), .literal(.string("b"))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -85,11 +87,12 @@ struct BoundTests {
                         parameters: [Parameter(name: "left", type: .any)],
                         returns: .bool
                     ),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Comparable.lessThan",
-                        arguments: [reference("left"), .literal(.int(1))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Comparable.lessThan",
+                            arguments: [reference("left"), .literal(.int(1))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -117,14 +120,12 @@ struct BoundTests {
                         returns: .parameter(name: "T"),
                         bounds: ["T": ["Scalar"]]
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [.literal(.int(7))]))
+                    body: [returning(.call(Call(selector: "keep", arguments: [.literal(.int(7))])))]
                 )
             ]
         )
@@ -149,14 +150,12 @@ struct BoundTests {
                         returns: .parameter(name: "T"),
                         bounds: ["T": ["Scalar"]]
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [.literal(.double(1.5))]))
+                    body: [returning(.call(Call(selector: "keep", arguments: [.literal(.double(1.5))])))]
                 )
             ]
         )
@@ -181,14 +180,12 @@ struct BoundTests {
                         returns: .parameter(name: "T"),
                         bounds: ["T": ["Sortable"]]
                     ),
-                    body: [],
-                    result: reference("value")
+                    body: [returning(reference("value"))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -215,14 +212,12 @@ struct BoundTests {
                             parameters: [Parameter(name: "items", type: .array(.composition(["A", "B"])))],
                             returns: .int
                         ),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     ),
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: "keep", arguments: [.literal(.array([element]))]))
+                        body: [returning(.call(Call(selector: "keep", arguments: [.literal(.array([element]))])))]
                     )
                 ]
             )
@@ -249,8 +244,7 @@ struct BoundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .composition(["A", "B"])),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 )
             ]
         )
@@ -277,9 +271,9 @@ struct BoundTests {
                         Statement(
                             binding: .constant("held", declared: .composition(["A", "B"])),
                             expression: .literal(.int(5))
-                        )
-                    ],
-                    result: .literal(.int(1))
+                        ),
+                        returning(.literal(.int(1)))
+                    ]
                 )
             ]
         )
@@ -303,8 +297,7 @@ struct BoundTests {
                         parameters: [Parameter(name: "x", type: .parameter(name: "T"))],
                         returns: .array(.parameter(name: "T"))
                     ),
-                    body: [],
-                    result: .array([.literal(.int(1)), .literal(.string("x"))])
+                    body: [returning(.array([.literal(.int(1)), .literal(.string("x"))]))]
                 )
             ]
         )
@@ -325,14 +318,12 @@ struct BoundTests {
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .named("App.Describable"))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.tell", arguments: [.literal(.null)]))
+                    body: [returning(.call(Call(selector: "App.tell", arguments: [.literal(.null)])))]
                 )
             ]
         )
@@ -357,8 +348,7 @@ struct BoundTests {
             procedures: [
                 "Bank.Card.describe": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Card"))], returns: .array(.int)),
-                    body: [],
-                    result: .array([.literal(.int(1))])
+                    body: [returning(.array([.literal(.int(1))]))]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -367,9 +357,9 @@ struct BoundTests {
                         Statement(
                             binding: .constant("card"),
                             expression: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
-                        )
-                    ],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("card")]))
+                        ),
+                        returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("card")])))
+                    ]
                 )
             ]
         )
@@ -397,8 +387,7 @@ struct BoundTests {
             procedures: [
                 "App.Box.show": Procedure(
                     signature: Signature(parameters: [Parameter(name: "of", type: .named("App.Box"))], returns: .named("Bank.Card")),
-                    body: [],
-                    result: .struct(["last": .literal(.string("x"))])
+                    body: [returning(.struct(["last": .literal(.string("x"))]))]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -411,9 +400,9 @@ struct BoundTests {
                         Statement(
                             binding: .constant("shown"),
                             expression: .call(Call(selector: "App.Printable.show", arguments: [reference("box")]))
-                        )
-                    ],
-                    result: .call(Call(selector: "App.Describable.describe", arguments: [reference("shown")]))
+                        ),
+                        returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("shown")])))
+                    ]
                 )
             ]
         )
@@ -436,14 +425,12 @@ struct BoundTests {
             procedures: [
                 "App.tell": Procedure(
                     signature: Signature(parameters: [Parameter(name: "it", type: .nullable(.named("App.Describable")))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.tell", arguments: [.literal(.null)]))
+                    body: [returning(.call(Call(selector: "App.tell", arguments: [.literal(.null)])))]
                 )
             ]
         )
@@ -464,15 +451,13 @@ struct BoundTests {
             procedures: [
                 "App.take": Procedure(
                     signature: Signature(parameters: [Parameter(name: "p", type: .named("App.Pick"))], returns: .int),
-                    body: [],
-                    result: .literal(.int(1))
+                    body: [returning(.literal(.int(1)))]
                 ),
                 "App.hand": Procedure(
                     signature: Signature(parameters: [Parameter(name: "x", type: .named("App.Marked"))], returns: .int),
-                    body: [],
-                    result: .call(Call(selector: "App.take", arguments: [reference("x")]))
+                    body: [returning(.call(Call(selector: "App.take", arguments: [reference("x")])))]
                 ),
-                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [], result: .call(Call(selector: "App.hand", arguments: [.literal(.int(1))])))
+                entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.call(Call(selector: "App.hand", arguments: [.literal(.int(1))])))])
             ]
         )
 
@@ -499,14 +484,12 @@ struct BoundTests {
                             returns: .int,
                             bounds: ["T": ["A", "B"]]
                         ),
-                        body: [],
-                        result: .literal(.int(1))
+                        body: [returning(.literal(.int(1)))]
                     ),
                     entryName: Procedure(
                         access: .public,
                         signature: Signature(returns: .int),
-                        body: [],
-                        result: .call(Call(selector: "keep", arguments: [.literal(argument)]))
+                        body: [returning(.call(Call(selector: "keep", arguments: [.literal(argument)])))]
                     )
                 ]
             )
@@ -538,14 +521,12 @@ struct BoundTests {
                         ],
                         bounds: ["T": ["Scalar"]]
                     ),
-                    body: [],
-                    result: .literal(.null)
+                    body: []
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(),
-                    body: [],
-                    result: .call(Call(selector: "keep", arguments: [.literal(.double(1.0)), .literal(.double(2.0))]))
+                    body: [returning(.call(Call(selector: "keep", arguments: [.literal(.double(1.0)), .literal(.double(2.0))])))]
                 )
             ]
         )
@@ -573,17 +554,17 @@ struct BoundTests {
                         returns: .bool,
                         bounds: ["T": ["Standard.Comparable"]]
                     ),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Comparable.lessThan",
-                        arguments: [reference("left"), reference("right")]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Comparable.lessThan",
+                            arguments: [reference("left"), reference("right")]
+                        )))
+                    ]
                 ),
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .bool),
-                    body: [],
-                    result: .call(Call(selector: "smallest", arguments: [.literal(.int(1)), .literal(.int(2))]))
+                    body: [returning(.call(Call(selector: "smallest", arguments: [.literal(.int(1)), .literal(.int(2))])))]
                 )
             ]
         )
@@ -603,11 +584,12 @@ struct BoundTests {
                 entryName: Procedure(
                     access: .public,
                     signature: Signature(returns: .any),
-                    body: [],
-                    result: .call(Call(
-                        selector: "Standard.Collection.sorted",
-                        arguments: [.literal(.array([.bool(true), .bool(false)]))]
-                    ))
+                    body: [
+                        returning(.call(Call(
+                            selector: "Standard.Collection.sorted",
+                            arguments: [.literal(.array([.bool(true), .bool(false)]))]
+                        )))
+                    ]
                 )
             ]
         )
@@ -632,8 +614,7 @@ struct BoundTests {
                         parameters: [Parameter(name: "absent", type: .any)],
                         returns: .any
                     ),
-                    body: [],
-                    result: .call(Call(selector: "Standard.Math.min", arguments: [reference("absent"), .literal(.int(1))]))
+                    body: [returning(.call(Call(selector: "Standard.Math.min", arguments: [reference("absent"), .literal(.int(1))])))]
                 )
             ]
         )
@@ -681,8 +662,7 @@ struct BoundTests {
                         returns: answers,
                         bounds: ["T": ["App.Marked"]]
                     ),
-                    body: [],
-                    result: answers == .int ? .literal(.int(1)) : reference("with")
+                    body: [returning(answers == .int ? .literal(.int(1)) : reference("with"))]
                 ),
                 entryName: Procedure(
                     access: .public,
@@ -691,9 +671,9 @@ struct BoundTests {
                         Statement(
                             binding: .constant("card"),
                             expression: .cast(.struct(["last": .literal(.string("x"))]), as: .named("Bank.Card"), optional: false)
-                        )
-                    ],
-                    result: .call(Call(selector: "App.Kept.keep", arguments: [reference("card"), .literal(.string("y"))]))
+                        ),
+                        returning(.call(Call(selector: "App.Kept.keep", arguments: [reference("card"), .literal(.string("y"))])))
+                    ]
                 )
             ]
         )
