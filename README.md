@@ -1,6 +1,6 @@
 # warp-runtime-swift
 
-The Swift runtime for [Warp](../../spec/README.md). It reads documents, builds them before anything runs, runs them under a host that can always stop them, and brings the host's vocabulary. The language is defined by the specification; this package is one implementation of it.
+The Swift runtime for [Warp](warp/spec/README.md). It reads documents, builds them before anything runs, runs them under a host that can always stop them, and brings the host's vocabulary. The language is defined by the specification; this package is one implementation of it.
 
 A program can also be built directly from Swift values (`Module`, `Procedure`, `Statement`, `Expression`) without a document.
 
@@ -158,7 +158,7 @@ A run can always be stopped from outside. Cancellation is observed between state
 
 ## Conformance
 
-`WarpConformanceTests` runs the cases in [`spec/conformance/`](../../spec/conformance) through public API, so a case passes by what the specification says and not by what the implementation holds inside.
+`WarpConformanceTests` runs the cases in [`spec/conformance/`](warp/spec/conformance) through public API, so a case passes by what the specification says and not by what the implementation holds inside. The specification is the `warp` submodule, at the version this runtime conforms to; `git submodule update --init` brings it.
 
 ## Status
 

@@ -27,9 +27,8 @@ struct LibraryTests {
             .deletingLastPathComponent()   // Library
             .deletingLastPathComponent()   // WarpStandardTests
             .deletingLastPathComponent()   // Tests
-            .deletingLastPathComponent()   // warp-runtime-swift
-            .deletingLastPathComponent()   // runtime
             .deletingLastPathComponent()   // the repository
+            .appendingPathComponent("warp")
             .appendingPathComponent("lib")
             .appendingPathComponent("standard")
         let files = try FileManager.default

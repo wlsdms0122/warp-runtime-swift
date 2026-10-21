@@ -1,7 +1,7 @@
 #!/bin/bash
-# Writes the shared `lib/standard` documents into a Swift source, so the vocabulary
-# they hold arrives with the library rather than off a disk the caller may not
-# have.
+# Writes the `lib/standard` documents of the `warp` submodule into a Swift
+# source, so the vocabulary they hold arrives with the library rather than off a
+# disk the caller may not have.
 #
 # The documents are the source; this is a copy of them. `LibraryTests` holds
 # the two to being the same text, so a document edited without running this
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-library="$root/../../lib/standard"
+library="$root/warp/lib/standard"
 written="$root/Sources/WarpStandard/Library/Library.swift"
 
 {
@@ -17,12 +17,12 @@ written="$root/Sources/WarpStandard/Library/Library.swift"
     echo "//  Library.swift"
     echo "//  WarpStandard"
     echo "//"
-    echo "//  Written by script/embed-library.sh. Edit lib/standard and run it again."
+    echo "//  Written by script/embed-library.sh. Edit warp/lib/standard and run it again."
     echo "//"
     echo ""
     echo "import Foundation"
     echo ""
-    echo "// The documents of \`lib/standard\`, as they stand in the repository."
+    echo "// The documents of \`lib/standard\`, as they stand in the \`warp\` submodule."
     echo "enum Library {"
     echo "    static let documents: [String: String] = ["
 
