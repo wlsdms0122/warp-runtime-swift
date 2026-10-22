@@ -7,8 +7,8 @@ import Foundation
 import Warp
 
 extension Module {
-    // What the runner's host lends a program: a log and a keyed store. All
-    // three reach outside the run, so all three are effects.
+    // What this host lends a program: a log, a keyed store and tickets. Every
+    // one reaches outside the run, so every one is an effect.
     static func host() throws -> Module {
         try Module(
             types: [
