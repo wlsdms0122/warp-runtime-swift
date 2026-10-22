@@ -34,6 +34,12 @@ python3 ../tool/server.py 8765 orders &
 (cd flow && $warp *.warpt --entry flow.main --arg path='"plan/nightly.json"')
 ```
 
+`tool/feature.sh` runs every program of `feature/programs.tsv` through `warpx` and prints one line each, `ok` when it did what the table expects and its objects answered the same. It exits 1 when one differs.
+
+```
+swift build && tool/feature.sh
+```
+
 ## The modules
 
 | library | declares | reaches | fails with |
