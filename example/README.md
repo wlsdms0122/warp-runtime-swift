@@ -17,7 +17,7 @@ swift build
 
 ## Running the examples
 
-`warp <document>... --entry <name> [--arg name=<value>]...` compiles the documents in the order their needs stand, beside the standard vocabulary and the modules, links them and runs the entry. An argument is a value written the way the text writes one. `File` and `Process` reach the directory it is run in, so a program is run from its own folder. A document's object is filed under `.objects/` beside it and read back while what it was compiled against still stands.
+`warp <document>... --entry <name> [--arg name=<value>]...` compiles the documents in the order their needs stand, beside the standard vocabulary and the modules, links them and runs the entry. An argument is a JSON value (`24`, `'"add"'`), and a nullable parameter the command line leaves out is handed null. `File` and `Process` reach the directory it is run in, so a program is run from its own folder. A document's object is filed under `.objects/` beside it and read back while what it was compiled against still stands.
 
 ```
 warp=$PWD/.build/debug/warp

@@ -29,9 +29,9 @@ let greet = Procedure(
                     ]
                 )
             )
-        )
-    ],
-    result: .reference([.name("greeting", optional: false)])
+        ),
+        Statement(expression: .leave(.procedure(.reference([.name("greeting", optional: false)]))))
+    ]
 )
 
 let image = try await Builder().build(
@@ -89,7 +89,7 @@ The line between them is the numbering. **A lowered body carries the numbers its
 
 `Builder` has an entry point for each. `build(_:)` is the two together. `compile(_:)` and `link(_:supplying:)` are the halves. `compile(_:against:supplying:)` compiles documents against documents compiled earlier, and `lay(_:supplying:)` makes a `Laid` that `compile(_:against:)` reuses, for a host that compiles against the same vocabulary many times.
 
-`Loader` reads the canonical document by default. Which construct keys exist is a `ConstructRegistry`; a host may register its own forms. A front end may also hand over a `Notation`: an `ExpressionSpelling` read wherever an expression is, a template's `Interpolation`, whether a parameter is written as a pair (`pairedParameter`), and how a name the text declares is read in full (`qualifying`). A document has no spellings, so this package ships no notation but the canonical one.
+`Loader.load` reads a document by the standard construct table only. Which construct keys exist is a `ConstructRegistry`, and a host may build its own (`Loader(registry:)`); it applies, with a `Notation` a front end hands over, when `Loader.canonical(_:from:)` turns a text into a document and when a fragment is read (`procedure(from:in:)`, `body(from:in:)` and the others). A `Notation` holds an `ExpressionSpelling` read wherever an expression is, a template's `Interpolation`, whether a parameter is written as a pair (`pairedParameter`), a closing key read as a `return` (`answerKey`), and how a name the text declares is read in full (`qualifying`). A document has no spellings, so this package ships no notation but the canonical one.
 
 `Writer` writes a program back out as a document, so a program built in Swift can be sent to a runtime elsewhere.
 
@@ -113,9 +113,9 @@ The identity is given before reading, so a refusal from that reading already say
 
 A place reads `0da2e372bba7/procedures.Wallet.charge…`: the part before the slash is `identity.short`, the first twelve hex digits of the identity, and the steps after it are the document's own keys, the declared spelling among them. The host that handed the bytes in knows which file an identity came from, and tells a person.
 
-Whether a place has a text under it is `document.identity != nil`. A place from a program nobody wrote down says `assembled` rather than `none`, since `Optional.none` answers to that spelling too and `document == .none` would read true for a place that does not exist.
+Whether a place has a text under it is `document.identity != nil`. A place from a program nobody wrote down is in `Place.Document.assembled`, whose identity is nil.
 
-Not every refusal has a place. A name declared by two modules is refused at the later declaration. An entry nobody declares is refused by the run, with an `ExecutionError` that has no place. A refusal from reading with a notation (`Loader.canonical`) carries the steps it reached, `ReadingError.steps`, in no identified document: its `place.document.identity` is nil.
+A name declared by two modules is refused at the later declaration. Not every refusal has a place: an entry nobody declares is refused by the run, with an `ExecutionError` that has no place. A refusal from reading with a notation (`Loader.canonical`) carries the steps it reached, `ReadingError.steps`, in no identified document: its `place.document.identity` is nil.
 
 ## Vocabulary: the boundary to the outside
 
@@ -150,7 +150,7 @@ let vocabulary = try Module(
 
 Linked beside `Module.standard`, it lets a document send `App.shout`. A document that sends a procedure nobody linked is refused by name before anything runs. The standard vocabulary ships the same way, as bundles a host picks from.
 
-What a host hands a run is its `Environment`, which its own procedures take back. A host carrying ambient state on the task, a task local holding an open session say, conforms that environment to `WarpStandard.ConcurrentEnvironment`, and a fan-out runs each piece through its `isolateConcurrentWork`, where the state is severed or forked.
+What a host hands a run is its `Environment`, which its effects read back through `Invocation.environment`. A host carrying ambient state on the task, a task local holding an open session say, conforms that environment to `WarpStandard.ConcurrentEnvironment`, and a fan-out runs each piece through its `isolateConcurrentWork`, where the state is severed or forked.
 
 ## Stopping and watching
 
