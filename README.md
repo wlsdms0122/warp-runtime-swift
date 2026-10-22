@@ -167,6 +167,10 @@ PROBE_REWRITE=~/written tool/probe.sh ~/cases ~/more-cases
 
 A folder of cases of one's own is asked the same way: `PROBE_DIR` enables the probe suite, which prints one line per case saying what it got and whether that held against its `expect`. `PROBE_REWRITE` also writes each program case there with its `expect` replaced by what it got, in the writer's layout, which is how a new case is generated. `tool/probe.sh` builds once and probes each folder given, writing its lines to `.build/probe/<folder name>.txt`.
 
+## Examples
+
+[`example/`](example/README.md) is a package of hosts beside this one: `warp`, which builds and runs any documents it is handed and lends them vocabulary modules (console, time, random, file, net, JSON, process), and `warpx`, which builds a program both straight and through its objects. They run the programs in `warp/example`.
+
 ## Status
 
 Everything above is implemented and tested. What the language does is asked by the specification's cases. Names in this package still change.
