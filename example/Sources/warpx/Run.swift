@@ -20,18 +20,38 @@ struct Run {
 
     // MARK: - Initializer
     // MARK: - Public
-    // Built from the documents as they are.
+    // Built from the documents as they are; a refusal says the stage it
+    // came from.
     func straight() async throws -> Value {
         let builder = Builder(fingerprinting: Fingerprint.of)
         let vocabulary = Module.standard + [try Module.host()]
         let supplying = try Supplying(vocabulary)
         var laid = try await builder.compile(vocabulary, against: [], supplying: supplying)
+        let batches: [[Module]]
 
-        for batch in try batches() {
-            laid += try await builder.compile(batch, against: laid, supplying: supplying)
+        do {
+            batches = try self.batches()
+        } catch {
+            throw Refusal(stage: .load, error: error)
         }
 
-        return try await run(builder.link(laid, supplying: supplying))
+        let image: Image
+
+        do {
+            for batch in batches {
+                laid += try await builder.compile(batch, against: laid, supplying: supplying)
+            }
+
+            image = try builder.link(laid, supplying: supplying)
+        } catch {
+            throw Refusal(stage: .build, error: error)
+        }
+
+        do {
+            return try await run(image)
+        } catch {
+            throw Refusal(stage: .run, error: error)
+        }
     }
 
     // Built from the documents' objects: each is written to bytes and read

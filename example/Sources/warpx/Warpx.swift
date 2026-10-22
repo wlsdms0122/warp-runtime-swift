@@ -64,6 +64,9 @@ struct Warpx {
         do {
             let direct = try await Run(files: files, entry: entry, arguments: given, store: store, together: together).straight()
             print("answer:\n\(Rendering(direct).text())")
+        } catch let refusal as Refusal {
+            print(refusal)
+            exit(1)
         } catch {
             print("refused(\(type(of: error))): \(error)")
             exit(1)
