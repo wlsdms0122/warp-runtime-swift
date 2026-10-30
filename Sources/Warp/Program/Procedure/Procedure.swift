@@ -1,0 +1,77 @@
+//
+//  Procedure.swift
+//  Warp
+//
+//  Created by JSilver on 8/8/26.
+//
+
+import Foundation
+
+// A declaration: what it is sent, what it returns, and how it does that.
+//
+// It has no name of its own. A procedure's name is the key it is declared under
+// in its `Module`, the same way a symbol's name is not stored inside the
+// function it names. A run names which one it starts from, so every
+// declaration is equally a procedure and none of them is the procedure.
+//
+// A signature and an implementation, and nothing else. The implementation is a
+// body of statements or native code, and that axis is the only thing separating
+// one a document wrote from one the host installed. One name table, one lookup
+// order.
+public struct Procedure: Sendable {
+    // MARK: - Property
+    public let signature: Signature
+    public let implementation: Implementation
+
+    // Who may name this declaration: its own document, the link, or the host
+    // as well. `internal` where the declaration said nothing.
+    public let access: Access
+
+    public var body: Body { implementation.body ?? [] }
+
+    // MARK: - Initializer
+    public init(
+        access: Access = .internal,
+        signature: Signature = Signature(),
+        implementation: Implementation
+    ) {
+        self.access = access
+        self.signature = signature
+        self.implementation = implementation
+    }
+
+    // A procedure written in the language. The common case, and the one a
+    // document can spell.
+    public init(
+        access: Access = .internal,
+        signature: Signature = Signature(),
+        body: Body
+    ) {
+        self.init(
+            access: access,
+            signature: signature,
+            implementation: .body(body)
+        )
+    }
+
+    // MARK: - Public
+    // The same declaration under another signature: a member's signature
+    // read under its head's bounds.
+    func with(signature: Signature) -> Procedure {
+        Procedure(
+            access: access,
+            signature: signature,
+            implementation: implementation
+        )
+    }
+
+    public func with(access: Access) -> Procedure {
+        Procedure(
+            access: access,
+            signature: signature,
+            implementation: implementation
+        )
+    }
+
+    // MARK: - Private
+}

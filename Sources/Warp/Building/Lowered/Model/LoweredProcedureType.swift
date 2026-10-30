@@ -1,0 +1,47 @@
+//
+//  LoweredProcedureType.swift
+//  Warp
+//
+//  Created by JSilver on 10/11/26.
+//
+
+import Foundation
+
+// A procedure type as the run reads it: the types it is applied with, in
+// position order, its return type, and what may come out of it when the work
+// goes wrong. The lowering of a
+// `ProcedureType`, so a slot that writes no signature writes none of them.
+struct LoweredProcedureType: Sendable, Equatable {
+    // MARK: - Property
+    let parameters: [LoweredType]
+    let returns: LoweredType
+    let failing: Failing
+
+    // MARK: - Initializer
+    init(parameters: [LoweredType], returns: LoweredType, failing: Failing) {
+        self.parameters = parameters
+        self.returns = returns
+        self.failing = failing
+    }
+
+    // MARK: - Public
+    // The same type with every part rewritten.
+    func map(_ part: (LoweredType) throws -> LoweredType) rethrows -> LoweredProcedureType {
+        LoweredProcedureType(parameters: try parameters.map(part), returns: try part(returns), failing: failing)
+    }
+
+    // The same type failing with `failing` instead.
+    func with(failing: Failing) -> LoweredProcedureType {
+        LoweredProcedureType(parameters: parameters, returns: returns, failing: failing)
+    }
+
+    // Two readings of one procedure type: the same positions and return type,
+    // failing with what either may. Nil where the two take or return apart.
+    func joined(_ other: LoweredProcedureType) -> LoweredProcedureType? {
+        guard parameters == other.parameters, returns == other.returns else { return nil }
+
+        return with(failing: failing.joined(other.failing))
+    }
+
+    // MARK: - Private
+}

@@ -1,0 +1,25 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+
+(struct App.Account
+  (field balance Int))
+
+(procedure App.read
+  (parameter account (type App.Account))
+  (returns Int)
+  (body
+    (return (path account (field balance)))))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let account (type App.Account) (struct (field balance 1)))
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (call App.read account)))))
+    (return seen)))

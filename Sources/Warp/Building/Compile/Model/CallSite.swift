@@ -1,0 +1,47 @@
+//
+//  CallSite.swift
+//  Warp
+//
+//  Created by JSilver on 8/16/26.
+//
+
+import Foundation
+
+// A call plus where it was written. The place exists only to make a refusal
+// one an author can act on: a name that did not resolve, said without the
+// path to the statement holding it, sends the author searching the whole
+// document.
+struct CallSite: Sendable {
+    // MARK: - Property
+    let call: Call
+    let place: Place
+
+    // What each operand held where this was written, as one type. The walk's
+    // own results, carried so the check never walks a body a second time for
+    // them. A call's arguments are mostly references, so without these the
+    // types a declaration carries would only ever be checked against
+    // literals. By position, the order the arguments were written in. These
+    // fill the callee's type parameters, so a struct literal read at one,
+    // which fills nothing, holds nothing here and its shape says the rest.
+    let readings: [LoweredType]
+
+    // What an operand that is a list or dictionary literal holds part by part, by
+    // position, where its reading does not say.
+    let shapes: [Int: LiteralShape]
+
+    // MARK: - Initializer
+    init(
+        call: Call,
+        place: Place,
+        readings: [LoweredType],
+        shapes: [Int: LiteralShape]
+    ) {
+        self.call = call
+        self.place = place
+        self.readings = readings
+        self.shapes = shapes
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}

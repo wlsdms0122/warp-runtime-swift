@@ -1,0 +1,19 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+
+(struct App.Data
+  (field a Int))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let data (type App.Data) (struct (field a 1)))
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (path data (field a))))))
+    (return seen)))

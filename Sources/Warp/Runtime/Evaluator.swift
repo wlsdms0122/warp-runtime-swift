@@ -1,0 +1,1100 @@
+//
+//  Evaluator.swift
+//  Warp
+//
+//  Created by JSilver on 10/1/26.
+//
+
+import Foundation
+
+// One evaluator over the lowered code of one table: a run of an image, and a
+// fold, which reaches it through `read`.
+struct Evaluator: Sendable {
+    // The row a call through a contract reaches: the spelling of the
+    // contract's procedure it is reached through, the call laid for it, what
+    // fills its type parameters, and the value standing first where the
+    // choosing read it.
+    struct Picked {
+        // MARK: - Property
+        let spelling: Name
+        let call: PlacedCall
+        let row: Int
+        let types: [Name: LoweredType]
+        let first: Value?
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // MARK: - Property
+    let observer: (any ExecutionObserver)?
+    let environment: (any Environment)?
+
+    // The linked table the bodies run against.
+    let linked: [Linked]
+
+    // What the numbers in those bodies stand for.
+    let resolving: Resolving
+
+    // What a closure the run makes is spelled with, by the origin its row
+    // says.
+    let naming: [Closure.Document]
+
+    // The types the link declared, by row. Every door and every cast reads
+    // it.
+    let loweredTypes: LoweredTypeTable
+
+    // One box per module variable, made when the run starts, by the document
+    // that declared it, in the order its frame reads them.
+    let boxes: [[Handle]]
+
+    // The rows satisfying each contract's procedure, by the procedure's
+    // spelling and the conforming type, for a call through a contract the
+    // link has not laid out yet: what a build folding before the link knows
+    // from the claims standing so far. Empty for a run of an image, whose
+    // calls the link laid out.
+    let witnesses: [Name: [Name: Int]]
+
+    // What each contract's procedure declares, by the spelling a call
+    // through the contract writes: what the build judged such a call
+    // against, `Self` standing.
+    let contractProcedures: [Name: LoweredContractProcedure]
+
+    // MARK: - Initializer
+    // A run of an image: its table, relocated, and a box for each variable
+    // its documents declared.
+    init(
+        _ image: Image,
+        observer: (any ExecutionObserver)?,
+        environment: (any Environment)?
+    ) {
+        self.init(
+            observer: observer,
+            environment: environment,
+            linked: image.linked,
+            resolving: .rows,
+            naming: image.naming,
+            loweredTypes: image.loweredTypes,
+            boxes: image.variables.map { started in
+                started.map { name, value in Handle(name, value) }
+            },
+            contractProcedures: image.contractProcedures
+        )
+    }
+
+    init(
+        observer: (any ExecutionObserver)? = nil,
+        environment: (any Environment)? = nil,
+        linked: [Linked],
+        resolving: Resolving,
+        naming: [Closure.Document],
+        loweredTypes: LoweredTypeTable,
+        boxes: [[Handle]] = [],
+        witnesses: [Name: [Name: Int]] = [:],
+        contractProcedures: [Name: LoweredContractProcedure] = [:]
+    ) {
+        self.observer = observer
+        self.environment = environment
+        self.linked = linked
+        self.resolving = resolving
+        self.naming = naming
+        self.loweredTypes = loweredTypes
+        self.boxes = boxes
+        self.witnesses = witnesses
+        self.contractProcedures = contractProcedures
+    }
+
+    // MARK: - Public
+    // A run starting from an entry, its arguments by name, which cross the
+    // door. What the entry returns the build held to the `returns` it
+    // declares, so it reaches the host as it is.
+    func run(_ entry: Linked, arguments: [Name: Value]) async throws -> Value {
+        try await invoke(entry, arguments: try entry.settle(arguments, in: loweredTypes), at: Trace()).dropped
+    }
+
+    // Calling a closure a procedure holds. What may be called is what the
+    // build proved callable. The arguments are handed by position, every
+    // position given, and are values from outside, each crossing the door
+    // at the closure's own declaration, its type parameters read as the
+    // closure holds them. Only a native procedure calls one, inside the run,
+    // so what it returns goes back to that procedure as it came.
+    func call(
+        _ closure: Closure,
+        handing arguments: [Value],
+        at trace: Trace
+    ) async throws -> Value {
+        let (linked, types) = try row(of: closure)
+
+        return try await invoke(
+            closure,
+            as: linked,
+            reading: types,
+            given: try linked.settle(outside: arguments, filled: types, in: loweredTypes).values,
+            holding: [],
+            at: trace
+        )
+    }
+
+    // One code read against one frame, for a caller outside a run: what a
+    // constant folds to. It is the evaluation a body runs, so
+    // what a constant may hold and what a body may hold are one question.
+    func read(_ code: Operation, in activation: Activation) async throws -> Value {
+        var activation = activation
+
+        return try await evaluate(code, in: &activation, at: Trace())
+    }
+
+    // Sending a procedure a procedure declared it sends. The row the send reaches is
+    // numbered by the sender's document, the same as one written in a body, and
+    // the arguments, values made by a native procedure, which the host
+    // implements, come in through the door at the callee's slots. What it
+    // returns goes back to the sender, inside the run, as it came.
+    func send(
+        _ sending: Sent,
+        from origin: Int,
+        handing values: [Value],
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[try row(sending.row, from: origin)]
+
+        return try await invoke(
+            callee,
+            arguments: try callee.settle(outside: values, in: loweredTypes),
+            at: trace.appending(callee.hop)
+        )
+    }
+
+    // MARK: - Private
+    // A body run as a procedure: what it returns is caught here. The build
+    // held every way out to what the body declares, so it is handed on as it
+    // came. A body is reached three ways, and each makes its frame in one
+    // place that ends here: a run starting, a written procedure being called,
+    // and a closure being invoked.
+    private func invoke(
+        _ body: LoweredBody,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let returned: Value
+
+        // A body returns through `return`, so one that reaches its end
+        // returns null.
+        do {
+            try await perform(body.instructions, in: &activation, at: trace)
+
+            returned = .null
+        } catch let Leaving.procedure(value) {
+            // A closure is a procedure, so this is also what stops a `return`
+            // written inside one from returning for the procedure around it.
+            returned = value
+        } catch is Leaving {
+            // A loop is inside one body, so one reaching here named a loop no
+            // body around it opened. A document is held to naming one the
+            // validator can see; an object carries the lowered body and not
+            // the document, so what is read back out of a cache never stood in
+            // front of that judge.
+            //
+            // Refused here rather than where a caller happens to stand,
+            // because what a frame does at its edge is this function's. Going
+            // on would let a loop further out take a leave that was never
+            // about it, which reads as a result rather than as a refusal.
+            throw ExecutionError("a leave reached the frame it started in, and nothing there takes one")
+        }
+
+        return returned
+    }
+
+    // Instructions in order, each landing its value in the slot it binds.
+    private func perform(
+        _ instructions: [Instruction],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws {
+        // The cancellation check sits at sequence entry, not only per statement:
+        // an empty body inside a loop round must still observe cancellation, or
+        // the host's one lever against a runaway loop silently stops working.
+        try Task.checkCancellation()
+
+        for instruction in instructions {
+            try Task.checkCancellation()
+
+            let result = try await run(instruction, in: &activation, at: trace)
+
+            switch instruction.binding {
+            case let .bind(slot)?:
+                activation.cells[slot] = .value(result)
+
+            // A new box, so a variable declared inside a nested body shadows rather
+            // than writes an outer one of the same name.
+            case let .declare(slot)?:
+                activation.cells[slot] = .hold(Handle(activation.frame.names[slot], result))
+
+            // A write lands in a box the enclosing bodies also hold.
+            case let .assign(address)?:
+                guard case let .hold(handle) = activation.cells[address.slot] else {
+                    throw ExecutionError(
+                        "'\(activation.spelled(address).rendered)' writes a name that is not a variable here"
+                    )
+                }
+
+                try handle.write(result, at: try activation.projections(of: address))
+
+            // A nameless statement ran, and its value is dropped, which is
+            // what leaving the name off said.
+            case nil:
+                break
+            }
+        }
+    }
+
+    private func run(
+        _ instruction: Instruction,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let inside = trace.appending(.statement(instruction.label))
+
+        await observer?.statementStarted(at: inside)
+
+        do {
+            let result = try await evaluate(instruction.code, in: &activation, at: inside)
+
+            // What a statement made is handed to the host, out of the run.
+            await observer?.statementCompleted(at: inside, result: result.dropped)
+
+            return result
+        } catch let leaving as Leaving {
+            throw leaving
+        } catch {
+            let refused = refusal(error, at: inside)
+
+            await observer?.statementFailed(at: inside, error: refused)
+
+            throw refused
+        }
+    }
+
+    // A refusal leaving a statement takes that statement's place with it, unless
+    // it already carries one: the innermost is where the mistake is, and every
+    // statement it passes through on the way out is only where the run was.
+    private func refusal(_ error: any Error, at trace: Trace) -> any Error {
+        guard let refused = error as? any WarpError, refused.trace == nil else { return error }
+
+        return refused.tracing(trace)
+    }
+
+    // The evaluator: every operation a body carries.
+    private func evaluate(
+        _ code: Operation,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        switch code {
+        case let .literal(value):
+            return value
+
+        case let .local(address):
+            return try activation.value(at: address)
+
+        // Making a closure runs nothing: it is the capture, and the capture is
+        // these cells and the types this body holds.
+        case let .closure(number, captures):
+            let row = linked[try self.row(number, from: activation.origin)]
+
+            guard let written = row.closure else {
+                throw ExecutionError("a closure stands on a row no declaration wrote")
+            }
+
+            guard naming.indices.contains(row.origin) else {
+                throw ExecutionError("a closure stands in a document this run was not told of")
+            }
+
+            return .procedure(
+                Closure(
+                    writer: Closure.Writer(document: naming[row.origin], declaration: written.by),
+                    nth: written.nth,
+                    resolution: .resolved(row, types: activation.types),
+                    captured: captures.map { outer, inner in (slot: inner, cell: activation.cells[outer]) }
+                )
+            )
+
+        case let .array(elements):
+            var values: [Value] = []
+
+            for element in elements {
+                values.append(try await evaluate(element, in: &activation, at: trace))
+            }
+
+            return .array(values)
+
+        case let .struct(held):
+            var values: [Value] = []
+            values.reserveCapacity(held.fields.count)
+
+            for field in held.fields {
+                values.append(try await evaluate(field, in: &activation, at: trace))
+            }
+
+            return .struct(Struct(layout: held.layout, values: values))
+
+        // Each entry is made in the order written, the key before its value,
+        // so a key written twice holds the later value.
+        case let .dictionary(entries):
+            var held = Value.Dictionary([:])
+
+            for entry in entries {
+                let key = try await evaluate(entry.key, in: &activation, at: trace)
+
+                held = held.writing(key: key, with: try await evaluate(entry.value, in: &activation, at: trace))
+            }
+
+            return .dictionary(held)
+
+        // The run's whole share of a cast: the build already decided what every
+        // dot after this means, and the one thing it could not know is what
+        // actually arrived, judged against the type with the body's type
+        // parameters read as what fills them here. A plain cast lets a
+        // mismatch out as `cast_refused`, a failure like any other; an
+        // optional one reads it as null, which is the author saying they
+        // expected it.
+        case let .cast(value, type, optional):
+            return try activation.reading(type).reading(
+                await evaluate(value, in: &activation, at: trace),
+                optional: optional,
+                in: loweredTypes
+            )
+
+        case let .coerced(value, coercion):
+            return coercion.applied(
+                to: try await evaluate(value, in: &activation, at: trace),
+                filling: activation.reading,
+                in: loweredTypes
+            )
+
+        case let .call(call):
+            return try await self.call(call, in: &activation, at: trace)
+
+        case let .dispatch(dispatch):
+            let picked = try await picked(dispatch, in: &activation, at: trace)
+            let returned = try await call(
+                picked.call,
+                reaching: picked.row,
+                first: picked.first,
+                types: picked.types,
+                in: &activation,
+                at: trace
+            )
+
+            guard case let .existential(existential)? = picked.first else { return returned }
+
+            return try held(returned, through: dispatch, as: picked.spelling, picked: try existential.resolved(), in: activation)
+
+        case let .apply(callee, arguments):
+            return try await apply(callee, arguments: arguments, in: &activation, at: trace)
+
+        // A conditional has no value: the condition chooses a way through the
+        // body, and what an arm keeps it writes to an outer variable.
+        case let .conditional(condition, then, otherwise):
+            let take = try bool(try await evaluate(condition, in: &activation, at: trace))
+
+            if let taken = take ? then : otherwise {
+                try await perform(taken, in: &activation, at: trace)
+            }
+
+            return .null
+
+        case let .loop(condition, body, round):
+            try await loop(while: condition, body: body, round: round, in: &activation, at: trace)
+
+            return .null
+
+        // A try has no value: what either way keeps it writes to an
+        // outer variable.
+        case let .try(body, `catch`, failure):
+            try await `try`(body, catch: `catch`, failure: failure, in: &activation, at: trace)
+
+            return .null
+
+        // An unwrap with a `then` has no value: `then` reads the payload
+        // under the statement's name. With no `then` it gives the payload for
+        // the statement to bind, since its `else` leaves.
+        case let .unwrap(read, then, otherwise, payload):
+            guard let held = try await evaluate(read, in: &activation, at: trace).payload else {
+                if let otherwise {
+                    try await perform(otherwise, in: &activation, at: trace)
+                }
+
+                return .null
+            }
+
+            guard let then else { return held }
+
+            if let payload {
+                activation.cells[payload] = .value(held)
+            }
+
+            try await perform(then, in: &activation, at: trace)
+
+            return .null
+
+        // Nothing comes back, so this has no value. What it carries
+        // is worked out here, where the names it reads are still in scope.
+        case let .leave(.procedure(returned)):
+            var carried = Value.null
+
+            if let returned {
+                carried = try await evaluate(returned, in: &activation, at: trace)
+            }
+
+            throw Leaving.procedure(carried)
+
+        case let .leave(.loop(target)):
+            throw Leaving.loop(target)
+
+        case let .leave(.round(target)):
+            throw Leaving.round(target)
+        }
+    }
+
+    // One lookup, because there is one table. What happens is decided by how
+    // the row is implemented, not by which container it was found in.
+    // What fills the callee's type parameters is what the call hands, read in
+    // the caller's body.
+    private func call(
+        _ call: CallOperation,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let row = try row(call.placed.procedure, from: activation.origin)
+        let types = Dictionary(
+            zip(linked[row].typeParameters, call.types.map { type in activation.reading(type) }),
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        return try await self.call(call.placed, reaching: row, types: types, in: &activation, at: trace)
+    }
+
+    // A placed call, its row found and what fills the callee's type
+    // parameters read: from what a named call hands, or by a dispatch off the
+    // type that picked the row.
+    private func call(
+        _ call: PlacedCall,
+        reaching row: Int,
+        first: Value? = nil,
+        types filled: [Name: LoweredType],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let callee = linked[row]
+        var types = filled
+        let opened: Bool
+        let returned: Value
+
+        switch callee.implementation {
+        case let .native(.query(query), _):
+            // A variable handed in place is read as what it holds now, since
+            // nothing here writes it.
+            var values = try await given(call, to: callee, first: first, in: &activation, at: trace)
+
+            for (position, handle) in try holds(call.handed, of: callee, first: first, in: activation) {
+                values[position] = try handle.value()
+            }
+
+            opened = try opening(&values, filling: &types, of: callee)
+            returned = try await evaluate(query, of: callee, arguments: ArgumentList(values: values), at: trace)
+
+        case let .native(.effect(effect), _):
+            let holds = try holds(call.handed, of: callee, first: first, in: activation)
+            var values = try await given(call, to: callee, first: first, in: &activation, at: trace)
+
+            opened = try opening(&values, filling: &types, of: callee)
+            returned = try await run(effect, of: callee, arguments: ArgumentList(values: values), holds: holds, trace: trace)
+
+        case let .body(body, frame):
+            let holds = try holds(call.handed, of: callee, first: first, in: activation)
+            var values = try await given(call, to: callee, first: first, in: &activation, at: trace)
+
+            opened = try opening(&values, filling: &types, of: callee)
+
+            let arguments = ArgumentList(values: values, types: types)
+
+            returned = try await invoke(
+                callee,
+                running: body,
+                in: frame,
+                arguments: arguments,
+                holding: holds,
+                at: trace.appending(callee.hop)
+            )
+        }
+
+        guard opened else { return returned }
+
+        return held(returned, returning: callee.returns, handed: filled, ran: types)
+    }
+
+    // Calling a value. The body runs in the cells the closure captured and not
+    // in the caller's: that is what lexical scope means, and it is the reason a
+    // closure is worth passing at all.
+    //
+    // A place the build found handed in place is the caller's hold where the
+    // closure's slot takes one, made before any argument is read the way a
+    // call to a declaration makes its holds, and is read as a value where the
+    // slot takes a value. The arguments are handed in as they were read: the
+    // build held each to the parameter the slot's procedure type writes, and
+    // held whatever fills the slot to take each of those parameters.
+    private func apply(
+        _ callee: Operation,
+        arguments: [Argument],
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Value {
+        let value = try await evaluate(callee, in: &activation, at: trace)
+
+        guard case let .procedure(closure) = value else {
+            throw ExecutionError(
+                "this call names \(value.nominal), and only a procedure can be called"
+            )
+        }
+
+        let (linked, types) = try row(of: closure)
+
+        try linked.refuseCount(arguments.count)
+
+        let handed = arguments.enumerated().compactMap { position, argument -> PlacedCall.Handed? in
+            guard
+                case let .reference(address) = argument,
+                linked.slots.indices.contains(position),
+                linked.slots[position].type.isInout
+            else { return nil }
+
+            return PlacedCall.Handed(position: position, address: address)
+        }
+        let holds = try holds(handed, of: linked, first: nil, in: activation)
+
+        // A value carries no names, so the arguments travel by position, in
+        // the order they were written, and land in the slots in that order.
+        var given: [Value?] = []
+
+        for (position, argument) in arguments.enumerated() {
+            switch argument {
+            case let .value(operation):
+                given.append(try await evaluate(operation, in: &activation, at: trace))
+
+            case let .reference(address):
+                given.append(
+                    handed.contains { held in held.position == position } ? nil : try activation.value(at: address)
+                )
+            }
+        }
+
+        return try await invoke(closure, as: linked, reading: types, given: given, holding: holds, at: trace)
+    }
+
+    // The one way a closure is called: the captured cells in their slots, the
+    // arguments in theirs as the caller has them, one for each, whatever the
+    // call handed in place held as a box, and the body run in the frame
+    // that was just made. The row and the types are the ones `row(of:)`
+    // returned.
+    //
+    // Making the frame and running the body in it are one act here, so no
+    // caller holds a frame it has not run the body in.
+    private func invoke(
+        _ closure: Closure,
+        as linked: Linked,
+        reading types: [Name: LoweredType],
+        given arguments: [Value?],
+        holding holds: [(position: Int, handle: Handle)],
+        at trace: Trace
+    ) async throws -> Value {
+        guard case let .body(body, frame) = linked.implementation else {
+            throw ExecutionError("a closure is a body, and this one is native")
+        }
+
+        var activation = try self.activation(of: linked, in: frame, types: types)
+
+        for (slot, cell) in closure.captured {
+            activation.cells[slot] = cell
+        }
+
+        for (position, handle) in holds {
+            activation.cells[frame.parameters[position]] = .hold(handle)
+        }
+
+        for (position, value) in arguments.enumerated() {
+            guard let value else { continue }
+
+            activation.cells[frame.parameters[position]] = .value(value)
+        }
+
+        return try await invoke(body, in: &activation, at: trace.appending(linked.hop))
+    }
+
+    // A row called with its arguments and nothing handed in place:
+    // what a send reaches and what a run starts from. A query returns
+    // through its own door, an effect runs, and a body runs on a frame of
+    // its own.
+    private func invoke(
+        _ callee: Linked,
+        arguments: ArgumentList,
+        at trace: Trace
+    ) async throws -> Value {
+        switch callee.implementation {
+        case let .native(.query(query), _):
+            return try await evaluate(query, of: callee, arguments: arguments, at: trace)
+
+        case let .native(.effect(effect), _):
+            return try await run(effect, of: callee, arguments: arguments, holds: [], trace: trace)
+
+        case let .body(body, frame):
+            return try await invoke(
+                callee,
+                running: body,
+                in: frame,
+                arguments: arguments,
+                holding: [],
+                at: trace
+            )
+        }
+    }
+
+    // The one way a written procedure is called: its frame, the arguments
+    // in their slots, whatever the call handed in place held as a
+    // box, and the body run in that frame.
+    private func invoke(
+        _ callee: Linked,
+        running body: LoweredBody,
+        in frame: Frame,
+        arguments: ArgumentList,
+        holding holds: [(position: Int, handle: Handle)],
+        at trace: Trace
+    ) async throws -> Value {
+        var activation = try self.activation(of: callee, in: frame, types: arguments.types)
+
+        // A parameter handed in place takes no value: it takes a hold on the
+        // caller's variable, and what the hold reaches is read only where the
+        // body reads it.
+        for (position, handle) in holds {
+            activation.cells[frame.parameters[position]] = .hold(handle)
+        }
+
+        for (position, value) in arguments.values.enumerated() {
+            guard let value else { continue }
+
+            activation.cells[frame.parameters[position]] = .value(value)
+        }
+
+        return try await invoke(body, in: &activation, at: trace)
+    }
+
+    private func loop(
+        while condition: Operation,
+        body: [Instruction],
+        round: Int?,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws {
+        let name = round.map { round in activation.frame.names[round] }
+        var index = 0
+
+        while true {
+            // The condition reads the state before the round it would start.
+            if let round {
+                activation.cells[round] = .value(.struct(Struct(name: TypeSpelling.round, [Prelude.index: .int(index)])))
+            }
+
+            guard try bool(try await evaluate(condition, in: &activation, at: trace)) else { return }
+
+            do {
+                try await perform(body, in: &activation, at: trace.appending(.round(index)))
+            } catch let leaving as Leaving where leaving.claimed(by: name) {
+                guard case .round = leaving else { return }
+            }
+
+            index += 1
+        }
+    }
+
+    private func `try`(
+        _ body: [Instruction],
+        `catch`: [Instruction],
+        failure: Int?,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws {
+        do {
+            try await perform(body, in: &activation, at: trace)
+        } catch {
+            guard !Task.isCancelled else { throw error }
+
+            // An author mistake passes through: a catch is for what the world
+            // did, not for what the procedure says.
+            guard let recoverable = error as? any RecoverableFailure else { throw error }
+
+            // While the catch runs, the failure is a value under the declared
+            // name, where the try bound one. What a failure carries is the
+            // failing procedure's, a value from outside, so the payload comes
+            // in through the door at the envelope's type.
+            if let failure {
+                activation.cells[failure] = .value(
+                    try loweredTypes.prelude(TypeSpelling.failure).settling(
+                        outside: recoverable.payload,
+                        at: "'\(activation.frame.names[failure])'",
+                        in: loweredTypes
+                    )
+                )
+            }
+
+            await observer?.failureCaught(
+                name: failure.map { failure in activation.frame.names[failure].spelling },
+                error: error
+            )
+
+            try await perform(`catch`, in: &activation, at: trace)
+        }
+    }
+
+    // The frame a row runs in, with the module variables it reads in place.
+    private func activation(of callee: Linked, in frame: Frame, types: [Name: LoweredType]) throws -> Activation {
+        var activation = Activation(frame, of: callee.origin, types: types, in: loweredTypes)
+
+        guard !frame.variables.isEmpty else { return activation }
+
+        guard boxes.indices.contains(callee.origin) else {
+            throw ExecutionError("'\(callee.rendered)' reads its document's variables, and this run holds none")
+        }
+
+        let held = boxes[callee.origin]
+
+        for (variable, slot) in frame.variables {
+            activation.cells[slot] = .hold(held[variable])
+        }
+
+        return activation
+    }
+
+    // The holds a call hands in place, by parameter position: the caller's
+    // box, seen through the path the argument wrote. Every write the callee
+    // makes lands in that box as it is made, so a call that fails after
+    // writing has written.
+    // A row a call through a contract picked by the type a box holds takes
+    // the box first as that type's: it reads the value held, and a whole value
+    // it writes is held beside the type again.
+    private func holds(
+        _ handed: [PlacedCall.Handed],
+        of callee: Linked,
+        first: Value?,
+        in activation: Activation
+    ) throws -> [(position: Int, handle: Handle)] {
+        try handed.map { handed in
+            guard case let .hold(handle) = activation.cells[handed.address.slot] else {
+                throw ExecutionError(
+                    "'\(callee.rendered)' takes '\(callee.slots[handed.position].name)' in place,"
+                        + " and '\(activation.frame.names[handed.address.slot])' is not a variable here"
+                )
+            }
+
+            let extended = handle.extended(by: try activation.projections(of: handed.address))
+
+            guard handed.position == 0, case let .existential(existential)? = first else {
+                return (handed.position, extended)
+            }
+
+            return (handed.position, extended.opened(as: try existential.resolved()))
+        }
+    }
+
+    // Which row a call through a contract reaches, and what fills the row's
+    // type parameters. The name of the type that fills `Self` is the whole of
+    // the choosing: the link gathered every type whose member satisfies this
+    // procedure and lowered a call for each, so nothing is resolved here. A
+    // reading of a contract is read as the type the value standing first
+    // holds. A value holding none, as one a door handed at a bounded
+    // parameter it left standing, is read as the type it is an instance of.
+    // What the choosing read stands first in the call, as it was read.
+    private func picked(
+        _ dispatch: DispatchOperation,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> Picked {
+        let spelling = dispatch.procedure.spelled(under: dispatch.contract)
+        var positions = dispatch.types.map { type in activation.reading(type) }
+        let name: Name
+        var first: Value?
+
+        if let named = positions[0].nominal(in: loweredTypes) {
+            name = named
+        } else {
+            let standing: Value
+
+            switch dispatch.first {
+            case let .value(operation):
+                standing = try await evaluate(operation, in: &activation, at: trace)
+
+            case let .reference(address):
+                standing = try activation.value(at: address)
+            }
+
+            first = standing
+
+            if
+                case let .existential(existential) = standing,
+                case let held = try existential.resolved(),
+                let named = held.nominal(in: loweredTypes)
+            {
+                positions[0] = held
+                name = named
+            } else {
+                positions[0] = LoweredType(of: standing, in: loweredTypes)
+                name = standing.nominal
+            }
+        }
+
+        if let call = dispatch.calls[name] {
+            let row = try row(call.procedure, from: activation.origin)
+
+            return Picked(spelling: spelling, call: call, row: row, types: types(of: linked[row], reading: positions), first: first)
+        }
+
+        // A call the link has not laid out reaches the row a claim within the
+        // folding document's reach names, placed against it the way the link
+        // would place it.
+        if dispatch.calls.isEmpty, let row = witnesses[spelling]?[name] {
+            let call = try dispatch.call(
+                of: linked[row],
+                at: row,
+                in: loweredTypes,
+                at: .procedure(linked[row].rendered, in: .assembled)
+            )
+
+            return Picked(spelling: spelling, call: call, row: row, types: types(of: linked[row], reading: positions), first: first)
+        }
+
+        // Before the link, what satisfies it is a declaration a claim names in a
+        // document this one stands on, and one anywhere else is not one a
+        // fold may run.
+        let because = dispatch.calls.isEmpty
+            ? ", and no document this one stands on declares that it conforms to '\(dispatch.contract)'"
+            : ", which does not conform to '\(dispatch.contract)'"
+
+        throw ExecutionError("'\(spelling)' is sent to '\(name)'" + because)
+    }
+
+    // What fills the type parameters of a row a call through a contract
+    // picked: what its parameters read the contract's positions as, the
+    // head's parameters among them by what fills `Self`, and each associated
+    // type that gives.
+    private func types(of callee: Linked, reading positions: [LoweredType]) -> [Name: LoweredType] {
+        guard !callee.typeParameters.isEmpty else { return [:] }
+
+        return types(of: callee.signature, over: callee.slots, reading: positions)
+            .filter { label, _ in callee.typeParameters.contains(label) }
+    }
+
+    // What the positions fill the type parameters of a signature with, each
+    // associated type among them.
+    private func types(
+        of signature: Signature,
+        over slots: [Slot],
+        reading positions: [LoweredType]
+    ) -> [Name: LoweredType] {
+        var substitution = Substitution(filling: slots.map(\.type), against: positions, in: loweredTypes)
+        let associated = signature.associatedTypes
+
+        if !associated.isEmpty {
+            substitution.derive(
+                associated,
+                bounds: signature.bounds,
+                said: signature.loweredSameTypes(in: loweredTypes),
+                in: loweredTypes
+            )
+        }
+
+        return substitution.readings.mapValues(\.asHeld)
+    }
+
+    // What a call returns where the run filled a type parameter of what it
+    // called with the type a value read as a contract holds, which the call
+    // handed as the contract: held at the call's reading, what is declared
+    // read by the types the callee ran with.
+    private func held(
+        _ returned: Value,
+        returning declared: LoweredType,
+        handed: [Name: LoweredType],
+        ran: [Name: LoweredType]
+    ) -> Value {
+        declared.filling(handed).holding(
+            returned,
+            readAs: declared,
+            filling: { type in type.filling(ran) },
+            in: loweredTypes
+        )
+    }
+
+    // What a call through a contract returns where the value standing first
+    // held the type that picked the row: held at the call's reading of what
+    // the contract's procedure returns, `Self` read as that type. A return
+    // naming no type parameter reads the same whatever filled them.
+    private func held(
+        _ returned: Value,
+        through dispatch: DispatchOperation,
+        as spelling: Name,
+        picked type: LoweredType,
+        in activation: Activation
+    ) throws -> Value {
+        guard let asked = contractProcedures[spelling] else {
+            throw ExecutionError("'\(spelling)' is called through a contract, and no contract this run reads declares it")
+        }
+
+        guard asked.returns.namesParameter else { return returned }
+
+        let handed = dispatch.types.map { type in activation.reading(type) }
+        var ran = handed
+
+        ran[0] = type
+
+        return held(
+            returned,
+            returning: asked.returns,
+            handed: types(of: asked.signature, over: asked.slots, reading: handed),
+            ran: types(of: asked.signature, over: asked.slots, reading: ran)
+        )
+    }
+
+    // Every argument a call wrote, in position order, so an argument standing
+    // first refuses or fails before one after it is read. A loop rather than
+    // a map, since reading one may run what produced it. A dispatch read the
+    // first to pick the row by the type it holds, so the value it holds
+    // stands there rather than a second reading of the same operand. A
+    // position handed in place holds no value here, since its box is read
+    // through the hold.
+    private func given(
+        _ call: PlacedCall,
+        to callee: Linked,
+        first: Value?,
+        in activation: inout Activation,
+        at trace: Trace
+    ) async throws -> [Value?] {
+        var given: [Value?] = []
+        given.reserveCapacity(call.arguments.count)
+
+        for (position, argument) in call.arguments.enumerated() {
+            let read: Value
+
+            if position == 0, argument != nil, let first {
+                read = first.opened
+            } else if let argument {
+                read = try await evaluate(argument, in: &activation, at: trace)
+            } else {
+                given.append(nil)
+                continue
+            }
+
+            given.append(read)
+        }
+
+        return given
+    }
+
+    // A value read as a contract, standing alone at a type parameter a bound
+    // holds, fills it with the type it holds, and the callee takes the value:
+    // inside a body, the parameter is one type, which the activation holds.
+    // Whether any did.
+    private func opening(
+        _ values: inout [Value?],
+        filling types: inout [Name: LoweredType],
+        of callee: Linked
+    ) throws -> Bool {
+        var opened = false
+
+        for (position, slot) in callee.slots.enumerated() where values.indices.contains(position) {
+            guard
+                case let .parameter(label, bounds) = slot.type,
+                !bounds.isEmpty,
+                case let .existential(existential)? = values[position]
+            else { continue }
+
+            types[label] = try existential.resolved()
+            values[position] = existential.value
+            opened = true
+        }
+
+        return opened
+    }
+
+    private func bool(_ value: Value) throws -> Bool {
+        guard case let .bool(condition) = value else {
+            throw ExecutionError("a condition reads \(value.nominal), expected Bool")
+        }
+
+        return condition
+    }
+
+    // The two protocols a native procedure adopts, what it hands back
+    // settled by the procedure as a value from outside. The procedure's
+    // parameters are its own type, so the call is made where that type has
+    // a name: handing `any Query` to a generic function opens it.
+    private func evaluate<W: Query>(
+        _ query: W,
+        of callee: Linked,
+        arguments: ArgumentList,
+        at trace: Trace
+    ) async throws -> Value {
+        try callee.settling(
+            returned: try await query.evaluate(
+                Question(
+                    arguments: arguments,
+                    of: callee,
+                    evaluator: self,
+                    at: trace
+                )
+            ),
+            in: loweredTypes
+        )
+    }
+
+    private func run<W: Effect>(
+        _ effect: W,
+        of callee: Linked,
+        arguments: ArgumentList,
+        holds: [(position: Int, handle: Handle)],
+        trace: Trace
+    ) async throws -> Value {
+        try callee.settling(
+            returned: try await effect.run(
+                Invocation(
+                    of: callee,
+                    arguments: arguments,
+                    holds: holds,
+                    trace: trace,
+                    evaluator: self
+                )
+            ),
+            in: loweredTypes
+        )
+    }
+
+    // Which row of this table a number written in a body stands for. A number
+    // the link found no row for is a body it lowered without judging: nothing
+    // a run does can resolve it.
+    private func row(_ number: Int, from origin: Int) throws -> Int {
+        guard let row = resolving.row(number, from: origin) else {
+            throw ExecutionError("a call standing at \(number) reaches no row of this link")
+        }
+
+        return row
+    }
+
+    // The row a closure value is a body of, asked before anything reads its
+    // rows: it is numbered by the table of the link that made it.
+    private func row(of closure: Closure) throws -> (row: Linked, types: [Name: LoweredType]) {
+        let resolved = try closure.resolved()
+
+        guard resolved.row.readable(in: loweredTypes) else {
+            throw ExecutionError("this call \(Linked.unreadable)")
+        }
+
+        return resolved
+    }
+}

@@ -1,0 +1,1081 @@
+//
+//  SeparateCompilationTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 9/8/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+import WarpTestSupport
+
+// The boundary between compiling a module graph and linking one.
+//
+// Compiling works out what the documents say on their own, and linking joins
+// what was compiled. What each half may do is what these ask.
+@Suite("What compiling works out and what linking decides")
+struct SeparateCompilationTests {
+    // A fixture that does not hold what a test reads out of it.
+    private struct Unheld: Error, CustomStringConvertible {
+        // MARK: - Property
+        let description: String
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // MARK: - Property
+    private let builder = Builder()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("one graph compiled once runs every entry asked of it")
+    func oneCompileRunsManyEntries() async throws {
+        // Given. Two entries, neither reaching the other.
+        let sut = try Module(
+            procedures: [
+                "App.here": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
+                "App.there": Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(2)))])
+            ]
+        )
+
+        // When. Compiled once, linked once.
+        let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
+
+        // Then. Each run starts where it was asked to.
+        #expect(try await Executor().run(image, entry: "App.here") == .int(1))
+        #expect(try await Executor().run(image, entry: "App.there") == .int(2))
+    }
+
+    @Test("what a document says holds whichever entry a host names")
+    func judgementDoesNotDependOnTheEntry() async throws {
+        // Given. A declaration nothing reaches, calling a procedure nobody declares.
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(access: .public, body: [returning(.literal(.int(1)))]),
+                "App.stray": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [returning(.call(Call(selector: "Nobody.declares")))]
+                )
+            ]
+        )
+
+        // When / Then. Compiling refuses, and no entry was named to refuse it.
+        await #expect {
+            try await compiled([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("sends 'Nobody.declares', which no module in this link declares")
+        }
+    }
+
+    @Test("an entry no module declares is refused by the run and not by the build")
+    func anUnknownEntryIsTheRunsRefusal() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])]
+        )
+
+        let image = try builder.link(try await compiled([sut] + Module.standard), supplying: Supplying(Module.standard))
+
+        // When / Then
+        await #expect {
+            try await Executor().run(image, entry: "App.nowhere")
+        } throws: { error in
+            error is ExecutionError
+                && "\(error)".contains("entry 'App.nowhere' is not declared by any module in this link")
+        }
+    }
+
+    @Test("a document's declarations take a run of rows rather than scattering")
+    func aDocumentTakesABlockOfRows() async throws {
+        // Given. Two documents whose spellings interleave in name order, so a
+        // table sorted by name alone would scatter both.
+        let first = try Module(
+            procedures: [
+                "A.one": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))]),
+                "C.three": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(3)))])
+            ]
+        )
+        let second = try Module(
+            procedures: [
+                "B.two": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(2)))]),
+                "D.four": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(4)))])
+            ]
+        )
+
+        // When
+        let rows = try await Assembled(compiled([first, second])).rows
+
+        // Then. Each document's rows are next to each other, and in name
+        // order inside the run.
+        let ours = try #require(rows["A.one"])
+
+        #expect(rows["C.three"] == ours + 1)
+        #expect(rows["B.two"] == ours + 2)
+        #expect(rows["D.four"] == ours + 3)
+
+    }
+
+    @Test("a body is held to what a declaration in another document says")
+    func aDeclarationCrossesDocuments() async throws {
+        // Given. The bottom document reads its own variable, so what it
+        // returns depends on the run's state and it says nothing of itself;
+        // the middle one says it is const and calls it.
+        let bottom = try Module(
+            variables: ["lowCount": .literal(.int(0))],
+            procedures: [
+                "Low.read": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [returning(.reference([.name("lowCount")]))]
+                )
+            ]
+        )
+        let middle = try Module(
+            procedures: [
+                "Mid.ask": Procedure(
+                    signature: Signature(returns: .int, constness: .const),
+                    body: [returning(.call(Call(selector: "Low.read")))]
+                )
+            ]
+        )
+
+        // When / Then. Handed over with the one that is needed last
+        await #expect {
+            try await compiled([middle, bottom])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("'Mid.ask' is declared const, and it calls 'Low.read'")
+        }
+    }
+
+    @Test("a constant runs a written procedure a document standing before it declared")
+    func aConstantRunsAProcedureOfADocumentBehindIt() async throws {
+        // Given. Two documents, the second holding a constant that calls the
+        // first's written procedure.
+        let callee = try Module(
+            procedures: [
+                "A.answer": Procedure(
+                    signature: Signature(returns: .int, constness: .const),
+                    body: [returning(.literal(.int(7)))]
+                )
+            ]
+        )
+        let asking = try Module(
+            constants: ["held": .call(Call(selector: "A.answer"))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [returning(.reference([.name("held")]))]
+                )
+            ]
+        )
+
+        // When. Handed over with the declaring document last, so the standing
+        // has to put it first for its body to be lowered when the constant
+        // runs.
+        let returned = try await run([asking, callee])
+
+        // Then. The constant is the value the procedure returned.
+        #expect(returned == .int(7))
+    }
+
+    @Test("a document's types take a run of type rows of their own")
+    func aDocumentTakesABlockOfTypeRows() async throws {
+        // Given. A document naming a type another declares, handed over first,
+        // so the rows follow the documents and not what they name.
+        let naming = try Module(
+            types: ["Z.Wraps": .alias(.named("A.Held")), "Z.Also": .alias(.named("A.Held"))],
+            procedures: [
+                entryName: Procedure(access: .public, signature: Signature(returns: .named("Z.Wraps")), body: [returning(.literal(.int(1)))])
+            ]
+        )
+        let held = try Module(types: ["A.Held": .alias(.int)])
+
+        // When
+        let loweredTypes = try await builder.link(compiled([naming, held]), supplying: Supplying(Module.standard)).types.loweredTypes
+
+        // Then. Each document's rows are a run of their own, in name order
+        // inside it, laid down in the order the host handed the documents
+        // over.
+        let row = { (declared: Name) in loweredTypes.labels.firstIndex(of: declared) }
+
+        #expect(try #require(row("Z.Also")) + 1 == #require(row("Z.Wraps")))
+        #expect(try #require(row("Z.Wraps")) < #require(row("A.Held")))
+    }
+
+    @Test("compiling leaves which types conform to a contract to the link")
+    func aContractCallIsFilledAtTheLink() async throws {
+        // Given. A procedure calling through a contract, and two types
+        // conforming to it from a document that procedure never names.
+        let sut = try describing()
+
+        // When. Compiled.
+        let compiled = try await compiled(sut + Module.standard)
+
+        // Then. The call names the contract's procedure and no row.
+        let compiledCall = try dispatch(in: code(of: "App.tell", in: compiled))
+
+        #expect(compiledCall.contract == "App.Describable")
+        #expect(compiledCall.procedure == "describe")
+        #expect(compiledCall.calls.isEmpty)
+
+        // And. Linking fills one call for every type that conforms.
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
+        let linkedCall = try dispatch(in: code(of: "App.tell", in: image))
+
+        #expect(Set(linkedCall.calls.keys) == ["Bank.Account", "Bank.Card"])
+    }
+
+    @Test("a type conforming to a contract from a document the caller never names")
+    func aWitnessOutsideTheCallersReachSatisfies() async throws {
+        // Given / When / Then. Both returned, and the procedure that called them
+        // mentions neither type.
+        #expect(try await run(try describing()) == .array([.string("balance 7"), .string("card 42")]))
+    }
+
+    @Test("a claim a document imports holds for it, however the documents were compiled")
+    func anImportedClaimHoldsForTheDocument() async throws {
+        // Given
+        let (typed, asking, claims, unpointing) = try leaning()
+        let program = try Module(importedClaims: [ClaimPair("Bank.Account", "App.Describable")], procedures: unpointing.procedures)
+
+        // When / Then. The whole graph, and each document on its own however
+        // the host listed them. The import puts the claim's document among
+        // what the program stands on, so it stands before the program.
+        await #expect(throws: Never.self) {
+            try await builder.build([typed, asking, claims, program] + Module.standard)
+        }
+        await #expect(throws: Never.self) {
+            try await incremental([typed, asking, claims, program] + Module.standard)
+        }
+        await #expect(throws: Never.self) {
+            try await incremental([typed, asking, program, claims] + Module.standard)
+        }
+    }
+
+    @Test("a pair no claim within reach declares is refused where the document is compiled")
+    func aPairNoClaimWithinReachDeclaresIsRefusedByTheCompile() async throws {
+        // Given. The same, with the claim standing beside the program and not
+        // imported by it.
+        let (typed, asking, claims, program) = try leaning()
+        let modules = [typed, asking, claims, program] + Module.standard
+
+        // When / Then. Compiled one at a time, the program refuses where it
+        // is compiled, naming the pair, though the claim stands in the list.
+        var compiled: [Compiled] = []
+
+        await #expect {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            }
+        } throws: { error in
+            "\(error)".contains("no claim within reach says 'Bank.Account' conforms to")
+        }
+    }
+
+    @Test("a claim whose member a document standing on it gives refuses at the claim")
+    func aClaimIsBackedWithinItsReach() async throws {
+        // Given. The claim and the member that would satisfy it in two
+        // documents, the member's naming the claim's type and so standing on
+        // the claim's document, which stands on nothing of the member's.
+        let holding = try Module(
+            types: ["Bank.Account": .struct(["balance": .int])],
+            claims: ["Bank.Account": ["App.Describable"]],
+            procedures: ["Bank.nothing": Procedure(body: [])]
+        )
+        let asking = try Module(
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            procedures: ["App.ask": Procedure(body: [])]
+        )
+        let conforming = try Module(
+            members: ["Bank.Account": ["describe"]],
+            procedures: [
+                "Bank.Account.describe": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
+                        returns: .string
+                    ),
+                    body: [returning(.literal(.string("an account")))]
+                )
+            ]
+        )
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .named("Bank.Account")),
+                    body: [
+                        returning(.cast(
+                            .struct(["balance": .literal(.int(7))]),
+                            as: .named("Bank.Account"),
+                            optional: false
+                        ))
+                    ]
+                )
+            ]
+        )
+
+        let modules = [holding, asking, conforming, program] + Module.standard
+
+        // When. Each document compiled against the ones already compiled, in
+        // the order the graph says they stand.
+        var compiled: [Compiled] = []
+
+        // Then. The claim is held to the members within its own document's
+        // reach, compiled one at a time or as a whole.
+        await #expect {
+            for origin in try ModuleGraph(modules).standing {
+                compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+            }
+        } throws: { error in
+            "\(error)".contains("nothing it stands on gives 'Bank.Account' the member 'describe'")
+        }
+        await #expect {
+            try await builder.build(modules)
+        } throws: { error in
+            "\(error)".contains("nothing it stands on gives 'Bank.Account' the member 'describe'")
+        }
+    }
+
+    @Test("a document numbers its calls from itself, and the link resolves them to rows")
+    func aCallCarriesTheDocumentsOwnNumber() async throws {
+        // Given. A document calling a procedure it does not declare.
+        let sut = try calling()
+
+        // When. Compiled.
+        let compiled = try await compiled(sut + Module.standard)
+
+        // Then. The call stands where the caller's imports put it, which is
+        // not the row the graph gave the callee.
+        let number = try called(in: code(of: "B.asks", in: compiled))
+
+        #expect(number == 0)
+        #expect(try number != #require(Assembled(compiled).rows["A.answers"]))
+
+        // And. The link supplies the row.
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
+
+        #expect(try called(in: code(of: "B.asks", in: image)) == image.rows["A.answers"])
+    }
+
+    @Test("what a document lowers to does not move when the link grows")
+    func loweredNumbersDoNotFollowTheGraph() async throws {
+        // Given. The same two documents, compiled once alone and once beside a
+        // third whose declarations sort in front of theirs.
+        let sut = try calling()
+        let ahead = try Module(
+            procedures: [
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
+            ]
+        )
+
+        // When
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
+
+        // Then. The rows moved and the number the body carries did not.
+        #expect(try Assembled(alone).rows["A.answers"] != Assembled(beside).rows["A.answers"])
+        #expect(
+            try called(in: code(of: "B.asks", in: alone))
+                == called(in: code(of: "B.asks", in: beside))
+        )
+    }
+
+    @Test("a document's block is its own, whatever else the link holds")
+    func aDocumentsBlockDoesNotFollowTheGraph() async throws {
+        // Given. The same two documents, compiled once alone and once beside a
+        // third whose declarations sort in front of theirs.
+        let sut = try calling()
+        let ahead = try Module(
+            procedures: [
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
+            ]
+        )
+
+        // When
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
+
+        // Then. The rows moved, and the block the document holds did not: the
+        // same spellings in the same order, and its closures behind them.
+        #expect(try Assembled(alone).rows["B.asks"] != Assembled(beside).rows["B.asks"])
+        #expect(try block(holding: "B.asks", in: alone) == block(holding: "B.asks", in: beside))
+    }
+
+    @Test("a cast carries the number its own document gave the type")
+    func aCastCarriesTheDocumentsOwnTypeNumber() async throws {
+        // Given. A document casting to a type it declares.
+        let sut = try casting()
+
+        // When. Compiled.
+        let compiled = try await compiled(sut + Module.standard)
+
+        // Then. The cast stands on the document's own number.
+        let number = try #require(cast(in: code(of: entryName, in: compiled)).row)
+
+        #expect(number == 0)
+
+        // And. The link supplies the row of its own table.
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
+
+        #expect(
+            try cast(in: code(of: entryName, in: image)).row
+                == image.types.loweredTypes.row(named: "Bank.Account")
+        )
+    }
+
+    @Test("what a document stands on does not move when the link grows")
+    func loweredTypesDoNotFollowTheGraph() async throws {
+        // Given. The same document, compiled once alone and once beside one
+        // whose type takes a row in front of its own.
+        let sut = try casting()
+        let ahead = try Module(
+            types: ["Aaa.Ahead": .struct(["first": .int])],
+            procedures: [
+                "Aaa.first": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))])
+            ]
+        )
+
+        // When
+        let alone = try await compiled(sut + Module.standard)
+        let beside = try await compiled([ahead] + sut + Module.standard)
+
+        // Then. The row moved and the number the cast stands on did not.
+        #expect(
+            try #require(builder.link(alone, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
+                != #require(builder.link(beside, supplying: Supplying(Module.standard)).types.loweredTypes.row(named: "Bank.Account"))
+        )
+        #expect(
+            try cast(in: code(of: entryName, in: alone)).row
+                == cast(in: code(of: entryName, in: beside)).row
+        )
+    }
+
+    @Test("a document compiled against the ones behind it runs the same as the graph")
+    func aDocumentCompilesAgainstWhatIsAlreadyCompiled() async throws {
+        // Given. A document whose constant runs a procedure another declared, and
+        // that procedure's body standing on a type its own document declared, so
+        // running it reads a type as well as a row.
+        let callee = try Module(
+            types: ["A.Held": .struct(["count": .int])],
+            procedures: [
+                "A.answer": Procedure(
+                    signature: Signature(returns: .int, failing: .these(["cast_refused"]), constness: .const),
+                    body: [
+                        Statement(
+                            binding: .constant("held"),
+                            expression: .cast(
+                                .struct(["count": .literal(.int(7))]),
+                                as: .named("A.Held"),
+                                optional: false
+                            )
+                        ),
+                        returning(.reference([.name("held"), .name("count")]))
+                    ]
+                )
+            ]
+        )
+        let asking = try Module(
+            constants: ["held": .call(Call(selector: "A.answer"))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [returning(.reference([.name("held")]))]
+                )
+            ]
+        )
+
+        let modules = [asking, callee] + Module.standard
+
+        // When. Each document compiled on its own, against the ones already
+        // compiled, in the order the graph says they stand.
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        }
+
+        // Then. The image runs to what the whole graph compiled at once
+        // returns.
+        let image = try builder.link(compiled, supplying: Supplying(Module.standard))
+
+        #expect(try await Executor(environment: nil).run(image, arguments: [:]) == .int(7))
+        #expect(try await run(modules, vocabulary: []) == .int(7))
+
+        // And. The two ways of building the accumulator build the documents
+        // the same, name for name and number for number.
+        let whole = try await self.compiled(modules)
+
+        for (position, origin) in try ModuleGraph(modules).standing.enumerated() {
+            let one = compiled[position]
+            let other = whole[origin]
+
+            #expect(one.document == other.document)
+            #expect(one.declared == other.declared)
+            #expect(one.typeNumbering.types == other.typeNumbering.types)
+            #expect(one.variables.map(\.name) == other.variables.map(\.name))
+            #expect(one.table.count == other.table.count)
+        }
+    }
+
+    @Test("a document laid before the one it imports still has its numbers resolved")
+    func aDocumentLaidBeforeWhatItImportsIsResolved() async throws {
+        // Given. A document whose body sends a procedure another document declares.
+        let library = try Module(
+            procedures: [
+                "Lib.twice": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .double)],
+                        returns: .int
+                    ),
+                    body: [returning(.call(Call(selector: "Standard.Math.rounded", arguments: [reference("of")])))]
+                )
+            ]
+        )
+        let compiled = try await builder.compile([library] + Module.standard)
+
+        // When. Laid first, so what it sends stands after it. A host hands
+        // compiled documents over in whatever order it holds them, and nothing
+        // says that order is the standing one.
+        var reordered = compiled
+        reordered.swapAt(0, try #require(compiled.firstIndex { document in
+            document.declared.contains("Lib.twice")
+        }))
+
+        let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
+
+        // Then. Every number it gave reaches a row.
+        #expect(laid.carried.documents[0].named?.allSatisfy { row in row != nil } == true)
+    }
+
+    @Test("a document sending a contract's procedure is laid beside a later one")
+    func aDocumentSendingAContractProcedureIsLaid() async throws {
+        // Given. A contract, a document calling through its spelling, and one
+        // laid after that. A contract's procedure has no row of its own: the
+        // link dispatches the call through the contract, so the document laid
+        // before the last one is missing nothing.
+        let contract = try Module(
+            contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+            procedures: ["App.nothing": Procedure(body: [])]
+        )
+        let leaning = try Module(
+            imports: ["App.Describable", "App.Describable.describe"],
+            types: ["Bank.Account": .struct(["balance": .int])],
+            claims: ["Bank.Account": ["App.Describable"]],
+            members: ["Bank.Account": ["describe"]],
+            procedures: [
+                "Bank.Account.describe": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
+                    body: [returning(.literal(.string("an account")))]
+                ),
+                "Bank.tell": Procedure(
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Account"))], returns: .string),
+                    body: [returning(.call(Call(selector: "App.Describable.describe", arguments: [reference("of")])))]
+                )
+            ]
+        )
+        let after = try Module(procedures: ["After.one": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])])
+
+        // When / Then
+        await #expect(throws: Never.self) {
+            var compiled = try await builder.compile([contract], against: [], supplying: Supplying(Module.standard))
+
+            compiled += try await builder.compile([leaning], against: compiled, supplying: Supplying(Module.standard))
+            compiled += try await builder.compile([after], against: compiled, supplying: Supplying(Module.standard))
+
+            _ = try builder.link(compiled, supplying: Supplying(Module.standard))
+        }
+    }
+
+    @Test("a document laid without what it sends is refused by the spelling")
+    func aDocumentLaidWithoutItsSendsIsRefused() async throws {
+        // Given. A document whose body sends a procedure another declares, laid on
+        // its own. What it numbered reaches nothing.
+        let library = try Module(
+            procedures: [
+                "Lib.twice": Procedure(
+                    signature: Signature(
+                        parameters: [Parameter(name: "of", type: .int)],
+                        returns: .int
+                    ),
+                    body: [returning(.call(Call(selector: "Standard.Numeric.plus", arguments: [reference("of"), reference("of")])))]
+                )
+            ]
+        )
+        let alone = try await builder.compile([library] + Module.standard)
+            .filter { document in document.declared.contains("Lib.twice") }
+
+        // When / Then. The refusal names the spelling, not the number a body
+        // of it happens to carry.
+        #expect {
+            try builder.lay(alone, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("'Standard.Numeric.plus' is sent by this document")
+        }
+    }
+
+    @Test("a call an object stands past what its callee takes is counted where its number is resolved")
+    func aCallStandingTooManyIsCountedWhereItsRowIsKnown() async throws {
+        // Given. A document whose body calls another document's declaration
+        // with two arguments, compiled beside a version of it taking two and
+        // written down as standing on one taking one.
+        let declaring = { (parameters: [Parameter]) in
+            try Module(
+                procedures: [
+                    "Lib.twice": Procedure(
+                        signature: Signature(parameters: parameters, returns: .int),
+                        body: [returning(reference("n"))]
+                    )
+                ]
+            )
+        }
+        let caller = try Module(
+            procedures: [
+                "App.relay": Procedure(
+                    signature: Signature(returns: .int),
+                    body: [returning(.call(Call(selector: "Lib.twice", arguments: [.literal(.int(2)), .literal(.int(3))])))]
+                )
+            ]
+        )
+        let fingerprinting = Builder { value in Fingerprint(Array("\(value)".utf8)) }
+        let compiled = try await fingerprinting.compile([try declaring([Parameter(name: "n", type: .int)])])
+        let wider = try await fingerprinting.compile([
+            try declaring([Parameter(name: "n", type: .int), Parameter(name: "m", type: .int)]),
+            caller
+        ])
+
+        guard case var .dictionary(parts) = try wider[1].object(), let fingerprint = compiled[0].fingerprint else {
+            Issue.record("an object writes what it stands on")
+
+            return
+        }
+
+        parts = parts.writing("dependencies", with: [.bytes(fingerprint.bytes)])
+
+        let read = [compiled[0], try Compiled(written: .dictionary(parts), of: wider[1].identity)]
+
+        // When / Then. The row the call reaches is another document's, so the
+        // reading takes it, and a compile laying it down refuses it before a
+        // fold could run it, as a link does.
+        #expect {
+            try builder.lay(read, supplying: .none)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
+        }
+
+        #expect {
+            try builder.link(read, supplying: .none)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a call stands 2 argument(s) where the 1 its callee declares stand")
+        }
+    }
+
+    @Test("two objects whose types name each other have no order, so the build refuses them")
+    func objectsNamingEachOthersTypesAreRefused() async throws {
+        // Given. Each document compiled beside a counterpart declaring the
+        // name it mentions as `Int`, so each compile stands, and the two
+        // objects laid together name each other's types.
+        let naming = try Module(types: ["App.A": .alias(.array(.named("Lib.B")))])
+        let named = try Module(types: ["Lib.B": .alias(.named("App.A"))])
+        let first = try await builder.compile([naming, try Module(types: ["Lib.B": .alias(.int)])])
+        let second = try await builder.compile([named, try Module(types: ["App.A": .alias(.int)])])
+        let objects = [first[0], second[0]]
+
+        // When / Then. Refused as two documents that need each other, before
+        // any alias is read through the other.
+        #expect {
+            try builder.lay(objects, supplying: .none)
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+
+        #expect {
+            try builder.link(objects, supplying: .none)
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+    }
+
+    @Test("an object's types written to name another object's are held to what stands before it")
+    func objectsWrittenToNameEachOtherAreRefused() async throws {
+        // Given. Two documents declaring a type each, written down and read
+        // back with each type naming the other's.
+        let library = try Module(types: ["Lib.B": .alias(.int)])
+        let program = try Module(
+            types: ["App.A": .alias(.int)],
+            procedures: [entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])]
+        )
+        let compiled = try await builder.compile([library, program] + Module.standard)
+        let standard = Array(compiled[2...])
+        let libraryNaming = try written(compiled[0], standingFor: .array([.int(14), .string("App.A")]))
+        let programNaming = try written(compiled[1], standingFor: .array([.int(14), .string("Lib.B")]))
+
+        // When / Then. One naming what the other declares links and runs, in
+        // whichever order the host hands them over.
+        let image = try builder.link([libraryNaming, compiled[1]] + standard, supplying: Supplying(Module.standard))
+
+        #expect(try await Executor().run(image) == .int(1))
+
+        // And two naming each other are refused.
+        #expect {
+            try builder.link([libraryNaming, programNaming] + standard, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is ModuleGraphError && "\(error)".contains("need each other")
+        }
+    }
+
+    @Test("a claim naming a contract nothing its document stands on declares refuses where it is compiled")
+    func aClaimIsJudgedAgainstWhatItsDocumentStandsOn() async throws {
+        // Given. A document declaring a type and claiming it conforms to a
+        // contract a program declares, which names the type and so stands
+        // after it.
+        let card = try Module(
+            imports: ["App.P"],
+            types: ["Bank.Card": .struct(["last": .string])],
+            claims: ["Bank.Card": ["App.P"]],
+            members: ["Bank.Card": ["show"]],
+            procedures: [
+                "Bank.Card.show": Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "of", type: .named("Bank.Card"))], returns: .string),
+                    body: [returning(.literal(.string("card")))]
+                )
+            ]
+        )
+        let standard = try await builder.compile(Module.standard)
+
+        // When / Then. The claim is held where its document is compiled, and
+        // the contract it names is declared in nothing that document stands
+        // on yet.
+        await #expect {
+            try await builder.compile([card], against: standard, supplying: Supplying(Module.standard))
+        } throws: { error in
+            "\(error)".contains("'App.P' is not a contract this link declares")
+        }
+    }
+
+    @Test("an object whose signature names a type nothing in the link declares links as written, and its run refuses")
+    func anObjectsSignatureNamingNothingLinksAsWritten() async throws {
+        // Given. A document whose declaration takes a type its counterpart
+        // declares, linked without the counterpart.
+        let program = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(parameters: [Parameter(name: "a", type: .named("Lib.B"))], returns: .int),
+                    body: [returning(.literal(.int(1)))]
+                )
+            ]
+        )
+        let compiled = try await builder.compile([program, try Module(types: ["Lib.B": .alias(.int)])])
+
+        // When
+        let image = try builder.link([compiled[0]], supplying: .none)
+
+        // Then
+        await #expect {
+            try await Executor().run(image, entry: entryName, arguments: ["a": .int(1)])
+        } throws: { error in
+            error is ArgumentError && "\(error)".contains("input 'a': declares Never, and nothing is ever that")
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // An object written down and read back with its declared types replaced
+    // by the ones given, as a cache holding a document compiled beside other
+    // counterparts would hand it over.
+    // The object with the type its one declared type stands for, the first
+    // entry of its type table, written as another.
+    private func written(_ object: Compiled, standingFor type: Value) throws -> Compiled {
+        guard case let .dictionary(parts) = try object.object(), case var .array(types) = parts["typeTable"] else {
+            throw Unheld(description: "an object is written as a dictionary of its parts")
+        }
+
+        types[0] = type
+
+        return try Compiled(written: .dictionary(parts.writing("typeTable", with: .array(types))), of: object.identity)
+    }
+
+    // A type, a contract, a claim about the two in a third document, and a
+    // program handing the type where the contract is asked. The program names
+    // the type and the procedure it sends and has no reason to name the third, so
+    // the standing puts the claim on either side of it depending on the order
+    // the host wrote the list in.
+    private func leaning() throws -> (typed: Module, asking: Module, claims: Module, program: Module) {
+        (
+            typed: try Module(
+                types: ["Bank.Account": .struct(["balance": .int])],
+                members: ["Bank.Account": ["describe"]],
+                procedures: [
+                    "Bank.Account.describe": Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
+                            returns: .string
+                        ),
+                        body: [returning(.literal(.string("an account")))]
+                    )
+                ]
+            ),
+            asking: try Module(
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+                procedures: [
+                    "App.tell": Procedure(
+                        signature: Signature(
+                            parameters: [
+                                Parameter(name: "it", type: .parameter(name: "T"))
+                            ],
+                            returns: .string,
+                            bounds: ["T": ["App.Describable"]]
+                        ),
+                        body: [
+                            returning(.call(
+                                Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                            ))
+                        ]
+                    )
+                ]
+            ),
+            claims: try Module(
+                claims: ["Bank.Account": ["App.Describable"]],
+                procedures: ["Glue.nothing": Procedure(body: [])]
+            ),
+            program: try Module(
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .string, failing: .these(["cast_refused"])),
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(
+                                    .struct(["balance": .literal(.int(7))]),
+                                    as: .named("Bank.Account"),
+                                    optional: false
+                                )
+                            ),
+                            returning(.call(Call(selector: "App.tell", arguments: [reference("account")])))
+                        ]
+                    )
+                ]
+            )
+        )
+    }
+
+    // Each document compiled against the ones already compiled, in the order
+    // the graph says they stand.
+    private func incremental(_ modules: [Module]) async throws {
+        var compiled: [Compiled] = []
+
+        for origin in try ModuleGraph(modules).standing {
+            compiled.append(contentsOf: try await builder.compile([modules[origin]], against: compiled, supplying: Supplying(Module.standard)))
+        }
+
+        _ = try builder.link(compiled, supplying: Supplying(Module.standard))
+    }
+
+    private func compiled(_ modules: [Module]) async throws -> [Compiled] {
+        try await builder.compile(modules)
+    }
+
+    // The block a document holds, by a spelling it declares: what it declared
+    // in the order its rows stand, and what each of those rows is called.
+    private func block(
+        holding declared: Name,
+        in compiled: [Compiled]
+    ) throws -> (declared: [Name], rows: [Name]) {
+        let document = try #require(
+            compiled.first { document in document.declared.contains(declared) }
+        )
+
+        return (document.declared, document.table.map(\.label))
+    }
+
+    // The code a declaration's row holds, whichever table it was read out of.
+    private func code(of declared: Name, in compiled: [Compiled]) throws -> LoweredBody {
+        let assembled = try Assembled(compiled)
+
+        guard
+            case let .body(body, _) = try assembled.table[#require(assembled.rows[declared])].judged.implementation
+        else {
+            throw Unheld(description: "'\(declared)' holds no written body")
+        }
+
+        return body
+    }
+
+    private func code(of declared: Name, in image: Image) throws -> LoweredBody {
+        guard case let .body(body, _) = try image.linked[#require(image.rows[declared])].implementation else {
+            throw Unheld(description: "'\(declared)' holds no written body")
+        }
+
+        return body
+    }
+
+    // The type the cast a row's last `return` carries stands on.
+    private func cast(in body: LoweredBody) throws -> LoweredType {
+        guard case let .leave(.procedure(.cast(_, type, _)?))? = body.instructions.last?.code else {
+            throw Unheld(description: "the entry holds no cast")
+        }
+
+        return type
+    }
+
+    // One document declaring a type and casting to it.
+    private func casting() throws -> [Module] {
+        [
+            try Module(
+                types: ["Bank.Account": .struct(["balance": .int])],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .named("Bank.Account"), failing: .these(["cast_refused"])),
+                        body: [
+                            returning(.cast(
+                                .struct(["balance": .literal(.int(7))]),
+                                as: .named("Bank.Account"),
+                                optional: false
+                            ))
+                        ]
+                    )
+                ]
+            )
+        ]
+    }
+
+    // The call through a contract a row's last `return` carries.
+    private func dispatch(in body: LoweredBody) throws -> DispatchOperation {
+        guard case let .leave(.procedure(.dispatch(dispatch)?))? = body.instructions.last?.code else {
+            throw Unheld(description: "'App.tell' holds no call through a contract")
+        }
+
+        return dispatch
+    }
+
+    // Two documents. The first declares the contract and the procedure calling
+    // through it; the second declares the types conforming to it, and the
+    // first names neither of them.
+    private func describing() throws -> [Module] {
+        [
+            try Module(
+                contracts: ["App.Describable": ["describe": Signature(parameters: [Parameter(name: "of", type: .selfType)], returns: .string)]],
+                procedures: [
+                    "App.tell": Procedure(
+                        signature: Signature(
+                            parameters: [
+                                Parameter(name: "it", type: .parameter(name: "T"))
+                            ],
+                            returns: .string,
+                            bounds: ["T": ["App.Describable"]]
+                        ),
+                        body: [
+                            returning(.call(
+                                Call(selector: "App.Describable.describe", arguments: [reference("it")])
+                            ))
+                        ]
+                    )
+                ]
+            ),
+            try Module(
+                types: [
+                    "Bank.Account": .struct(["balance": .int]),
+                    "Bank.Card": .struct(["last": .string])
+                ],
+                claims: [
+                    "Bank.Account": ["App.Describable"],
+                    "Bank.Card": ["App.Describable"]
+                ],
+                members: [
+                    "Bank.Account": ["describe"],
+                    "Bank.Card": ["describe"]
+                ],
+                procedures: [
+                    entryName: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .array(.string), failing: .these(["cast_refused"])),
+                        body: [
+                            Statement(
+                                binding: .constant("account"),
+                                expression: .cast(
+                                    .struct(["balance": .literal(.int(7))]),
+                                    as: .named("Bank.Account"),
+                                    optional: false
+                                )
+                            ),
+                            Statement(
+                                binding: .constant("card"),
+                                expression: .cast(
+                                    .struct(["last": .literal(.string("42"))]),
+                                    as: .named("Bank.Card"),
+                                    optional: false
+                                )
+                            ),
+                            returning(.array([
+                                .call(Call(selector: "App.tell", arguments: [reference("account")])),
+                                .call(Call(selector: "App.tell", arguments: [reference("card")]))
+                            ]))
+                        ]
+                    ),
+                    "Bank.Account.describe": Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .named("Bank.Account"))],
+                            returns: .string
+                        ),
+                        body: [
+                            returning(joined(
+                                literal("balance "),
+                                spelling(.reference([.name("of"), .name("balance")]))
+                            ))
+                        ]
+                    ),
+                    "Bank.Card.describe": Procedure(
+                        signature: Signature(
+                            parameters: [Parameter(name: "of", type: .named("Bank.Card"))],
+                            returns: .string
+                        ),
+                        body: [
+                            returning(joined(
+                                literal("card "),
+                                spelling(.reference([.name("of"), .name("last")]))
+                            ))
+                        ]
+                    )
+                ]
+            )
+        ]
+    }
+
+    // The number the call a row's last `return` carries holds.
+    private func called(in body: LoweredBody) throws -> Int {
+        guard case let .leave(.procedure(.call(call)?))? = body.instructions.last?.code else {
+            throw Unheld(description: "'B.asks' holds no call")
+        }
+
+        return call.placed.procedure
+    }
+
+    // Two documents, the second calling a procedure the first declares.
+    private func calling() throws -> [Module] {
+        [
+            try Module(
+                procedures: [
+                    "A.aaa": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(0)))]),
+                    "A.answers": Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(1)))])
+                ]
+            ),
+            try Module(
+                procedures: [
+                    entryName: Procedure(access: .public, signature: Signature(returns: .int), body: [returning(.call(Call(selector: "B.asks")))]),
+                    "B.asks": Procedure(
+                        signature: Signature(returns: .int),
+                        body: [returning(.call(Call(selector: "A.answers")))]
+                    )
+                ]
+            )
+        ]
+    }
+}

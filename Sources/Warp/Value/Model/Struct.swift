@@ -1,0 +1,122 @@
+//
+//  Struct.swift
+//  Warp
+//
+//  Created by JSilver on 9/4/26.
+//
+
+import Foundation
+
+// Fields at the places a `Layout` puts them. The names live in the layout, so
+// two structs of one layout share one copy of them, and a field is read by
+// finding its place once rather than by carrying its name alongside its value.
+public struct Struct: Sendable, Equatable {
+    // MARK: - Property
+    public let layout: Layout
+
+    // In the layout's order, one value per field.
+    public let values: [Value]
+
+    public var name: Name {
+        layout.name
+    }
+
+    public var names: [Name] {
+        layout.fields
+    }
+
+    public var count: Int {
+        values.count
+    }
+
+    public var isEmpty: Bool {
+        values.isEmpty
+    }
+
+    // Whether this is the marker, an Optional's some of a none.
+    var isMarker: Bool {
+        name == TypeSpelling.marker
+    }
+
+    // Why this struct is no value, or nil where it is one. The marker holds a
+    // none, `null` or a marker, under its one field: one holding a value of a
+    // type would spell a second time the some that value is.
+    var markerRefusal: String? {
+        guard isMarker else { return nil }
+        guard names == [Prelude.markerField], let held = values.first, held.isNone else {
+            return "a \(TypeSpelling.marker) holds null or a \(TypeSpelling.marker) under '\(Prelude.markerField)' and"
+                + " nothing else, so this one is no value"
+        }
+
+        return nil
+    }
+
+    // MARK: - Initializer
+    // A struct of the fields a caller hands in, under a layout of their names.
+    init(name: Name, _ fields: [Name: Value]) {
+        let ordered = fields.map { field in (name: field.key, value: field.value) }
+            .sorted { one, other in one.name < other.name }
+
+        self.layout = Layout(name: name, ordered: ordered.map(\.name))
+        self.values = ordered.map(\.value)
+    }
+
+    // A layout filled from outside, where the values are as many as the
+    // layout names and stand in its order.
+    public init(layout: Layout, checking values: [Value]) throws {
+        guard values.count == layout.fields.count else {
+            throw ValueRefused(
+                "a layout of \(layout.fields.count) fields was handed \(values.count) values"
+            )
+        }
+
+        self.init(layout: layout, values: values)
+    }
+
+    // Values the maker already laid out on the layout.
+    init(layout: Layout, values: [Value]) {
+        assert(layout.fields.count == values.count, "a struct has one value per field its layout names")
+
+        self.layout = layout
+        self.values = values
+    }
+
+    // MARK: - Public
+    public subscript(field: Name) -> Value? {
+        layout.position(of: field).map { place in values[place] }
+    }
+
+    // This struct with one field written. A layout says which fields there
+    // are, so a name it does not hold is not written but refused.
+    public func writing(_ field: Name, with value: Value) throws -> Struct {
+        guard let place = layout.position(of: field) else {
+            throw ValueRefused("\(name) has no field '\(field)'")
+        }
+
+        return writing(at: place, with: value)
+    }
+
+    // The same, at the place the layout puts the field.
+    func writing(at place: Int, with value: Value) -> Struct {
+        var written = values
+        written[place] = value
+
+        return Struct(layout: layout, values: written)
+    }
+
+    // This struct with every value put through `transform`, under the same
+    // layout.
+    public func mapValues(_ transform: (Name, Value) throws -> Value) rethrows -> Struct {
+        Struct(
+            layout: layout,
+            values: try zip(layout.fields, values).map { field, value in try transform(field, value) }
+        )
+    }
+
+    public static func == (lhs: Struct, rhs: Struct) -> Bool {
+        lhs.layout == rhs.layout
+            && zip(lhs.values, rhs.values).allSatisfy { mine, theirs in mine == theirs }
+    }
+
+    // MARK: - Private
+}

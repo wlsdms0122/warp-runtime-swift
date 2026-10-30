@@ -1,0 +1,193 @@
+//
+//  PathParserTests.swift
+//  WarpSyntaxTests
+//
+//  Created by JSilver on 10/1/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+@testable import WarpSyntax
+
+@Suite("A path parses into segments")
+struct PathParserTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a bracketed path parses into index segments")
+    func bracketPathParsesIndexSegments() throws {
+        // Given
+        let sut = PathParser()
+
+        // When
+        let parsed = try sut.parse("items[0].name[${i}]")
+
+        // Then
+        #expect(parsed == [.name("items"), .index(0), .name("name"), .indexRef([.name("i")])])
+    }
+
+    @Test("an integer between brackets is an integer, whatever its size")
+    func aBracketedIntegerIsNoName() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. One no `Int` holds is refused, never read as a name
+        #expect(try sut.parse("d[5]") == [.name("d"), .index(5)])
+        #expect(throws: PathSyntaxError.self) { try sut.parse("d[99999999999999999999]") }
+    }
+
+    @Test("a path between brackets is a level deeper, counted on from the containers around the path's string")
+    func aPathNestsToTheBound() throws {
+        // Given
+        let sut = PathParser()
+        let nested = { (levels: Int, inner: String) in
+            String(repeating: "a[", count: levels) + inner + String(repeating: "]", count: levels)
+        }
+        let around = 100
+        let indexed = "a" + String(repeating: "[0]", count: Value.nestingBound + 1)
+
+        // When / Then. An integer between brackets is no path
+        #expect(try sut.parse(nested(Value.nestingBound, "i")).rendered == nested(Value.nestingBound, "i"))
+        #expect(throws: PathSyntaxError.self) { try sut.parse(nested(Value.nestingBound + 1, "i")) }
+        #expect(try sut.parse(nested(Value.nestingBound - around, "i"), at: around).rendered
+            == nested(Value.nestingBound - around, "i"))
+        #expect(throws: PathSyntaxError.self) { try sut.parse(nested(Value.nestingBound - around + 1, "i"), at: around) }
+        #expect(try sut.parse(indexed, at: Value.nestingBound).rendered == indexed)
+    }
+
+    @Test("an optional dot parses and renders as itself")
+    func optionalDotRoundTrips() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. `?.` marks the segment after it
+        #expect(
+            try sut.parse("task?.name") == [.name("task"), .name("name", optional: true)]
+        )
+        #expect(
+            try sut.parse("a.b?.c[0]?.d")
+                == [.name("a"), .name("b"), .name("c", optional: true), .index(0), .name("d", optional: true)]
+        )
+
+        #expect(Path([.name("task"), .name("name", optional: true)]).rendered == "task?.name")
+
+        // A space before the `?` belongs to nobody. The name comes out trimmed,
+        // the way every other segment does.
+        #expect(
+            try sut.parse("a.b ?.c") == [.name("a"), .name("b"), .name("c", optional: true)]
+        )
+    }
+
+    @Test("an optional bracket parses and renders as itself")
+    func optionalBracketRoundTrips() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. `?[` is the same mark `?.` puts on a name, on an index
+        // instead: a literal, an index reference, one after an index
+        #expect(
+            try sut.parse("items?[0]") == [.name("items"), .index(0, optional: true)]
+        )
+        #expect(
+            try sut.parse("a.items?[i]")
+                == [.name("a"), .name("items"), .indexRef([.name("i")], optional: true)]
+        )
+        #expect(
+            try sut.parse("rows[0]?[1]")
+                == [.name("rows"), .index(0), .index(1, optional: true)]
+        )
+
+        // A mark on the head reads as written, for the load to refuse.
+        #expect(try sut.parse("?[0]") == [.index(0, optional: true)])
+        #expect(try sut.parse("?.a") == [.name("a", optional: true)])
+
+        #expect(Path([.name("items"), .index(0, optional: true)]).rendered == "items?[0]")
+        #expect(
+            Path([.name("a"), .indexRef([.name("i")], optional: true)]).rendered == "a?[i]"
+        )
+    }
+
+    @Test("a ? that marks nothing is refused")
+    func danglingOptionalIsRefused() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. A trailing `?` and a doubled `?` each claim an absence
+        // no segment reads
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a.b?") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a??.b") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a?b.c") }
+
+        // And. An empty segment after `?.` is nothing to mark. Dropping it
+        // would parse a path the author never wrote.
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a?..b") }
+    }
+
+    @Test("an empty segment is refused wherever it stands")
+    func emptySegmentsAreRefused() throws {
+        // Given. A silently dropped segment is a path the author never wrote,
+        // `?.` or not
+        let sut = PathParser()
+
+        // When / Then
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a..b") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("items[0]..name") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse(".a") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a.") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a.[0]") }
+
+        // And. The dot after an index is a segment boundary, not an empty
+        // segment.
+        #expect(
+            try sut.parse("items[0].name") == [.name("items"), .index(0), .name("name")]
+        )
+    }
+
+    @Test("a bracket is closed, and closes one opened before it")
+    func unbalancedBracketsAreRefused() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. Neither bracket is folded into a name
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[0") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[i[0]") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a]") }
+        #expect(throws: PathSyntaxError.self) { try sut.parse("a[0]]") }
+
+        #expect(try sut.parse("a[i[0]]") == [.name("a"), .indexRef([.name("i"), .index(0)])])
+    }
+
+    @Test("a string between double quotes in the brackets parses and renders as itself")
+    func aQuotedStringRoundTrips() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then. Inside the quotes a dot, a bracket and a space are the
+        // string's, `\"` a quote and `\\` a backslash, and the empty string is
+        // a string
+        #expect(try sut.parse(#"d["a"]"#) == [.name("d"), .index("a")])
+        #expect(try sut.parse(#"d[ "a.b[0] c" ]"#) == [.name("d"), .index("a.b[0] c")])
+        #expect(try sut.parse(#"d["say \"hi\" \\"]"#) == [.name("d"), .index(#"say "hi" \"#)])
+        #expect(try sut.parse(#"d[""]?["x"]"#) == [.name("d"), .index(""), .index("x", optional: true)])
+        #expect(try sut.parse(#"d[k["a"]]"#) == [.name("d"), .indexRef([.name("k"), .index("a")])])
+
+        for text in [#"d["a"]"#, #"d["say \"hi\" \\"]"#, #"d[""]?["x"]"#] {
+            #expect(try sut.parse(text).rendered == text)
+        }
+    }
+
+    @Test("a string between the brackets is closed, holds only itself and escapes two characters")
+    func aQuotedStringIsRefusedWhereItIsNoString() throws {
+        // Given
+        let sut = PathParser()
+
+        // When / Then
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a]"#) }
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a"b]"#) }
+        #expect(throws: PathSyntaxError.self) { try sut.parse(#"d["a\n"]"#) }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}

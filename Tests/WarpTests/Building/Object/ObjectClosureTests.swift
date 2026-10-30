@@ -1,0 +1,536 @@
+//
+//  ObjectClosureTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 9/18/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+import WarpTestSupport
+
+// A closure a fold made into a value, written down and read back. An
+// object spells it by the declaration that wrote it and which of that
+// declaration's it is, and the link reading the object supplies the row: the
+// row the fold had is the fold's link's, and no object holds one.
+@Suite("An object a procedure folded into")
+struct ObjectClosureTests {
+    // MARK: - Property
+    private let builder = Builder(fingerprinting: Fingerprint.of)
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a module variable starting as a closure comes back and runs")
+    func aVariableThatStartsAsAProcedure() async throws {
+        // Given
+        let sut = try returningLater(7, identity: Identity([1]))
+
+        // When
+        let returned = try await roundTripped(sut, entry: "App.entry")
+
+        // Then
+        #expect(returned == .int(7))
+    }
+
+    @Test("a literal a body folded from a closure comes back and runs")
+    func aLiteralFoldedFromAProcedure() async throws {
+        // Given
+        let sut = try madeOf(5, entry: "App.entry", identity: Identity([1]))
+
+        // When
+        let returned = try await roundTripped(sut, entry: "App.entry")
+
+        // Then
+        #expect(returned == .int(5))
+    }
+
+    @Test("a closure folded out of another document's procedure comes back and runs")
+    func aClosureFoldedAcrossDocuments() async throws {
+        // Given. The closure captures a name by copy, so what it holds
+        // travels with it
+        let maker = try Module(
+            Draft(
+                procedures: [
+                    "App.make": Procedure(
+                        signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                        body: [
+                            Statement(binding: .constant("x"), expression: .literal(.int(11))),
+                            returning(.closure(Procedure(signature: Signature(returns: .int), body: [returning(reference("x"))])))
+                        ]
+                    )
+                ]
+            ),
+            identity: Identity([1])
+        )
+        let sut = try Module(
+            Draft(
+                imports: ["App.make"],
+                variables: ["held": ModuleVariable(.call(Call(selector: "App.make")))],
+                procedures: [
+                    "App.entry": Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int, failing: .anything),
+                        body: [returning(.apply(reference("held"), arguments: []))]
+                    )
+                ]
+            ),
+            identity: Identity([2])
+        )
+
+        // When
+        let returned = try await roundTripped(sut, beside: [maker], entry: "App.entry")
+
+        // Then
+        #expect(returned == .int(11))
+    }
+
+    @Test("a closure spelled by a writer no document of the link has is refused at the link")
+    func aClosureOfAnUnknownWriterIsRefused() async throws {
+        // Given. A compiled document whose variable starts as a closure some
+        // other spelling claims to have written.
+        let compiled = try await builder.compile(Module.standard + [returningLater(7)])
+        let forged = try holding(Closure(writer: Closure.Writer(document: .compiled(Compiled.Token()), declaration: .procedure("App.nobody")), nth: 0, resolution: .spelled(types: [:]), captured: []), in: compiled)
+
+        // When / Then
+        #expect {
+            try builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'App.nobody.closure[0]', written in a document no module in this link is")
+        }
+    }
+
+    @Test("a closure spelled past what its writer wrote is refused at the link")
+    func aClosurePastItsWriterIsRefused() async throws {
+        // Given. The writer wrote one closure, and the value asks for its sixth
+        let compiled = try await builder.compile(Module.standard + [returningLater(7)])
+        let forged = try holding(Closure(writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("later")), nth: 5, resolution: .spelled(types: [:]), captured: []), in: compiled)
+
+        // When / Then
+        #expect {
+            try builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'later.closure[5]', and its writer wrote no closure at that count")
+        }
+    }
+
+    @Test("two documents may each write a closure under one constant's spelling, and each runs its own")
+    func twoDocumentsMayShareAConstantsSpelling() async throws {
+        // Given. Two documents that were written down, compiled apart, each
+        // with a constant of one spelling holding a closure of its own. A
+        // constant's spelling is its document's, so the two are two writers.
+        let one = try await builder.compile(Module.standard + [madeOf(5, entry: "App.one", identity: Identity([1]))])
+        let other = try await builder.compile(
+            [madeOf(6, entry: "App.two", identity: Identity([2]))],
+            against: try builder.lay(one, supplying: Supplying(Module.standard))
+        )
+        let read = try (one + other).map { document in
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
+        }
+
+        // When
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image, entry: "App.two") == .int(6))
+    }
+
+    @Test("a closure an unwritten document folded out of another unwritten one runs the other's body")
+    func aClosureFoldedBetweenUnwrittenDocumentsKeepsItsWriter() async throws {
+        // Given. Two documents nobody wrote down, both writing a closure under
+        // `made`. The second hands its own out through a procedure, and
+        // the first folds that into a variable. The compile of each names it,
+        // so the first document's own `made` is not the one it holds.
+        let other = try Module(
+            constants: ["made": .closure(procedure(returning: 6))],
+            procedures: [
+                "App.give": Procedure(
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                    body: [returning(reference("made"))]
+                )
+            ]
+        )
+        let one = try Module(
+            imports: ["App.give"],
+            constants: ["made": .closure(procedure(returning: 5))],
+            variables: ["held": .call(Call(selector: "App.give"))],
+            procedures: [
+                "App.one": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.apply(reference("held"), arguments: []))])
+            ]
+        )
+
+        // When
+        let image = try await builder.build(Module.standard + [other, one])
+
+        // Then
+        #expect(try await Executor().run(image, entry: "App.one") == .int(6))
+    }
+
+    @Test("two documents nobody wrote down each read a closure of their own under one name")
+    func twoUnwrittenWritersOfOneNameEachReadTheirOwn() async throws {
+        // Given. The same two, with no text to tell them apart by, told apart
+        // by their compiles
+        let one = try await builder.compile(Module.standard + [madeOf(5, entry: "App.one")])
+        let other = try await builder.compile([madeOf(6, entry: "App.two")], against: try builder.lay(one, supplying: Supplying(Module.standard)))
+
+        // When
+        let image = try builder.link(one + other, supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image, entry: "App.two") == .int(6))
+    }
+
+    @Test("a closure folded in one compile is resolved anew where its document is laid into another")
+    func aClosureFoldedEarlierIsResolvedWhereLaid() async throws {
+        // Given. A document compiled in memory, whose constant closure calls
+        // a procedure of the vocabulary, so its body reaches another row.
+        // Laid down again in another order, the rows stand elsewhere.
+        let calling = try Module(
+            imports: ["Standard.Numeric.plus"],
+            constants: [
+                "made": .closure(
+                    Procedure(
+                        signature: Signature(returns: .int),
+                        body: [returning(.call(Call(selector: "Standard.Numeric.plus", arguments: [.literal(.int(2)), .literal(.int(3))])))]
+                    )
+                )
+            ],
+            procedures: [
+                "App.give": Procedure(
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                    body: [returning(reference("made"))]
+                )
+            ]
+        )
+        let compiled = try await builder.compile(Module.standard + [calling])
+        let reordered = compiled.reversed().map { document in document }
+        let folding = try Module(
+            imports: ["App.give"],
+            constants: ["got": .call(Call(selector: "App.give"))],
+            procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.apply(reference("got"), arguments: []))])]
+        )
+
+        // When
+        let laid = try builder.lay(reordered, supplying: Supplying(Module.standard))
+        let against = try await builder.compile([folding], against: laid)
+        let image = try builder.link(reordered + against, supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image, entry: "App.entry") == .int(5))
+    }
+
+    @Test("an object laid beside another compile of what it leaned on is refused")
+    func anObjectBesideAnotherCompileOfItsDependencyIsRefused() async throws {
+        // Given. A document compiled against another, and that other compiled
+        // again with a change. The first says what it leaned on by
+        // fingerprint, and that fingerprint is not among what is laid now.
+        let first = try await builder.compile(Module.standard + [madeOf(5, entry: "App.one", identity: Identity([1]))])
+        let leaning = try Module(
+            Draft(
+                imports: ["App.one"],
+                procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.call(Call(selector: "App.one")))])]
+            ),
+            identity: Identity([2])
+        )
+        let second = try await builder.compile([leaning], against: try builder.lay(first, supplying: Supplying(Module.standard)))
+        let changed = try await builder.compile(Module.standard + [madeOf(6, entry: "App.one", identity: Identity([1]))])
+
+        // When / Then
+        #expect {
+            try builder.link(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
+        }
+        #expect {
+            try builder.lay(changed + second, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("that is not laid beside it as it was then")
+        }
+    }
+
+    @Test("a fold through a document read out of an object hands on the closure the object holds")
+    func aFoldThroughAReadObjectHandsOnItsClosure() async throws {
+        // Given. A written document whose constant holds a closure and whose
+        // procedure hands it on, compiled, written down and read back. A
+        // second document folds a constant through that procedure, and its
+        // entry applies what it got.
+        let held = try Module(
+            Draft(
+                constants: ["made": .closure(procedure(returning: 5))],
+                procedures: [
+                    "App.give": Procedure(
+                        signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                        body: [returning(reference("made"))]
+                    )
+                ]
+            ),
+            identity: Identity([1])
+        )
+        let read = try (await builder.compile(Module.standard + [held])).map { document in
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
+        }
+        let folding = try Module(
+            Draft(
+                imports: ["App.give"],
+                constants: ["got": .call(Call(selector: "App.give"))],
+                procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.apply(reference("got"), arguments: []))])]
+            ),
+            identity: Identity([2])
+        )
+
+        // When. The second document is written down and read back too, so
+        // what its constant folded to crosses an object as well.
+        let compiled = try (await builder.compile([folding], against: try builder.lay(read, supplying: Supplying(Module.standard)))).map { document in
+            try Compiled(written: try document.object(), of: document.identity, fingerprint: document.fingerprint)
+        }
+        let image = try builder.link(read + compiled, supplying: Supplying(Module.standard))
+
+        // Then
+        #expect(try await Executor().run(image, entry: "App.entry") == .int(5))
+    }
+
+    @Test("a closure holding fewer cells than its frame is filled from is refused at the link")
+    func aClosureHoldingTooFewCellsIsRefused() async throws {
+        // Given. The closure the writer wrote takes one cell with it, and the
+        // value claims none
+        let compiled = try await builder.compile(Module.standard + [capturingMaker(identity: Identity([1])), holdingUser(identity: Identity([2]))])
+        let forged = try holding(
+            Closure(writer: Closure.Writer(document: .written(Identity([1])), declaration: .procedure("App.make")), nth: 0, resolution: .spelled(types: [:]), captured: []),
+            in: compiled
+        )
+
+        // When / Then
+        #expect {
+            try builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'App.make.closure[0]' holds cells at [], and its frame is filled at [0]")
+        }
+    }
+
+    @Test("a closure a document nobody wrote down wrote is not written into an object")
+    func aClosureOfAnUnwrittenDocumentIsNotWritten() async throws {
+        // Given. A written document whose variable folds a closure out of
+        // an unwritten one. An object cannot spell the writer, so none is
+        // written for the holder
+        let maker = try Module(
+            procedures: [
+                "App.make": Procedure(
+                    signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                    body: [returning(.closure(procedure(returning: 3)))]
+                )
+            ]
+        )
+        let sut = try Module(
+            Draft(
+                imports: ["App.make"],
+                variables: ["held": ModuleVariable(.call(Call(selector: "App.make")))],
+                procedures: ["App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.apply(reference("held"), arguments: []))])]
+            ),
+            identity: Identity([7])
+        )
+
+        // When
+        let compiled = try await builder.compile(Module.standard + [maker, sut])
+
+        // Then
+        #expect(throws: ObjectUnwritable.self) { try #require(compiled.last).object() }
+    }
+
+    @Test("a closure holding a cell its frame has not is refused at the link")
+    func aClosureHoldingACellPastItsFrameIsRefused() async throws {
+        // Given. The closure the writer wrote takes nothing with it, and the
+        // value claims a cell at 99
+        let compiled = try await builder.compile(Module.standard + [returningLater(7)])
+        let forged = try holding(
+            Closure(
+                writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("later")),
+                nth: 0,
+                resolution: .spelled(types: [:]),
+                captured: [(slot: 99, cell: .value(.int(1)))]
+            ),
+            in: compiled
+        )
+
+        // When / Then. Refused where a link resolves it, and where a compile
+        // lays a body holding it down to fold through
+        #expect {
+            try builder.link(forged, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'later.closure[0]' holds cells at [99], and its frame is filled at []")
+        }
+
+        let inBody = try holdingInBody(
+            Closure(
+                writer: Closure.Writer(document: try #require(compiled.last?.naming), declaration: .binding("later")),
+                nth: 0,
+                resolution: .spelled(types: [:]),
+                captured: [(slot: 99, cell: .value(.int(1)))]
+            ),
+            in: compiled
+        )
+
+        #expect {
+            try builder.lay(inBody, supplying: Supplying(Module.standard))
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("'later.closure[0]' holds cells at [99], and its frame is filled at []")
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // The same objects, with the entry's body applying the closure handed in
+    // as a literal it holds.
+    private func holdingInBody(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
+        try compiled.map { one in
+            guard let entry = one.declared.firstIndex(of: "App.entry"),
+                case let .body(_, frame) = one.table[entry].implementation
+            else {
+                return one
+            }
+
+            var table = one.table
+            let row = table[entry]
+
+            table[entry] = try Judged(
+                label: row.label,
+                signature: row.signature,
+                access: row.access,
+                judging: .body(
+                    LoweredBody(instructions: [Instruction(binding: nil, code: .leave(.procedure(.apply(.literal(.procedure(closure)), arguments: []))), label: "return")]),
+                    frame
+                )
+            )
+
+            return try Compiled(
+                document: one.document,
+                types: one.types,
+                contracts: one.contracts,
+                claims: one.claims,
+                members: one.members,
+                typeMembers: one.typeMembers,
+                importedClaims: one.importedClaims,
+                rows: Array(table[..<one.declared.count]),
+                lifted: Array(table[one.lifted]),
+                constants: one.constants,
+                numbering: one.numbering,
+                typeNumbering: one.typeNumbering,
+                judging: one.variables,
+                dependencies: one.dependencies,
+                token: one.token
+            )
+        }
+    }
+
+    private func returningLater(_ number: Int, identity: Identity? = nil) throws -> Module {
+        try Module(
+            Draft(
+                variables: ["later": ModuleVariable(.closure(procedure(returning: number)))],
+                procedures: [
+                    "App.entry": Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int, failing: .anything),
+                        body: [returning(.apply(reference("later"), arguments: []))]
+                    )
+                ]
+            ),
+            identity: identity
+        )
+    }
+
+    private func capturingMaker(identity: Identity? = nil) throws -> Module {
+        try Module(
+            Draft(
+                procedures: [
+                    "App.make": Procedure(
+                        signature: Signature(returns: .procedure(ProcedureType(returns: .int, failing: .anything)), constness: .const),
+                        body: [
+                            Statement(binding: .constant("x"), expression: .literal(.int(11))),
+                            returning(.closure(Procedure(signature: Signature(returns: .int), body: [returning(reference("x"))])))
+                        ]
+                    )
+                ]
+            ),
+            identity: identity
+        )
+    }
+
+    private func holdingUser(identity: Identity? = nil) throws -> Module {
+        try Module(
+            Draft(
+                imports: ["App.make"],
+                variables: ["held": ModuleVariable(.call(Call(selector: "App.make")))],
+                procedures: [
+                    "App.entry": Procedure(access: .public, signature: Signature(returns: .int, failing: .anything), body: [returning(.apply(reference("held"), arguments: []))])
+                ]
+            ),
+            identity: identity
+        )
+    }
+
+    private func madeOf(_ number: Int, entry: Name, identity: Identity? = nil) throws -> Module {
+        try Module(
+            Draft(
+                constants: ["made": .closure(procedure(returning: number))],
+                procedures: [
+                    entry: Procedure(
+                        access: .public,
+                        signature: Signature(returns: .int, failing: .anything),
+                        body: [returning(.apply(reference("made"), arguments: []))]
+                    )
+                ]
+            ),
+            identity: identity
+        )
+    }
+
+    // The same objects, with the one variable there is starting as the
+    // closure handed in.
+    private func holding(_ closure: Closure, in compiled: [Compiled]) throws -> [Compiled] {
+        try compiled.map { one in
+            guard let held = one.variables.first else { return one }
+
+            return try Compiled(
+                document: one.document,
+                types: one.types,
+                contracts: one.contracts,
+                claims: one.claims,
+                members: one.members,
+                typeMembers: one.typeMembers,
+                importedClaims: one.importedClaims,
+                rows: Array(one.table[..<one.declared.count]),
+                lifted: Array(one.table[one.lifted]),
+                constants: one.constants,
+                numbering: one.numbering,
+                typeNumbering: one.typeNumbering,
+                judging: [(name: held.name, value: .procedure(closure))],
+                dependencies: one.dependencies,
+                token: one.token
+            )
+        }
+    }
+
+    private func procedure(returning number: Int) -> Procedure {
+        Procedure(signature: Signature(returns: .int), body: [returning(.literal(.int(number)))])
+    }
+
+    // The module compiled beside the vocabulary and the documents it leans
+    // on, every object written to bytes and read back, and the run's return
+    // value.
+    private func roundTripped(_ module: Module, beside others: [Module] = [], entry: Name) async throws -> Value? {
+        let compiled = try await builder.compile(Module.standard + others + [module])
+        let read = try compiled.map { one -> Compiled in
+            let written = try one.object()
+
+            return try Compiled(written: written, of: one.document.identity, fingerprint: one.fingerprint)
+        }
+        let image = try builder.link(read, supplying: Supplying(Module.standard))
+
+        return try await Executor().run(image, entry: entry)
+    }
+}

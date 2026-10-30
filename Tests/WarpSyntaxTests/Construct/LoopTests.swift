@@ -1,0 +1,168 @@
+//
+//  LoopTests.swift
+//  WarpSyntaxTests
+//
+//  Created by JSilver on 8/9/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+@testable import WarpSyntax
+import WarpTestSupport
+
+@Suite("A loop repeats while its condition holds")
+struct LoopTests {
+    // MARK: - Property
+    private let loader = Loader()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("loop repeats while its where holds")
+    func loopRepeatsWhileConditionHolds() async throws {
+        // Given. The loop writes a variable declared outside it and reads its
+        // own round index through ${gate.index}
+        let spec = try loader.loadProcedure([
+            "returns": "Any",
+            "body": [
+                ["var": "latest", "value": 0],
+                [
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["call": ["procedure": "Standard.Logic.notEqual", "arguments": [["ref": "gate.index"], 3]]],
+                        "body": [["set": "latest", "value": ["ref": "gate.index"]]]
+                    ]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "latest"]]]]]]
+            ]
+        ], importing: ["Standard.Logic.notEqual"])
+
+        // When
+        let outputs = try await run(spec)
+
+        // Then. Rounds 0/1/2 ran; at index 3 the where turned false
+        #expect(outputs.dictionaryValue?["result"] == .int(2))
+    }
+
+    @Test("a loop runs unbounded, like while")
+    func loopRunsUnbounded() async throws {
+        // Given. The language carries no budget; the world (here, the
+        // condition) ends the repetition
+        let spec = try loader.loadProcedure([
+            "returns": "Any",
+            "body": [
+                ["var": "latest", "value": 0],
+                [
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["call": ["procedure": "Standard.Logic.notEqual", "arguments": [["ref": "gate.index"], 7]]],
+                        "body": [["set": "latest", "value": ["ref": "gate.index"]]]
+                    ]
+                ]],
+                ["value": ["return": ["dictionary": [["result", ["ref": "latest"]]]]]]
+            ]
+        ], importing: ["Standard.Logic.notEqual"])
+
+        // When
+        let outputs = try await run(spec)
+
+        // Then
+        #expect(outputs.dictionaryValue?["result"] == .int(6))
+    }
+
+    @Test("a key the loop does not name is refused at the load")
+    func anUnknownKeyIsRefusedAtTheLoad() throws {
+        // When / Then. A loop's keys are closed, so one it does not name is
+        // refused where it is written.
+        #expect(throws: ReadingError.self) {
+            try loader.loadProcedure([
+                "body": [
+                    [
+                        "let": "gate",
+                        "value": ["loop": [
+                            "while": ["call": ["procedure": "Standard.Logic.notEqual", "arguments": [["ref": "gate.index"], 3]]],
+                            "body": [["let": "noop", "value": "again"]],
+                            "mystery": 2
+                        ]
+                    ]]
+                ]
+            ])
+        }
+    }
+
+    @Test("an empty-body loop still observes cancellation")
+    func emptyBodyObservesCancellation() async throws {
+        // Given. An empty body must still observe cancellation, or the host's
+        // one lever against a runaway loop stops working
+        let spec = try loader.loadProcedure([
+            "body": [
+                [
+                    "let": "gate",
+                    "value": ["loop": ["while": ["call": ["procedure": "Standard.Logic.notEqual", "arguments": [["ref": "gate.index"], .null]]], "body": []]
+                ]]
+            ]
+        ], importing: ["Standard.Logic.notEqual"])
+
+        // When
+        let task = Task {
+            try await run(spec)
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+
+        // Then
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
+    }
+
+    @Test("a loop with no while stops when the host cancels the run")
+    func aLoopWithNoWhileObservesCancellation() async throws {
+        // Given. A loop that declares it does not finish runs until the host
+        // cancels the run, like any loop
+        let spec = try loader.loadProcedure([
+            "body": [
+                ["value": ["loop": ["body": []]]]
+            ]
+        ])
+
+        // When
+        let task = Task {
+            try await run(spec)
+        }
+
+        try await Task.sleep(for: .milliseconds(50))
+        task.cancel()
+
+        // Then
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
+    }
+
+    @Test("a loop body may rebind an outer id by shadowing")
+    func loopRebindsOuterIDByShadowing() throws {
+        // Given. The retry-loop idiom rebinds an outer id inside loop steps
+        let fixture: Value = [
+            "body": [
+                ["let": "format", "value": "first"],
+                [
+                    "let": "gate",
+                    "value": ["loop": [
+                        "while": ["call": ["procedure": "Standard.Logic.equal", "arguments": [["ref": "gate.index"], 0]]],
+                        "body": [["let": "format", "value": "retried"]]
+                    ]
+                ]]
+            ]
+        ]
+
+        // When / Then
+        #expect(throws: Never.self) {
+            try loader.loadProcedure(fixture, importing: ["Standard.Logic.equal"])
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}

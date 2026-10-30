@@ -1,0 +1,24 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.plus)
+
+(procedure counted
+  (parameter value (type Int))
+  (returns Int)
+  (body
+    (var held 0)
+    (set held (call Standard.Numeric.plus held value))
+    (return held)))
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (var seen 0)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set seen (call counted 1)))))
+    (return seen)))

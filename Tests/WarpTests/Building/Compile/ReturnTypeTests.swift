@@ -1,0 +1,169 @@
+//
+//  ReturnTypeTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 8/17/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+import WarpTestSupport
+
+@Suite("What a procedure returns")
+struct ReturnTypeTests {
+    // MARK: - Property
+    private let builder = Builder()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a return value is held to its declaration before the caller sees it")
+    func returnValueIsHeldToItsDeclaration() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        returns: .int
+                    ),
+                    body: [
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let image = try await builder.build([sut])
+        let returned = try await Executor().run(image)
+
+        // Then. Held to the declared representation, not merely waved past
+        #expect(returned == .int(3))
+    }
+
+    @Test("a body that returns something else is refused where both are written")
+    func wrongReturnFails() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        returns: .string
+                    ),
+                    body: [
+                        Statement(binding: .constant("counted"), expression: .literal(.int(3))),
+                        returning(.reference([.name("counted")]))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then. The body and the declaration beside it are one
+        // document's text, so nothing has to run to find them disagreeing
+        await #expect {
+            try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("returns Int, and its declaration promises String")
+        }
+    }
+
+    @Test("a return carrying something else is refused where it is written")
+    func wrongReturnIsRefusedAtTheBuild() async throws {
+        // Given. The last `return` fits; one on another way through does not.
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(
+                            expression: .conditional(
+                                .literal(.bool(true)),
+                                then: [Statement(expression: .leave(.procedure(.literal(.string("x")))))],
+                                else: nil
+                            )
+                        ),
+                        returning(.literal(.int(0)))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then. Two return values that disagree would join to `Any`, and
+        // `Any` fits everything, so each is held on its own.
+        let refusal = await #expect(throws: BuildError.self) {
+            try await builder.build([sut])
+        }
+
+        #expect(refusal?.message.contains("declaration promises Int") == true)
+    }
+
+    @Test("a struct literal returned where a declared struct is promised takes the name, and one a name that declares nothing holds refuses")
+    func aLiteralReturnedTakesTheDeclaredName() async throws {
+        // Given. The same list written straight into the return value, and held
+        // first by a name that says nothing of the struct
+        func module(returning returned: Warp.Expression, holding body: Body = []) throws -> Module {
+            try Module(
+                types: ["Task": .struct(["id": .string])],
+                procedures: [
+                    "entry": Procedure(
+                        access: .public,
+                        signature: Signature(returns: .array(.named("Task"))),
+                        body: Body(body.statements + [returning(returned)])
+                    )
+                ]
+            )
+        }
+
+        let written = try module(returning: .array([.struct(["id": .literal(.string("a"))])]))
+        let held = try module(
+            returning: .reference([.name("made")]),
+            holding: [Statement(binding: .constant("made"), expression: .array([.struct(["id": .literal(.string("a"))])]))]
+        )
+
+        // When / Then. A literal is written where the promise stands, so it
+        // is a `Task`; a name that declares nothing reads no declared struct,
+        // so the literal it holds has none to be
+        let image = try await builder.build([written])
+
+        #expect(try await Executor().run(image) == .array([.struct(Struct(name: "Task", ["id": .string("a")]))]))
+
+        await #expect {
+            try await builder.build([held])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("a struct literal is written where a declared struct is read")
+        }
+    }
+
+    @Test("a return type naming a type nobody declared is refused at the build")
+    func unknownReturnTypeIsABuildError() async throws {
+        // Given
+        let sut = try Module(
+            procedures: [
+                "entry": Procedure(
+                    access: .public,
+                    signature: Signature(
+                        returns: .named("Nowhere")
+                    ),
+                    body: [
+                        Statement(binding: .constant("done"), expression: .literal(.int(1)))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            _ = try await builder.build([sut])
+        } throws: { error in
+            error is BuildError && "\(error)".contains("names type 'Nowhere', which no module in this link declares")
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}

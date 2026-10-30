@@ -1,0 +1,18 @@
+(warp 1)
+(import Standard.Collection.setting)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.remainder)
+(import Standard.Text.text)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns (dictionary String Int))
+  (body
+    (var held (type (dictionary String Int)) (dictionary))
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (set held (call Standard.Collection.setting held (call Standard.Text.text (call Standard.Numeric.remainder (path round (field index)) 100)) 1)))))
+    (return held)))

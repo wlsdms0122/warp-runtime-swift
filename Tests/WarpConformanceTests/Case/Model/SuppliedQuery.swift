@@ -1,0 +1,25 @@
+//
+//  SuppliedQuery.swift
+//  WarpConformanceTests
+//
+//  Created by JSilver on 9/30/26.
+//
+
+import Foundation
+import Warp
+
+// A procedure a case asked for that is const. What it returns is
+// the case's, and it is the same every time: a case asks what a declaration
+// permits, not what arithmetic does.
+struct SuppliedQuery<Parameters: ParameterSet>: Query {
+    // MARK: - Property
+    let answers: Value
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        answers
+    }
+
+    // MARK: - Private
+}

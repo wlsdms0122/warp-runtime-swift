@@ -1,0 +1,149 @@
+//
+//  NeverTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 8/21/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpTestSupport
+
+// A statement typed `Never` does not finish, so it binds nothing and nothing
+// after it runs. The syntactic leaves are refused where they are read; a call
+// is the build's to refuse, because only the build knows what the procedure declares.
+@Suite("What never finishes binds nothing")
+struct NeverTests {
+    // MARK: - Property
+    private let builder = Builder()
+
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a statement after a call that never finishes is refused at the build")
+    func nothingRunsAfterANeverCall() async throws {
+        // Given. `Standard.Control.abort` declares `Never`, so the statement after it
+        // would never run, and a name written there would never bind
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(expression: aborting(literal("done"))),
+                        Statement(binding: .constant("after"), expression: .literal(.int(1))),
+                        returning(.reference([.name("after")]))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("what follows it here would never run")
+        }
+    }
+
+    @Test("a name on the last statement is still refused when it never finishes")
+    func aNamedNeverLastStatementIsRefused() async throws {
+        // Given. Last in the body, so the "nothing after" rule has nothing to
+        // say; only the name itself is wrong
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("gone"), expression: aborting(literal("done"))),
+                        returning(.literal(.int(1)))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await builder.build([sut] + Module.standard)
+        } throws: { error in
+            "\(error)".contains("binds nothing and takes no name")
+        }
+    }
+
+    @Test("a body that ends by leaving still carries its folded constant")
+    func aLeavingBodyKeepsItsFolding() async throws {
+        // Given. The image holds only judged spellings, and a body every way
+        // through which leaves is still a body the image holds: the constant
+        // it carries out folds like any other
+        let sut = try Module(
+            constants: ["C": .literal(.int(7))],
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .int),
+                    body: [
+                        Statement(expression: .conditional(
+                            .literal(.bool(true)),
+                            then: [Statement(expression: .leave(.procedure(.reference([.name("C")]))))],
+                            else: [Statement(expression: .leave(.procedure(.literal(.int(0)))))]
+                        ))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .int(7))
+    }
+
+    @Test("a body that ends by leaving still carries its judged calls")
+    func aLeavingBodyKeepsItsJudgedCalls() async throws {
+        // Given. The call the build lowered must reach the image whether the
+        // body finishes or leaves
+        let sut = Procedure(
+            signature: Signature(returns: .int),
+            body: [
+                Statement(binding: .constant("items"), expression: .array([.literal(.int(1)), .literal(.int(2))])),
+                Statement(expression: .conditional(
+                    .literal(.bool(true)),
+                    then: [
+                        Statement(expression: .leave(.procedure(
+                            .call(Call(selector: "Standard.Collection.count", arguments: [reference("items")]))
+                        )))
+                    ],
+                    else: [Statement(expression: .leave(.procedure(.literal(.int(0)))))]
+                ))
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .int(2))
+    }
+
+    @Test("a loop whose rounds never finish still finishes")
+    func aLoopWhoseRoundsNeverFinishStillFinishes() async throws {
+        // Given. A condition that declines at the start runs no round, whatever
+        // the rounds would have done, so a body no run comes back from (here a
+        // procedure only the build knows declares `Never`) leaves what follows
+        // the loop reachable. The reader refuses the leaves it can see; this is
+        // the type only the build sees, and the run keeps it
+        let loop = Warp.Expression.loop(
+            while: .literal(.bool(false)),
+            body: [Statement(expression: aborting(literal("stops")))]
+        )
+
+        let sut = Procedure(
+            signature: Signature(returns: .string, failing: .these(["aborted"])),
+            body: [
+                Statement(binding: .constant("kept"), expression: loop),
+                Statement(binding: .constant("after"), expression: .literal(.string("done"))),
+                returning(reference("after"))
+            ]
+        )
+
+        // When / Then
+        #expect(try await run(sut) == .string("done"))
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+}

@@ -1,0 +1,472 @@
+//
+//  ClosureTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 8/17/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+import WarpTestSupport
+
+// A procedure is a value, so an author can write a construct that takes a
+// body, and a procedure that makes one.
+@Suite("A procedure is a value")
+struct ClosureTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a body declaring the one parameter the slot hands fits it, under any name", arguments: ["item", "anything"] as [Name])
+    func aBodyDeclaringWhatTheSlotHandsFits(name: Name) async throws {
+        // Given. The slot hands one value, and a value is applied by position
+        let sut = try module(declaring: [Parameter(name: name, type: .int)])
+
+        // When / Then
+        await #expect(throws: Never.self) {
+            try await Builder().build([sut] + Module.standard)
+        }
+    }
+
+    @Test("a body declaring another count than the slot hands does not fit", arguments: [
+        [] as [Parameter],
+        [Parameter(name: "item", type: .int), Parameter(name: "index", type: .int)]
+    ])
+    func aBodyDeclaringAnotherCountDoesNotFit(declared: [Parameter]) async throws {
+        // Given. The slot hands one value, and a body declaring none or two is
+        // a different procedure
+        let sut = try module(declaring: declared)
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("where (Int) throws -> Any is declared")
+        }
+    }
+
+    @Test(
+        "a value applied short or over is refused by the count",
+        arguments: [
+            (handed: 2, refusal: "with 2 arguments, and it takes 3"),
+            (handed: 4, refusal: "with 4 arguments, and it takes 3")
+        ]
+    )
+    func anApplicationShortOrOverSaysWhy(handed: Int, refusal: String) async throws {
+        // Given. `made` takes two and an Optional third, so two arguments are
+        // one short even where the missing one is an Optional, and four is one
+        // more than it takes
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("made"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "a", type: .int),
+                                            Parameter(name: "b", type: .int),
+                                            Parameter(name: "c", type: .optional(.int))
+                                        ],
+                                        returns: .int
+                                    ),
+                                    body: [returning(reference("a"))]
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("said"),
+                            expression: .apply(
+                                reference("made"),
+                                arguments: Array(repeating: .literal(.int(1)), count: handed)
+                            )
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains(refusal)
+        }
+    }
+
+    @Test("a value taking a parameter in place, applied short, is refused by the count")
+    func anApplicationShortOfAnInPlaceParameterSaysTheCount() async throws {
+        // Given. `bump` takes a variable in place and an int, and is handed
+        // one argument, which is no variable
+        let sut = try Module(
+            procedures: [
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(
+                            binding: .constant("bump"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: [
+                                        Parameter(name: "c", type: .inout(.int)),
+                                        Parameter(name: "d", type: .int)
+                                    ]),
+                                    body: []
+                                )
+                            )
+                        ),
+                        Statement(expression: .apply(reference("bump"), arguments: [.literal(.int(1))]))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError && "\(error)".contains("with 1 arguments, and it takes 2")
+        }
+    }
+
+    @Test("a closure captures the scope it was written in, not the one it runs in")
+    func closureCapturesLexically() async throws {
+        // Given. `made` is written where `outer` says "written", and `running`
+        // applies it beside an `outer` of its own saying "called"
+        let running = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "by", type: .procedure(ProcedureType(returns: .string, failing: .anything)))],
+                returns: .string,
+                failing: .anything
+            ),
+            body: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("called"))),
+                Statement(binding: .constant("said"), expression: .apply(reference("by"), arguments: [])),
+                returning(reference("said"))
+            ]
+        )
+
+        // When
+        let returned = try await returned(
+            of: [
+                Statement(binding: .constant("outer"), expression: .literal(.string("written"))),
+                Statement(binding: .constant("made"), expression: .closure(Procedure(signature: Signature(returns: .string), body: [returning(reference("outer"))])))
+            ],
+            returning: .call(Call(selector: "running", arguments: [reference("made")])),
+            beside: ["running": running]
+        )
+
+        // Then
+        #expect(returned == .string("written"))
+    }
+
+    @Test("an extra parameter the slot never hands does not fit, even an Optional one")
+    func anExtraParameterDoesNotFit() async throws {
+        // Given. The slot hands one value and the body writes two, the second
+        // an Optional. A count the slot does not have is a different procedure,
+        // whatever the extra parameter admits.
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], returns: .any, failing: .anything)))
+                ],
+                failing: .anything
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
+                )
+            ]
+        )
+        let sut = try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(failing: .anything),
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(
+                                        parameters: [
+                                            Parameter(name: "item", type: .int),
+                                            Parameter(name: "index", type: .optional(.int))
+                                        ],
+                                        returns: .int
+                                    ),
+                                    body: [returning(.literal(.int(1)))]
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
+                        )
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds (Int, Int?) -> Int where (Int) throws -> Any is declared")
+        }
+    }
+
+    @Test("a slot asking for a const procedure type refuses one that reaches outside")
+    func aClosureThatRunsIsRefusedWhereConstIsAsked() async throws {
+        // Given. `twice` declares that whatever it is handed is const. The
+        // closure handed to it shouts, and shouting is an effect
+        let twice = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))]
+            ),
+            body: [
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: []))
+            ]
+        )
+        let sut = try Module(
+            procedures: [
+                "twice": twice,
+                entryName: Procedure(
+                    access: .public,
+                    body: [
+                        Statement(binding: .constant("loud"), expression: .closure(
+                                Procedure(
+                                    signature: Signature(returns: .string),
+                                    body: [
+                                        Statement(binding: .constant("said"), expression: .call(Call(
+                                            selector: "App.shout",
+                                            arguments: [.literal(.string("hi"))]
+                                        ))),
+                                        returning(reference("said"))
+                                    ]
+                                )
+                            )
+                        ),
+                        Statement(binding: .constant("ran"), expression: .call(Call(
+                            selector: "twice",
+                            arguments: [reference("loud")]
+                        )))
+                    ]
+                )
+            ]
+        )
+
+        // When / Then
+        await #expect {
+            try await Builder().build([sut, .shouting] + Module.standard)
+        } throws: { error in
+            error is BuildError
+                && "\(error)".contains("which holds () -> String where const () throws -> String is declared")
+        }
+    }
+
+    @Test("a slot asking for a const procedure type takes a const closure")
+    func aConstClosureFitsWhereConstIsAsked() async throws {
+        // Given. The same declaration, handed a body that only reads
+        let twice = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything), .const))],
+                returns: .string,
+                failing: .anything
+            ),
+            body: [
+                Statement(binding: .constant("once"), expression: .apply(reference("body"), arguments: [])),
+                returning(reference("once"))
+            ]
+        )
+        let sut = try Module(
+            procedures: [
+                "twice": twice,
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(returns: .string, failing: .anything),
+                    body: [
+                        Statement(binding: .constant("quiet"), expression: .closure(
+                            Procedure(signature: Signature(returns: .string, constness: .const), body: [returning(.literal(.string("read")))])
+                        )),
+                        returning(.call(Call(selector: "twice", arguments: [reference("quiet")])))
+                    ]
+                )
+            ]
+        )
+
+        // When
+        let returned = try await run(sut)
+
+        // Then
+        #expect(returned == .string("read"))
+    }
+
+    @Test("an author can write a construct that takes a body")
+    func authorWrittenControlStructure() async throws {
+        // Given. `twice` is not a native procedure and not a language case. It is a
+        // procedure that declares a procedure parameter and calls it, which is
+        // the whole of what "the author can make constructs" means here.
+        let twice = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "body", type: .procedure(ProcedureType(returns: .string, failing: .anything)))],
+                returns: .array(.string),
+                failing: .anything
+            ),
+            body: [
+                Statement(binding: .constant("first"), expression: .apply(reference("body"), arguments: [])),
+                Statement(binding: .constant("second"), expression: .apply(reference("body"), arguments: [])),
+                returning(.array([reference("first"), reference("second")]))
+            ]
+        )
+
+        // When
+        let returned = try await returned(
+            of: [
+                Statement(binding: .constant("ran"), expression: .call(
+                        Call(
+                            selector: "twice",
+                            arguments: [
+                                .closure(
+                                    Procedure(signature: Signature(returns: .string), body: [returning(.literal(.string("hi")))])
+                                )
+                            ]
+                        )
+                    )
+                )
+            ],
+            returning: reference("ran"),
+            beside: ["twice": twice]
+        )
+
+        // Then
+        #expect(returned == .array([.string("hi"), .string("hi")]))
+    }
+
+    @Test("a procedure can return a procedure")
+    func procedureReturnsProcedure() async throws {
+        // Given. The returned closure holds the argument its maker was given,
+        // which is what makes returning one worth anything
+        let makeGreeter = Procedure(
+            signature: Signature(
+                parameters: [Parameter(name: "greeting", type: .string)],
+                returns: .procedure(ProcedureType(parameters: [.string], returns: .string, failing: .these([])))
+            ),
+            body: [
+                returning(.closure(
+                    Procedure(
+                        signature: Signature(parameters: [Parameter(name: "name", type: .string)], returns: .string),
+                        body: [returning(joined(spelling(reference("greeting")), literal(", "), spelling(reference("name"))))]
+                    )
+                ))
+            ]
+        )
+
+        // When
+        let returned = try await returned(
+            of: [
+                Statement(binding: .constant("hello"), expression: .call(
+                    Call(selector: "makeGreeter", arguments: [.literal(.string("hello"))])
+                )),
+                Statement(binding: .constant("said"), expression: .apply(
+                        reference("hello"),
+                        arguments: [.literal(.string("warp"))]
+                    )
+                )
+            ],
+            returning: reference("said"),
+            beside: ["makeGreeter": makeGreeter]
+        )
+
+        // Then
+        #expect(returned == .string("hello, warp"))
+    }
+
+    @Test("closures travel in arrays and dictionaries like any other value")
+    func closuresTravelInStructures() async throws {
+        // Given
+        let sut: Body = [
+            Statement(binding: .constant("table"), expression: dictionary([
+                    "yes": .closure(Procedure(signature: Signature(returns: .string), body: [returning(.literal(.string("y")))])),
+                    "no": .closure(Procedure(signature: Signature(returns: .string), body: [returning(.literal(.string("n")))]))
+                ])
+            ),
+            Statement(binding: .constant("picked"), expression: .apply(.reference([.name("table"), .index("yes")]), arguments: []))
+        ]
+
+        // When
+        let returned = try await returned(of: sut, returning: reference("picked"))
+
+        // Then
+        #expect(returned == .string("y"))
+    }
+
+    @Test("calling a value no procedure could be is refused at the build")
+    func callingNonProcedureIsRefused() async {
+        // Given
+        let sut: Body = [
+            Statement(binding: .constant("notCallable"), expression: .literal(.int(1))),
+            Statement(binding: .constant("called"), expression: .apply(reference("notCallable"), arguments: []))
+        ]
+
+        // When / Then
+        await #expect {
+            try await returned(of: sut, returning: reference("called"))
+        } throws: { error in
+            error is BuildError && "\(error)".contains("calls a value of Int, and only a procedure can be called")
+        }
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // A procedure whose slot hands one int, and an entry handing it a closure
+    // that declares these parameters.
+    private func module(declaring declared: [Parameter]) throws -> Module {
+        let walking = Procedure(
+            signature: Signature(
+                parameters: [
+                    Parameter(name: "by", type: .procedure(ProcedureType(parameters: [.int], returns: .any, failing: .anything)))
+                ],
+                failing: .anything
+            ),
+            body: [
+                Statement(
+                    binding: .constant("once"),
+                    expression: .apply(reference("by"), arguments: [.literal(.int(1))])
+                )
+            ]
+        )
+
+        return try Module(
+            procedures: [
+                "walking": walking,
+                entryName: Procedure(
+                    access: .public,
+                    signature: Signature(failing: .anything),
+                    body: [
+                        Statement(
+                            binding: .constant("body"),
+                            expression: .closure(
+                                Procedure(
+                                    signature: Signature(parameters: declared, returns: .int),
+                                    body: [returning(.literal(.int(1)))]
+                                )
+                            )
+                        ),
+                        Statement(
+                            binding: .constant("ran"),
+                            expression: .call(Call(selector: "walking", arguments: [reference("body")]))
+                        )
+                    ]
+                )
+            ]
+        )
+    }
+}

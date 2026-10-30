@@ -1,0 +1,157 @@
+//
+//  DataNode.swift
+//  WarpSyntax
+//
+//  Created by JSilver on 10/20/26.
+//
+
+import Foundation
+import Warp
+
+// A value as data: a scalar as its atom, and a container as the node that
+// holds what it holds. A dictionary is keyed by values, and a struct is named.
+//
+//   null true 1 1.5 "a" x"6a"
+//   (array 1 2)
+//   (dictionary (entry "a" 1) (entry 2 x"00"))
+//   (struct App.Point (field x 1) (field y 2))
+struct DataNode {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Public
+    // A container opens one more on from the `depth` around it.
+    func value(of datum: Datum, within depth: Int) throws -> Value {
+        switch datum.form {
+        case .null:
+            return .null
+
+        case let .bool(bool):
+            return .bool(bool)
+
+        case let .int(int):
+            return .int(int)
+
+        case let .double(double):
+            return .double(double)
+
+        case let .string(string):
+            return .string(string)
+
+        case let .bytes(bytes):
+            return .bytes(bytes)
+
+        case let .name(name):
+            throw TextRefused("'\(name)' is a name, and data holds values", at: datum.offset)
+
+        case .list:
+            let node = try Node(datum)
+            let inside = try Node.opening(1, within: depth, at: node.offset)
+
+            switch node.word {
+            case "array": return .array(try node.operands.map { operand in try value(of: operand, within: inside) })
+            case "dictionary": return try dictionary(node, within: inside)
+            case "struct": return try `struct`(node, within: inside)
+            default: throw TextRefused("data holds no `(\(node.word) …)`", at: node.offset)
+            }
+        }
+    }
+
+    func datum(of value: Value) throws -> Datum {
+        switch value {
+        // A text writes a value and not what a run read it as.
+        case let .existential(existential):
+            return try datum(of: existential.value)
+
+        case .null:
+            return Datum(.null)
+
+        case let .bool(bool):
+            return Datum(.bool(bool))
+
+        case let .int(int):
+            return Datum(.int(int))
+
+        case let .double(double):
+            guard double.isFinite else {
+                throw TextRefused("only a finite floating-point number has a spelling, and \(double) is none")
+            }
+
+            return Datum(.double(double))
+
+        case let .string(string):
+            return Datum(.string(string))
+
+        case let .bytes(bytes):
+            return Datum(.bytes(bytes))
+
+        case let .array(elements):
+            return .node("array", try elements.map(datum(of:)))
+
+        case let .dictionary(held):
+            return try dictionary(held)
+
+        case let .struct(instance):
+            return try `struct`(instance)
+
+        case .procedure:
+            throw TextRefused("a procedure closed over a scope is not data, and a text holds data")
+        }
+    }
+
+    // MARK: - Private
+    private func dictionary(_ node: Node, within depth: Int) throws -> Value {
+        let entries = try node.operands.map { operand in
+            let entry = try Node(operand)
+
+            guard entry.word == "entry", entry.operands.count == 2 else {
+                throw TextRefused("a dictionary holds `(entry key value)`", at: operand.offset)
+            }
+
+            return (key: try value(of: entry.operands[0], within: depth), value: try value(of: entry.operands[1], within: depth))
+        }
+
+        do {
+            return .dictionary(try Value.Dictionary(entries))
+        } catch let refusal as ValueRefused {
+            throw TextRefused(refusal.message, at: node.offset)
+        }
+    }
+
+    private func `struct`(_ node: Node, within depth: Int) throws -> Value {
+        let (name, parts) = try node.declared()
+
+        let fields = try parts.map { operand in
+            let field = try Node(operand)
+
+            guard field.word == "field" else {
+                throw TextRefused("a struct holds `(field name value)`", at: operand.offset)
+            }
+
+            let (named, held) = try field.named()
+
+            return (name: try Node.name(named, at: field.offset), value: try value(of: held, within: depth))
+        }
+
+        do {
+            return try .holding(fields, named: try Node.name(name, at: node.offset))
+        } catch let refusal as ValueRefused {
+            throw TextRefused(refusal.message, at: node.offset)
+        }
+    }
+
+    private func dictionary(_ held: Value.Dictionary) throws -> Datum {
+        .node(
+            "dictionary",
+            try held.entries.map { entry in .node("entry", [try datum(of: entry.key), try datum(of: entry.value)]) }
+        )
+    }
+
+    private func `struct`(_ instance: Struct) throws -> Datum {
+        .node(
+            "struct",
+            [.name(instance.name.spelling)] + (try zip(instance.layout.fields, instance.values).map { name, value in
+                .node("field", [.name(name.spelling), try datum(of: value)])
+            })
+        )
+    }
+}
