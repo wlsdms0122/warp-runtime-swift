@@ -1,0 +1,20 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let one 1)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let held
+            (closure
+              (returns Int)
+              (body
+                (return one))))
+          (let got (apply held)))))
+    (return one)))

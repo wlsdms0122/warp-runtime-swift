@@ -1,0 +1,16 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Numeric.plus)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let one 1)
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let sum (call Standard.Numeric.plus one 1)))))
+    (return one)))

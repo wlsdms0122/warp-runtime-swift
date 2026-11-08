@@ -1,0 +1,24 @@
+(warp 1)
+(import Standard.Collection.map)
+(import Standard.Comparable.lessThan)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns (array Int))
+  (body
+    (let items (array 1))
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let mapped
+            (call Standard.Collection.map items
+              (closure
+                (const)
+                (isolated)
+                (parameter item (type Int))
+                (returns Int)
+                (body
+                  (return item))))))))
+    (return items)))

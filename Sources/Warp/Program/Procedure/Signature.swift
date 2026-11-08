@@ -1,0 +1,266 @@
+//
+//  Signature.swift
+//  Warp
+//
+//  Created by JSilver on 8/8/26.
+//
+
+import Foundation
+
+// What a call is checked against, in both directions: what it takes, what
+// comes back, what may come out of it when the work goes wrong, and whether it
+// is const and touches no name another body could touch at once. A body is
+// held to its signature, and every call reads the signature alone.
+public struct Signature: Sendable, Equatable {
+    // MARK: - Property
+    // What the declaration takes, in the order it wrote them. The order is the
+    // declaration's own: it is the order every call hands its arguments in,
+    // and the order the run keeps them in.
+    public let parameters: [Parameter]
+
+    // What a call returns. `Null` where the declaration wrote nothing: a call
+    // of it returns null.
+    public let returns: TypeExpression
+
+    // What may come out of a call when the work goes wrong. Nothing where the
+    // declaration wrote nothing.
+    public let failing: Failing
+
+    // Whether a call is const, and whether it touches no name
+    // another body could touch at the same time.
+    public let constness: Constness
+    public let isolation: Isolation
+
+    // The contracts each type parameter is bounded by, by its name. The
+    // signature owns the bound, so one name is held to one set however many
+    // slots mention it, and a name absent here is bounded by nothing.
+    public let bounds: [Name: Set<Name>]
+
+    // The associated types of its type parameters it says are a type, by
+    // the label one is written under, `T.Item`. What fills `T` must give that
+    // type there, and inside the declaration the associated type is that type.
+    public let sameTypes: [Name: TypeExpression]
+
+    // The declared names in position order.
+    public var names: [Name] {
+        parameters.map(\.name)
+    }
+
+    // The type a value of this declaration carries, the way a slot holding
+    // one writes it: its procedure type with the two marks.
+    public var type: TypeExpression {
+        .procedure(procedureType, constness, isolation)
+    }
+
+    // The parameter types in position order, the return type and what may fail.
+    // No names, since a value is applied by position and the names are the
+    // declaration's own.
+    public var procedureType: ProcedureType {
+        ProcedureType(parameters: parameters.map(\.type), returns: returns, failing: failing)
+    }
+
+    // Whether a call is const and touches no name another body could touch
+    // at once, and what may fail out of it.
+    var effects: EffectSet {
+        EffectSet(constness: constness, isolation: isolation, failing: failing)
+    }
+
+    // The parameters whose box is the body's own. One handed in place is the
+    // caller's box, written through rather than held.
+    var ownedParameters: Set<Name> {
+        Set(parameters.compactMap { parameter in parameter.type.isInout ? nil : parameter.name })
+    }
+
+    // The first parameter handed in place, which only a call a body writes
+    // can fill.
+    var inPlace: Name? {
+        parameters.first { parameter in parameter.type.isInout }?.name
+    }
+
+    // Whether the declaration writes a type parameter anywhere.
+    var isGeneric: Bool { procedureType.isGeneric }
+
+    // Every type parameter this signature names. A nested procedure type's
+    // parameters are named too: they are this signature's own slots, so
+    // `Array<some Element>` beside a procedure taking the same `some Element`
+    // is one parameter filled by one call.
+    package var parameterNames: Set<Name> { procedureType.parameterNames }
+
+    // Every declared name this signature reaches, through what it takes, what
+    // it returns and the contracts its bounds name.
+    var mentions: Set<Name> {
+        let said = sameTypes.values.reduce(into: Set(bounds.values.joined())) { mentioned, type in
+            mentioned.formUnion(type.mentions)
+        }
+
+        return parameters.reduce(into: returns.mentions.union(said)) { mentioned, parameter in
+            mentioned.formUnion(parameter.type.mentions)
+        }
+    }
+
+    // Every associated type of a type parameter this names, by its label: in
+    // what it takes and returns, what its same types say and the ones its
+    // bounds and same types are written under.
+    var associatedTypes: [Name: AssociatedType] {
+        let written = ([returns] + parameters.map(\.type) + Array(sameTypes.values))
+            .reduce(into: [Name: AssociatedType]()) { found, type in
+                found.merge(type.associatedTypes) { first, _ in first }
+            }
+
+        return Set(bounds.keys).union(sameTypes.keys).reduce(into: written) { found, key in
+            found.merge(AssociatedType(label: key)?.chain ?? [:]) { first, _ in first }
+        }
+    }
+
+    // MARK: - Initializer
+    // A name bounded by no contract is a name bounded by nothing, so it
+    // stands nowhere in `bounds`.
+    public init(
+        parameters: [Parameter] = [],
+        returns: TypeExpression = .null,
+        failing: Failing = .these([]),
+        constness: Constness = .unstated,
+        isolation: Isolation = .unstated,
+        bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:]
+    ) {
+        self.parameters = parameters
+        self.returns = returns
+        self.failing = failing
+        self.constness = constness
+        self.isolation = isolation
+        self.bounds = bounds.filter { _, contracts in !contracts.isEmpty }
+        self.sameTypes = sameTypes
+    }
+
+    // A native procedure's declaration, read off the procedure itself. What it takes is
+    // its own type's to say, so a registration names the procedure once and the
+    // parameters come with it, in the order its cases stand. `bounds` are what
+    // its type parameters are held to, as a document's signature writes them.
+    public init<P: NativeProcedure>(
+        of procedure: P.Type,
+        returns: TypeExpression = .null,
+        failing: Failing = .these([]),
+        constness: Constness = .unstated,
+        isolation: Isolation = .unstated,
+        bounds: [Name: Set<Name>] = [:],
+        sameTypes: [Name: TypeExpression] = [:]
+    ) {
+        self.init(
+            parameters: P.Parameters.allCases.map(\.declared),
+            returns: returns,
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
+            bounds: bounds,
+            sameTypes: sameTypes
+        )
+    }
+
+    // MARK: - Public
+    // The parameter declared under a name, or nil where none is.
+    public func parameter(named name: Name) -> Parameter? {
+        parameters.first { parameter in parameter.name == name }
+    }
+
+    // Where a name stands among the parameters, or nil where none is
+    // declared under it.
+    public func position(of name: Name) -> Int? {
+        parameters.firstIndex { parameter in parameter.name == name }
+    }
+
+    // This declaration as the run reads it: its parameters as slots, in
+    // position order, each type parameter held to its bounds.
+    func lowered(in table: LoweredTypeTable) -> [Slot] {
+        parameters.map { parameter in parameter.lowered(in: table, bounds: bounds, sameTypes: sameTypes) }
+    }
+
+    // What this declaration returns as the run reads it.
+    func loweredReturns(in table: LoweredTypeTable) -> LoweredType {
+        returns.lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+    }
+
+    // Each associated type this says is a type, as the declaration reads that type.
+    func loweredSameTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        loweredAssociatedTypes(in: table).filter { label, _ in sameTypes[label] != nil }
+    }
+
+    // Each associated type this names as the declaration reads it, by its label: the
+    // type its same types say, or one type the declaration does not know,
+    // held to what bounds it.
+    func loweredAssociatedTypes(in table: LoweredTypeTable) -> [Name: LoweredType] {
+        associatedTypes.reduce(into: [:]) { lowered, entry in
+            lowered[entry.key] = TypeExpression.associatedType(entry.value)
+                .lowered(in: table, bounds: bounds, sameTypes: sameTypes)
+        }
+    }
+
+    // A closure's signature as the procedure it is written in reads it: each
+    // type parameter it names, and each associated type of one, held to the bounds
+    // `declared` gives that name and said to be what `said` says, since the
+    // procedure around it owns the name.
+    func bounded(by declared: [Name: Set<Name>], sameTypes said: [Name: TypeExpression] = [:]) -> Signature {
+        let named = parameterNames.union(associatedTypes.values.map(\.base))
+
+        return with(
+            bounds: declared.filter { name, _ in named.contains(AssociatedType.base(of: name)) },
+            sameTypes: said.filter { label, _ in named.contains(AssociatedType.base(of: label)) }
+        )
+    }
+
+    // A member's signature as the head it is given under reads it: each type
+    // parameter it names that the head names is held to the head's bounds
+    // beside its own, since the head says where the member applies.
+    func under(_ head: Head) -> Signature {
+        let named = parameterNames
+
+        return with(
+            bounds: head.bounds.filter { name, _ in named.contains(name) }.merging(bounds) { theirs, mine in
+                theirs.union(mine)
+            },
+            sameTypes: sameTypes
+        )
+    }
+
+    // A contract's procedure as a call through the contract reads it: `Self`
+    // as one type parameter the contract bounds, which every position
+    // writing it shares.
+    func read(of contract: Name) -> Signature {
+        let read = replacingSelf(with: .parameter(name: TypeSpelling.selfType))
+
+        return read.with(
+            bounds: read.bounds.merging([TypeSpelling.selfType: [contract]]) { _, contract in contract },
+            sameTypes: read.sameTypes
+        )
+    }
+
+    // This signature with `Self` written as `type` wherever it stands.
+    func replacingSelf(with type: TypeExpression) -> Signature {
+        Signature(
+            parameters: parameters.map { parameter in
+                Parameter(name: parameter.name, type: parameter.type.replacingSelf(with: type))
+            },
+            returns: returns.replacingSelf(with: type),
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
+            bounds: bounds,
+            sameTypes: sameTypes.mapValues { same in same.replacingSelf(with: type) }
+        )
+    }
+
+    // MARK: - Private
+    // This signature holding its type parameters to these bounds and same
+    // types instead.
+    private func with(bounds: [Name: Set<Name>], sameTypes: [Name: TypeExpression]) -> Signature {
+        Signature(
+            parameters: parameters,
+            returns: returns,
+            failing: failing,
+            constness: constness,
+            isolation: isolation,
+            bounds: bounds,
+            sameTypes: sameTypes
+        )
+    }
+}

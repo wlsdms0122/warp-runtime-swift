@@ -1,0 +1,71 @@
+//
+//  Laid.swift
+//  Warp
+//
+//  Created by JSilver on 9/11/26.
+//
+
+import Foundation
+
+// Documents already compiled, laid down as a compile against them carries
+// them.
+//
+// What a document is compiled against is other documents, and turning those
+// into what a compile reads is work: each declaration's signature lowered into
+// slots, each native joined to the code the host brought under its spelling,
+// and every number their bodies carry resolved to the row it reaches. A
+// host compiling one document after another against the same documents would
+// pay for that once a document. This is where it is paid once.
+//
+// The rows a document takes are the rows after the ones already laid, and both
+// type tables number by the order their documents stand, so a document laid
+// down later takes numbers past these and moves none of them. That is what
+// lets what is laid here stand in a compile that puts more documents beside it.
+//
+// The natives among them are joined to the host's procedures here, since making a
+// row is what joining is. The documents laid beside them later are joined at
+// the link, which is where a build states every procedure its run may call.
+public struct Laid: Sendable {
+    // MARK: - Property
+    public let compiled: [Compiled]
+
+    // What these documents leave the ones compiled after them.
+    let carried: Carried
+
+    // Every declaration these documents made, under the spelling it was
+    // declared by. What a document laid beside them declares is held against
+    // this, and a spelling already in it is a spelling that document cannot
+    // take.
+    let signatures: [Name: Placed<Declared>]
+
+    // The link these rows are numbered against. A compile against them
+    // numbers the documents it lays beside them into the same one.
+    let linkage: Linkage
+
+    // What every compile against these reads of them, read once here and
+    // not off every document at every compile: how each is named to a
+    // closure, which texts they are, and what each declares under what it
+    // turned out to be.
+    let naming: [Closure.Document]
+    let identities: Set<Identity>
+    let declarers: DeclarerTable
+
+    // Nothing laid down, for a build that was handed no documents to compile
+    // against. Made at each ask, since the linkage is what tells one compile's
+    // rows from another's.
+    static var none: Laid {
+        Laid(
+            compiled: [],
+            carried: .none,
+            signatures: [:],
+            linkage: Linkage(),
+            naming: [],
+            identities: [],
+            declarers: DeclarerTable()
+        )
+    }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // MARK: - Private
+}

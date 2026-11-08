@@ -1,0 +1,20 @@
+(warp 1)
+(import Standard.Comparable.lessThan)
+(import Standard.Logic.equal)
+
+(procedure entry
+  (access public)
+  (parameter rounds (type Int))
+  (returns Int)
+  (body
+    (let round
+      (loop
+        (while (call Standard.Comparable.lessThan (path round (field index)) rounds))
+        (body
+          (let seen (path round (field index)))
+          (conditional
+            (when (call Standard.Logic.equal (path round (field index)) 1))
+            (then
+              (continue)))
+          (let kept seen))))
+    (return rounds)))

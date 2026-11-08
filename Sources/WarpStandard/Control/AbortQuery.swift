@@ -1,0 +1,49 @@
+//
+//  AbortQuery.swift
+//  WarpStandard
+//
+//  Created by JSilver on 8/23/26.
+//
+
+import Foundation
+import Warp
+
+// Failing on purpose instead of returning a value. It never returns, which is
+// what `returns: Never` on its declaration says and what lets the arm that
+// fails stay out of the type the arm that stays decides.
+//
+// The failure it raises carries the recoverable marker, so `try` around it
+// catches it and nothing else does.
+struct AbortQuery: Query {
+    // What this takes: the message it fails with. Anything spells, so a
+    // failure can name what it was holding rather than only a sentence
+    // written ahead of time. Null spells as `null`, and a failure saying that
+    // word would be saying nothing, so null says `aborted`.
+    enum Parameters: Int, ParameterSet {
+        case message
+
+        // MARK: - Property
+        var declared: Parameter { Parameter(name: "message", type: .any) }
+
+        // MARK: - Initializer
+        // MARK: - Public
+        // MARK: - Private
+    }
+
+    // MARK: - Property
+    static let unsaid = "aborted"
+
+    // MARK: - Initializer
+    // MARK: - Public
+    func evaluate(_ question: Question<Self>) async throws -> Value {
+        let message = question[.message]
+
+        guard message != .null else {
+            throw Aborted(Self.unsaid)
+        }
+
+        throw Aborted(Rendering(message).text())
+    }
+
+    // MARK: - Private
+}
