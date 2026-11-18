@@ -1,0 +1,90 @@
+//
+//  LinkBoundaryTests.swift
+//  WarpTests
+//
+//  Created by JSilver on 9/11/26.
+//
+
+import Foundation
+import Testing
+@testable import Warp
+import WarpStandard
+import WarpTestSupport
+
+// A procedure value carries its row, and a row is numbered by the link that
+// made it. The two facts together are why a run holds one to the link it came
+// from: the number means a declaration of that link and nothing about any
+// other, so a row read where it was not made reads whatever stands at its
+// number there.
+@Suite("A row is read where the link that made it is read")
+struct LinkBoundaryTests {
+    // MARK: - Property
+    // MARK: - Initializer
+    // MARK: - Test
+    @Test("a row's number means a different declaration in another link")
+    func aRowNumberMeansAnotherDeclaration() async throws {
+        // Given. Two links declaring different sets of type names. Names are
+        // numbered in the order they sort, so one more name ahead of `Thing`
+        // moves what its number stands for
+        let mine = try await Builder().build(
+            try link(declaring: ["App.Thing": .struct(["a": .int])])
+        )
+        let theirs = try await Builder().build(
+            try link(declaring: [
+                "App.Alpha": .struct(["z": .string]),
+                "App.Thing": .struct(["a": .int])
+            ])
+        )
+
+        // When. A procedure value leaves the run that made it
+        guard case let .procedure(closure) = try await Executor().run(mine, arguments: [:]) else {
+            Issue.record("the entry returns a procedure")
+
+            return
+        }
+
+        guard case let .named(row, _) = try closure.resolved().row.slots[0].type else {
+            Issue.record("the parameter is declared as a name")
+
+            return
+        }
+
+        // Then. One number, two declarations
+        #expect(mine.types.loweredTypes.labels[row] == "App.Thing")
+        #expect(theirs.types.loweredTypes.labels[row] == "App.Alpha")
+
+        // And the run refuses it rather than reading the other declaration
+        #expect(try closure.resolved().row.readable(in: mine.types.loweredTypes))
+        #expect(try !closure.resolved().row.readable(in: theirs.types.loweredTypes))
+    }
+
+    // MARK: - Public
+    // MARK: - Private
+    // A document that hands out a procedure taking one of its declared types.
+    private func link(declaring types: [Name: TypeDeclaration]) throws -> [Module] {
+        [
+            try Module(Draft(
+                types: types,
+                procedures: [
+                    "App.hand": Procedure(
+                        signature: Signature(returns: .any),
+                        body: [
+                            returning(.closure(Procedure(
+                                signature: Signature(
+                                    parameters: [Parameter(name: "it", type: .named("App.Thing"))],
+                                    returns: .any
+                                ),
+                                body: [returning(.reference([.name("it")]))]
+                            )))
+                        ]
+                    ),
+                    "entry": Procedure(
+                        access: .public,
+                        signature: Signature(returns: .any),
+                        body: [returning(.call(Call(selector: "App.hand")))]
+                    )
+                ]
+            ))
+        ] + Module.standard
+    }
+}

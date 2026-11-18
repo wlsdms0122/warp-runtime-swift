@@ -1,0 +1,68 @@
+//
+//  Failing.swift
+//  Warp
+//
+//  Created by JSilver on 9/6/26.
+//
+
+import Foundation
+
+// What may come out of a body or a procedure when the work itself goes wrong:
+// the types a `RecoverableFailure` names itself by, which is what a catch
+// reads as `type`.
+//
+// Declared by a signature and a procedure type; a body is held to what its
+// declaration says by what it casts, calls and catches.
+public enum Failing: Sendable, Equatable {
+    // Anything at all.
+    case anything
+
+    // These and no others. The empty set is a body nothing can fail out of.
+    case these(Set<String>)
+
+    // MARK: - Property
+    // The word a document writes for anything.
+    public static let anythingSpelling = "anything"
+
+    // Whether this says nothing can fail out of it.
+    public var failsNothing: Bool {
+        self == .these([])
+    }
+
+    // How a refusal names it: the failures in order, nothing, or anything.
+    public var rendered: String {
+        switch self {
+        case .anything:
+            return Self.anythingSpelling
+
+        case let .these(failures) where failures.isEmpty:
+            return "nothing"
+
+        case let .these(failures):
+            return failures.sorted().map { failure in "'\(failure)'" }.joined(separator: ", ")
+        }
+    }
+
+    // MARK: - Initializer
+    // MARK: - Public
+    // What may come out of one and then the other: anything where either
+    // may fail with anything.
+    public func joined(_ other: Failing) -> Failing {
+        guard case let .these(mine) = self, case let .these(theirs) = other else { return .anything }
+
+        return .these(mine.union(theirs))
+    }
+
+    // Whether this stands where `allowed` may come out: anywhere that allows
+    // anything, and within what it names otherwise. Anything is within no
+    // list.
+    func fails(within allowed: Failing) -> Bool {
+        guard case let .these(names) = allowed else { return true }
+
+        guard case let .these(failures) = self else { return false }
+
+        return failures.isSubset(of: names)
+    }
+
+    // MARK: - Private
+}
